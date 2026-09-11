@@ -37,8 +37,13 @@ const SYM2CODE = { '$': 'USD', '€': 'EUR', '£': 'GBP', '₽': 'RUB', '₸': '
 
 const SUPABASE_URL = 'https://yiglgfkjjvwijukdzutw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xnZmtqanZ3aWp1a2R6dXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjM5NjYsImV4cCI6MjEwNDY5OTk2Nn0.SF_vpL9F_CBf81NXIhcH_ZUWVoRtt3XoPpQjkDjPOck';
+// На вебе (web/index.html выставляет этот флаг до загрузки app.js) страница
+// сама и есть OAuth-редирект-цель — detectSessionInUrl:true даёт клиенту
+// самому доставершить PKCE-обмен по возврату с Google, без кастомного
+// протокола/IPC, которые нужны только на десктопе.
+const IS_WEB = window.__LANCIBLE_PLATFORM__ === 'web';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { flowType: 'pkce', detectSessionInUrl: false, persistSession: true, autoRefreshToken: true },
+  auth: { flowType: 'pkce', detectSessionInUrl: IS_WEB, persistSession: true, autoRefreshToken: true },
 });
 
 // ---------------------------------------------------------------------------
@@ -59,7 +64,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проект: {name}',
     'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.collapse': 'Свернуть',
-    'nav.language': 'Язык',
+    'nav.language': 'Язык', 'nav.account': 'Аккаунт',
     'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
@@ -164,7 +169,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'project: {name}',
     'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.collapse': 'Collapse',
-    'nav.language': 'Language',
+    'nav.language': 'Language', 'nav.account': 'Account',
     'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Restart to update',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
@@ -269,7 +274,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проєкт: {name}',
     'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.collapse': 'Згорнути',
-    'nav.language': 'Мова',
+    'nav.language': 'Мова', 'nav.account': 'Акаунт',
     'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
@@ -374,7 +379,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'жоба: {name}',
     'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.collapse': 'Жию',
-    'nav.language': 'Тіл',
+    'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
     'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
@@ -536,6 +541,8 @@ const el = {
   updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
 
   accountBtn: $('account-btn'), accountLabel: $('account-label'),
+  mobileTabbar: $('mobile-tabbar'), mobileAccountBtn: $('mobile-account-btn'),
+  mobileBackToList: $('mobile-back-to-list'),
   authBackdrop: $('auth-backdrop'),
   authStepCredentials: $('auth-step-credentials'), authStepOnboarding: $('auth-step-onboarding'),
   authStepConfirm: $('auth-step-confirm'), authConfirmText: $('auth-confirm-text'), authConfirmOk: $('auth-confirm-ok'),
@@ -861,6 +868,45 @@ function openLangMenu() {
 }
 el.langToggle.addEventListener('click', openLangMenu);
 
+/** Мобильная нижняя плашка (см. web/responsive.css) складывает тему,
+ * язык и вход/выход в один пункт "Аккаунт" — на десктопе для них есть
+ * отдельные элементы рейла, здесь их не показывают вовсе. */
+function openMobileAccountMenu(anchor) {
+  const currentTheme = (state.settings && state.settings.theme) || 'system';
+  const items = [
+    { key: 'system', i18n: 'nav.theme_system' },
+    { key: 'light', i18n: 'nav.theme_light' },
+    { key: 'dark', i18n: 'nav.theme_dark' },
+  ].map(({ key, i18n }) => ({
+    label: t(i18n),
+    selected: key === currentTheme,
+    onClick: () => { state.settings.theme = key; applyTheme(); scheduleSave(); },
+  }));
+  items.push({ sep: true });
+  for (const code of Object.keys(LANG_NAMES)) {
+    items.push({
+      label: LANG_NAMES[code],
+      selected: code === ((state.settings && state.settings.lang) || 'ru'),
+      onClick: () => setLang(code),
+    });
+  }
+  items.push({ sep: true });
+  if (currentUser) items.push({ label: t('auth.sign_out'), danger: true, onClick: signOut });
+  else items.push({ label: t('auth.sign_in_nav'), onClick: openAuthModal });
+  openMenu(anchor, items);
+}
+if (el.mobileAccountBtn) {
+  el.mobileAccountBtn.addEventListener('click', () => openMobileAccountMenu(el.mobileAccountBtn));
+}
+if (el.mobileBackToList) {
+  el.mobileBackToList.addEventListener('click', () => {
+    flushEditor();
+    selectedId = null;
+    render();
+    scheduleSave();
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Автообновление
 // ---------------------------------------------------------------------------
@@ -1058,12 +1104,21 @@ async function handleGoogleSignIn() {
   el.authGoogleBtn.disabled = true;
   el.authError.hidden = true;
   try {
+    // Десктоп: открываем системный браузер и ждём lancible://auth-callback
+    // через IPC (кастомный протокол, main.js). Веб: сама страница и есть
+    // редирект-цель — не мешаем signInWithOAuth перенаправить вкладку.
     const { data, error } = await sb.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'lancible://auth-callback', skipBrowserRedirect: true },
+      options: IS_WEB
+        ? { redirectTo: window.location.origin + window.location.pathname }
+        : { redirectTo: 'lancible://auth-callback', skipBrowserRedirect: true },
     });
-    if (error || !data || !data.url) { showAuthError('auth.error_generic'); return; }
-    await window.api.openExternal(data.url);
+    if (error) { showAuthError('auth.error_generic'); return; }
+    if (!IS_WEB) {
+      if (!data || !data.url) { showAuthError('auth.error_generic'); return; }
+      await window.api.openExternal(data.url);
+    }
+    // на вебе signInWithOAuth уже сам перенаправил вкладку — сюда код не дойдёт
   } catch {
     showAuthError('auth.error_generic');
   } finally {
@@ -1075,20 +1130,24 @@ async function handleGoogleSignIn() {
  * lancible://auth-callback (по протоколу, зарегистрированному инсталлятором)
  * и присылает его сюда через IPC — окно приложения всё это время остаётся
  * открытым, менять код на сессию тем же клиентом (PKCE) можно прямо здесь. */
-window.api.onOAuthCallback(async ({ url }) => {
-  let code = null;
-  try {
-    code = new URL(url).searchParams.get('code');
-  } catch { /* некорректный колбэк — игнорируем */ }
-  if (!code) return;
-  try {
-    const { error } = await sb.auth.exchangeCodeForSession(code);
-    if (error) { showAuthError('auth.error_generic'); return; }
-    await afterSignedIn();
-  } catch {
-    showAuthError('auth.error_generic');
-  }
-});
+// Не определён на вебе (detectSessionInUrl:true уже сам достраивает сессию
+// по возврату с Google) — есть только у десктопного window.api.
+if (window.api.onOAuthCallback) {
+  window.api.onOAuthCallback(async ({ url }) => {
+    let code = null;
+    try {
+      code = new URL(url).searchParams.get('code');
+    } catch { /* некорректный колбэк — игнорируем */ }
+    if (!code) return;
+    try {
+      const { error } = await sb.auth.exchangeCodeForSession(code);
+      if (error) { showAuthError('auth.error_generic'); return; }
+      await afterSignedIn();
+    } catch {
+      showAuthError('auth.error_generic');
+    }
+  });
+}
 
 el.accountBtn.addEventListener('click', () => {
   if (currentUser) openMenu(el.accountBtn, [{ label: t('auth.sign_out'), danger: true, onClick: signOut }]);
@@ -1274,6 +1333,7 @@ function render() {
   const v = state.ui.view;
 
   document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
+  document.body.classList.toggle('has-selected-task', v === 'project' && !!selectedId);
   renderStats();
   el.topbar.hidden = v !== 'home';
 

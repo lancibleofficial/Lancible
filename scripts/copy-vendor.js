@@ -32,12 +32,19 @@ try {
   }
 
   const fontSrc = path.join(root, 'font');
+  const committedFonts = path.join(root, 'assets', 'fonts'); // .woff2 в гите — на случай, если font/ нет (свежий клон)
   if (fs.existsSync(fontSrc)) {
     for (const [from, name] of fonts) {
       const p = path.join(fontSrc, from);
       if (fs.existsSync(p)) fs.copyFileSync(p, path.join(fontDest, name));
     }
     console.log('[copy-vendor] Quill + шрифт Basique Pro скопированы в', dest);
+  } else if (fs.existsSync(committedFonts)) {
+    for (const [, name] of fonts) {
+      const p = path.join(committedFonts, name);
+      if (fs.existsSync(p)) fs.copyFileSync(p, path.join(fontDest, name));
+    }
+    console.log('[copy-vendor] Quill + шрифт Basique Pro (из assets/fonts) скопированы в', dest);
   } else {
     console.warn('[copy-vendor] Папка font/ не найдена — шрифт не скопирован, интерфейс на системном шрифте.');
   }
