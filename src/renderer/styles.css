@@ -42,40 +42,40 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]):not([data-theme="light"]) {
     color-scheme: light;
-    --bg: #eef0e7;
+    --bg: #f6f7f3;
     --panel: #ffffff;
-    --panel-2: #e3e7da;
-    --border: #d2d7c6;
-    --border-strong: #adb49d;
-    --text: #191b15;
-    --text-dim: #565b4d;
-    --icon: #666b5a;
-    --accent: #2f7d1a;
-    --accent-hover: #256614;
+    --panel-2: #eef1ea;
+    --border: #e1e6da;
+    --border-strong: #c7cdba;
+    --text: #14160f;
+    --text-dim: #5c6152;
+    --icon: #6b7060;
+    --accent: #12873f;
+    --accent-hover: #0d6c30;
     --accent-text: #ffffff;
-    --teal: #1f7a63;
-    --danger: #c53527;
-    --running: #256614;
-    --shadow: 0 2px 10px rgba(30, 40, 20, 0.12);
+    --teal: #12806a;
+    --danger: #d13a2c;
+    --running: #0d6c30;
+    --shadow: 0 2px 12px rgba(20, 30, 15, 0.08);
   }
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #eef0e7;
+  --bg: #f6f7f3;
   --panel: #ffffff;
-  --panel-2: #e3e7da;
-  --border: #d2d7c6;
-  --border-strong: #adb49d;
-  --text: #191b15;
-  --text-dim: #565b4d;
-  --icon: #666b5a;
-  --accent: #2f7d1a;
-  --accent-hover: #256614;
+  --panel-2: #eef1ea;
+  --border: #e1e6da;
+  --border-strong: #c7cdba;
+  --text: #14160f;
+  --text-dim: #5c6152;
+  --icon: #6b7060;
+  --accent: #12873f;
+  --accent-hover: #0d6c30;
   --accent-text: #ffffff;
-  --teal: #1f7a63;
-  --danger: #c53527;
-  --running: #256614;
-  --shadow: 0 2px 10px rgba(30, 40, 20, 0.12);
+  --teal: #12806a;
+  --danger: #d13a2c;
+  --running: #0d6c30;
+  --shadow: 0 2px 12px rgba(20, 30, 15, 0.08);
 }
 
 * { box-sizing: border-box; }
@@ -90,12 +90,13 @@ input, select, button, textarea { font-family: inherit; }
 
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
   background-color: var(--border-strong);
   background-clip: padding-box;
-  border: 2px solid transparent;
-  border-radius: 8px;
+  border: 3px solid transparent;
+  border-radius: 9px;
 }
 *::-webkit-scrollbar-thumb:hover { background-color: var(--icon); background-clip: padding-box; }
 *::-webkit-scrollbar-corner { background: transparent; }
@@ -603,10 +604,13 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 #empty-state { margin: auto; text-align: center; }
 #task-detail { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 
-.task-title-row { display: flex; align-items: center; gap: 8px; }
+/* flex-wrap — при нехватке ширины (узкое окно) табы Заметки/История переносятся
+   на свою строку, а заголовок с иконками закрепления/удаления не сжимаются
+   до нечитаемой ширины (title держит осмысленный min-width). */
+.task-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; }
 #task-title {
   flex: 1;
-  min-width: 0;
+  min-width: 140px;
   font-size: 20px;
   font-weight: 600;
   border: none;
@@ -948,7 +952,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 /* ---------- Главная ---------- */
 
-.home-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.home-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 .home-head h1 { margin: 0; font-size: 22px; font-weight: 700; }
 .h-count { font-size: 15px; font-weight: 600; color: var(--text-dim); margin-left: 4px; }
 .btn-accent {
@@ -989,9 +993,12 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   justify-content: center;
   transition: border-color 0.12s var(--ease), color 0.12s var(--ease), opacity 0.15s var(--ease);
 }
-.car-arrow:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.car-arrow:disabled { opacity: 0.3; cursor: default; }
-.car-track { display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth; padding: 4px 2px; scrollbar-width: none; }
+.car-arrow:hover { border-color: var(--accent); color: var(--accent); }
+/* overflow-x:auto здесь неизбежно включает и overflow-y (не может остаться
+   "visible", когда любая другая ось не visible) — паддинга должно хватать на
+   hover-подъём (-2px) плюс размытие тени (18px blur / 6px offset), иначе тень
+   плиток обрезается снизу/сверху трека. */
+.car-track { display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; scroll-behavior: smooth; padding: 12px 2px 26px; margin: -8px 0 -22px; scrollbar-width: none; }
 .car-track::-webkit-scrollbar { display: none; }
 
 /* Незакреплённые проекты — плитки идут слева направо и переносятся на новую
@@ -999,6 +1006,11 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
    вертикально целиком (см. .home-main). Закреплённые же — только в одну
    строку через .carousel/.car-track выше. */
 .projects-grid { display: flex; flex-wrap: wrap; gap: 12px; padding: 4px 2px; }
+/* Плитки в этой сетке (в отличие от закреплённой карусели, где ширина должна
+   быть фиксированной ради прокрутки) могут сжиматься — иначе на очень узком
+   окне 250px-плитка не помещается и .home-main получает нежеланный
+   горизонтальный скролл вместо переноса строки. */
+.projects-grid .ptile, .projects-grid .ptile-add { flex: 0 1 250px; width: auto; min-width: 160px; }
 
 .ptile {
   position: relative;
@@ -1050,7 +1062,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   position: relative;
   flex: none;
   width: 230px;
-  background: var(--panel-2);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-left: 3px solid var(--pc, var(--accent));
   border-radius: 9px;
@@ -1116,7 +1128,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 /* ---------- Полный календарь ---------- */
 
-.cal-grid { height: 100%; display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+/* Правая колонка была жёстко 340px — на минимальной ширине окна (760px) левой
+   колонке оставалось ~170px и .cal-head разваливался на 4 отдельные строки.
+   minmax() позволяет правой колонке сжаться до 220px, отдавая разницу левой. */
+.cal-grid { height: 100%; display: grid; grid-template-columns: 1fr minmax(220px, 340px); min-height: 0; }
 .cal-main { display: flex; flex-direction: column; min-height: 0; padding: 18px 22px; }
 .cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
 .cal-modes { display: flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
@@ -1126,6 +1141,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   transition: background 0.12s var(--ease), color 0.12s var(--ease);
 }
 .cal-modes button.on { background: var(--bg); color: var(--accent); }
+/* Группа prev/title/next/today держится вместе одним flex-элементом — если
+   места не хватает даже на неё, переносится целиком, а не разваливается по
+   одной кнопке на строку. */
+.cal-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 4px; }
 #cal-title { font-size: 16px; font-weight: 700; min-width: 150px; text-align: center; text-transform: none; }
 
 .switch {
@@ -1324,6 +1343,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   align-items: center;
   gap: 10px;
   min-height: 22px;
+  flex-shrink: 0;
   padding: 2px 8px;
   border-radius: 6px;
   opacity: 0.5;
@@ -1335,6 +1355,8 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
+  max-width: 100%;
   border: none;
   border-left: 3px solid var(--pc, var(--accent));
   background: var(--panel-2);

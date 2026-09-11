@@ -64,6 +64,9 @@ app.whenReady().then(async () => {
     langSelectRemoved: !document.getElementById('lang-select'),
     langTogglePresent: !!document.getElementById('lang-toggle'),
     topbarHasNoBorderLine: getComputedStyle(document.getElementById('topbar')).borderBottomWidth === '0px',
+    taskTitleRowWraps: getComputedStyle(document.querySelector('.task-title-row')).flexWrap === 'wrap',
+    homeHeadWraps: getComputedStyle(document.querySelector('.home-head')).flexWrap === 'wrap',
+    calNavPresent: !!document.querySelector('.cal-nav'),
   }))()`);
 
   const flow = await win.webContents.executeJavaScript(`(async () => {
@@ -170,9 +173,35 @@ app.whenReady().then(async () => {
     await wait(30);
     out.taskListHasThreeTasks = document.querySelectorAll('#task-list .task-item').length === 3;
 
-    // --- экспорт для проверки xlsx (теперь с переведёнными заголовками) ---
+    // --- карточки "Недавние задачи": фон = --panel (не --panel-2, чтобы не выглядели тускло) ---
     document.querySelector('.nav-item[data-view="home"]').click();
     await wait(40);
+    const rtile = document.querySelector('#recent-track .rtile');
+    const bgProbe = document.createElement('div');
+    bgProbe.style.background = 'var(--panel)';
+    document.body.appendChild(bgProbe);
+    const expectedPanelBg = getComputedStyle(bgProbe).backgroundColor;
+    bgProbe.remove();
+    out.recentTileUsesPanelBg = !!rtile && getComputedStyle(rtile).backgroundColor === expectedPanelBg;
+
+    // --- часовые строки в "День": не сжимаются флексом ниже контента (регресс — раньше чипы вылезали за границы часа) ---
+    document.querySelector('.nav-item[data-view="calendar"]').click();
+    await wait(40);
+    document.querySelector('.cal-modes button[data-mode="day"]').click();
+    await wait(60);
+    const hourRow = document.querySelector('.hour-row');
+    out.hourRowFlexShrinkIsZero = !!hourRow && getComputedStyle(hourRow).flexShrink === '0';
+    document.querySelector('.cal-modes button[data-mode="month"]').click();
+    await wait(40);
+
+    // --- стрелки карусели: полностью скрыты (не просто задизейблены opacity), когда скроллить некуда ---
+    document.querySelector('.nav-item[data-view="home"]').click();
+    await wait(40);
+    const recentCarousel = document.getElementById('recent-track').closest('.carousel');
+    const [rLeft, rRight] = recentCarousel.querySelectorAll('.car-arrow');
+    out.carouselArrowsHiddenWhenNoOverflow = !!rLeft && !!rRight && rLeft.hidden && rRight.hidden;
+
+    // --- экспорт для проверки xlsx (теперь с переведёнными заголовками) ---
     [...document.querySelectorAll('#projects-track .ptile')]
       .find(t => /Проект №2/.test(t.textContent)).querySelector('.ptile-menu').click();
     await wait(40);

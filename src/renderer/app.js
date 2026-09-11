@@ -1060,9 +1060,8 @@ function updateCarousel(c) {
   const [left, right] = c.querySelectorAll('.car-arrow');
   const overflow = track.scrollWidth > track.clientWidth + 4;
   const max = track.scrollWidth - track.clientWidth - 2;
-  left.hidden = right.hidden = !overflow;
-  left.disabled = track.scrollLeft <= 1;
-  right.disabled = track.scrollLeft >= max;
+  left.hidden = !overflow || track.scrollLeft <= 1;
+  right.hidden = !overflow || track.scrollLeft >= max;
 }
 const updateCarousels = () => carousels.forEach(updateCarousel);
 window.addEventListener('resize', updateCarousels);

@@ -37,7 +37,7 @@ let mainWindow = null;
 // страницы через titleBarOverlay, — должны совпадать с --bg/--text-dim темы,
 // иначе в светлой теме там остаётся тёмный "огрызок" тёмной темы.
 const TITLEBAR_DARK = { color: '#2a2b2e', symbolColor: '#b9bbc1', height: 52 };
-const TITLEBAR_LIGHT = { color: '#eef0e7', symbolColor: '#565b4d', height: 52 };
+const TITLEBAR_LIGHT = { color: '#f6f7f3', symbolColor: '#5c6152', height: 52 };
 
 function resolveTitlebarOverlay(theme) {
   const isDark = theme === 'dark' ? true : theme === 'light' ? false : nativeTheme.shouldUseDarkColors;
