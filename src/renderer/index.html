@@ -43,23 +43,22 @@
 
       <div class="nav-spacer"></div>
 
-      <div class="nav-item nav-lang" title="Language">
+      <button type="button" id="lang-toggle" class="nav-item nav-lang" data-i18n-title="nav.language" title="Язык">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
         <span class="nav-label" id="lang-label">Русский</span>
-        <select id="lang-select" class="nav-lang-select" aria-label="Language">
-          <option value="ru">Русский</option>
-          <option value="en">English</option>
-          <option value="uk">Українська</option>
-          <option value="kk">Қазақша</option>
-        </select>
-      </div>
-
-      <button id="theme-toggle" class="nav-item" title="Theme">
-        <svg class="icon theme-icon" id="theme-icon-system" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
-        <svg class="icon theme-icon" id="theme-icon-light" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
-        <svg class="icon theme-icon" id="theme-icon-dark" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM2 2.6h1.2v1.2H2zM12.8 2.2h1v1h-1zM12.5 11.5h1.3v1.3h-1.3z"/></svg>
-        <span class="nav-label" id="theme-label" data-i18n="nav.theme_system">Системная</span>
       </button>
+
+      <div class="theme-tabs" id="theme-toggle">
+        <button type="button" class="theme-tab" data-theme="system" data-i18n-title="nav.theme_system" title="Системная">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
+        </button>
+        <button type="button" class="theme-tab" data-theme="light" data-i18n-title="nav.theme_light" title="Светлая">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+        </button>
+        <button type="button" class="theme-tab" data-theme="dark" data-i18n-title="nav.theme_dark" title="Тёмная">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM2 2.6h1.2v1.2H2zM12.8 2.2h1v1h-1zM12.5 11.5h1.3v1.3h-1.3z"/></svg>
+        </button>
+      </div>
 
       <button id="nav-collapse" class="nav-item">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2h11A1.5 1.5 0 0115 3.5v9A1.5 1.5 0 0113.5 14h-11A1.5 1.5 0 011 12.5v-9A1.5 1.5 0 012.5 2zm3.5 1.6H2.6v8.8H6V3.6z"/></svg>
@@ -70,7 +69,7 @@
     <div id="main">
       <!-- ГЛАВНАЯ -->
       <main id="home-view" class="view">
-        <div class="home-grid">
+        <div class="home-center">
           <div class="home-main">
             <div id="topbar">
               <div class="stat-cards">
@@ -119,28 +118,28 @@
             <p id="home-empty" class="muted" data-i18n="home.empty" hidden>Пока нет ни одного проекта. Создай первый.</p>
           </div>
 
-          <aside id="home-side">
-            <div class="side-head">
-              <span id="mini-cal-title">—</span>
-              <button id="open-calendar" class="linklike"><span data-i18n="home.calendar_link">Календарь</span> →</button>
+          <section id="recent-section" class="recent-fixed" hidden>
+            <div class="row-label" data-i18n="home.recent">Недавние задачи</div>
+            <div class="carousel">
+              <button class="car-arrow" data-dir="-1" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+              <div class="car-track" id="recent-track"></div>
+              <button class="car-arrow" data-dir="1" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
             </div>
-            <div class="mini-cal-tot" id="mini-cal-tot"></div>
-            <div class="mini-weekdays">
-              <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
-            </div>
-            <div class="mini-cal" id="mini-cal"></div>
-            <div class="side-today" id="side-today"></div>
-          </aside>
+          </section>
         </div>
 
-        <section id="recent-section" class="recent-fixed" hidden>
-          <div class="row-label" data-i18n="home.recent">Недавние задачи</div>
-          <div class="carousel">
-            <button class="car-arrow" data-dir="-1" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-            <div class="car-track" id="recent-track"></div>
-            <button class="car-arrow" data-dir="1" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+        <aside id="home-side">
+          <div class="side-head">
+            <span id="mini-cal-title">—</span>
+            <button id="open-calendar" class="linklike"><span data-i18n="home.calendar_link">Календарь</span> →</button>
           </div>
-        </section>
+          <div class="mini-cal-tot" id="mini-cal-tot"></div>
+          <div class="mini-weekdays">
+            <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
+          </div>
+          <div class="mini-cal" id="mini-cal"></div>
+          <div class="side-today" id="side-today"></div>
+        </aside>
       </main>
 
       <!-- ОТКРЫТЫЙ ПРОЕКТ -->

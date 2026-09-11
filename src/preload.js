@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('api', {
   save: (data) => ipcRenderer.invoke('data:save', data),
   exportXlsx: (payload) => ipcRenderer.invoke('export:xlsx', payload),
   copy: (text) => ipcRenderer.invoke('clipboard:write', text),
+  setTitlebarOverlay: (theme) => ipcRenderer.invoke('theme:set-overlay', theme),
 });

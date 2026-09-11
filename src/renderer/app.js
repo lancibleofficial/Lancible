@@ -44,6 +44,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проект: {name}',
     'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.collapse': 'Свернуть',
+    'nav.language': 'Язык',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
     'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
@@ -130,6 +131,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'project: {name}',
     'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.collapse': 'Collapse',
+    'nav.language': 'Language',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
     'stats.month': 'earned this month', 'stats.done': 'tasks done',
@@ -216,6 +218,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проєкт: {name}',
     'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.collapse': 'Згорнути',
+    'nav.language': 'Мова',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
     'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
@@ -302,6 +305,7 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'жоба: {name}',
     'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.collapse': 'Жию',
+    'nav.language': 'Тіл',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
     'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
@@ -439,9 +443,8 @@ const el = {
   navCollapse: $('nav-collapse'), tbSearch: document.querySelector('.tb-search'),
   searchPanel: $('search-panel'), searchInput: $('search-input'), searchResults: $('search-results'),
 
-  langSelect: $('lang-select'), langLabel: $('lang-label'),
-  themeToggle: $('theme-toggle'), themeLabel: $('theme-label'),
-  themeIconSystem: $('theme-icon-system'), themeIconLight: $('theme-icon-light'), themeIconDark: $('theme-icon-dark'),
+  langToggle: $('lang-toggle'), langLabel: $('lang-label'),
+  themeTabs: [...document.querySelectorAll('.theme-tab')],
 
   topbar: $('topbar'),
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
@@ -716,29 +719,42 @@ function applyTheme() {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', theme);
 
-  el.themeIconSystem.hidden = theme !== 'system';
-  el.themeIconLight.hidden = theme !== 'light';
-  el.themeIconDark.hidden = theme !== 'dark';
-  el.themeLabel.textContent = t(`nav.theme_${theme}`);
+  for (const btn of el.themeTabs) btn.classList.toggle('on', btn.dataset.theme === theme);
+  window.api.setTitlebarOverlay(theme).catch(() => {});
 }
-function cycleTheme() {
-  const order = ['system', 'light', 'dark'];
-  const cur = (state.settings && state.settings.theme) || 'system';
-  state.settings.theme = order[(order.indexOf(cur) + 1) % order.length];
-  applyTheme();
-  scheduleSave();
+for (const btn of el.themeTabs) {
+  btn.addEventListener('click', () => {
+    state.settings.theme = btn.dataset.theme;
+    applyTheme();
+    scheduleSave();
+  });
 }
-el.themeToggle.addEventListener('click', cycleTheme);
+// Нативные кнопки окна не следят за системной темой сами — при переключении
+// ОС между светлой/тёмной темой пересинхронизируем их вручную, но только
+// когда пользователь не переопределил тему явно (иначе CSS и так не следит).
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (((state.settings && state.settings.theme) || 'system') === 'system') {
+    window.api.setTitlebarOverlay('system').catch(() => {});
+  }
+});
 
-el.langSelect.addEventListener('change', () => {
-  state.settings.lang = el.langSelect.value;
-  el.langLabel.textContent = LANG_NAMES[state.settings.lang] || state.settings.lang;
+function setLang(code) {
+  state.settings.lang = code;
+  el.langLabel.textContent = LANG_NAMES[code] || code;
   applyStaticTranslations();
-  applyTheme();
   buildCurrencyOptions();
   render();
   scheduleSave();
-});
+}
+function openLangMenu() {
+  const items = Object.keys(LANG_NAMES).map((code) => ({
+    label: LANG_NAMES[code],
+    selected: code === ((state.settings && state.settings.lang) || 'ru'),
+    onClick: () => setLang(code),
+  }));
+  openMenu(el.langToggle, items);
+}
+el.langToggle.addEventListener('click', openLangMenu);
 
 // ---------------------------------------------------------------------------
 // Сохранение
@@ -1935,8 +1951,9 @@ function openMenu(anchor, items) {
   for (const it of items) {
     if (it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); continue; }
     const b = document.createElement('button');
-    b.className = 'ctx-item' + (it.danger ? ' danger' : '');
-    b.textContent = it.label;
+    b.className = 'ctx-item' + (it.danger ? ' danger' : '') + (it.selected ? ' sel' : '');
+    b.innerHTML = `<span>${escapeHtml(it.label)}</span>` +
+      (it.selected ? `<svg class="icon ctx-check" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS.check}"/></svg>` : '');
     b.addEventListener('click', () => { closeMenu(); it.onClick(); });
     m.appendChild(b);
   }
@@ -2688,7 +2705,6 @@ async function init() {
   }
 
   migrate();
-  el.langSelect.value = state.settings.lang;
   el.langLabel.textContent = LANG_NAMES[state.settings.lang] || state.settings.lang;
   applyStaticTranslations();
   applyTheme();

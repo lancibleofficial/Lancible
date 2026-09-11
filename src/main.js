@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, shell, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, dialog, clipboard, nativeTheme } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const { buildWorkbook } = require('./xlsx');
@@ -33,20 +33,28 @@ function saveData(data) {
 
 let mainWindow = null;
 
-function createWindow() {
+// Цвета нативных кнопок окна (minimize/maximize/close), рисуемых Windows поверх
+// страницы через titleBarOverlay, — должны совпадать с --bg/--text-dim темы,
+// иначе в светлой теме там остаётся тёмный "огрызок" тёмной темы.
+const TITLEBAR_DARK = { color: '#2a2b2e', symbolColor: '#b9bbc1', height: 52 };
+const TITLEBAR_LIGHT = { color: '#eef0e7', symbolColor: '#565b4d', height: 52 };
+
+function resolveTitlebarOverlay(theme) {
+  const isDark = theme === 'dark' ? true : theme === 'light' ? false : nativeTheme.shouldUseDarkColors;
+  return isDark ? TITLEBAR_DARK : TITLEBAR_LIGHT;
+}
+
+function createWindow(initialData) {
+  const theme = (initialData && initialData.settings && initialData.settings.theme) || 'system';
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 780,
     minWidth: 760,
     minHeight: 500,
     title: 'Lancible',
-    backgroundColor: '#2a2b2e',
+    backgroundColor: resolveTitlebarOverlay(theme).color,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#2a2b2e',
-      symbolColor: '#b9bbc1',
-      height: 52,
-    },
+    titleBarOverlay: resolveTitlebarOverlay(theme),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -94,6 +102,11 @@ app.whenReady().then(() => {
     clipboard.writeText(String(text ?? ''));
     return true;
   });
+  ipcMain.handle('theme:set-overlay', (event, theme) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.setTitleBarOverlay(resolveTitlebarOverlay(theme));
+    return true;
+  });
 
   // Выгрузка в .xlsx: рендерер присылает готовые листы, тут — диалог + запись файла.
   ipcMain.handle('export:xlsx', async (event, { defaultName, sheets }) => {
@@ -113,10 +126,10 @@ app.whenReady().then(() => {
     }
   });
 
-  createWindow();
+  createWindow(loadData());
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(loadData());
   });
 });
 
