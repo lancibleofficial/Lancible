@@ -1,0 +1,26 @@
+# Зависимости
+node_modules/
+
+# Сборка
+dist/
+build/icon.ico
+build/icon.png
+
+# Шрифт (пользователь кладёт свой Basique Pro отдельно — исходники не наши)
+font/
+
+# Скопированные на postinstall вендорные файлы (Quill, шрифты) — генерируются заново
+src/renderer/vendor/
+
+# Скриншоты и результаты локальных проверок — не часть исходников
+scripts/preview-*.png
+scripts/smoke-result.json
+scripts/_smoke-export-*.xlsx
+
+# Данные пользователя (на случай локального запуска рядом с исходниками)
+data.json
+
+# ОС/редакторы
+.DS_Store
+Thumbs.db
+*.log

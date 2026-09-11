@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;"
+  />
+  <link rel="stylesheet" href="vendor/quill.snow.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Lancible</title>
+</head>
+<body>
+  <header id="titlebar">
+    <div class="tb-logo" id="tb-logo">
+      <svg class="tb-logo-mark" viewBox="0 0 256 256" aria-hidden="true">
+        <path d="M100.37 43.9496C101.421 42.8419 102.224 42.4168 103.822 42.0089C108.584 40.7933 113.436 39.703 118.22 38.5229L152.793 30.1718C164.966 27.2807 177.258 24.5912 189.67 22.1029C194.411 21.1485 230.917 14.2461 234.601 16.4218C235.109 16.9659 235.346 17.2512 235.55 17.8909C236.36 20.4235 233.088 29.9118 232.388 32.4172C227.816 48.0378 222.612 63.1832 216.785 77.8286C206.724 103.179 195.962 125.536 181.168 146.669C167.918 165.171 153.081 182.096 136.733 197.359C134.903 199.063 133.082 200.731 131.153 202.324C129.558 203.641 127.242 202.385 127.189 199.522C126.888 183.359 123.949 157.022 123.192 149.313C122.435 141.605 122.397 130.451 115.791 136.218C114.283 137.503 112.482 138.975 110.974 140.296L43.263 199.388C41.9506 200.53 36.3608 206.112 34.8232 205.711C34.416 205.606 33.978 205.308 33.6312 204.9C33.0986 204.279 32.4997 203.001 32.3381 202.348C30.8886 196.487 28.3181 189.357 31.7367 186.235C33.3426 184.769 34.8809 183.414 36.4834 182.025L105.443 121.79C108.603 119.014 111.788 116.23 114.909 113.411C116.238 112.211 116.227 109.964 116.921 108.224C117.384 107.063 118.291 106.077 119.149 105.295C125.142 99.9063 131.29 94.6932 137.59 89.6586C144.579 84.2589 151.749 79.3354 158.956 74.2203C165.973 69.11 173.071 64.0982 180.249 59.1869C182.095 57.9407 194.472 49.8661 196.332 50.624C196.782 51.4764 196.437 52.4807 196.147 52.9969C186.905 69.5091 173.663 83.1167 160.852 95.9024C157.326 99.428 153.752 102.9 150.13 106.318C148.09 108.257 145.187 110.695 143.447 112.834C140.961 115.889 142.005 125.516 142.142 130.632L142.682 150.328C142.834 154.647 142.887 159.232 143.344 163.714C143.4 164.268 143.588 164.618 144.039 165.125C145.598 165.62 151.041 157.316 152.028 155.972C174.087 126.247 192.383 92.8968 206.725 56.2742C208.397 52.1914 210.011 48.061 211.566 43.8852C212.119 42.3962 214.356 37.9476 213.015 35.8617C211.919 35.337 206.752 36.9039 205.591 37.1888C200.228 38.5019 194.907 39.885 189.63 41.3378C176.889 44.8234 164.303 48.5554 151.874 52.5337L137.527 57.006C135.027 57.7943 132.427 58.4779 130.027 59.4172C129.203 59.7394 128.366 60.1061 127.82 60.7766C125.237 63.9495 128.373 74.4111 126.895 78.883C126.302 80.6812 109.927 94.8774 107.454 96.5832C106.875 96.9835 106.186 97.4351 105.348 97.4316C103.782 96.3081 103.633 94.8643 103.538 93.5348C102.441 78.1464 101 62.6012 99.8311 47.1821C99.7232 45.7606 99.9067 44.987 100.37 43.9496Z" fill="currentColor"/>
+        <path d="M21.207 150.033C25.5303 145.695 31.3626 141.066 36.0217 136.985L81.8216 96.9769C84.0832 95.0018 88.3241 90.9144 90.8234 89.7441C93.0884 90.2013 93.816 95.9908 94.2257 97.6634C95.2168 101.708 95.8054 104.618 94.5732 107.488C93.5958 109.154 89.3899 112.555 87.7259 114.005L74.2356 125.733L44.2161 151.96C38.3184 157.122 32.444 162.328 26.4496 167.379C26.026 167.721 25.5528 168.115 24.8788 168.077C23.5741 167.965 22.6682 166.025 22.3093 164.916C21.5057 162.434 21.0791 160.063 20.5061 157.646C20.1819 156.278 20.0051 155.035 20.0001 153.801C19.9937 152.259 20.5802 151.091 21.207 150.033Z" fill="currentColor"/>
+        <path d="M48.8059 218.168C52.0324 214.935 56.1559 211.595 59.6206 208.569L78.2213 192.306L96.6413 176.25C99.3712 173.876 110.636 163.955 113.729 163.287C115.737 163.994 116.51 171.087 116.965 172.788C118.709 179.309 114.032 181.613 110.854 184.323L54.958 233.156C53.0975 234.794 48.5333 239.256 46.4091 239.837L45.8101 239.435C43.8092 237.136 43.2505 231.734 42.4986 229.028C40.9488 223.453 45.8277 220.756 48.8059 218.168Z" fill="currentColor"/>
+      </svg>
+      <span class="tb-logo-text">Lancible</span>
+    </div>
+    <div class="tb-rest">
+      <div class="tb-search">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.8 1.2a5.6 5.6 0 104.02 9.5l3.2 3.2 1.4-1.4-3.2-3.2A5.6 5.6 0 006.8 1.2zm0 2a3.6 3.6 0 110 7.2 3.6 3.6 0 010-7.2z"/></svg>
+        <input id="search-input" type="text" data-i18n-ph="search.placeholder" placeholder="Поиск (Ctrl+F)" autocomplete="off" />
+      </div>
+    </div>
+  </header>
+
+  <div id="shell">
+    <nav id="navrail">
+      <div class="nav-items">
+        <button class="nav-item" data-view="home">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3l6.6 5.5-1.15 1.35-.75-.62V13.6a1.1 1.1 0 01-1.1 1.1H9.35V9.9h-2.7v4.8H4.4a1.1 1.1 0 01-1.1-1.1V7.5l-.75.63L1.4 6.8 8 1.3z"/></svg>
+          <span class="nav-label" data-i18n="nav.home">Обзор</span>
+        </button>
+        <button class="nav-item" data-view="calendar">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
+          <span class="nav-label" data-i18n="nav.calendar">Календарь</span>
+        </button>
+      </div>
+
+      <div class="nav-spacer"></div>
+
+      <div class="nav-item nav-lang" title="Language">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
+        <span class="nav-label" id="lang-label">Русский</span>
+        <select id="lang-select" class="nav-lang-select" aria-label="Language">
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+          <option value="uk">Українська</option>
+          <option value="kk">Қазақша</option>
+        </select>
+      </div>
+
+      <button id="theme-toggle" class="nav-item" title="Theme">
+        <svg class="icon theme-icon" id="theme-icon-system" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
+        <svg class="icon theme-icon" id="theme-icon-light" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+        <svg class="icon theme-icon" id="theme-icon-dark" viewBox="0 0 16 16" aria-hidden="true" hidden><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM2 2.6h1.2v1.2H2zM12.8 2.2h1v1h-1zM12.5 11.5h1.3v1.3h-1.3z"/></svg>
+        <span class="nav-label" id="theme-label" data-i18n="nav.theme_system">Системная</span>
+      </button>
+
+      <button id="nav-collapse" class="nav-item">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2h11A1.5 1.5 0 0115 3.5v9A1.5 1.5 0 0113.5 14h-11A1.5 1.5 0 011 12.5v-9A1.5 1.5 0 012.5 2zm3.5 1.6H2.6v8.8H6V3.6z"/></svg>
+        <span class="nav-label" data-i18n="nav.collapse">Свернуть</span>
+      </button>
+    </nav>
+
+    <div id="main">
+      <!-- ГЛАВНАЯ -->
+      <main id="home-view" class="view">
+        <div class="home-grid">
+          <div class="home-main">
+            <div id="topbar">
+              <div class="stat-cards">
+                <div class="stat-card">
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+                  <div><b id="st-time">—</b><span data-i18n="stats.worked">всего проработано</span></div>
+                </div>
+                <div class="stat-card">
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+                  <div><b id="st-money">—</b><span data-i18n="stats.earned">всего заработано</span></div>
+                </div>
+                <div class="stat-card">
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
+                  <div><b id="st-month">—</b><span data-i18n="stats.month">заработано в этом месяце</span></div>
+                </div>
+                <div class="stat-card">
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M13.6 3.3a1.05 1.05 0 010 1.5l-6.7 6.7a1.05 1.05 0 01-1.5 0L2 8.1a1.05 1.05 0 011.5-1.5l2.65 2.65 5.95-5.95a1.05 1.05 0 011.5 0z"/></svg>
+                  <div><b id="st-done">0</b><span data-i18n="stats.done">задач выполнено</span></div>
+                </div>
+              </div>
+              <button id="st-running" class="st-running" hidden></button>
+            </div>
+
+            <div class="home-head">
+              <h1><span data-i18n="home.title">Проекты</span> <span class="h-count" id="home-count"></span></h1>
+              <button id="create-project-btn" class="btn-accent">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
+                <span data-i18n="home.create">Создать проект</span>
+              </button>
+            </div>
+
+            <section id="pinned-section" hidden>
+              <div class="row-label" data-i18n="home.pinned">Закреплённые</div>
+              <div class="carousel">
+                <button class="car-arrow" data-dir="-1" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+                <div class="car-track" id="pinned-track"></div>
+                <button class="car-arrow" data-dir="1" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+              </div>
+            </section>
+
+            <section>
+              <div class="row-label" id="all-label" data-i18n="home.other" hidden>Остальные</div>
+              <div class="projects-grid" id="projects-track"></div>
+            </section>
+
+            <p id="home-empty" class="muted" data-i18n="home.empty" hidden>Пока нет ни одного проекта. Создай первый.</p>
+          </div>
+
+          <aside id="home-side">
+            <div class="side-head">
+              <span id="mini-cal-title">—</span>
+              <button id="open-calendar" class="linklike"><span data-i18n="home.calendar_link">Календарь</span> →</button>
+            </div>
+            <div class="mini-cal-tot" id="mini-cal-tot"></div>
+            <div class="mini-weekdays">
+              <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
+            </div>
+            <div class="mini-cal" id="mini-cal"></div>
+            <div class="side-today" id="side-today"></div>
+          </aside>
+        </div>
+
+        <section id="recent-section" class="recent-fixed" hidden>
+          <div class="row-label" data-i18n="home.recent">Недавние задачи</div>
+          <div class="carousel">
+            <button class="car-arrow" data-dir="-1" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+            <div class="car-track" id="recent-track"></div>
+            <button class="car-arrow" data-dir="1" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+          </div>
+        </section>
+      </main>
+
+      <!-- ОТКРЫТЫЙ ПРОЕКТ -->
+      <div id="project-view" class="view" hidden>
+        <aside id="sidebar">
+          <div id="project-header">
+            <button id="back-home" class="back-btn">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg>
+              <span data-i18n="project.all">Все проекты</span>
+            </button>
+            <div class="ph-row">
+              <span class="ph-dot" id="ph-dot"></span>
+              <span class="ph-name" id="ph-name"></span>
+              <button id="project-menu-btn" class="icon-btn" aria-label="Опции проекта">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
+              </button>
+            </div>
+            <div class="ph-desc muted" id="ph-desc" hidden></div>
+          </div>
+
+          <div class="sidebar-header">
+            <h1 data-i18n="project.tasks">Задачи</h1>
+            <button id="new-task-btn" class="icon-btn icon-btn-accent" data-i18n-title="project.new_task_title" title="Новая задача (Ctrl+N)">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
+            </button>
+          </div>
+
+          <div class="task-filter">
+            <div class="tf-status">
+              <button data-status="all" class="on" data-i18n="filter.all">Все</button>
+              <button data-status="active" data-i18n="filter.active">В работе</button>
+              <button data-status="done" data-i18n="filter.done">Готово</button>
+            </div>
+          </div>
+
+          <div id="sidebar-empty" class="muted"></div>
+          <ul id="task-list"></ul>
+
+          <div class="sidebar-footer">
+            <label class="muted" for="default-rate" data-i18n="rate.default_label">Ставка по умолчанию</label>
+            <div class="rate-row">
+              <input id="default-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0" />
+              <select id="currency" title="Валюта"></select>
+              <span class="muted" data-i18n="rate.per_hour">/ч</span>
+            </div>
+            <div id="project-earned" class="project-earned muted"></div>
+          </div>
+        </aside>
+
+        <main id="detail">
+          <div id="empty-state" class="muted">
+            <p data-i18n="project.pick_task">Выбери задачу слева или создай новую.</p>
+          </div>
+
+          <section id="task-detail" hidden>
+            <div class="task-title-row">
+              <input id="task-title" type="text" data-i18n-ph="task.title_ph" placeholder="Название задачи" autocomplete="off" />
+              <button id="pin-task-btn" class="icon-btn" data-i18n-title="task.pin_title" title="Закрепить задачу">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z"/></svg>
+              </button>
+              <button id="delete-task-btn" class="icon-btn icon-btn-danger" data-i18n-title="task.delete_title" title="Удалить задачу">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
+              </button>
+              <div class="task-tabs" id="task-tabs">
+                <button type="button" data-tab="notes" class="on" data-i18n="tabs.notes">Заметки</button>
+                <button type="button" data-tab="history" data-i18n="tabs.history">История</button>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-notes">
+              <div class="timer-bar">
+                <div class="timer-block">
+                  <div class="timer-display" id="timer-display">00:00:00</div>
+                  <div class="timer-sub" id="timer-sub" data-i18n="timer.sub_default">общее время по задаче</div>
+                </div>
+                <button id="timer-btn" class="timer-btn"><span id="timer-btn-icon">▶</span> <span id="timer-btn-label" data-i18n="timer.start">Старт</span></button>
+              </div>
+
+              <div class="money-bar">
+                <label for="task-rate" data-i18n="money.rate_label">Ставка</label>
+                <input id="task-rate" type="text" inputmode="decimal" autocomplete="off" />
+                <span id="rate-unit" class="muted"></span>
+                <span id="money-calc" class="money-calc"></span>
+              </div>
+
+              <div id="editor-wrap">
+                <div id="editor"></div>
+                <div id="table-tools" hidden>
+                  <button data-tt="rowBelow" data-i18n="table.add_row">+ строка</button>
+                  <button data-tt="colRight" data-i18n="table.add_col">+ столбец</button>
+                  <button data-tt="rowDel" data-i18n="table.del_row">− строка</button>
+                  <button data-tt="colDel" data-i18n="table.del_col">− столбец</button>
+                  <span class="tt-div"></span>
+                  <span class="tt-fill-label" data-i18n="table.fill_label">залить:</span>
+                  <div class="tt-scope">
+                    <button data-scope="cell" class="on" data-i18n="table.scope_cell">ячейку</button>
+                    <button data-scope="row" data-i18n="table.scope_row">строку</button>
+                    <button data-scope="col" data-i18n="table.scope_col">столбец</button>
+                  </div>
+                  <div class="tt-swatches" id="tt-swatches"></div>
+                  <span class="tt-div"></span>
+                  <button data-tt="tableDel" class="tt-danger" data-i18n="table.del_table">удалить таблицу</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-history" hidden>
+              <div class="history-head">
+                <h2><span data-i18n="history.title">Записи времени</span> <span class="h-count" id="session-count">0</span></h2>
+                <div class="history-actions">
+                  <button id="add-session-btn" class="btn-accent" data-i18n="history.add">+ Добавить запись</button>
+                  <button id="export-task-btn" class="ghost" data-i18n="history.excel" data-i18n-title="history.excel_title" title="Выгрузить логи времени этой задачи в Excel">⬇ Excel</button>
+                </div>
+              </div>
+              <ul id="session-list"></ul>
+              <p id="session-empty" class="muted" data-i18n="history.empty">Ещё не было ни одного запуска таймера.</p>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- КАЛЕНДАРЬ -->
+      <div id="calendar-view" class="view" hidden>
+        <div class="cal-grid">
+          <div class="cal-main">
+            <div class="cal-head">
+              <div class="cal-modes">
+                <button data-mode="month" class="on" data-i18n="calendar.month">Месяц</button>
+                <button data-mode="week" data-i18n="calendar.week">Неделя</button>
+                <button data-mode="day" data-i18n="calendar.day">День</button>
+              </div>
+              <button id="cal-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+              <span id="cal-title"></span>
+              <button id="cal-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+              <button id="cal-today" class="linklike" data-i18n="calendar.today">Сегодня</button>
+              <span class="spacer"></span>
+              <button id="cal-period-toggle" class="switch" aria-pressed="false">
+                <span class="switch-track"><span class="switch-thumb"></span></span>
+                <span data-i18n="calendar.choose_period">Выбрать период</span>
+              </button>
+            </div>
+            <div class="cal-range" id="cal-range" hidden>
+              <button type="button" class="dp-btn" id="range-from-btn"></button>
+              <span class="muted">—</span>
+              <button type="button" class="dp-btn" id="range-to-btn"></button>
+              <div class="cal-period-tot" id="cal-period-tot"></div>
+            </div>
+            <div class="cal-weekdays" id="cal-weekdays">
+              <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
+            </div>
+            <div class="cal-days" id="cal-days"></div>
+          </div>
+
+          <aside class="cal-day" id="cal-day-panel">
+            <div class="cal-view-tot" id="cal-view-tot" hidden></div>
+            <div class="cal-day-head" id="cal-day-head" data-i18n="calendar.pick_day">Выбери день</div>
+            <div class="cal-day-tot" id="cal-day-tot"></div>
+            <ul class="cal-day-list" id="cal-day-list"></ul>
+            <p class="muted" id="cal-day-empty" data-i18n="calendar.day_empty" hidden>В этот день записей не было.</p>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Результаты поиска -->
+  <div id="search-panel" hidden>
+    <div id="search-results"></div>
+  </div>
+
+  <!-- Плавающее меню -->
+  <div id="ctx-menu" class="ctx-menu" hidden></div>
+
+  <!-- Кастомный выбор даты (переиспользуется везде: период в календаре, диалог записи времени) -->
+  <div class="dp-pop" id="dp-pop" hidden>
+    <div class="dp-head">
+      <button type="button" class="icon-btn" id="dp-prev" data-i18n-aria="common.back" aria-label="Прошлый месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+      <span id="dp-title"></span>
+      <button type="button" class="icon-btn" id="dp-next" data-i18n-aria="common.forward" aria-label="Следующий месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+    </div>
+    <div class="dp-weekdays">
+      <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
+    </div>
+    <div class="dp-days" id="dp-days"></div>
+  </div>
+
+  <!-- Кастомный выбор времени (часы/минуты) -->
+  <div class="tp-pop" id="tp-pop" hidden>
+    <div class="tp-col" id="tp-hours"></div>
+    <div class="tp-col" id="tp-minutes"></div>
+  </div>
+
+  <!-- Модалка с одним полем -->
+  <div id="modal-backdrop" hidden>
+    <div class="modal">
+      <label id="modal-label" for="modal-input"></label>
+      <input id="modal-input" type="text" autocomplete="off" />
+      <div class="modal-buttons">
+        <button id="modal-cancel" data-i18n="common.cancel">Отмена</button>
+        <button id="modal-ok" class="primary" data-i18n="common.ok">ОК</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Диалог подтверждения удаления -->
+  <div id="confirm-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-title" id="confirm-title" data-i18n="common.delete_q">Удалить?</div>
+      <p class="confirm-text" id="confirm-text"></p>
+      <div class="modal-buttons">
+        <button id="confirm-cancel" data-i18n="common.cancel">Отмена</button>
+        <button id="confirm-ok" class="primary confirm-danger" data-i18n="common.delete">Удалить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Диалог проекта -->
+  <div id="pdlg-backdrop" hidden>
+    <div class="modal modal-lg">
+      <div class="modal-title" id="pdlg-title">Проект</div>
+      <label for="pdlg-name" data-i18n="pdlg.name_label">Название</label>
+      <input id="pdlg-name" type="text" autocomplete="off" data-i18n-ph="pdlg.name_ph" placeholder="Название проекта" />
+      <label for="pdlg-desc" data-i18n="pdlg.desc_label">Описание</label>
+      <textarea id="pdlg-desc" rows="3" data-i18n-ph="pdlg.desc_ph" placeholder="Необязательно"></textarea>
+      <label data-i18n="pdlg.color_label">Цвет</label>
+      <div class="swatches" id="pdlg-swatches"></div>
+      <div class="modal-buttons">
+        <button id="pdlg-cancel" data-i18n="common.cancel">Отмена</button>
+        <button id="pdlg-save" class="primary" data-i18n="common.save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Диалог записи времени -->
+  <div id="sdlg-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-title" id="sdlg-title">Запись времени</div>
+      <label data-i18n="sdlg.date_label">Дата</label>
+      <button type="button" class="dp-btn dp-btn-wide" id="sdlg-date-btn"></button>
+      <div class="sdlg-times">
+        <div><label data-i18n="sdlg.start_label">Начало</label><button type="button" class="dp-btn" id="sdlg-start-btn"></button></div>
+        <div><label data-i18n="sdlg.end_label">Конец</label><button type="button" class="dp-btn" id="sdlg-end-btn"></button></div>
+      </div>
+      <div class="sdlg-dur muted" id="sdlg-dur"></div>
+      <div class="modal-buttons">
+        <button id="sdlg-cancel" data-i18n="common.cancel">Отмена</button>
+        <button id="sdlg-save" class="primary" data-i18n="common.save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" hidden></div>
+
+  <script src="vendor/quill.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "lancible",
+  "productName": "Lancible",
+  "version": "0.1.0",
+  "description": "Lancible — задачи, учёт времени и заработка",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "smoke": "electron scripts/smoke.js",
+    "check:xlsx": "node scripts/xlsx-check.js",
+    "icon": "electron scripts/make-icon.js",
+    "package": "electron-packager . Lancible --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --icon=build/icon.ico --app-version=0.1.0 --ignore=\"^/(scripts|dist|build|font|\\.vscode)($|/)\" --ignore=\"\\.(md|log)$\"",
+    "shortcuts": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-shortcuts.ps1",
+    "build:exe": "npm run icon && npm run package && npm run shortcuts",
+    "postinstall": "node scripts/copy-vendor.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^33.2.1",
+    "png-to-ico": "^3.0.2",
+    "quill": "^2.0.3"
+  }
+}
