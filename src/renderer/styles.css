@@ -24,7 +24,7 @@
   --accent-hover: #aceb98;
   --accent-text: #16220e;
 
-  --teal: #a4c2a8;
+  --link: #5ec8f2;
   --danger: #ef7a72;
   --running: #aceb98;
 
@@ -50,12 +50,12 @@
     --text: #14160f;
     --text-dim: #5c6152;
     --icon: #6b7060;
-    --accent: #12873f;
-    --accent-hover: #0d6c30;
-    --accent-text: #ffffff;
-    --teal: #12806a;
+    --accent: #7ae65b;
+    --accent-hover: #68c44d;
+    --accent-text: #16220e;
+    --link: #1c72b0;
     --danger: #d13a2c;
-    --running: #0d6c30;
+    --running: #68c44d;
     --shadow: 0 2px 12px rgba(20, 30, 15, 0.08);
   }
 }
@@ -69,12 +69,12 @@
   --text: #14160f;
   --text-dim: #5c6152;
   --icon: #6b7060;
-  --accent: #12873f;
-  --accent-hover: #0d6c30;
-  --accent-text: #ffffff;
-  --teal: #12806a;
+  --accent: #7ae65b;
+  --accent-hover: #68c44d;
+  --accent-text: #16220e;
+  --link: #1c72b0;
   --danger: #d13a2c;
-  --running: #0d6c30;
+  --running: #68c44d;
   --shadow: 0 2px 12px rgba(20, 30, 15, 0.08);
 }
 
@@ -86,9 +86,15 @@ input, select, button, textarea { font-family: inherit; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* ---------- Скроллбар: тонкий, минималистичный, в цветах темы ---------- */
-
-* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+/* ---------- Скроллбар: тонкий, минималистичный, в цветах темы ----------
+   Только webkit-псевдоэлементы, БЕЗ scrollbar-width/scrollbar-color: в Chromium
+   если на элементе заданы обе группы свойств одновременно, побеждают
+   стандартные scrollbar-width/scrollbar-color и весь webkit-кастом (в т.ч.
+   ::-webkit-scrollbar-button) молча игнорируется — скроллбар откатывается на
+   вид по умолчанию (широкий, со стрелками, без скругления), хотя getComputedStyle
+   по пseudo-элементам при этом всё равно возвращает "нужные" значения (это и
+   ввело в заблуждение при предыдущей проверке). Приложение — Electron/Chromium
+   only, кроссбраузерный fallback не нужен. */
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 *::-webkit-scrollbar-track { background: transparent; }
@@ -761,12 +767,14 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ql-snow.ql-toolbar button:hover, .ql-snow.ql-toolbar button.ql-active,
 .ql-snow .ql-picker-label:hover, .ql-snow .ql-picker-item:hover,
 .ql-snow .ql-picker-item.ql-selected { color: var(--accent); }
-.ql-editor a { color: var(--teal); }
+.ql-editor a { color: var(--link); }
 .ql-editor blockquote { border-left-color: var(--border-strong); color: var(--text-dim); }
 .ql-editor code, .ql-editor pre, .ql-editor pre.ql-syntax { background: #232428; color: var(--text); }
 .ql-snow .ql-tooltip { background: var(--panel-2); color: var(--text); border-color: var(--border); box-shadow: var(--shadow); }
 .ql-snow .ql-tooltip input[type='text'] { background: var(--panel); color: var(--text); border-color: var(--border); }
-.ql-snow .ql-tooltip a.ql-action, .ql-snow .ql-tooltip a.ql-preview { color: var(--teal); }
+.ql-snow .ql-tooltip a.ql-action, .ql-snow .ql-tooltip a.ql-preview { color: var(--link); }
+.ql-snow .ql-tooltip a.ql-remove { color: var(--danger); }
+.ql-snow .ql-tooltip a.ql-remove::before { color: var(--danger); }
 .ql-table-insert { font-size: 15px !important; line-height: 1 !important; }
 
 .ql-editor table { border-collapse: collapse; margin: 6px 0; }
@@ -1404,8 +1412,8 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  background: color-mix(in srgb, var(--accent) 10%, var(--panel-2));
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  background: var(--panel-2);
+  border: 1px solid var(--border);
   border-radius: 9px;
   padding: 9px 12px;
   margin-bottom: 16px;

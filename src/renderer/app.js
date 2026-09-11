@@ -2295,6 +2295,7 @@ function setupEditor() {
   quill = new Quill('#editor', {
     theme: 'snow',
     placeholder: t('editor.placeholder'),
+    bounds: '#editor-wrap',
     modules: {
       table: true,
       toolbar: [
