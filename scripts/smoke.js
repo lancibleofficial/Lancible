@@ -26,6 +26,9 @@ ipcMain.handle('data:load', () => store);
 ipcMain.handle('data:save', (_e, d) => { store = d; return true; });
 ipcMain.handle('clipboard:write', () => true);
 ipcMain.handle('theme:set-overlay', (_e, theme) => { overlayCalls.push(theme); return true; });
+ipcMain.handle('update:check', () => ({ ok: false, reason: 'dev' }));
+ipcMain.handle('update:download', () => ({ ok: true }));
+ipcMain.handle('update:install', () => true);
 ipcMain.handle('export:xlsx', (_e, { defaultName, sheets }) => {
   const buf = buildWorkbook(sheets);
   const file = path.join(__dirname, `_smoke-export-${exportsWritten.length + 1}.xlsx`);
@@ -67,6 +70,7 @@ app.whenReady().then(async () => {
     taskTitleRowWraps: getComputedStyle(document.querySelector('.task-title-row')).flexWrap === 'wrap',
     homeHeadWraps: getComputedStyle(document.querySelector('.home-head')).flexWrap === 'wrap',
     calNavPresent: !!document.querySelector('.cal-nav'),
+    updateBtnHiddenByDefault: document.getElementById('update-btn').hidden === true,
   }))()`);
 
   const flow = await win.webContents.executeJavaScript(`(async () => {
@@ -212,6 +216,22 @@ app.whenReady().then(async () => {
   })()`);
 
   await new Promise((r) => setTimeout(r, 200));
+
+  // --- автообновление: кнопка реагирует на события из главного процесса ---
+  win.webContents.send('update:available', { version: '9.9.9' });
+  await new Promise((r) => setTimeout(r, 60));
+  const updateAfterAvailable = await win.webContents.executeJavaScript(`
+    JSON.stringify({ hidden: document.getElementById('update-btn').hidden, label: document.getElementById('update-btn-label').textContent })
+  `);
+  win.webContents.send('update:progress', { percent: 42 });
+  await new Promise((r) => setTimeout(r, 30));
+  win.webContents.send('update:ready');
+  await new Promise((r) => setTimeout(r, 30));
+  const updateAfterReady = await win.webContents.executeJavaScript(`
+    JSON.stringify({ label: document.getElementById('update-btn-label').textContent })
+  `);
+  flow.updateBtnShowsOnAvailable = !JSON.parse(updateAfterAvailable).hidden;
+  flow.updateBtnLabelMatchesReady = JSON.parse(updateAfterReady).label === 'Перезапустить';
 
   const unzip = (buf) => {
     const files = {};

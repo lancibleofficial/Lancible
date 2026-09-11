@@ -231,7 +231,7 @@ npm start
 `npm install` заодно копирует файлы редактора Quill в `src/renderer/vendor/`
 (скрипт `scripts/copy-vendor.js`).
 
-## Сборка .exe
+## Сборка .exe и автообновление
 
 ```bash
 npm run build:exe
@@ -241,19 +241,36 @@ npm run build:exe
 
 1. `npm run icon` — рисует `build/icon.ico` (графит + акцентное лого-ракета из
    `build/logo-accent.svg`);
-2. `npm run package` — `@electron/packager` собирает
-   `dist/Lancible-win32-x64/` с `Lancible.exe` внутри;
-3. `npm run shortcuts` — кладёт ярлык **Lancible** на рабочий стол и в меню
-   «Пуск» (и удаляет старый ярлык «Task Timer»).
+2. `npm run package` — **`electron-builder`** собирает NSIS-инсталлятор
+   `dist/Lancible Setup X.Y.Z.exe` (one-click, ставится в
+   `%LOCALAPPDATA%\Programs\Lancible`, сам создаёт ярлыки на рабочем столе и в
+   «Пуск») + `dist/latest.yml` — метаданные для автообновления.
 
-Отдельные шаги можно запускать по одному. Приложение переносимое: папку
-`dist/Lancible-win32-x64/` можно скопировать куда угодно — после переноса
-запусти `npm run shortcuts` ещё раз или поправь ярлык вручную.
+Приложение теперь **обновляет себя само**: при запуске (только в собранном
+`.exe`, не в `npm start`) `src/main.js` через `electron-updater` тихо проверяет
+`dist/latest.yml`, опубликованный в Supabase Storage (см. ниже); если версия
+новее — в левом рейле снизу появляется зелёная кнопка «Доступно обновление»;
+клик скачивает файл, кнопка становится «Перезапустить» — второй клик тихо
+ставит новую версию и перезапускает приложение. Никакого мастера/диалогов
+между двумя кликами не показывается (`oneClick: true` обязателен для этого —
+без него `quitAndInstall()` открывает полный мастер установки и не завершает
+процесс).
 
-> На этой машине `npm` не выполняет install-скрипты зависимостей, поэтому бинарь
-> Electron мог не распаковаться при `npm install`. Если `npm start` / сборка
-> падают с «electron.exe не найден» — распакуй вручную:
-> `Expand-Archive "$env:LOCALAPPDATA\electron\Cache\*\electron-*-win32-x64.zip" node_modules\electron\dist -Force`.
+**Публикация новой версии**:
+1. Подними `"version"` в `package.json`.
+2. `npm run build:exe`.
+3. `npm run publish:release` — заливает `dist/*.exe` + `.blockmap` +
+   `latest.yml` в публичный Supabase Storage bucket `releases` (нужны
+   `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` в `.env`, см. комментарий в
+   `scripts/publish-release.js` — файл `.env` никогда не коммитится).
+
+> На этой машине у `npm` есть allowlist на install-скрипты зависимостей
+> (`npm-lavamoat`) — после `npm install` может появиться предупреждение
+> `N packages have install scripts not yet covered by allowScripts`. Чинится
+> через `npm approve-scripts <имя-пакета>` (запускает нужный скрипт и
+> запоминает разрешение в `package.json`) — так это и было исправлено для
+> `electron` и `electron-winstaller` (нужен `electron-builder`'у для сборки
+> NSIS). Так надёжнее, чем распаковывать вручную.
 
 ## Где хранятся данные
 
@@ -285,15 +302,15 @@ npm run build:exe
 
 | Файл | Назначение |
 | --- | --- |
-| `src/main.js` | Главный процесс: окно (свой titlebar, без меню), `data.json` + миграция, диалог .xlsx, синхронизация цвета кнопок окна с темой (`theme:set-overlay`). |
-| `src/preload.js` | Мост `window.api` (`load` / `save` / `exportXlsx` / `copy` / `setTitlebarOverlay`). |
+| `src/main.js` | Главный процесс: окно (свой titlebar, без меню), `data.json` + миграция, диалог .xlsx, синхронизация цвета кнопок окна с темой (`theme:set-overlay`), автообновление через `electron-updater` (`update:check`/`update:download`/`update:install`). |
+| `src/preload.js` | Мост `window.api` (`load` / `save` / `exportXlsx` / `copy` / `setTitlebarOverlay` / `checkForUpdate` / `downloadUpdate` / `installUpdate` + подписки `onUpdate*`). |
 | `src/xlsx.js` | Мини-генератор .xlsx (ZIP + OOXML) без зависимостей. |
 | `src/renderer/index.html` | Разметка: `#titlebar` (лого + поиск), `#navrail` (+ переключатели темы/языка), `#home-view` (статистика внутри `.home-main`, `.projects-grid`, `#recent-section.recent-fixed`), `#project/calendar-view`, вкладки задачи (`#task-tabs`/`#tab-notes`/`#tab-history`), фильтр задач в `#sidebar`, попапы кастомного календаря/времени (`#dp-pop`/`#tp-pop`, общие для периода в календаре и диалога записи времени), диалог подтверждения (`#confirm-backdrop`), `#search-panel`. Все статичные подписи размечены `data-i18n*`. Иконки — инлайн-SVG. |
 | `src/renderer/styles.css` | Стили, палитра (тёмная/светлая — CSS-переменные + `[data-theme]`/`prefers-color-scheme`), анимации, `@font-face` Basique Pro. `.icon` — `--icon` цвет. |
 | `src/renderer/app.js` | Логика: **i18n** (словарь `T`, `t()`, `pluralForm()`, `applyStaticTranslations()`, `LOCALE_MAP`), **темы** (`applyTheme`/`cycleTheme`), рейл (сворачивание — один класс `body.nav-collapsed`, элементы вынесены в `position:absolute` ради плавной анимации ширины), поиск из шапки, маршрутизатор видов, плитки/карусели, недавние задачи (без готовых), календарь (`aggregateDays`/`rangeAgg`, режимы month/week/day, `renderViewTotal` — итог за месяц/неделю всегда в правой панели, `calState.periodOn` + `renderPeriodSummary`), обобщённые попапы даты/времени (`openDatePicker`/`openTimePicker`, принимают anchor+value+callback — используются и календарём, и диалогом записи времени), фильтр задач по статусу (`taskFilter`, `filteredProjectTasks`), вкладки задачи (`setTaskTab`), диалог подтверждения (`confirmDialog`, замена `window.confirm`), диалоги проекта и записи времени, меню, пины, редактор (цвет текста + таблицы + `cellBg` через Parchment StyleAttributor), таймер, деньги (`sessionRate`), экспорт (заголовки тоже через `t()`), миграция. |
 | `scripts/copy-vendor.js` | Копирует Quill + шрифт в `src/renderer/vendor/` (postinstall). |
 | `scripts/make-icon.js` | Генерирует `build/icon.*` из `build/logo-accent.svg` (canvas + `Path2D`/`Image`, собирает `.ico` через `png-to-ico`). |
-| `scripts/make-shortcuts.ps1` | Ярлыки на рабочий стол и в «Пуск». |
+| `scripts/publish-release.js` | Заливает `dist/*.exe`/`latest.yml` в Supabase Storage (`npm run publish:release`). |
 | `scripts/smoke.js` | Headless-проверка UI (`npm run smoke`). |
 | `scripts/xlsx-check.js` | Проверка генератора .xlsx (`npm run check:xlsx`). |
 

@@ -1,7 +1,13 @@
 const { app, BrowserWindow, Menu, ipcMain, shell, dialog, clipboard, nativeTheme } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
+const { autoUpdater } = require('electron-updater');
 const { buildWorkbook } = require('./xlsx');
+
+// Скачивание — только по явному запросу из рендерера (кнопка "Обновить"),
+// не автоматически в фоне.
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
 
 const DATA_FILE = path.join(app.getPath('userData'), 'data.json');
 const LEGACY_DATA_FILE = path.join(app.getPath('appData'), 'task-timer', 'data.json');
@@ -90,6 +96,49 @@ function createWindow(initialData) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Автообновление (electron-updater): проверка тихая, скачивание и установка —
+// только по явному действию пользователя (кнопка в интерфейсе).
+// ---------------------------------------------------------------------------
+
+function setupAutoUpdater() {
+  autoUpdater.on('update-available', (info) => {
+    mainWindow?.webContents.send('update:available', { version: info.version });
+  });
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('update:progress', { percent: progress.percent });
+  });
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow?.webContents.send('update:ready');
+  });
+  autoUpdater.on('error', (err) => {
+    console.error('[autoUpdater]', err);
+    mainWindow?.webContents.send('update:error', { message: err.message });
+  });
+
+  ipcMain.handle('update:check', async () => {
+    if (!app.isPackaged) return { ok: false, reason: 'dev' };
+    try {
+      await autoUpdater.checkForUpdates();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle('update:download', async () => {
+    try {
+      await autoUpdater.downloadUpdate();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+  ipcMain.handle('update:install', () => {
+    autoUpdater.quitAndInstall();
+    return true;
+  });
+}
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null); // убираем стандартный навбар File/Edit/View/…
 
@@ -126,7 +175,13 @@ app.whenReady().then(() => {
     }
   });
 
+  setupAutoUpdater();
+
   createWindow(loadData());
+  if (app.isPackaged) {
+    // Небольшая задержка, чтобы не мешать первому рендеру окна.
+    setTimeout(() => autoUpdater.checkForUpdates().catch((err) => console.error('[autoUpdater] startup check:', err.message)), 3000);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(loadData());

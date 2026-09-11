@@ -265,6 +265,23 @@ body.nav-collapsed .nav-item .nav-label { opacity: 0; }
 .nav-item:active { transform: scale(0.98); }
 .nav-item.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
 
+.nav-update {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  animation: popIn 0.2s var(--ease);
+}
+.nav-update:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.nav-update.downloading { pointer-events: none; opacity: 0.75; }
+.nav-update .nav-progress {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+
 .nav-items { display: flex; flex-direction: column; gap: 3px; }
 .nav-spacer { flex: 1; }
 

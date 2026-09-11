@@ -72,6 +72,9 @@ ipcMain.handle('data:save', (_e, d) => { store = d; return true; });
 ipcMain.handle('clipboard:write', () => true);
 ipcMain.handle('export:xlsx', () => ({ ok: false, canceled: true }));
 ipcMain.handle('theme:set-overlay', () => true);
+ipcMain.handle('update:check', () => ({ ok: false, reason: 'dev' }));
+ipcMain.handle('update:download', () => ({ ok: true }));
+ipcMain.handle('update:install', () => true);
 
 async function capture(win, file) {
   await new Promise((r) => setTimeout(r, 500));

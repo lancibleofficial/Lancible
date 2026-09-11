@@ -45,6 +45,7 @@ const T = {
     'search.task_sub': 'проект: {name}',
     'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.collapse': 'Свернуть',
     'nav.language': 'Язык',
+    'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
     'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
@@ -132,6 +133,7 @@ const T = {
     'search.task_sub': 'project: {name}',
     'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.collapse': 'Collapse',
     'nav.language': 'Language',
+    'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Restart to update',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
     'stats.month': 'earned this month', 'stats.done': 'tasks done',
@@ -219,6 +221,7 @@ const T = {
     'search.task_sub': 'проєкт: {name}',
     'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.collapse': 'Згорнути',
     'nav.language': 'Мова',
+    'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
     'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
@@ -306,6 +309,7 @@ const T = {
     'search.task_sub': 'жоба: {name}',
     'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.collapse': 'Жию',
     'nav.language': 'Тіл',
+    'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
     'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
@@ -445,6 +449,8 @@ const el = {
 
   langToggle: $('lang-toggle'), langLabel: $('lang-label'),
   themeTabs: [...document.querySelectorAll('.theme-tab')],
+
+  updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
 
   topbar: $('topbar'),
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
@@ -743,6 +749,7 @@ function setLang(code) {
   el.langLabel.textContent = LANG_NAMES[code] || code;
   applyStaticTranslations();
   buildCurrencyOptions();
+  renderUpdateBtn();
   render();
   scheduleSave();
 }
@@ -755,6 +762,44 @@ function openLangMenu() {
   openMenu(el.langToggle, items);
 }
 el.langToggle.addEventListener('click', openLangMenu);
+
+// ---------------------------------------------------------------------------
+// Автообновление
+// ---------------------------------------------------------------------------
+
+let updateState = 'idle'; // idle | available | downloading | ready
+
+function renderUpdateBtn() {
+  el.updateBtn.hidden = updateState === 'idle';
+  el.updateBtn.classList.toggle('downloading', updateState === 'downloading');
+  const key = updateState === 'ready' ? 'update.ready'
+    : updateState === 'downloading' ? 'update.downloading'
+    : 'update.available';
+  el.updateBtnLabel.textContent = t(key);
+}
+
+if (window.api.onUpdateAvailable) {
+  window.api.onUpdateAvailable(() => { updateState = 'available'; renderUpdateBtn(); });
+  window.api.onUpdateProgress(({ percent }) => { el.updateProgress.style.width = `${Math.round(percent || 0)}%`; });
+  window.api.onUpdateReady(() => { updateState = 'ready'; renderUpdateBtn(); });
+  window.api.onUpdateError(() => { updateState = 'idle'; renderUpdateBtn(); });
+}
+
+el.updateBtn.addEventListener('click', async () => {
+  if (updateState === 'available') {
+    updateState = 'downloading';
+    renderUpdateBtn();
+    try {
+      const r = await window.api.downloadUpdate();
+      if (!r || !r.ok) { updateState = 'available'; renderUpdateBtn(); }
+    } catch {
+      updateState = 'available';
+      renderUpdateBtn();
+    }
+  } else if (updateState === 'ready') {
+    window.api.installUpdate();
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Сохранение

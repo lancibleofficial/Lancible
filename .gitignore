@@ -20,6 +20,9 @@ scripts/_smoke-export-*.xlsx
 # Данные пользователя (на случай локального запуска рядом с исходниками)
 data.json
 
+# Секреты для scripts/publish-release.js (service_role-ключ Supabase) — никогда не коммитить
+.env
+
 # ОС/редакторы
 .DS_Store
 Thumbs.db
