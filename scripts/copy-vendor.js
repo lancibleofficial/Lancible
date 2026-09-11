@@ -11,6 +11,9 @@ const fontDest = path.join(dest, 'fonts');
 const quill = [
   [path.join(root, 'node_modules', 'quill', 'dist', 'quill.js'), 'quill.js'],
   [path.join(root, 'node_modules', 'quill', 'dist', 'quill.snow.css'), 'quill.snow.css'],
+  // UMD-сборка supabase-js — рендерер грузит её как обычный <script> (contextIsolation
+  // не даёт require() из node_modules напрямую), даёт глобальный window.supabase.createClient().
+  [path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'supabase.js'],
 ];
 
 // Basique Pro: Basique_4=Thin(100) 3=Light(300) 2=Regular(400) 1=Bold(700) (без Black) → берём woff2.

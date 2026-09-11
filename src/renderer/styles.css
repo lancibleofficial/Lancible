@@ -894,7 +894,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-item .ctx-check { color: var(--accent); flex: none; }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
-#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop {
+#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
@@ -916,7 +916,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   display: block; font-size: 11px; color: var(--text-dim); margin: 10px 0 5px;
 }
 #modal-input, .modal-lg input[type='text'], .modal-lg textarea,
-#sdlg-backdrop input {
+#sdlg-backdrop input, #auth-backdrop input {
   width: 100%;
   background: var(--panel-2);
   color: var(--text);
@@ -929,7 +929,19 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   resize: vertical;
   transition: border-color 0.12s var(--ease);
 }
-#modal-input:focus, .modal-lg input:focus, .modal-lg textarea:focus, #sdlg-backdrop input:focus { border-color: var(--accent); }
+#modal-input:focus, .modal-lg input:focus, .modal-lg textarea:focus, #sdlg-backdrop input:focus, #auth-backdrop input:focus { border-color: var(--accent); }
+
+.auth-sub { margin: -4px 0 4px; font-size: 12px; line-height: 1.4; }
+.auth-error { margin: 8px 0 0; font-size: 12px; color: var(--danger); }
+#auth-signup-offer { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
+.auth-usecases { display: flex; flex-wrap: wrap; gap: 6px; }
+.auth-usecase {
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text-dim);
+  border-radius: 7px; padding: 7px 11px; font-size: 12.5px; font-family: inherit; cursor: pointer;
+  transition: border-color 0.12s var(--ease), color 0.12s var(--ease), background 0.12s var(--ease);
+}
+.auth-usecase:hover { border-color: var(--border-strong); color: var(--text); }
+.auth-usecase.on { background: color-mix(in srgb, var(--accent) 15%, transparent); border-color: var(--accent); color: var(--accent); }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .modal-buttons button {
   border: 1px solid var(--border); background: var(--panel-2); color: var(--text);

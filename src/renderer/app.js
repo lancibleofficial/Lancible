@@ -27,6 +27,19 @@ const CURRENCIES = {
 const SYM2CODE = { '$': 'USD', '€': 'EUR', '£': 'GBP', '₽': 'RUB', '₸': 'KZT', '₴': 'UAH', '₺': 'TRY', 'Br': 'BYN', 'zł': 'PLN' };
 
 // ---------------------------------------------------------------------------
+// Аккаунт (Supabase) — вход опционален, приложение и без него полностью
+// рабочее офлайн. Синхронизация данных — отдельный, более поздний этап;
+// пока что вход только создаёт профиль (имя + для чего используют прилу).
+// anon-ключ намеренно зашит в клиент — это публичный, предназначенный для
+// встраивания в приложения ключ (защита данных — через RLS на стороне БД,
+// не через секретность этого ключа).
+// ---------------------------------------------------------------------------
+
+const SUPABASE_URL = 'https://yiglgfkjjvwijukdzutw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xnZmtqanZ3aWp1a2R6dXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjM5NjYsImV4cCI6MjEwNDY5OTk2Nn0.SF_vpL9F_CBf81NXIhcH_ZUWVoRtt3XoPpQjkDjPOck';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ---------------------------------------------------------------------------
 // Интернационализация (i18n)
 // ---------------------------------------------------------------------------
 
@@ -93,6 +106,18 @@ const T = {
     'calendar.for_month': 'За месяц', 'calendar.for_week': 'За неделю',
     'calendar.for_period': 'За период: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперёд', 'common.cancel': 'Отмена', 'common.ok': 'ОК',
+    'common.skip': 'Пропустить', 'common.continue': 'Продолжить',
+    'auth.title': 'Вход', 'auth.subtitle': 'Необязательно — приложение и так работает офлайн. Войдите, чтобы синхронизировать данные между устройствами.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
+    'auth.no_account': 'Нет аккаунта с таким email.', 'auth.create_account': 'Создать аккаунт',
+    'auth.sign_in': 'Войти', 'auth.sign_in_nav': 'Войти', 'auth.sign_out': 'Выйти',
+    'auth.onboarding_title': 'Расскажите о себе', 'auth.name_label': 'Как вас зовут?',
+    'auth.usecase_label': 'Для чего будете использовать Lancible?',
+    'auth.usecase_personal': 'Личные задачи', 'auth.usecase_freelance': 'Фриланс / клиенты',
+    'auth.usecase_team': 'Работа в команде', 'auth.usecase_other': 'Другое',
+    'auth.error_invalid': 'Неверный email или пароль.', 'auth.error_generic': 'Что-то пошло не так. Попробуйте ещё раз.',
+    'auth.signed_in_toast': 'Вход выполнен', 'auth.signed_out_toast': 'Вы вышли из аккаунта',
+    'auth.confirm_title': 'Проверьте почту', 'auth.confirm_text': 'Мы отправили письмо на {email} — перейдите по ссылке в нём, потом войдите тем же паролем.',
     'common.save': 'Сохранить', 'common.delete_q': 'Удалить?', 'common.delete': 'Удалить',
     'confirm.delete_task_named': 'Удалить «{name}»? Отменить нельзя.',
     'confirm.delete_task': 'Удалить эту задачу? Отменить нельзя.',
@@ -181,6 +206,18 @@ const T = {
     'calendar.for_month': 'This month', 'calendar.for_week': 'This week',
     'calendar.for_period': 'Period: {time} · {money}',
     'common.back': 'Back', 'common.forward': 'Forward', 'common.cancel': 'Cancel', 'common.ok': 'OK',
+    'common.skip': 'Skip', 'common.continue': 'Continue',
+    'auth.title': 'Sign in', 'auth.subtitle': 'Optional — the app works offline either way. Sign in to sync your data across devices.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Password',
+    'auth.no_account': 'No account with this email yet.', 'auth.create_account': 'Create account',
+    'auth.sign_in': 'Sign in', 'auth.sign_in_nav': 'Sign in', 'auth.sign_out': 'Sign out',
+    'auth.onboarding_title': 'Tell us about yourself', 'auth.name_label': "What's your name?",
+    'auth.usecase_label': 'What will you use Lancible for?',
+    'auth.usecase_personal': 'Personal tasks', 'auth.usecase_freelance': 'Freelance / clients',
+    'auth.usecase_team': 'Team work', 'auth.usecase_other': 'Other',
+    'auth.error_invalid': 'Wrong email or password.', 'auth.error_generic': 'Something went wrong. Please try again.',
+    'auth.signed_in_toast': 'Signed in', 'auth.signed_out_toast': 'Signed out',
+    'auth.confirm_title': 'Check your email', 'auth.confirm_text': "We've sent a confirmation link to {email} — follow it, then sign in with the same password.",
     'common.save': 'Save', 'common.delete_q': 'Delete?', 'common.delete': 'Delete',
     'confirm.delete_task_named': 'Delete "{name}"? This can’t be undone.',
     'confirm.delete_task': 'Delete this task? This can’t be undone.',
@@ -269,6 +306,18 @@ const T = {
     'calendar.for_month': 'За місяць', 'calendar.for_week': 'За тиждень',
     'calendar.for_period': 'За період: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперед', 'common.cancel': 'Скасувати', 'common.ok': 'ОК',
+    'common.skip': 'Пропустити', 'common.continue': 'Продовжити',
+    'auth.title': 'Вхід', 'auth.subtitle': 'Необов’язково — застосунок і так працює офлайн. Увійдіть, щоб синхронізувати дані між пристроями.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
+    'auth.no_account': 'Немає акаунта з таким email.', 'auth.create_account': 'Створити акаунт',
+    'auth.sign_in': 'Увійти', 'auth.sign_in_nav': 'Увійти', 'auth.sign_out': 'Вийти',
+    'auth.onboarding_title': 'Розкажіть про себе', 'auth.name_label': 'Як вас звати?',
+    'auth.usecase_label': 'Для чого будете використовувати Lancible?',
+    'auth.usecase_personal': 'Особисті завдання', 'auth.usecase_freelance': 'Фриланс / клієнти',
+    'auth.usecase_team': 'Робота в команді', 'auth.usecase_other': 'Інше',
+    'auth.error_invalid': 'Невірний email або пароль.', 'auth.error_generic': 'Щось пішло не так. Спробуйте ще раз.',
+    'auth.signed_in_toast': 'Вхід виконано', 'auth.signed_out_toast': 'Ви вийшли з акаунта',
+    'auth.confirm_title': 'Перевірте пошту', 'auth.confirm_text': 'Ми надіслали лист на {email} — перейдіть за посиланням у ньому, потім увійдіть тим самим паролем.',
     'common.save': 'Зберегти', 'common.delete_q': 'Видалити?', 'common.delete': 'Видалити',
     'confirm.delete_task_named': 'Видалити «{name}»? Скасувати не можна.',
     'confirm.delete_task': 'Видалити це завдання? Скасувати не можна.',
@@ -357,6 +406,18 @@ const T = {
     'calendar.for_month': 'Ай бойынша', 'calendar.for_week': 'Апта бойынша',
     'calendar.for_period': 'Кезең бойынша: {time} · {money}',
     'common.back': 'Артқа', 'common.forward': 'Алға', 'common.cancel': 'Бас тарту', 'common.ok': 'ОК',
+    'common.skip': 'Өткізіп жіберу', 'common.continue': 'Жалғастыру',
+    'auth.title': 'Кіру', 'auth.subtitle': 'Міндетті емес — қолданба офлайн жұмыс істей береді. Құрылғылар арасында деректерді синхрондау үшін кіріңіз.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Құпия сөз',
+    'auth.no_account': 'Бұл email-мен аккаунт жоқ.', 'auth.create_account': 'Аккаунт құру',
+    'auth.sign_in': 'Кіру', 'auth.sign_in_nav': 'Кіру', 'auth.sign_out': 'Шығу',
+    'auth.onboarding_title': 'Өзіңіз туралы айтыңыз', 'auth.name_label': 'Атыңыз кім?',
+    'auth.usecase_label': 'Lancible-ды не үшін пайдаланасыз?',
+    'auth.usecase_personal': 'Жеке тапсырмалар', 'auth.usecase_freelance': 'Фриланс / клиенттер',
+    'auth.usecase_team': 'Команда жұмысы', 'auth.usecase_other': 'Басқа',
+    'auth.error_invalid': 'Email немесе құпия сөз қате.', 'auth.error_generic': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',
+    'auth.signed_in_toast': 'Кіру сәтті өтті', 'auth.signed_out_toast': 'Аккаунттан шықтыңыз',
+    'auth.confirm_title': 'Поштаны тексеріңіз', 'auth.confirm_text': '{email} мекенжайына хат жібердік — сілтеме бойынша өтіп, содан кейін сол құпия сөзбен кіріңіз.',
     'common.save': 'Сақтау', 'common.delete_q': 'Жою керек пе?', 'common.delete': 'Жою',
     'confirm.delete_task_named': '«{name}» жойылсын ба? Қайтару мүмкін емес.',
     'confirm.delete_task': 'Бұл тапсырма жойылсын ба? Қайтару мүмкін емес.',
@@ -451,6 +512,16 @@ const el = {
   themeTabs: [...document.querySelectorAll('.theme-tab')],
 
   updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
+
+  accountBtn: $('account-btn'), accountLabel: $('account-label'),
+  authBackdrop: $('auth-backdrop'),
+  authStepCredentials: $('auth-step-credentials'), authStepOnboarding: $('auth-step-onboarding'),
+  authStepConfirm: $('auth-step-confirm'), authConfirmText: $('auth-confirm-text'), authConfirmOk: $('auth-confirm-ok'),
+  authEmail: $('auth-email'), authPassword: $('auth-password'), authError: $('auth-error'),
+  authSignupOffer: $('auth-signup-offer'), authSignupBtn: $('auth-signup-btn'),
+  authCancel: $('auth-cancel'), authSubmit: $('auth-submit'),
+  authName: $('auth-name'), authUsecases: $('auth-usecases'),
+  authOnboardingSkip: $('auth-onboarding-skip'), authOnboardingSave: $('auth-onboarding-save'),
 
   topbar: $('topbar'),
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
@@ -750,6 +821,7 @@ function setLang(code) {
   applyStaticTranslations();
   buildCurrencyOptions();
   renderUpdateBtn();
+  renderAccountBtn();
   render();
   scheduleSave();
 }
@@ -800,6 +872,188 @@ el.updateBtn.addEventListener('click', async () => {
     window.api.installUpdate();
   }
 });
+
+// ---------------------------------------------------------------------------
+// Аккаунт: вход/регистрация (email+пароль) и онбординг. Вход опционален —
+// приложение полностью работает офлайн без него; синхронизация данных
+// (заливка/подтяжка проектов и задач) — отдельный, более поздний этап.
+// ---------------------------------------------------------------------------
+
+let currentUser = null; // { id, email, name } | null
+const USE_CASES = ['personal', 'freelance', 'team', 'other'];
+let selectedUseCase = null;
+
+function renderAccountBtn() {
+  el.accountLabel.textContent = currentUser ? (currentUser.name || currentUser.email) : t('auth.sign_in_nav');
+}
+
+function buildUsecaseButtons() {
+  el.authUsecases.innerHTML = '';
+  for (const key of USE_CASES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'auth-usecase' + (selectedUseCase === key ? ' on' : '');
+    b.textContent = t(`auth.usecase_${key}`);
+    b.addEventListener('click', () => { selectedUseCase = key; buildUsecaseButtons(); });
+    el.authUsecases.appendChild(b);
+  }
+}
+
+function showAuthStep(step) {
+  el.authStepCredentials.hidden = step !== 'credentials';
+  el.authStepConfirm.hidden = step !== 'confirm';
+  el.authStepOnboarding.hidden = step !== 'onboarding';
+}
+function openAuthModal() {
+  el.authError.hidden = true;
+  el.authSignupOffer.hidden = true;
+  el.authEmail.value = '';
+  el.authPassword.value = '';
+  showAuthStep('credentials');
+  el.authBackdrop.hidden = false;
+  setTimeout(() => el.authEmail.focus(), 30);
+}
+function closeAuthModal() {
+  el.authBackdrop.hidden = true;
+}
+function showAuthError(key) {
+  el.authError.textContent = t(key);
+  el.authError.hidden = false;
+}
+function openOnboarding() {
+  selectedUseCase = null;
+  el.authName.value = '';
+  buildUsecaseButtons();
+  showAuthStep('onboarding');
+}
+
+/** После успешного входа: если для пользователя ещё нет профиля — это его
+ * самый первый настоящий вход (сразу после регистрации+подтверждения email,
+ * или профиль по какой-то причине не сохранился раньше) — просим имя и
+ * назначение прямо сейчас, а не пытаемся это сделать сразу в момент signUp():
+ * пока email не подтверждён, сессии ещё нет и сохранить профиль всё равно
+ * нечем. */
+async function afterSignedIn(opts) {
+  const silent = !!(opts && opts.silent); // true при тихом восстановлении сессии на старте — без модалки/тоста
+  const { data } = await sb.auth.getUser();
+  const user = data && data.user;
+  if (!user) return;
+  let profile = null;
+  try {
+    const { data: row } = await sb.from('profiles').select('name').eq('id', user.id).maybeSingle();
+    profile = row;
+  } catch (err) { console.error('Не удалось прочитать профиль:', err); }
+  if (!profile) {
+    if (!silent) openOnboarding();
+    return;
+  }
+  currentUser = { id: user.id, email: user.email, name: profile.name };
+  renderAccountBtn();
+  if (!silent) {
+    closeAuthModal();
+    toast(t('auth.signed_in_toast'));
+  }
+}
+
+async function handleAuthSubmit() {
+  const email = el.authEmail.value.trim();
+  const password = el.authPassword.value;
+  if (!email || !password) return;
+  el.authError.hidden = true;
+  el.authSignupOffer.hidden = true;
+  el.authSubmit.disabled = true;
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (/invalid login credentials/i.test(error.message || '')) el.authSignupOffer.hidden = false;
+      else showAuthError('auth.error_generic');
+      return;
+    }
+    await afterSignedIn();
+  } catch {
+    showAuthError('auth.error_generic');
+  } finally {
+    el.authSubmit.disabled = false;
+  }
+}
+
+async function handleSignup() {
+  const email = el.authEmail.value.trim();
+  const password = el.authPassword.value;
+  if (!email || !password) return;
+  el.authSignupBtn.disabled = true;
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) { showAuthError('auth.error_generic'); return; }
+    if (data.session) {
+      // подтверждение email отключено в проекте — сессия уже есть сразу.
+      await afterSignedIn();
+    } else {
+      el.authConfirmText.textContent = t('auth.confirm_text', { email });
+      showAuthStep('confirm');
+    }
+  } catch {
+    showAuthError('auth.error_generic');
+  } finally {
+    el.authSignupBtn.disabled = false;
+  }
+}
+
+async function saveOnboarding() {
+  try {
+    const { data } = await sb.auth.getUser();
+    const user = data && data.user;
+    if (user) {
+      await sb.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        name: el.authName.value.trim() || null,
+        use_case: selectedUseCase,
+      });
+      currentUser = { id: user.id, email: user.email, name: el.authName.value.trim() || null };
+      renderAccountBtn();
+    }
+  } catch (err) { console.error('Не удалось сохранить профиль:', err); }
+  closeAuthModal();
+  toast(t('auth.signed_in_toast'));
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  renderAccountBtn();
+  toast(t('auth.signed_out_toast'));
+}
+
+el.accountBtn.addEventListener('click', () => {
+  if (currentUser) openMenu(el.accountBtn, [{ label: t('auth.sign_out'), danger: true, onClick: signOut }]);
+  else openAuthModal();
+});
+el.authCancel.addEventListener('click', closeAuthModal);
+el.authBackdrop.addEventListener('click', (e) => { if (e.target === el.authBackdrop) closeAuthModal(); });
+el.authSubmit.addEventListener('click', handleAuthSubmit);
+el.authSignupBtn.addEventListener('click', handleSignup);
+el.authOnboardingSave.addEventListener('click', saveOnboarding);
+el.authOnboardingSkip.addEventListener('click', async () => {
+  try {
+    const { data } = await sb.auth.getUser();
+    const user = data && data.user;
+    if (user) {
+      // минимальная строка профиля — иначе онбординг будет всплывать при каждом входе.
+      await sb.from('profiles').upsert({ id: user.id, email: user.email });
+      currentUser = { id: user.id, email: user.email, name: null };
+      renderAccountBtn();
+    }
+  } catch (err) { console.error('Не удалось сохранить профиль:', err); }
+  closeAuthModal();
+  toast(t('auth.signed_in_toast'));
+});
+el.authConfirmOk.addEventListener('click', closeAuthModal);
+[el.authEmail, el.authPassword].forEach((input) => {
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); });
+});
+
+sb.auth.getSession().then(({ data }) => { if (data && data.session) afterSignedIn({ silent: true }); });
 
 // ---------------------------------------------------------------------------
 // Сохранение
@@ -2754,6 +3008,7 @@ async function init() {
   applyStaticTranslations();
   applyTheme();
   buildCurrencyOptions();
+  renderAccountBtn();
   recoverActiveTimer();
   state.ui.view = 'home';
   selectedId = null;

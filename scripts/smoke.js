@@ -40,7 +40,11 @@ ipcMain.handle('export:xlsx', (_e, { defaultName, sheets }) => {
 app.whenReady().then(async () => {
   const win = new BrowserWindow({
     show: false, titleBarStyle: 'hidden',
-    webPreferences: { preload: path.join(__dirname, '..', 'src', 'preload.js'), contextIsolation: true },
+    webPreferences: {
+      preload: path.join(__dirname, '..', 'src', 'preload.js'),
+      contextIsolation: true,
+      partition: 'nopersist:smoke',
+    },
   });
   win.webContents.on('console-message', (_e, level, message, line, src) => {
     const entry = `[${level}] ${message} (${String(src).split('/').pop()}:${line})`;
@@ -71,6 +75,9 @@ app.whenReady().then(async () => {
     homeHeadWraps: getComputedStyle(document.querySelector('.home-head')).flexWrap === 'wrap',
     calNavPresent: !!document.querySelector('.cal-nav'),
     updateBtnHiddenByDefault: document.getElementById('update-btn').hidden === true,
+    supabaseClientLoaded: typeof window.supabase === 'object' && typeof window.supabase.createClient === 'function',
+    accountBtnPresent: !!document.getElementById('account-btn'),
+    authModalPresent: !!document.getElementById('auth-backdrop'),
   }))()`);
 
   const flow = await win.webContents.executeJavaScript(`(async () => {
@@ -204,6 +211,14 @@ app.whenReady().then(async () => {
     const recentCarousel = document.getElementById('recent-track').closest('.carousel');
     const [rLeft, rRight] = recentCarousel.querySelectorAll('.car-arrow');
     out.carouselArrowsHiddenWhenNoOverflow = !!rLeft && !!rRight && rLeft.hidden && rRight.hidden;
+
+    // --- диалог входа: открытие/закрытие (без реальных сетевых вызовов Supabase) ---
+    document.getElementById('account-btn').click();
+    await wait(40);
+    out.authModalOpensOnAccountClick = !$('#auth-backdrop').hidden;
+    document.getElementById('auth-cancel').click();
+    await wait(40);
+    out.authModalClosesOnCancel = $('#auth-backdrop').hidden;
 
     // --- экспорт для проверки xlsx (теперь с переведёнными заголовками) ---
     [...document.querySelectorAll('#projects-track .ptile')]

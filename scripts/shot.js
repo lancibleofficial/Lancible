@@ -91,6 +91,7 @@ app.whenReady().then(async () => {
     webPreferences: {
       preload: path.join(__dirname, '..', 'src', 'preload.js'),
       contextIsolation: true, nodeIntegration: false,
+      partition: 'nopersist:shot',
     },
   });
 

@@ -272,6 +272,34 @@ npm run build:exe
 > `electron` и `electron-winstaller` (нужен `electron-builder`'у для сборки
 > NSIS). Так надёжнее, чем распаковывать вручную.
 
+## Аккаунты и облачная синхронизация (в разработке)
+
+- Бэкенд — **Supabase** (Postgres + Auth + Storage): проект
+  `yiglgfkjjvwijukdzutw`, схема таблиц (`profiles`/`projects`/`tasks`/
+  `sessions`/`user_settings`, все с RLS `user_id = auth.uid()`) — в
+  `supabase/schema.sql`. Клиент — `@supabase/supabase-js` (UMD-сборка,
+  вендорится в `src/renderer/vendor/supabase.js` тем же `copy-vendor.js`, что и
+  Quill; `contextIsolation` не даёт использовать `require()` в рендерере,
+  поэтому подключается как обычный `<script>`).
+- **Вход опционален** — кнопка «Войти»/имя пользователя в рейле
+  (`#account-btn`), не блокирует работу офлайн.
+- Вход по **email + паролю**: одна форма на вход и регистрацию — если
+  «неверные данные», предлагается «Нет аккаунта? Создать» тем же email+
+  паролем (Supabase не даёт заранее проверить существование email — это
+  защита от enumeration-атак, так делают Slack/Notion). Проект по умолчанию
+  требует подтверждение email — если `signUp()` не вернул сессию сразу,
+  показывается экран «проверьте почту» (`#auth-step-confirm`) вместо
+  мгновенного онбординга.
+- **Онбординг** (имя + «для чего используете», для аналитики) показывается не
+  сразу после регистрации, а **при первом реальном входе с сессией** —
+  `afterSignedIn()` проверяет, есть ли уже строка в `profiles` для этого
+  `user.id`; если нет — онбординг, если есть — сразу вход. Это правильно
+  обрабатывает и случай с отложенным подтверждением email.
+- Google-вход (через системный браузер + кастомный протокол
+  `lancible://auth-callback`) и сама синхронизация данных (`projects`/
+  `tasks`/`sessions` ↔ Supabase, realtime, офлайн-очередь) — ещё не сделаны,
+  следующие этапы.
+
 ## Где хранятся данные
 
 `data.json` в папке пользовательских данных Electron:
@@ -311,12 +339,14 @@ npm run build:exe
 | `scripts/copy-vendor.js` | Копирует Quill + шрифт в `src/renderer/vendor/` (postinstall). |
 | `scripts/make-icon.js` | Генерирует `build/icon.*` из `build/logo-accent.svg` (canvas + `Path2D`/`Image`, собирает `.ico` через `png-to-ico`). |
 | `scripts/publish-release.js` | Заливает `dist/*.exe`/`latest.yml` в Supabase Storage (`npm run publish:release`). |
-| `scripts/smoke.js` | Headless-проверка UI (`npm run smoke`). |
+| `supabase/schema.sql` | Схема БД для аккаунтов/синхронизации (таблицы + RLS-политики), выполняется вручную в SQL Editor проекта. |
+| `scripts/smoke.js` | Headless-проверка UI (`npm run smoke`); окно рендерера — на изолированной сессии (`partition: 'nopersist:smoke'`), чтобы реальная Supabase-сессия из ручных прогонов не протекала между запусками. |
 | `scripts/xlsx-check.js` | Проверка генератора .xlsx (`npm run check:xlsx`). |
 
 ## Дальше (идеи на потом)
 
-- Однофайловый установщик (electron-builder / NSIS), автообновление, автозапуск.
+- Автозапуск при старте Windows.
+- Google-вход и облачная синхронизация данных между устройствами.
 - Графики (часы/деньги по неделям/месяцам), экспорт календаря за период.
 - Ставка на уровне проекта; тарифы с историей.
 - Перенос задачи между проектами, drag-and-drop порядок.
