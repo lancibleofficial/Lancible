@@ -10,9 +10,15 @@
    ≤860px — "узкий/планшет"
    ========================================================================= */
 @media (max-width: 860px) {
-  /* Главная: мини-календарь уезжает под основной контент */
+  /* Главная: мини-календарь уезжает под основной контент. flex-column +
+     min-height:100% (а не просто display:block) — чтобы #home-side, если
+     контента меньше высоты экрана, растягивался своим собственным фоном
+     до низа, а не оставлял разноцветную прогалину до таббара/края экрана. */
   #home-view {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    height: auto;
     overflow-y: auto;
   }
   #home-view .home-center {
@@ -26,6 +32,10 @@
     position: static;
   }
   #home-side {
+    /* растёт, если есть лишнее место, но никогда не сжимается меньше
+       своего реального контента (overflow-y:auto иначе даёт flex-элементу
+       автоматический min-height:0 и его может схлопнуть до нуля) */
+    flex: 1 0 auto;
     border-left: none;
     border-top: 1px solid var(--border);
   }
@@ -39,13 +49,19 @@
     min-width: 140px;
   }
 
-  /* Календарь: день/период-панель уезжает под сетку */
+  /* Календарь: день/период-панель уезжает под сетку. Тот же приём —
+     flex-column + min-height:100%, чтобы .cal-day растягивался своим фоном
+     до низа, а не оставлял серую прогалину другого цвета над таббаром. */
   .cal-grid {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
     height: auto;
     overflow-y: auto;
   }
   .cal-day {
+    /* см. комментарий у #home-side — та же ловушка overflow:auto + flex:1 */
+    flex: 1 0 auto;
     border-left: none;
     border-top: 1px solid var(--border);
   }
@@ -111,10 +127,14 @@
   .tb-rest {
     margin-left: 50px !important;
   }
+  .tb-logo {
+    border-right: none;
+    background: var(--panel-2);
+  }
   .tb-search {
     max-width: none;
     height: 38px;
-    margin: auto 12px auto 8px;
+    margin: auto 12px auto 10px;
     border-radius: 12px;
     padding: 0 13px;
   }
@@ -126,12 +146,13 @@
     font-size: 14.5px;
   }
 
-  /* Рейл полностью скрыт — навигация через нижнюю плашку */
+  /* Рейл полностью скрыт — навигация через нижнюю плашку. .tb-rest сюда
+     специально не входит — ему по-прежнему нужен отступ под лого (задан
+     чуть выше), сбрасывать нужно только отступ #main под сам рейл. */
   #navrail {
     display: none;
   }
-  #main,
-  .tb-rest {
+  #main {
     margin-left: 0 !important;
   }
 
@@ -193,9 +214,12 @@
   #mobile-tabbar .nav-label {
     opacity: 1 !important;
   }
-  #shell,
-  #main {
-    padding-bottom: 62px;
+  /* Место под фиксированную нижнюю плашку — на самих скролл-контейнерах
+     (а не на #main целиком), чтобы у каждого свой фон дотягивался до низа
+     без разноцветных прогалин чужого цвета над таббаром. */
+  #home-view,
+  .cal-grid {
+    padding-bottom: 70px;
   }
   #toast {
     bottom: 76px;
@@ -255,6 +279,28 @@
     to { transform: translateY(0); }
   }
 
+  /* Кнопки внутри шторок — крупнее и на всю ширину, не сжаты по контенту */
+  .modal-buttons {
+    gap: 10px;
+  }
+  .modal-buttons button {
+    flex: 1;
+    padding: 13px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+
+  /* Карточки проектов — в один столбец на всю ширину вместо сминающейся
+     wrap-сетки под 250px-плитки */
+  .projects-grid {
+    flex-direction: column;
+  }
+  .projects-grid .ptile,
+  .projects-grid .ptile-add {
+    width: 100% !important;
+    flex: none !important;
+  }
+
   /* --- 2. Меньше отступов по краям --- */
   .home-main {
     padding: 0 14px 16px;
@@ -311,19 +357,28 @@
     display: inline;
   }
 
-  /* Проект: список задач и деталь — по одному пейну за раз (master-detail) */
+  /* Проект: список задач и деталь — по одному пейну за раз (master-detail).
+     flex, а не block — иначе #sidebar/#detail теряют высотное растяжение,
+     которое на десктопе давал grid-template-columns, и редактор перестаёт
+     дотягиваться до низа страницы. */
   #project-view {
-    display: block;
+    display: flex;
+  }
+  #sidebar,
+  #detail {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
   }
   #sidebar {
-    width: auto;
-    height: 100%;
+    padding-bottom: 70px;
   }
   body.has-selected-task #sidebar {
     display: none;
   }
   #detail {
     display: none;
+    padding-bottom: 70px;
   }
   body.has-selected-task #detail {
     display: flex;
@@ -352,6 +407,19 @@
   .cal-cell {
     min-height: 54px;
     padding: 4px;
+  }
+  /* --- 6. Табы Месяц/Неделя/День — на всю ширину --- */
+  .cal-modes {
+    width: 100%;
+  }
+  .cal-modes button {
+    flex: 1;
+  }
+  /* --- 7. Кнопки-инпуты даты/времени покрупнее --- */
+  .dp-btn {
+    padding: 11px 14px;
+    font-size: 14px;
+    min-width: 0;
   }
   .cc-num {
     font-size: 14px;
