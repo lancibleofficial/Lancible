@@ -932,6 +932,21 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 #modal-input:focus, .modal-lg input:focus, .modal-lg textarea:focus, #sdlg-backdrop input:focus, #auth-backdrop input:focus { border-color: var(--accent); }
 
 .auth-sub { margin: -4px 0 4px; font-size: 12px; line-height: 1.4; }
+.auth-google-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+  border: 1px solid var(--border); background: var(--panel-2); color: var(--text);
+  border-radius: 8px; padding: 9px 12px; font-size: 13px; font-family: inherit; font-weight: 500;
+  cursor: pointer; margin-top: 6px;
+  transition: border-color 0.12s var(--ease), background 0.12s var(--ease);
+}
+.auth-google-btn:hover { border-color: var(--border-strong); background: var(--panel); }
+.auth-google-btn:active { transform: scale(0.98); }
+.auth-google-btn:disabled { opacity: 0.6; cursor: default; }
+.auth-divider {
+  display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 11px;
+  color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .auth-error { margin: 8px 0 0; font-size: 12px; color: var(--danger); }
 #auth-signup-offer { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
 .auth-usecases { display: flex; flex-wrap: wrap; gap: 6px; }

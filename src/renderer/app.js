@@ -37,7 +37,9 @@ const SYM2CODE = { '$': 'USD', '€': 'EUR', '£': 'GBP', '₽': 'RUB', '₸': '
 
 const SUPABASE_URL = 'https://yiglgfkjjvwijukdzutw.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xnZmtqanZ3aWp1a2R6dXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjM5NjYsImV4cCI6MjEwNDY5OTk2Nn0.SF_vpL9F_CBf81NXIhcH_ZUWVoRtt3XoPpQjkDjPOck';
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { flowType: 'pkce', detectSessionInUrl: false, persistSession: true, autoRefreshToken: true },
+});
 
 // ---------------------------------------------------------------------------
 // Интернационализация (i18n)
@@ -118,6 +120,11 @@ const T = {
     'auth.error_invalid': 'Неверный email или пароль.', 'auth.error_generic': 'Что-то пошло не так. Попробуйте ещё раз.',
     'auth.signed_in_toast': 'Вход выполнен', 'auth.signed_out_toast': 'Вы вышли из аккаунта',
     'auth.confirm_title': 'Проверьте почту', 'auth.confirm_text': 'Мы отправили письмо на {email} — перейдите по ссылке в нём, потом войдите тем же паролем.',
+    'auth.google_btn': 'Войти через Google', 'auth.or_divider': 'или',
+    'sync.conflict_title': 'Какие данные оставить?',
+    'sync.conflict_text': 'На сервере уже есть сохранённые данные, а на этом компьютере — свои. Какие использовать?',
+    'sync.use_server': 'С сервера', 'sync.use_local': 'С этого компьютера',
+    'sync.updated_toast': 'Данные обновлены с другого устройства',
     'common.save': 'Сохранить', 'common.delete_q': 'Удалить?', 'common.delete': 'Удалить',
     'confirm.delete_task_named': 'Удалить «{name}»? Отменить нельзя.',
     'confirm.delete_task': 'Удалить эту задачу? Отменить нельзя.',
@@ -218,6 +225,11 @@ const T = {
     'auth.error_invalid': 'Wrong email or password.', 'auth.error_generic': 'Something went wrong. Please try again.',
     'auth.signed_in_toast': 'Signed in', 'auth.signed_out_toast': 'Signed out',
     'auth.confirm_title': 'Check your email', 'auth.confirm_text': "We've sent a confirmation link to {email} — follow it, then sign in with the same password.",
+    'auth.google_btn': 'Sign in with Google', 'auth.or_divider': 'or',
+    'sync.conflict_title': 'Which data should we keep?',
+    'sync.conflict_text': 'There is already saved data on the server, and this computer has its own too. Which should we use?',
+    'sync.use_server': 'From the server', 'sync.use_local': 'From this computer',
+    'sync.updated_toast': 'Data updated from another device',
     'common.save': 'Save', 'common.delete_q': 'Delete?', 'common.delete': 'Delete',
     'confirm.delete_task_named': 'Delete "{name}"? This can’t be undone.',
     'confirm.delete_task': 'Delete this task? This can’t be undone.',
@@ -318,6 +330,11 @@ const T = {
     'auth.error_invalid': 'Невірний email або пароль.', 'auth.error_generic': 'Щось пішло не так. Спробуйте ще раз.',
     'auth.signed_in_toast': 'Вхід виконано', 'auth.signed_out_toast': 'Ви вийшли з акаунта',
     'auth.confirm_title': 'Перевірте пошту', 'auth.confirm_text': 'Ми надіслали лист на {email} — перейдіть за посиланням у ньому, потім увійдіть тим самим паролем.',
+    'auth.google_btn': 'Увійти через Google', 'auth.or_divider': 'або',
+    'sync.conflict_title': 'Які дані залишити?',
+    'sync.conflict_text': 'На сервері вже є збережені дані, а на цьому комп’ютері — свої. Які використати?',
+    'sync.use_server': 'З сервера', 'sync.use_local': 'З цього комп’ютера',
+    'sync.updated_toast': 'Дані оновлено з іншого пристрою',
     'common.save': 'Зберегти', 'common.delete_q': 'Видалити?', 'common.delete': 'Видалити',
     'confirm.delete_task_named': 'Видалити «{name}»? Скасувати не можна.',
     'confirm.delete_task': 'Видалити це завдання? Скасувати не можна.',
@@ -418,6 +435,11 @@ const T = {
     'auth.error_invalid': 'Email немесе құпия сөз қате.', 'auth.error_generic': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',
     'auth.signed_in_toast': 'Кіру сәтті өтті', 'auth.signed_out_toast': 'Аккаунттан шықтыңыз',
     'auth.confirm_title': 'Поштаны тексеріңіз', 'auth.confirm_text': '{email} мекенжайына хат жібердік — сілтеме бойынша өтіп, содан кейін сол құпия сөзбен кіріңіз.',
+    'auth.google_btn': 'Google арқылы кіру', 'auth.or_divider': 'немесе',
+    'sync.conflict_title': 'Қай деректерді қалдырамыз?',
+    'sync.conflict_text': 'Серверде деректер бар, осы компьютерде де өз деректері бар. Қайсысын пайдаланамыз?',
+    'sync.use_server': 'Сервердегі', 'sync.use_local': 'Осы компьютердегі',
+    'sync.updated_toast': 'Деректер басқа құрылғыдан жаңартылды',
     'common.save': 'Сақтау', 'common.delete_q': 'Жою керек пе?', 'common.delete': 'Жою',
     'confirm.delete_task_named': '«{name}» жойылсын ба? Қайтару мүмкін емес.',
     'confirm.delete_task': 'Бұл тапсырма жойылсын ба? Қайтару мүмкін емес.',
@@ -517,6 +539,7 @@ const el = {
   authBackdrop: $('auth-backdrop'),
   authStepCredentials: $('auth-step-credentials'), authStepOnboarding: $('auth-step-onboarding'),
   authStepConfirm: $('auth-step-confirm'), authConfirmText: $('auth-confirm-text'), authConfirmOk: $('auth-confirm-ok'),
+  authGoogleBtn: $('auth-google-btn'),
   authEmail: $('auth-email'), authPassword: $('auth-password'), authError: $('auth-error'),
   authSignupOffer: $('auth-signup-offer'), authSignupBtn: $('auth-signup-btn'),
   authCancel: $('auth-cancel'), authSubmit: $('auth-submit'),
@@ -766,9 +789,12 @@ const anyDialogOpen = () =>
 // ---------------------------------------------------------------------------
 
 let confirmResolve = null;
-function confirmDialog(message, { okLabel } = {}) {
+function confirmDialog(message, { okLabel, cancelLabel, title, danger = true } = {}) {
+  el.confirmTitle.textContent = title || t('common.delete_q');
   el.confirmText.textContent = message;
   el.confirmOk.textContent = okLabel || t('common.delete');
+  el.confirmCancel.textContent = cancelLabel || t('common.cancel');
+  el.confirmOk.classList.toggle('confirm-danger', danger);
   el.confirmBackdrop.hidden = false;
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeConfirm(false); }
@@ -949,6 +975,7 @@ async function afterSignedIn(opts) {
   }
   currentUser = { id: user.id, email: user.email, name: profile.name };
   renderAccountBtn();
+  await syncOnSignIn();
   if (!silent) {
     closeAuthModal();
     toast(t('auth.signed_in_toast'));
@@ -1012,6 +1039,7 @@ async function saveOnboarding() {
       });
       currentUser = { id: user.id, email: user.email, name: el.authName.value.trim() || null };
       renderAccountBtn();
+      await syncOnSignIn();
     }
   } catch (err) { console.error('Не удалось сохранить профиль:', err); }
   closeAuthModal();
@@ -1020,10 +1048,47 @@ async function saveOnboarding() {
 
 async function signOut() {
   await sb.auth.signOut();
+  unsubscribeSyncRealtime();
   currentUser = null;
   renderAccountBtn();
   toast(t('auth.signed_out_toast'));
 }
+
+async function handleGoogleSignIn() {
+  el.authGoogleBtn.disabled = true;
+  el.authError.hidden = true;
+  try {
+    const { data, error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: 'lancible://auth-callback', skipBrowserRedirect: true },
+    });
+    if (error || !data || !data.url) { showAuthError('auth.error_generic'); return; }
+    await window.api.openExternal(data.url);
+  } catch {
+    showAuthError('auth.error_generic');
+  } finally {
+    el.authGoogleBtn.disabled = false;
+  }
+}
+
+/** Колбэк системного браузера после входа через Google: main.js ловит
+ * lancible://auth-callback (по протоколу, зарегистрированному инсталлятором)
+ * и присылает его сюда через IPC — окно приложения всё это время остаётся
+ * открытым, менять код на сессию тем же клиентом (PKCE) можно прямо здесь. */
+window.api.onOAuthCallback(async ({ url }) => {
+  let code = null;
+  try {
+    code = new URL(url).searchParams.get('code');
+  } catch { /* некорректный колбэк — игнорируем */ }
+  if (!code) return;
+  try {
+    const { error } = await sb.auth.exchangeCodeForSession(code);
+    if (error) { showAuthError('auth.error_generic'); return; }
+    await afterSignedIn();
+  } catch {
+    showAuthError('auth.error_generic');
+  }
+});
 
 el.accountBtn.addEventListener('click', () => {
   if (currentUser) openMenu(el.accountBtn, [{ label: t('auth.sign_out'), danger: true, onClick: signOut }]);
@@ -1033,6 +1098,7 @@ el.authCancel.addEventListener('click', closeAuthModal);
 el.authBackdrop.addEventListener('click', (e) => { if (e.target === el.authBackdrop) closeAuthModal(); });
 el.authSubmit.addEventListener('click', handleAuthSubmit);
 el.authSignupBtn.addEventListener('click', handleSignup);
+el.authGoogleBtn.addEventListener('click', handleGoogleSignIn);
 el.authOnboardingSave.addEventListener('click', saveOnboarding);
 el.authOnboardingSkip.addEventListener('click', async () => {
   try {
@@ -1056,6 +1122,123 @@ el.authConfirmOk.addEventListener('click', closeAuthModal);
 sb.auth.getSession().then(({ data }) => { if (data && data.session) afterSignedIn({ silent: true }); });
 
 // ---------------------------------------------------------------------------
+// Синхронизация данных (проекты/задачи) с Supabase — только для вошедших.
+// Хранится одним JSON-документом на пользователя (таблица sync_state), а не
+// разложено по реляционным таблицам: это ровно то же самое, что уже целиком
+// сохраняется локально в data.json, поэтому не потребовалось менять ни одну
+// точку мутации state.projects/state.tasks. activeTimer/settings/ui
+// намеренно НЕ синхронизируются — это данные конкретного устройства.
+// ---------------------------------------------------------------------------
+
+const SYNC_CLIENT_ID = uid(); // отличает собственные правки от чужих в realtime-подписке
+let syncChannel = null;
+let syncDirty = false;
+let syncRetryTimer = null;
+// JSON последнего состояния, которое точно совпадает с сервером (свой
+// успешный пуш или только что подтянутые чужие данные) — pushSyncState
+// сверяется с ним, чтобы не отправлять обратно то же самое, что и так
+// только что пришло. Без этой проверки два устройства бесконечно
+// перекидывались бы идентичными обновлениями по кругу (реально
+// воспроизведено при тестировании), а под нагрузкой более старое
+// сообщение могло прийти позже нового и откатить чужие изменения.
+let lastSyncedJSON = null;
+
+function syncPayload() {
+  return { projects: state.projects, tasks: state.tasks };
+}
+
+async function pushSyncState() {
+  if (!currentUser) return;
+  const payload = syncPayload();
+  const json = JSON.stringify(payload);
+  if (json === lastSyncedJSON) return; // с последнего синка ничего не поменялось
+  try {
+    const { error } = await sb.from('sync_state').upsert({
+      user_id: currentUser.id,
+      data: payload,
+      updated_at: new Date().toISOString(),
+      updated_by: SYNC_CLIENT_ID,
+    });
+    if (error) throw error;
+    lastSyncedJSON = json;
+    syncDirty = false;
+  } catch (err) {
+    console.error('Не удалось синхронизировать данные:', err);
+    syncDirty = true;
+    scheduleSyncRetry();
+  }
+}
+
+function scheduleSyncRetry() {
+  clearTimeout(syncRetryTimer);
+  syncRetryTimer = setTimeout(() => { if (syncDirty && currentUser) pushSyncState(); }, 15000);
+}
+window.addEventListener('online', () => { if (syncDirty && currentUser) pushSyncState(); });
+
+function applyRemoteData(data) {
+  state.projects = Array.isArray(data && data.projects) ? data.projects : [];
+  state.tasks = Array.isArray(data && data.tasks) ? data.tasks : [];
+  if (selectedId && !getTask(selectedId)) selectedId = null;
+  if (state.ui.projectId && !getProject(state.ui.projectId)) {
+    state.ui.view = 'home';
+    state.ui.projectId = null;
+  }
+  lastSyncedJSON = JSON.stringify(syncPayload());
+  render();
+  scheduleSave(); // сохраняем локально; pushSyncState сам не отправит лишнего — см. lastSyncedJSON
+}
+
+/** При входе: если на сервере ничего нет — заливаем локальные данные; если
+ * локально пусто — просто подтягиваем с сервера; если данные есть и там, и
+ * там — спрашиваем пользователя (нетривиальный случай первого мерджа, который
+ * план изначально откладывал на этот момент). */
+async function syncOnSignIn() {
+  let row = null;
+  try {
+    const { data, error } = await sb.from('sync_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
+    if (error) throw error;
+    row = data;
+  } catch (err) {
+    console.error('Не удалось прочитать синхронизированные данные:', err);
+    return;
+  }
+  const localHasData = state.projects.length > 0 || state.tasks.length > 0;
+  const remoteHasData = !!(row && row.data && ((row.data.projects || []).length > 0 || (row.data.tasks || []).length > 0));
+  if (!remoteHasData) {
+    if (localHasData) await pushSyncState();
+  } else if (!localHasData) {
+    applyRemoteData(row.data);
+  } else {
+    const useServer = await confirmDialog(t('sync.conflict_text'), {
+      title: t('sync.conflict_title'),
+      okLabel: t('sync.use_server'),
+      cancelLabel: t('sync.use_local'),
+      danger: false,
+    });
+    if (useServer) applyRemoteData(row.data);
+    else await pushSyncState();
+  }
+  subscribeSyncRealtime();
+}
+
+function subscribeSyncRealtime() {
+  unsubscribeSyncRealtime();
+  if (!currentUser) return;
+  syncChannel = sb
+    .channel('sync_state:' + currentUser.id)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sync_state', filter: `user_id=eq.${currentUser.id}` }, (payload) => {
+      const row = payload.new;
+      if (!row || row.updated_by === SYNC_CLIENT_ID) return; // эхо нашей же записи
+      applyRemoteData(row.data);
+      toast(t('sync.updated_toast'));
+    })
+    .subscribe();
+}
+function unsubscribeSyncRealtime() {
+  if (syncChannel) { sb.removeChannel(syncChannel); syncChannel = null; }
+}
+
+// ---------------------------------------------------------------------------
 // Сохранение
 // ---------------------------------------------------------------------------
 
@@ -1073,6 +1256,7 @@ async function saveNow() {
   savePending = false;
   try {
     await window.api.save(state);
+    if (currentUser) pushSyncState(); // не блокируем локальное сохранение сетью; сам не пришлёт лишнего — см. lastSyncedJSON
   } catch (err) {
     console.error('Не удалось сохранить данные:', err);
     toast(t('toast.save_error'));

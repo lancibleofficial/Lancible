@@ -75,6 +75,7 @@ ipcMain.handle('theme:set-overlay', () => true);
 ipcMain.handle('update:check', () => ({ ok: false, reason: 'dev' }));
 ipcMain.handle('update:download', () => ({ ok: true }));
 ipcMain.handle('update:install', () => true);
+ipcMain.handle('shell:open-external', () => true);
 
 async function capture(win, file) {
   await new Promise((r) => setTimeout(r, 500));

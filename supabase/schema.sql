@@ -63,6 +63,19 @@ create table if not exists user_settings (
   updated_at timestamptz default now()
 );
 
+-- Синхронизация projects/tasks: приложение и так хранит их одним JSON-блоком
+-- локально (data.json) и шлёт его целиком на каждое сохранение — поэтому
+-- вместо разбора по projects/tasks/sessions выше (задел на будущее, сейчас не
+-- используется) синк идёт одним документом на пользователя. updated_by —
+-- id клиента, отправившего последнюю запись, чтобы игнорировать эхо
+-- собственных правок в realtime-подписке.
+create table if not exists sync_state (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+
 -- Row Level Security — обязательно: без этого anon-ключ (публичный, зашит в
 -- приложение) даёт доступ ко ВСЕМ строкам таблицы, а не только своим.
 alter table profiles enable row level security;
@@ -70,6 +83,7 @@ alter table projects enable row level security;
 alter table tasks enable row level security;
 alter table sessions enable row level security;
 alter table user_settings enable row level security;
+alter table sync_state enable row level security;
 
 create policy "own profile" on profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
@@ -81,3 +95,8 @@ create policy "own sessions" on sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "own settings" on user_settings
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own sync_state" on sync_state
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Realtime: без этого другое устройство не узнает об изменении сразу.
+alter publication supabase_realtime add table sync_state;

@@ -29,6 +29,7 @@ ipcMain.handle('theme:set-overlay', (_e, theme) => { overlayCalls.push(theme); r
 ipcMain.handle('update:check', () => ({ ok: false, reason: 'dev' }));
 ipcMain.handle('update:download', () => ({ ok: true }));
 ipcMain.handle('update:install', () => true);
+ipcMain.handle('shell:open-external', () => true);
 ipcMain.handle('export:xlsx', (_e, { defaultName, sheets }) => {
   const buf = buildWorkbook(sheets);
   const file = path.join(__dirname, `_smoke-export-${exportsWritten.length + 1}.xlsx`);
@@ -78,6 +79,7 @@ app.whenReady().then(async () => {
     supabaseClientLoaded: typeof window.supabase === 'object' && typeof window.supabase.createClient === 'function',
     accountBtnPresent: !!document.getElementById('account-btn'),
     authModalPresent: !!document.getElementById('auth-backdrop'),
+    googleBtnPresent: !!document.getElementById('auth-google-btn'),
   }))()`);
 
   const flow = await win.webContents.executeJavaScript(`(async () => {

@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('api', {
   exportXlsx: (payload) => ipcRenderer.invoke('export:xlsx', payload),
   copy: (text) => ipcRenderer.invoke('clipboard:write', text),
   setTitlebarOverlay: (theme) => ipcRenderer.invoke('theme:set-overlay', theme),
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  onOAuthCallback: (cb) => ipcRenderer.on('auth:oauth-callback', (_e, data) => cb(data)),
 
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),

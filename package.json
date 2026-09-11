@@ -45,6 +45,12 @@
       "target": "nsis",
       "icon": "build/icon.ico"
     },
+    "protocols": [
+      {
+        "name": "Lancible",
+        "schemes": ["lancible"]
+      }
+    ],
     "nsis": {
       "oneClick": true,
       "createDesktopShortcut": true,

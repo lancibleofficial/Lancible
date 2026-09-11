@@ -39,6 +39,41 @@ function saveData(data) {
 
 let mainWindow = null;
 
+// ---------------------------------------------------------------------------
+// Вход через Google: signInWithOAuth открывает системный браузер, тот после
+// авторизации редиректит на lancible://auth-callback — Windows либо передаёт
+// эту ссылку новому процессу (перехватываем через single-instance lock и
+// second-instance), либо, если приложение ещё не запущено, она приходит
+// прямо в process.argv первого запуска.
+// ---------------------------------------------------------------------------
+
+if (process.defaultApp) {
+  // Дев-режим (electron .) — без явного exePath/args протокол зарегистрируется
+  // на сам electron.exe с неверными аргументами и не сработает.
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('lancible', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('lancible');
+}
+
+function handleAuthCallbackUrl(url) {
+  if (!mainWindow) return;
+  mainWindow.webContents.send('auth:oauth-callback', { url });
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.focus();
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const url = argv.find((arg) => arg.startsWith('lancible://'));
+    if (url) handleAuthCallbackUrl(url);
+  });
+}
+
 // Цвета нативных кнопок окна (minimize/maximize/close), рисуемых Windows поверх
 // страницы через titleBarOverlay, — должны совпадать с --bg/--text-dim темы,
 // иначе в светлой теме там остаётся тёмный "огрызок" тёмной темы.
@@ -156,6 +191,13 @@ app.whenReady().then(() => {
     if (win) win.setTitleBarOverlay(resolveTitlebarOverlay(theme));
     return true;
   });
+  ipcMain.handle('shell:open-external', (_event, url) => {
+    if (typeof url === 'string' && /^https:\/\//.test(url)) {
+      shell.openExternal(url);
+      return true;
+    }
+    return false;
+  });
 
   // Выгрузка в .xlsx: рендерер присылает готовые листы, тут — диалог + запись файла.
   ipcMain.handle('export:xlsx', async (event, { defaultName, sheets }) => {
@@ -178,6 +220,10 @@ app.whenReady().then(() => {
   setupAutoUpdater();
 
   createWindow(loadData());
+  const initialAuthUrl = process.argv.find((arg) => arg.startsWith('lancible://'));
+  if (initialAuthUrl) {
+    mainWindow.webContents.once('did-finish-load', () => handleAuthCallbackUrl(initialAuthUrl));
+  }
   if (app.isPackaged) {
     // Небольшая задержка, чтобы не мешать первому рендеру окна.
     setTimeout(() => autoUpdater.checkForUpdates().catch((err) => console.error('[autoUpdater] startup check:', err.message)), 3000);
