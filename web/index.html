@@ -2,12 +2,14 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta
     http-equiv="Content-Security-Policy"
     content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://yiglgfkjjvwijukdzutw.supabase.co wss://yiglgfkjjvwijukdzutw.supabase.co;"
   />
   <link rel="stylesheet" href="vendor/quill.snow.css" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="responsive.css" />
   <title>Lancible</title>
 </head>
 <body>
@@ -206,6 +208,10 @@
           </div>
 
           <section id="task-detail" hidden>
+            <button id="mobile-back-to-list" class="mobile-back-btn" hidden>
+              <svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg>
+              <span data-i18n="project.tasks">Задачи</span>
+            </button>
             <div class="task-title-row">
               <input id="task-title" type="text" data-i18n-ph="task.title_ph" placeholder="Название задачи" autocomplete="off" />
               <button id="pin-task-btn" class="icon-btn" data-i18n-title="task.pin_title" title="Закрепить задачу">
@@ -317,6 +323,22 @@
       </div>
     </div>
   </div>
+
+  <!-- Нижняя навигация (только на телефонной ширине, см. responsive.css) -->
+  <nav id="mobile-tabbar" hidden>
+    <button class="nav-item mtab" data-view="home">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3l6.6 5.5-1.15 1.35-.75-.62V13.6a1.1 1.1 0 01-1.1 1.1H9.35V9.9h-2.7v4.8H4.4a1.1 1.1 0 01-1.1-1.1V7.5l-.75.63L1.4 6.8 8 1.3z"/></svg>
+      <span data-i18n="nav.home">Обзор</span>
+    </button>
+    <button class="nav-item mtab" data-view="calendar">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
+      <span data-i18n="nav.calendar">Календарь</span>
+    </button>
+    <button type="button" id="mobile-account-btn" class="mtab">
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
+      <span data-i18n="nav.account">Аккаунт</span>
+    </button>
+  </nav>
 
   <!-- Результаты поиска -->
   <div id="search-panel" hidden>
@@ -459,6 +481,8 @@
 
   <script src="vendor/quill.js"></script>
   <script src="vendor/supabase.js"></script>
+  <script src="xlsx.js"></script>
+  <script src="api-shim.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

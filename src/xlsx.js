@@ -1,21 +1,28 @@
 'use strict';
 
 // Мини-генератор .xlsx без зависимостей: строит OOXML-части и упаковывает их
-// в ZIP вручную (Node zlib для deflate). Достаточно для табличных выгрузок:
-// строки — массив ячеек, ячейка это строка | число | { n } | { t } | { f, n }.
+// в ZIP вручную. Работает и в Node (main.js, через require), и в браузере
+// (веб-версия, через обычный <script> тег) — только Uint8Array/DataView,
+// без Buffer/zlib. Записи ZIP всегда хранятся без сжатия (метод 0): у
+// TextEncoder+DataView нет браузерного эквивалента Node-совместимого
+// deflate без сторонней библиотеки, а несжатый .xlsx всё равно валиден по
+// спецификации — только чуть крупнее файл, для табличных выгрузок это
+// не проблема.
+// Строки — массив ячеек, ячейка это строка | число | { n } | { t } | { f, n }.
 //   { n: 12.5 }          — число
 //   { n: 12.5, s: 2 }    — число со стилем (2 = формат 0.00)
 //   { t: 'текст', s: 1 } — строка со стилем (1 = жирный)
 //   { f: 'SUM(F2:F9)', n: 42, s: 2 } — формула с заранее посчитанным значением
 
-const zlib = require('node:zlib');
+(function (root) {
+const textEncoder = new TextEncoder();
 
 // ---------------------------------------------------------------------------
 // ZIP
 // ---------------------------------------------------------------------------
 
 let crcTable = null;
-function crc32(buf) {
+function crc32(bytes) {
   if (!crcTable) {
     crcTable = new Uint32Array(256);
     for (let n = 0; n < 256; n++) {
@@ -25,71 +32,80 @@ function crc32(buf) {
     }
   }
   let c = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  for (let i = 0; i < bytes.length; i++) c = crcTable[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 }
 
-/** @param {{name: string, data: Buffer}[]} files */
+function concatBytes(arrays) {
+  let total = 0;
+  for (const a of arrays) total += a.length;
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const a of arrays) { out.set(a, offset); offset += a.length; }
+  return out;
+}
+
+/** @param {{name: string, data: Uint8Array}[]} files */
 function zip(files) {
   const parts = [];
   const central = [];
   let offset = 0;
 
   for (const f of files) {
-    const name = Buffer.from(f.name, 'utf8');
-    const raw = f.data;
-    const crc = crc32(raw);
-    const deflated = zlib.deflateRawSync(raw, { level: 9 });
-    const useDeflate = deflated.length < raw.length;
-    const body = useDeflate ? deflated : raw;
-    const method = useDeflate ? 8 : 0;
+    const name = textEncoder.encode(f.name);
+    const body = f.data; // всегда без сжатия — метод 0
+    const crc = crc32(body);
+    const method = 0;
 
-    const local = Buffer.alloc(30);
-    local.writeUInt32LE(0x04034b50, 0);
-    local.writeUInt16LE(20, 4);
-    local.writeUInt16LE(0x0800, 6); // bit 11: имена в UTF-8
-    local.writeUInt16LE(method, 8);
-    local.writeUInt16LE(0, 10);
-    local.writeUInt16LE(0x21, 12); // дата 1980-01-01
-    local.writeUInt32LE(crc, 14);
-    local.writeUInt32LE(body.length, 18);
-    local.writeUInt32LE(raw.length, 22);
-    local.writeUInt16LE(name.length, 26);
-    local.writeUInt16LE(0, 28);
+    const local = new Uint8Array(30);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0x0800, true); // bit 11: имена в UTF-8
+    lv.setUint16(8, method, true);
+    lv.setUint16(10, 0, true);
+    lv.setUint16(12, 0x21, true); // дата 1980-01-01
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, body.length, true);
+    lv.setUint32(22, body.length, true);
+    lv.setUint16(26, name.length, true);
+    lv.setUint16(28, 0, true);
     parts.push(local, name, body);
 
-    const cd = Buffer.alloc(46);
-    cd.writeUInt32LE(0x02014b50, 0);
-    cd.writeUInt16LE(20, 4);
-    cd.writeUInt16LE(20, 6);
-    cd.writeUInt16LE(0x0800, 8);
-    cd.writeUInt16LE(method, 10);
-    cd.writeUInt16LE(0, 12);
-    cd.writeUInt16LE(0x21, 14);
-    cd.writeUInt32LE(crc, 16);
-    cd.writeUInt32LE(body.length, 20);
-    cd.writeUInt32LE(raw.length, 24);
-    cd.writeUInt16LE(name.length, 28);
-    cd.writeUInt16LE(0, 30);
-    cd.writeUInt16LE(0, 32);
-    cd.writeUInt16LE(0, 34);
-    cd.writeUInt16LE(0, 36);
-    cd.writeUInt32LE(0, 38);
-    cd.writeUInt32LE(offset, 42);
+    const cd = new Uint8Array(46);
+    const cv = new DataView(cd.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, method, true);
+    cv.setUint16(12, 0, true);
+    cv.setUint16(14, 0x21, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, body.length, true);
+    cv.setUint32(24, body.length, true);
+    cv.setUint16(28, name.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
     central.push(cd, name);
 
     offset += local.length + name.length + body.length;
   }
 
-  const centralBuf = Buffer.concat(central);
-  const eocd = Buffer.alloc(22);
-  eocd.writeUInt32LE(0x06054b50, 0);
-  eocd.writeUInt16LE(files.length, 8);
-  eocd.writeUInt16LE(files.length, 10);
-  eocd.writeUInt32LE(centralBuf.length, 12);
-  eocd.writeUInt32LE(offset, 16);
+  const centralBuf = concatBytes(central);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralBuf.length, true);
+  ev.setUint32(16, offset, true);
 
-  return Buffer.concat([...parts, centralBuf, eocd]);
+  return concatBytes([...parts, centralBuf, eocd]);
 }
 
 // ---------------------------------------------------------------------------
@@ -176,7 +192,7 @@ const STYLES_XML =
 
 /**
  * @param {{ name: string, rows: any[][], cols?: {width:number}[] }[]} sheets
- * @returns {Buffer}
+ * @returns {Uint8Array}
  */
 function buildWorkbook(sheets) {
   const names = sheets.map((s, i) => sanitizeSheetName(s.name, i));
@@ -226,18 +242,23 @@ function buildWorkbook(sheets) {
     '</Relationships>';
 
   const files = [
-    { name: '[Content_Types].xml', data: Buffer.from(contentTypes, 'utf8') },
-    { name: '_rels/.rels', data: Buffer.from(rootRels, 'utf8') },
-    { name: 'xl/workbook.xml', data: Buffer.from(workbook, 'utf8') },
-    { name: 'xl/_rels/workbook.xml.rels', data: Buffer.from(workbookRels, 'utf8') },
-    { name: 'xl/styles.xml', data: Buffer.from(STYLES_XML, 'utf8') },
+    { name: '[Content_Types].xml', data: textEncoder.encode(contentTypes) },
+    { name: '_rels/.rels', data: textEncoder.encode(rootRels) },
+    { name: 'xl/workbook.xml', data: textEncoder.encode(workbook) },
+    { name: 'xl/_rels/workbook.xml.rels', data: textEncoder.encode(workbookRels) },
+    { name: 'xl/styles.xml', data: textEncoder.encode(STYLES_XML) },
     ...sheets.map((s, i) => ({
       name: `xl/worksheets/sheet${i + 1}.xml`,
-      data: Buffer.from(sheetXml(s), 'utf8'),
+      data: textEncoder.encode(sheetXml(s)),
     })),
   ];
 
   return zip(files);
 }
 
-module.exports = { buildWorkbook };
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { buildWorkbook };
+} else {
+  root.buildWorkbook = buildWorkbook;
+}
+})(typeof window !== 'undefined' ? window : globalThis);

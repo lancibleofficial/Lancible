@@ -90,7 +90,10 @@ const sheets = buildWorkbook([
 fs.writeFileSync(path.join(__dirname, '_check.xlsx'), sheets);
 assert(sheets.length > 400, `workbook built (${sheets.length} bytes)`);
 
-const files = unzip(sheets);
+// buildWorkbook возвращает Uint8Array (общий для Node и браузера) — здесь,
+// в чисто Node-овом проверочном скрипте, оборачиваем в Buffer ради
+// readUInt32LE/slice ниже.
+const files = unzip(Buffer.from(sheets));
 assert('[Content_Types].xml' in files, '[Content_Types].xml present + CRC ok');
 assert('xl/workbook.xml' in files, 'xl/workbook.xml present');
 assert('xl/worksheets/sheet1.xml' in files, 'sheet1 present');

@@ -27,6 +27,26 @@ const CURRENCIES = {
 const SYM2CODE = { '$': 'USD', '€': 'EUR', '£': 'GBP', '₽': 'RUB', '₸': 'KZT', '₴': 'UAH', '₺': 'TRY', 'Br': 'BYN', 'zł': 'PLN' };
 
 // ---------------------------------------------------------------------------
+// Аккаунт (Supabase) — вход опционален, приложение и без него полностью
+// рабочее офлайн. Синхронизация данных — отдельный, более поздний этап;
+// пока что вход только создаёт профиль (имя + для чего используют прилу).
+// anon-ключ намеренно зашит в клиент — это публичный, предназначенный для
+// встраивания в приложения ключ (защита данных — через RLS на стороне БД,
+// не через секретность этого ключа).
+// ---------------------------------------------------------------------------
+
+const SUPABASE_URL = 'https://yiglgfkjjvwijukdzutw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlpZ2xnZmtqanZ3aWp1a2R6dXR3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkxMjM5NjYsImV4cCI6MjEwNDY5OTk2Nn0.SF_vpL9F_CBf81NXIhcH_ZUWVoRtt3XoPpQjkDjPOck';
+// На вебе (web/index.html выставляет этот флаг до загрузки app.js) страница
+// сама и есть OAuth-редирект-цель — detectSessionInUrl:true даёт клиенту
+// самому доставершить PKCE-обмен по возврату с Google, без кастомного
+// протокола/IPC, которые нужны только на десктопе.
+const IS_WEB = window.__LANCIBLE_PLATFORM__ === 'web';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { flowType: 'pkce', detectSessionInUrl: IS_WEB, persistSession: true, autoRefreshToken: true },
+});
+
+// ---------------------------------------------------------------------------
 // Интернационализация (i18n)
 // ---------------------------------------------------------------------------
 
@@ -44,6 +64,8 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проект: {name}',
     'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.collapse': 'Свернуть',
+    'nav.language': 'Язык', 'nav.account': 'Аккаунт',
+    'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
     'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
@@ -91,6 +113,23 @@ const T = {
     'calendar.for_month': 'За месяц', 'calendar.for_week': 'За неделю',
     'calendar.for_period': 'За период: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперёд', 'common.cancel': 'Отмена', 'common.ok': 'ОК',
+    'common.skip': 'Пропустить', 'common.continue': 'Продолжить',
+    'auth.title': 'Вход', 'auth.subtitle': 'Необязательно — приложение и так работает офлайн. Войдите, чтобы синхронизировать данные между устройствами.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
+    'auth.no_account': 'Нет аккаунта с таким email.', 'auth.create_account': 'Создать аккаунт',
+    'auth.sign_in': 'Войти', 'auth.sign_in_nav': 'Войти', 'auth.sign_out': 'Выйти',
+    'auth.onboarding_title': 'Расскажите о себе', 'auth.name_label': 'Как вас зовут?',
+    'auth.usecase_label': 'Для чего будете использовать Lancible?',
+    'auth.usecase_personal': 'Личные задачи', 'auth.usecase_freelance': 'Фриланс / клиенты',
+    'auth.usecase_team': 'Работа в команде', 'auth.usecase_other': 'Другое',
+    'auth.error_invalid': 'Неверный email или пароль.', 'auth.error_generic': 'Что-то пошло не так. Попробуйте ещё раз.',
+    'auth.signed_in_toast': 'Вход выполнен', 'auth.signed_out_toast': 'Вы вышли из аккаунта',
+    'auth.confirm_title': 'Проверьте почту', 'auth.confirm_text': 'Мы отправили письмо на {email} — перейдите по ссылке в нём, потом войдите тем же паролем.',
+    'auth.google_btn': 'Войти через Google', 'auth.or_divider': 'или',
+    'sync.conflict_title': 'Какие данные оставить?',
+    'sync.conflict_text': 'На сервере уже есть сохранённые данные, а на этом компьютере — свои. Какие использовать?',
+    'sync.use_server': 'С сервера', 'sync.use_local': 'С этого компьютера',
+    'sync.updated_toast': 'Данные обновлены с другого устройства',
     'common.save': 'Сохранить', 'common.delete_q': 'Удалить?', 'common.delete': 'Удалить',
     'confirm.delete_task_named': 'Удалить «{name}»? Отменить нельзя.',
     'confirm.delete_task': 'Удалить эту задачу? Отменить нельзя.',
@@ -130,6 +169,8 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'project: {name}',
     'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.collapse': 'Collapse',
+    'nav.language': 'Language', 'nav.account': 'Account',
+    'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Restart to update',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
     'stats.month': 'earned this month', 'stats.done': 'tasks done',
@@ -177,6 +218,23 @@ const T = {
     'calendar.for_month': 'This month', 'calendar.for_week': 'This week',
     'calendar.for_period': 'Period: {time} · {money}',
     'common.back': 'Back', 'common.forward': 'Forward', 'common.cancel': 'Cancel', 'common.ok': 'OK',
+    'common.skip': 'Skip', 'common.continue': 'Continue',
+    'auth.title': 'Sign in', 'auth.subtitle': 'Optional — the app works offline either way. Sign in to sync your data across devices.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Password',
+    'auth.no_account': 'No account with this email yet.', 'auth.create_account': 'Create account',
+    'auth.sign_in': 'Sign in', 'auth.sign_in_nav': 'Sign in', 'auth.sign_out': 'Sign out',
+    'auth.onboarding_title': 'Tell us about yourself', 'auth.name_label': "What's your name?",
+    'auth.usecase_label': 'What will you use Lancible for?',
+    'auth.usecase_personal': 'Personal tasks', 'auth.usecase_freelance': 'Freelance / clients',
+    'auth.usecase_team': 'Team work', 'auth.usecase_other': 'Other',
+    'auth.error_invalid': 'Wrong email or password.', 'auth.error_generic': 'Something went wrong. Please try again.',
+    'auth.signed_in_toast': 'Signed in', 'auth.signed_out_toast': 'Signed out',
+    'auth.confirm_title': 'Check your email', 'auth.confirm_text': "We've sent a confirmation link to {email} — follow it, then sign in with the same password.",
+    'auth.google_btn': 'Sign in with Google', 'auth.or_divider': 'or',
+    'sync.conflict_title': 'Which data should we keep?',
+    'sync.conflict_text': 'There is already saved data on the server, and this computer has its own too. Which should we use?',
+    'sync.use_server': 'From the server', 'sync.use_local': 'From this computer',
+    'sync.updated_toast': 'Data updated from another device',
     'common.save': 'Save', 'common.delete_q': 'Delete?', 'common.delete': 'Delete',
     'confirm.delete_task_named': 'Delete "{name}"? This can’t be undone.',
     'confirm.delete_task': 'Delete this task? This can’t be undone.',
@@ -216,6 +274,8 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проєкт: {name}',
     'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.collapse': 'Згорнути',
+    'nav.language': 'Мова', 'nav.account': 'Акаунт',
+    'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
     'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
@@ -263,6 +323,23 @@ const T = {
     'calendar.for_month': 'За місяць', 'calendar.for_week': 'За тиждень',
     'calendar.for_period': 'За період: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперед', 'common.cancel': 'Скасувати', 'common.ok': 'ОК',
+    'common.skip': 'Пропустити', 'common.continue': 'Продовжити',
+    'auth.title': 'Вхід', 'auth.subtitle': 'Необов’язково — застосунок і так працює офлайн. Увійдіть, щоб синхронізувати дані між пристроями.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
+    'auth.no_account': 'Немає акаунта з таким email.', 'auth.create_account': 'Створити акаунт',
+    'auth.sign_in': 'Увійти', 'auth.sign_in_nav': 'Увійти', 'auth.sign_out': 'Вийти',
+    'auth.onboarding_title': 'Розкажіть про себе', 'auth.name_label': 'Як вас звати?',
+    'auth.usecase_label': 'Для чого будете використовувати Lancible?',
+    'auth.usecase_personal': 'Особисті завдання', 'auth.usecase_freelance': 'Фриланс / клієнти',
+    'auth.usecase_team': 'Робота в команді', 'auth.usecase_other': 'Інше',
+    'auth.error_invalid': 'Невірний email або пароль.', 'auth.error_generic': 'Щось пішло не так. Спробуйте ще раз.',
+    'auth.signed_in_toast': 'Вхід виконано', 'auth.signed_out_toast': 'Ви вийшли з акаунта',
+    'auth.confirm_title': 'Перевірте пошту', 'auth.confirm_text': 'Ми надіслали лист на {email} — перейдіть за посиланням у ньому, потім увійдіть тим самим паролем.',
+    'auth.google_btn': 'Увійти через Google', 'auth.or_divider': 'або',
+    'sync.conflict_title': 'Які дані залишити?',
+    'sync.conflict_text': 'На сервері вже є збережені дані, а на цьому комп’ютері — свої. Які використати?',
+    'sync.use_server': 'З сервера', 'sync.use_local': 'З цього комп’ютера',
+    'sync.updated_toast': 'Дані оновлено з іншого пристрою',
     'common.save': 'Зберегти', 'common.delete_q': 'Видалити?', 'common.delete': 'Видалити',
     'confirm.delete_task_named': 'Видалити «{name}»? Скасувати не можна.',
     'confirm.delete_task': 'Видалити це завдання? Скасувати не можна.',
@@ -302,6 +379,8 @@ const T = {
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'жоба: {name}',
     'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.collapse': 'Жию',
+    'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
+    'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
     'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
@@ -349,6 +428,23 @@ const T = {
     'calendar.for_month': 'Ай бойынша', 'calendar.for_week': 'Апта бойынша',
     'calendar.for_period': 'Кезең бойынша: {time} · {money}',
     'common.back': 'Артқа', 'common.forward': 'Алға', 'common.cancel': 'Бас тарту', 'common.ok': 'ОК',
+    'common.skip': 'Өткізіп жіберу', 'common.continue': 'Жалғастыру',
+    'auth.title': 'Кіру', 'auth.subtitle': 'Міндетті емес — қолданба офлайн жұмыс істей береді. Құрылғылар арасында деректерді синхрондау үшін кіріңіз.',
+    'auth.email_label': 'Email', 'auth.password_label': 'Құпия сөз',
+    'auth.no_account': 'Бұл email-мен аккаунт жоқ.', 'auth.create_account': 'Аккаунт құру',
+    'auth.sign_in': 'Кіру', 'auth.sign_in_nav': 'Кіру', 'auth.sign_out': 'Шығу',
+    'auth.onboarding_title': 'Өзіңіз туралы айтыңыз', 'auth.name_label': 'Атыңыз кім?',
+    'auth.usecase_label': 'Lancible-ды не үшін пайдаланасыз?',
+    'auth.usecase_personal': 'Жеке тапсырмалар', 'auth.usecase_freelance': 'Фриланс / клиенттер',
+    'auth.usecase_team': 'Команда жұмысы', 'auth.usecase_other': 'Басқа',
+    'auth.error_invalid': 'Email немесе құпия сөз қате.', 'auth.error_generic': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',
+    'auth.signed_in_toast': 'Кіру сәтті өтті', 'auth.signed_out_toast': 'Аккаунттан шықтыңыз',
+    'auth.confirm_title': 'Поштаны тексеріңіз', 'auth.confirm_text': '{email} мекенжайына хат жібердік — сілтеме бойынша өтіп, содан кейін сол құпия сөзбен кіріңіз.',
+    'auth.google_btn': 'Google арқылы кіру', 'auth.or_divider': 'немесе',
+    'sync.conflict_title': 'Қай деректерді қалдырамыз?',
+    'sync.conflict_text': 'Серверде деректер бар, осы компьютерде де өз деректері бар. Қайсысын пайдаланамыз?',
+    'sync.use_server': 'Сервердегі', 'sync.use_local': 'Осы компьютердегі',
+    'sync.updated_toast': 'Деректер басқа құрылғыдан жаңартылды',
     'common.save': 'Сақтау', 'common.delete_q': 'Жою керек пе?', 'common.delete': 'Жою',
     'confirm.delete_task_named': '«{name}» жойылсын ба? Қайтару мүмкін емес.',
     'confirm.delete_task': 'Бұл тапсырма жойылсын ба? Қайтару мүмкін емес.',
@@ -439,9 +535,23 @@ const el = {
   navCollapse: $('nav-collapse'), tbSearch: document.querySelector('.tb-search'),
   searchPanel: $('search-panel'), searchInput: $('search-input'), searchResults: $('search-results'),
 
-  langSelect: $('lang-select'), langLabel: $('lang-label'),
-  themeToggle: $('theme-toggle'), themeLabel: $('theme-label'),
-  themeIconSystem: $('theme-icon-system'), themeIconLight: $('theme-icon-light'), themeIconDark: $('theme-icon-dark'),
+  langToggle: $('lang-toggle'), langLabel: $('lang-label'),
+  themeTabs: [...document.querySelectorAll('.theme-tab')],
+
+  updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
+
+  accountBtn: $('account-btn'), accountLabel: $('account-label'),
+  mobileTabbar: $('mobile-tabbar'), mobileAccountBtn: $('mobile-account-btn'),
+  mobileBackToList: $('mobile-back-to-list'),
+  authBackdrop: $('auth-backdrop'),
+  authStepCredentials: $('auth-step-credentials'), authStepOnboarding: $('auth-step-onboarding'),
+  authStepConfirm: $('auth-step-confirm'), authConfirmText: $('auth-confirm-text'), authConfirmOk: $('auth-confirm-ok'),
+  authGoogleBtn: $('auth-google-btn'),
+  authEmail: $('auth-email'), authPassword: $('auth-password'), authError: $('auth-error'),
+  authSignupOffer: $('auth-signup-offer'), authSignupBtn: $('auth-signup-btn'),
+  authCancel: $('auth-cancel'), authSubmit: $('auth-submit'),
+  authName: $('auth-name'), authUsecases: $('auth-usecases'),
+  authOnboardingSkip: $('auth-onboarding-skip'), authOnboardingSave: $('auth-onboarding-save'),
 
   topbar: $('topbar'),
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
@@ -686,9 +796,12 @@ const anyDialogOpen = () =>
 // ---------------------------------------------------------------------------
 
 let confirmResolve = null;
-function confirmDialog(message, { okLabel } = {}) {
+function confirmDialog(message, { okLabel, cancelLabel, title, danger = true } = {}) {
+  el.confirmTitle.textContent = title || t('common.delete_q');
   el.confirmText.textContent = message;
   el.confirmOk.textContent = okLabel || t('common.delete');
+  el.confirmCancel.textContent = cancelLabel || t('common.cancel');
+  el.confirmOk.classList.toggle('confirm-danger', danger);
   el.confirmBackdrop.hidden = false;
   const onKey = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeConfirm(false); }
@@ -716,29 +829,473 @@ function applyTheme() {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', theme);
 
-  el.themeIconSystem.hidden = theme !== 'system';
-  el.themeIconLight.hidden = theme !== 'light';
-  el.themeIconDark.hidden = theme !== 'dark';
-  el.themeLabel.textContent = t(`nav.theme_${theme}`);
+  for (const btn of el.themeTabs) btn.classList.toggle('on', btn.dataset.theme === theme);
+  window.api.setTitlebarOverlay(theme).catch(() => {});
 }
-function cycleTheme() {
-  const order = ['system', 'light', 'dark'];
-  const cur = (state.settings && state.settings.theme) || 'system';
-  state.settings.theme = order[(order.indexOf(cur) + 1) % order.length];
-  applyTheme();
-  scheduleSave();
+for (const btn of el.themeTabs) {
+  btn.addEventListener('click', () => {
+    state.settings.theme = btn.dataset.theme;
+    applyTheme();
+    scheduleSave();
+  });
 }
-el.themeToggle.addEventListener('click', cycleTheme);
+// Нативные кнопки окна не следят за системной темой сами — при переключении
+// ОС между светлой/тёмной темой пересинхронизируем их вручную, но только
+// когда пользователь не переопределил тему явно (иначе CSS и так не следит).
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (((state.settings && state.settings.theme) || 'system') === 'system') {
+    window.api.setTitlebarOverlay('system').catch(() => {});
+  }
+});
 
-el.langSelect.addEventListener('change', () => {
-  state.settings.lang = el.langSelect.value;
-  el.langLabel.textContent = LANG_NAMES[state.settings.lang] || state.settings.lang;
+function setLang(code) {
+  state.settings.lang = code;
+  el.langLabel.textContent = LANG_NAMES[code] || code;
   applyStaticTranslations();
-  applyTheme();
   buildCurrencyOptions();
+  renderUpdateBtn();
+  renderAccountBtn();
   render();
   scheduleSave();
+}
+function openLangMenu() {
+  const items = Object.keys(LANG_NAMES).map((code) => ({
+    label: LANG_NAMES[code],
+    selected: code === ((state.settings && state.settings.lang) || 'ru'),
+    onClick: () => setLang(code),
+  }));
+  openMenu(el.langToggle, items);
+}
+el.langToggle.addEventListener('click', openLangMenu);
+
+/** Мобильная нижняя плашка (см. web/responsive.css) складывает тему,
+ * язык и вход/выход в один пункт "Аккаунт" — на десктопе для них есть
+ * отдельные элементы рейла, здесь их не показывают вовсе. */
+function openMobileAccountMenu(anchor) {
+  const currentTheme = (state.settings && state.settings.theme) || 'system';
+  const items = [
+    { key: 'system', i18n: 'nav.theme_system' },
+    { key: 'light', i18n: 'nav.theme_light' },
+    { key: 'dark', i18n: 'nav.theme_dark' },
+  ].map(({ key, i18n }) => ({
+    label: t(i18n),
+    selected: key === currentTheme,
+    onClick: () => { state.settings.theme = key; applyTheme(); scheduleSave(); },
+  }));
+  items.push({ sep: true });
+  for (const code of Object.keys(LANG_NAMES)) {
+    items.push({
+      label: LANG_NAMES[code],
+      selected: code === ((state.settings && state.settings.lang) || 'ru'),
+      onClick: () => setLang(code),
+    });
+  }
+  items.push({ sep: true });
+  if (currentUser) items.push({ label: t('auth.sign_out'), danger: true, onClick: signOut });
+  else items.push({ label: t('auth.sign_in_nav'), onClick: openAuthModal });
+  openMenu(anchor, items);
+}
+if (el.mobileAccountBtn) {
+  el.mobileAccountBtn.addEventListener('click', () => openMobileAccountMenu(el.mobileAccountBtn));
+}
+if (el.mobileBackToList) {
+  el.mobileBackToList.addEventListener('click', () => {
+    flushEditor();
+    selectedId = null;
+    render();
+    scheduleSave();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Автообновление
+// ---------------------------------------------------------------------------
+
+let updateState = 'idle'; // idle | available | downloading | ready
+
+function renderUpdateBtn() {
+  el.updateBtn.hidden = updateState === 'idle';
+  el.updateBtn.classList.toggle('downloading', updateState === 'downloading');
+  const key = updateState === 'ready' ? 'update.ready'
+    : updateState === 'downloading' ? 'update.downloading'
+    : 'update.available';
+  el.updateBtnLabel.textContent = t(key);
+}
+
+if (window.api.onUpdateAvailable) {
+  window.api.onUpdateAvailable(() => { updateState = 'available'; renderUpdateBtn(); });
+  window.api.onUpdateProgress(({ percent }) => { el.updateProgress.style.width = `${Math.round(percent || 0)}%`; });
+  window.api.onUpdateReady(() => { updateState = 'ready'; renderUpdateBtn(); });
+  window.api.onUpdateError(() => { updateState = 'idle'; renderUpdateBtn(); });
+}
+
+el.updateBtn.addEventListener('click', async () => {
+  if (updateState === 'available') {
+    updateState = 'downloading';
+    renderUpdateBtn();
+    try {
+      const r = await window.api.downloadUpdate();
+      if (!r || !r.ok) { updateState = 'available'; renderUpdateBtn(); }
+    } catch {
+      updateState = 'available';
+      renderUpdateBtn();
+    }
+  } else if (updateState === 'ready') {
+    window.api.installUpdate();
+  }
 });
+
+// ---------------------------------------------------------------------------
+// Аккаунт: вход/регистрация (email+пароль) и онбординг. Вход опционален —
+// приложение полностью работает офлайн без него; синхронизация данных
+// (заливка/подтяжка проектов и задач) — отдельный, более поздний этап.
+// ---------------------------------------------------------------------------
+
+let currentUser = null; // { id, email, name } | null
+const USE_CASES = ['personal', 'freelance', 'team', 'other'];
+let selectedUseCase = null;
+
+function renderAccountBtn() {
+  el.accountLabel.textContent = currentUser ? (currentUser.name || currentUser.email) : t('auth.sign_in_nav');
+}
+
+function buildUsecaseButtons() {
+  el.authUsecases.innerHTML = '';
+  for (const key of USE_CASES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'auth-usecase' + (selectedUseCase === key ? ' on' : '');
+    b.textContent = t(`auth.usecase_${key}`);
+    b.addEventListener('click', () => { selectedUseCase = key; buildUsecaseButtons(); });
+    el.authUsecases.appendChild(b);
+  }
+}
+
+function showAuthStep(step) {
+  el.authStepCredentials.hidden = step !== 'credentials';
+  el.authStepConfirm.hidden = step !== 'confirm';
+  el.authStepOnboarding.hidden = step !== 'onboarding';
+}
+function openAuthModal() {
+  el.authError.hidden = true;
+  el.authSignupOffer.hidden = true;
+  el.authEmail.value = '';
+  el.authPassword.value = '';
+  showAuthStep('credentials');
+  el.authBackdrop.hidden = false;
+  setTimeout(() => el.authEmail.focus(), 30);
+}
+function closeAuthModal() {
+  el.authBackdrop.hidden = true;
+}
+function showAuthError(key) {
+  el.authError.textContent = t(key);
+  el.authError.hidden = false;
+}
+function openOnboarding() {
+  selectedUseCase = null;
+  el.authName.value = '';
+  buildUsecaseButtons();
+  showAuthStep('onboarding');
+}
+
+/** После успешного входа: если для пользователя ещё нет профиля — это его
+ * самый первый настоящий вход (сразу после регистрации+подтверждения email,
+ * или профиль по какой-то причине не сохранился раньше) — просим имя и
+ * назначение прямо сейчас, а не пытаемся это сделать сразу в момент signUp():
+ * пока email не подтверждён, сессии ещё нет и сохранить профиль всё равно
+ * нечем. */
+async function afterSignedIn(opts) {
+  const silent = !!(opts && opts.silent); // true при тихом восстановлении сессии на старте — без модалки/тоста
+  const { data } = await sb.auth.getUser();
+  const user = data && data.user;
+  if (!user) return;
+  let profile = null;
+  try {
+    const { data: row } = await sb.from('profiles').select('name').eq('id', user.id).maybeSingle();
+    profile = row;
+  } catch (err) { console.error('Не удалось прочитать профиль:', err); }
+  if (!profile) {
+    if (!silent) openOnboarding();
+    return;
+  }
+  currentUser = { id: user.id, email: user.email, name: profile.name };
+  renderAccountBtn();
+  await syncOnSignIn();
+  if (!silent) {
+    closeAuthModal();
+    toast(t('auth.signed_in_toast'));
+  }
+}
+
+async function handleAuthSubmit() {
+  const email = el.authEmail.value.trim();
+  const password = el.authPassword.value;
+  if (!email || !password) return;
+  el.authError.hidden = true;
+  el.authSignupOffer.hidden = true;
+  el.authSubmit.disabled = true;
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (/invalid login credentials/i.test(error.message || '')) el.authSignupOffer.hidden = false;
+      else showAuthError('auth.error_generic');
+      return;
+    }
+    await afterSignedIn();
+  } catch {
+    showAuthError('auth.error_generic');
+  } finally {
+    el.authSubmit.disabled = false;
+  }
+}
+
+async function handleSignup() {
+  const email = el.authEmail.value.trim();
+  const password = el.authPassword.value;
+  if (!email || !password) return;
+  el.authSignupBtn.disabled = true;
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password });
+    if (error) { showAuthError('auth.error_generic'); return; }
+    if (data.session) {
+      // подтверждение email отключено в проекте — сессия уже есть сразу.
+      await afterSignedIn();
+    } else {
+      el.authConfirmText.textContent = t('auth.confirm_text', { email });
+      showAuthStep('confirm');
+    }
+  } catch {
+    showAuthError('auth.error_generic');
+  } finally {
+    el.authSignupBtn.disabled = false;
+  }
+}
+
+async function saveOnboarding() {
+  try {
+    const { data } = await sb.auth.getUser();
+    const user = data && data.user;
+    if (user) {
+      await sb.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        name: el.authName.value.trim() || null,
+        use_case: selectedUseCase,
+      });
+      currentUser = { id: user.id, email: user.email, name: el.authName.value.trim() || null };
+      renderAccountBtn();
+      await syncOnSignIn();
+    }
+  } catch (err) { console.error('Не удалось сохранить профиль:', err); }
+  closeAuthModal();
+  toast(t('auth.signed_in_toast'));
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  unsubscribeSyncRealtime();
+  currentUser = null;
+  renderAccountBtn();
+  toast(t('auth.signed_out_toast'));
+}
+
+async function handleGoogleSignIn() {
+  el.authGoogleBtn.disabled = true;
+  el.authError.hidden = true;
+  try {
+    // Десктоп: открываем системный браузер и ждём lancible://auth-callback
+    // через IPC (кастомный протокол, main.js). Веб: сама страница и есть
+    // редирект-цель — не мешаем signInWithOAuth перенаправить вкладку.
+    const { data, error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: IS_WEB
+        ? { redirectTo: window.location.origin + window.location.pathname }
+        : { redirectTo: 'lancible://auth-callback', skipBrowserRedirect: true },
+    });
+    if (error) { showAuthError('auth.error_generic'); return; }
+    if (!IS_WEB) {
+      if (!data || !data.url) { showAuthError('auth.error_generic'); return; }
+      await window.api.openExternal(data.url);
+    }
+    // на вебе signInWithOAuth уже сам перенаправил вкладку — сюда код не дойдёт
+  } catch {
+    showAuthError('auth.error_generic');
+  } finally {
+    el.authGoogleBtn.disabled = false;
+  }
+}
+
+/** Колбэк системного браузера после входа через Google: main.js ловит
+ * lancible://auth-callback (по протоколу, зарегистрированному инсталлятором)
+ * и присылает его сюда через IPC — окно приложения всё это время остаётся
+ * открытым, менять код на сессию тем же клиентом (PKCE) можно прямо здесь. */
+// Не определён на вебе (detectSessionInUrl:true уже сам достраивает сессию
+// по возврату с Google) — есть только у десктопного window.api.
+if (window.api.onOAuthCallback) {
+  window.api.onOAuthCallback(async ({ url }) => {
+    let code = null;
+    try {
+      code = new URL(url).searchParams.get('code');
+    } catch { /* некорректный колбэк — игнорируем */ }
+    if (!code) return;
+    try {
+      const { error } = await sb.auth.exchangeCodeForSession(code);
+      if (error) { showAuthError('auth.error_generic'); return; }
+      await afterSignedIn();
+    } catch {
+      showAuthError('auth.error_generic');
+    }
+  });
+}
+
+el.accountBtn.addEventListener('click', () => {
+  if (currentUser) openMenu(el.accountBtn, [{ label: t('auth.sign_out'), danger: true, onClick: signOut }]);
+  else openAuthModal();
+});
+el.authCancel.addEventListener('click', closeAuthModal);
+el.authBackdrop.addEventListener('click', (e) => { if (e.target === el.authBackdrop) closeAuthModal(); });
+el.authSubmit.addEventListener('click', handleAuthSubmit);
+el.authSignupBtn.addEventListener('click', handleSignup);
+el.authGoogleBtn.addEventListener('click', handleGoogleSignIn);
+el.authOnboardingSave.addEventListener('click', saveOnboarding);
+el.authOnboardingSkip.addEventListener('click', async () => {
+  try {
+    const { data } = await sb.auth.getUser();
+    const user = data && data.user;
+    if (user) {
+      // минимальная строка профиля — иначе онбординг будет всплывать при каждом входе.
+      await sb.from('profiles').upsert({ id: user.id, email: user.email });
+      currentUser = { id: user.id, email: user.email, name: null };
+      renderAccountBtn();
+    }
+  } catch (err) { console.error('Не удалось сохранить профиль:', err); }
+  closeAuthModal();
+  toast(t('auth.signed_in_toast'));
+});
+el.authConfirmOk.addEventListener('click', closeAuthModal);
+[el.authEmail, el.authPassword].forEach((input) => {
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); });
+});
+
+sb.auth.getSession().then(({ data }) => { if (data && data.session) afterSignedIn({ silent: true }); });
+
+// ---------------------------------------------------------------------------
+// Синхронизация данных (проекты/задачи) с Supabase — только для вошедших.
+// Хранится одним JSON-документом на пользователя (таблица sync_state), а не
+// разложено по реляционным таблицам: это ровно то же самое, что уже целиком
+// сохраняется локально в data.json, поэтому не потребовалось менять ни одну
+// точку мутации state.projects/state.tasks. activeTimer/settings/ui
+// намеренно НЕ синхронизируются — это данные конкретного устройства.
+// ---------------------------------------------------------------------------
+
+const SYNC_CLIENT_ID = uid(); // отличает собственные правки от чужих в realtime-подписке
+let syncChannel = null;
+let syncDirty = false;
+let syncRetryTimer = null;
+// JSON последнего состояния, которое точно совпадает с сервером (свой
+// успешный пуш или только что подтянутые чужие данные) — pushSyncState
+// сверяется с ним, чтобы не отправлять обратно то же самое, что и так
+// только что пришло. Без этой проверки два устройства бесконечно
+// перекидывались бы идентичными обновлениями по кругу (реально
+// воспроизведено при тестировании), а под нагрузкой более старое
+// сообщение могло прийти позже нового и откатить чужие изменения.
+let lastSyncedJSON = null;
+
+function syncPayload() {
+  return { projects: state.projects, tasks: state.tasks };
+}
+
+async function pushSyncState() {
+  if (!currentUser) return;
+  const payload = syncPayload();
+  const json = JSON.stringify(payload);
+  if (json === lastSyncedJSON) return; // с последнего синка ничего не поменялось
+  try {
+    const { error } = await sb.from('sync_state').upsert({
+      user_id: currentUser.id,
+      data: payload,
+      updated_at: new Date().toISOString(),
+      updated_by: SYNC_CLIENT_ID,
+    });
+    if (error) throw error;
+    lastSyncedJSON = json;
+    syncDirty = false;
+  } catch (err) {
+    console.error('Не удалось синхронизировать данные:', err);
+    syncDirty = true;
+    scheduleSyncRetry();
+  }
+}
+
+function scheduleSyncRetry() {
+  clearTimeout(syncRetryTimer);
+  syncRetryTimer = setTimeout(() => { if (syncDirty && currentUser) pushSyncState(); }, 15000);
+}
+window.addEventListener('online', () => { if (syncDirty && currentUser) pushSyncState(); });
+
+function applyRemoteData(data) {
+  state.projects = Array.isArray(data && data.projects) ? data.projects : [];
+  state.tasks = Array.isArray(data && data.tasks) ? data.tasks : [];
+  if (selectedId && !getTask(selectedId)) selectedId = null;
+  if (state.ui.projectId && !getProject(state.ui.projectId)) {
+    state.ui.view = 'home';
+    state.ui.projectId = null;
+  }
+  lastSyncedJSON = JSON.stringify(syncPayload());
+  render();
+  scheduleSave(); // сохраняем локально; pushSyncState сам не отправит лишнего — см. lastSyncedJSON
+}
+
+/** При входе: если на сервере ничего нет — заливаем локальные данные; если
+ * локально пусто — просто подтягиваем с сервера; если данные есть и там, и
+ * там — спрашиваем пользователя (нетривиальный случай первого мерджа, который
+ * план изначально откладывал на этот момент). */
+async function syncOnSignIn() {
+  let row = null;
+  try {
+    const { data, error } = await sb.from('sync_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
+    if (error) throw error;
+    row = data;
+  } catch (err) {
+    console.error('Не удалось прочитать синхронизированные данные:', err);
+    return;
+  }
+  const localHasData = state.projects.length > 0 || state.tasks.length > 0;
+  const remoteHasData = !!(row && row.data && ((row.data.projects || []).length > 0 || (row.data.tasks || []).length > 0));
+  if (!remoteHasData) {
+    if (localHasData) await pushSyncState();
+  } else if (!localHasData) {
+    applyRemoteData(row.data);
+  } else {
+    const useServer = await confirmDialog(t('sync.conflict_text'), {
+      title: t('sync.conflict_title'),
+      okLabel: t('sync.use_server'),
+      cancelLabel: t('sync.use_local'),
+      danger: false,
+    });
+    if (useServer) applyRemoteData(row.data);
+    else await pushSyncState();
+  }
+  subscribeSyncRealtime();
+}
+
+function subscribeSyncRealtime() {
+  unsubscribeSyncRealtime();
+  if (!currentUser) return;
+  syncChannel = sb
+    .channel('sync_state:' + currentUser.id)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sync_state', filter: `user_id=eq.${currentUser.id}` }, (payload) => {
+      const row = payload.new;
+      if (!row || row.updated_by === SYNC_CLIENT_ID) return; // эхо нашей же записи
+      applyRemoteData(row.data);
+      toast(t('sync.updated_toast'));
+    })
+    .subscribe();
+}
+function unsubscribeSyncRealtime() {
+  if (syncChannel) { sb.removeChannel(syncChannel); syncChannel = null; }
+}
 
 // ---------------------------------------------------------------------------
 // Сохранение
@@ -758,6 +1315,7 @@ async function saveNow() {
   savePending = false;
   try {
     await window.api.save(state);
+    if (currentUser) pushSyncState(); // не блокируем локальное сохранение сетью; сам не пришлёт лишнего — см. lastSyncedJSON
   } catch (err) {
     console.error('Не удалось сохранить данные:', err);
     toast(t('toast.save_error'));
@@ -775,6 +1333,7 @@ function render() {
   const v = state.ui.view;
 
   document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
+  document.body.classList.toggle('has-selected-task', v === 'project' && !!selectedId);
   renderStats();
   el.topbar.hidden = v !== 'home';
 
@@ -1044,9 +1603,8 @@ function updateCarousel(c) {
   const [left, right] = c.querySelectorAll('.car-arrow');
   const overflow = track.scrollWidth > track.clientWidth + 4;
   const max = track.scrollWidth - track.clientWidth - 2;
-  left.hidden = right.hidden = !overflow;
-  left.disabled = track.scrollLeft <= 1;
-  right.disabled = track.scrollLeft >= max;
+  left.hidden = !overflow || track.scrollLeft <= 1;
+  right.hidden = !overflow || track.scrollLeft >= max;
 }
 const updateCarousels = () => carousels.forEach(updateCarousel);
 window.addEventListener('resize', updateCarousels);
@@ -1935,8 +2493,9 @@ function openMenu(anchor, items) {
   for (const it of items) {
     if (it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); continue; }
     const b = document.createElement('button');
-    b.className = 'ctx-item' + (it.danger ? ' danger' : '');
-    b.textContent = it.label;
+    b.className = 'ctx-item' + (it.danger ? ' danger' : '') + (it.selected ? ' sel' : '');
+    b.innerHTML = `<span>${escapeHtml(it.label)}</span>` +
+      (it.selected ? `<svg class="icon ctx-check" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS.check}"/></svg>` : '');
     b.addEventListener('click', () => { closeMenu(); it.onClick(); });
     m.appendChild(b);
   }
@@ -2279,6 +2838,7 @@ function setupEditor() {
   quill = new Quill('#editor', {
     theme: 'snow',
     placeholder: t('editor.placeholder'),
+    bounds: '#editor-wrap',
     modules: {
       table: true,
       toolbar: [
@@ -2688,11 +3248,11 @@ async function init() {
   }
 
   migrate();
-  el.langSelect.value = state.settings.lang;
   el.langLabel.textContent = LANG_NAMES[state.settings.lang] || state.settings.lang;
   applyStaticTranslations();
   applyTheme();
   buildCurrencyOptions();
+  renderAccountBtn();
   recoverActiveTimer();
   state.ui.view = 'home';
   selectedId = null;

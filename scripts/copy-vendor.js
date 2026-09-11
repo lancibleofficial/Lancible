@@ -11,6 +11,9 @@ const fontDest = path.join(dest, 'fonts');
 const quill = [
   [path.join(root, 'node_modules', 'quill', 'dist', 'quill.js'), 'quill.js'],
   [path.join(root, 'node_modules', 'quill', 'dist', 'quill.snow.css'), 'quill.snow.css'],
+  // UMD-сборка supabase-js — рендерер грузит её как обычный <script> (contextIsolation
+  // не даёт require() из node_modules напрямую), даёт глобальный window.supabase.createClient().
+  [path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'supabase.js'],
 ];
 
 // Basique Pro: Basique_4=Thin(100) 3=Light(300) 2=Regular(400) 1=Bold(700) (без Black) → берём woff2.
@@ -29,12 +32,19 @@ try {
   }
 
   const fontSrc = path.join(root, 'font');
+  const committedFonts = path.join(root, 'assets', 'fonts'); // .woff2 в гите — на случай, если font/ нет (свежий клон)
   if (fs.existsSync(fontSrc)) {
     for (const [from, name] of fonts) {
       const p = path.join(fontSrc, from);
       if (fs.existsSync(p)) fs.copyFileSync(p, path.join(fontDest, name));
     }
     console.log('[copy-vendor] Quill + шрифт Basique Pro скопированы в', dest);
+  } else if (fs.existsSync(committedFonts)) {
+    for (const [, name] of fonts) {
+      const p = path.join(committedFonts, name);
+      if (fs.existsSync(p)) fs.copyFileSync(p, path.join(fontDest, name));
+    }
+    console.log('[copy-vendor] Quill + шрифт Basique Pro (из assets/fonts) скопированы в', dest);
   } else {
     console.warn('[copy-vendor] Папка font/ не найдена — шрифт не скопирован, интерфейс на системном шрифте.');
   }

@@ -71,6 +71,11 @@ ipcMain.handle('data:load', () => store);
 ipcMain.handle('data:save', (_e, d) => { store = d; return true; });
 ipcMain.handle('clipboard:write', () => true);
 ipcMain.handle('export:xlsx', () => ({ ok: false, canceled: true }));
+ipcMain.handle('theme:set-overlay', () => true);
+ipcMain.handle('update:check', () => ({ ok: false, reason: 'dev' }));
+ipcMain.handle('update:download', () => ({ ok: true }));
+ipcMain.handle('update:install', () => true);
+ipcMain.handle('shell:open-external', () => true);
 
 async function capture(win, file) {
   await new Promise((r) => setTimeout(r, 500));
@@ -87,6 +92,7 @@ app.whenReady().then(async () => {
     webPreferences: {
       preload: path.join(__dirname, '..', 'src', 'preload.js'),
       contextIsolation: true, nodeIntegration: false,
+      partition: 'nopersist:shot',
     },
   });
 
@@ -208,22 +214,21 @@ app.whenReady().then(async () => {
   await new Promise((r) => setTimeout(r, 250));
   await capture(win, 'preview-link-tooltip.png');
 
-  // Светлая тема
-  await win.webContents.executeJavaScript(`document.getElementById('theme-toggle').click()`);
+  // Светлая тема — теперь через icon-табы вместо цикличной кнопки
+  await win.webContents.executeJavaScript(`document.querySelector('.theme-tab[data-theme="light"]').click()`);
   await new Promise((r) => setTimeout(r, 250));
   await win.webContents.executeJavaScript(`document.querySelector('.nav-item[data-view="home"]').click()`);
   await new Promise((r) => setTimeout(r, 300));
   await capture(win, 'preview-theme-light.png');
-  await win.webContents.executeJavaScript(`document.getElementById('theme-toggle').click()`); // -> dark
-  await new Promise((r) => setTimeout(r, 150));
-  await win.webContents.executeJavaScript(`document.getElementById('theme-toggle').click()`); // -> system
+  await win.webContents.executeJavaScript(`document.querySelector('.theme-tab[data-theme="dark"]').click()`);
   await new Promise((r) => setTimeout(r, 150));
 
-  // Английский язык
+  // Кастомный дропдаун языка (не системный <select>) — сначала сам открытый попап
+  await win.webContents.executeJavaScript(`document.getElementById('lang-toggle').click()`);
+  await new Promise((r) => setTimeout(r, 200));
+  await capture(win, 'preview-lang-menu.png');
   await win.webContents.executeJavaScript(`
-    const sel = document.getElementById('lang-select');
-    sel.value = 'en';
-    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    [...document.querySelectorAll('#ctx-menu .ctx-item')].find(b => b.textContent.includes('English')).click();
   `);
   await new Promise((r) => setTimeout(r, 300));
   await capture(win, 'preview-lang-en.png');

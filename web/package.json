@@ -1,0 +1,13 @@
+{
+  "name": "lancible-web",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Веб-версия Lancible — статический сайт, деплоится на Vercel из этой папки (Root Directory).",
+  "scripts": {
+    "build": "node ../scripts/sync-web-assets.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "quill": "^2.0.3"
+  }
+}

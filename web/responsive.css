@@ -1,0 +1,202 @@
+/* Адаптивные брейкпоинты для веб-версии — накладываются поверх styles.css,
+   сам styles.css не трогаем (нулевой риск для десктоп-приложения). */
+
+/* =========================================================================
+   ≤860px — "узкий/планшет"
+   ========================================================================= */
+@media (max-width: 860px) {
+  /* Главная: мини-календарь уезжает под основной контент */
+  #home-view {
+    display: block;
+    overflow-y: auto;
+  }
+  #home-view .home-center {
+    display: block;
+  }
+  .home-main {
+    overflow: visible;
+    height: auto;
+  }
+  #recent-section.recent-fixed {
+    position: static;
+  }
+  #home-side {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Статистика в 2 колонки вместо одного сминающегося ряда */
+  .stat-cards {
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 140px;
+  }
+
+  /* Календарь: день/период-панель уезжает под сетку */
+  .cal-grid {
+    display: block;
+    height: auto;
+    overflow-y: auto;
+  }
+  .cal-day {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Рейл — по умолчанию свёрнутый (только иконки), меньше занимает места */
+  #navrail:not([data-user-expanded]) {
+    width: var(--nav-w-collapsed);
+  }
+  #navrail:not([data-user-expanded]) .nav-label {
+    opacity: 0;
+  }
+  #navrail:not([data-user-expanded]) .theme-tab:not(.on) {
+    display: none;
+  }
+  body:not(.nav-collapsed) #main,
+  body:not(.nav-collapsed) .tb-rest {
+    margin-left: var(--nav-w-collapsed);
+  }
+  body:not(.nav-collapsed) .tb-logo {
+    width: var(--nav-w-collapsed);
+    padding: 0 17px;
+  }
+  body:not(.nav-collapsed) .tb-logo-text {
+    opacity: 0;
+  }
+}
+
+/* =========================================================================
+   ≤560px — "телефон": нижняя плашка вместо рейла, список/деталь задачи
+   ========================================================================= */
+@media (max-width: 560px) {
+  #titlebar {
+    height: 46px;
+  }
+  .tb-logo {
+    width: 46px !important;
+    padding: 0 12px !important;
+    gap: 0;
+  }
+  .tb-logo-text {
+    display: none;
+  }
+  .tb-rest {
+    margin-left: 46px !important;
+  }
+  .tb-search {
+    max-width: none;
+  }
+
+  /* Рейл полностью скрыт — навигация через нижнюю плашку */
+  #navrail {
+    display: none;
+  }
+  #main,
+  .tb-rest {
+    margin-left: 0 !important;
+  }
+
+  #mobile-tabbar[hidden] {
+    display: flex !important;
+  }
+  #mobile-tabbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 56px;
+    display: flex;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    z-index: 40;
+  }
+  #mobile-tabbar .nav-item,
+  #mobile-tabbar #mobile-account-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 10.5px;
+    padding: 0;
+  }
+  #mobile-tabbar .nav-item.active {
+    color: var(--accent);
+    background: none;
+  }
+  #mobile-tabbar .nav-label {
+    opacity: 1 !important;
+  }
+  #shell,
+  #main {
+    padding-bottom: 56px;
+  }
+  #toast {
+    bottom: 70px;
+  }
+
+  /* Проект: список задач и деталь — по одному пейну за раз (master-detail) */
+  #project-view {
+    display: block;
+  }
+  #sidebar {
+    width: auto;
+    height: 100%;
+  }
+  body.has-selected-task #sidebar {
+    display: none;
+  }
+  #detail {
+    display: none;
+  }
+  body.has-selected-task #detail {
+    display: flex;
+  }
+  #mobile-back-to-list[hidden] {
+    display: flex !important;
+  }
+  .mobile-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 0 0 10px;
+    cursor: pointer;
+  }
+
+  /* Календарь: месяц остаётся 7-колоночным, но компактнее */
+  .cal-days {
+    grid-auto-rows: 60px;
+  }
+  .cal-cell {
+    min-height: 52px;
+    padding: 4px;
+    font-size: 12px;
+  }
+  .cal-main {
+    padding: 12px;
+  }
+
+  /* Строки, которые на десктопе никогда не переносились */
+  .timer-bar,
+  .session-item {
+    flex-wrap: wrap;
+  }
+
+  /* Тулбар редактора — горизонтальный скролл вместо переполнения */
+  .ql-toolbar.ql-snow {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+}

@@ -21,9 +21,15 @@ let store = {
   settings: { hourlyRate: 1000, currency: '₽' },
 };
 
+let overlayCalls = [];
 ipcMain.handle('data:load', () => store);
 ipcMain.handle('data:save', (_e, d) => { store = d; return true; });
 ipcMain.handle('clipboard:write', () => true);
+ipcMain.handle('theme:set-overlay', (_e, theme) => { overlayCalls.push(theme); return true; });
+ipcMain.handle('update:check', () => ({ ok: false, reason: 'dev' }));
+ipcMain.handle('update:download', () => ({ ok: true }));
+ipcMain.handle('update:install', () => true);
+ipcMain.handle('shell:open-external', () => true);
 ipcMain.handle('export:xlsx', (_e, { defaultName, sheets }) => {
   const buf = buildWorkbook(sheets);
   const file = path.join(__dirname, `_smoke-export-${exportsWritten.length + 1}.xlsx`);
@@ -35,7 +41,11 @@ ipcMain.handle('export:xlsx', (_e, { defaultName, sheets }) => {
 app.whenReady().then(async () => {
   const win = new BrowserWindow({
     show: false, titleBarStyle: 'hidden',
-    webPreferences: { preload: path.join(__dirname, '..', 'src', 'preload.js'), contextIsolation: true },
+    webPreferences: {
+      preload: path.join(__dirname, '..', 'src', 'preload.js'),
+      contextIsolation: true,
+      partition: 'nopersist:smoke',
+    },
   });
   win.webContents.on('console-message', (_e, level, message, line, src) => {
     const entry = `[${level}] ${message} (${String(src).split('/').pop()}:${line})`;
@@ -50,17 +60,26 @@ app.whenReady().then(async () => {
   const probe = await win.webContents.executeJavaScript(`(() => ({
     quill: typeof window.Quill === 'function',
     topbarInsideHomeMain: !!document.querySelector('.home-main > #topbar'),
-    recentSectionOutsideGrid: !!document.querySelector('#home-view > #recent-section.recent-fixed'),
-    homeSideSiblingOfHomeMain: !!document.querySelector('.home-grid > .home-main') && !!document.querySelector('.home-grid > #home-side'),
+    recentSectionInsideCenter: !!document.querySelector('.home-center > #recent-section.recent-fixed'),
+    homeSideSiblingOfCenter: !!document.querySelector('#home-view > .home-center') && !!document.querySelector('#home-view > #home-side'),
     projectsGridPresent: !!document.querySelector('.projects-grid'),
     pinnedStillCarousel: !!document.querySelector('#pinned-section .carousel'),
     editorWrapOverflowVisible: getComputedStyle(document.getElementById('editor-wrap')).overflow === 'visible',
     timerBarSpaceBetween: getComputedStyle(document.querySelector('.timer-bar')).justifyContent === 'space-between',
     sdlgUsesButtons: !!document.getElementById('sdlg-date-btn') && !document.getElementById('sdlg-date'),
     tpPopPresent: !!document.getElementById('tp-pop'),
-    themeTogglePresent: !!document.getElementById('theme-toggle'),
-    langSelectPresent: !!document.getElementById('lang-select'),
-    langSelectHasFourOptions: document.querySelectorAll('#lang-select option').length === 4,
+    themeTabsPresent: document.querySelectorAll('.theme-tab').length === 3,
+    langSelectRemoved: !document.getElementById('lang-select'),
+    langTogglePresent: !!document.getElementById('lang-toggle'),
+    topbarHasNoBorderLine: getComputedStyle(document.getElementById('topbar')).borderBottomWidth === '0px',
+    taskTitleRowWraps: getComputedStyle(document.querySelector('.task-title-row')).flexWrap === 'wrap',
+    homeHeadWraps: getComputedStyle(document.querySelector('.home-head')).flexWrap === 'wrap',
+    calNavPresent: !!document.querySelector('.cal-nav'),
+    updateBtnHiddenByDefault: document.getElementById('update-btn').hidden === true,
+    supabaseClientLoaded: typeof window.supabase === 'object' && typeof window.supabase.createClient === 'function',
+    accountBtnPresent: !!document.getElementById('account-btn'),
+    authModalPresent: !!document.getElementById('auth-backdrop'),
+    googleBtnPresent: !!document.getElementById('auth-google-btn'),
   }))()`);
 
   const flow = await win.webContents.executeJavaScript(`(async () => {
@@ -68,32 +87,36 @@ app.whenReady().then(async () => {
     const wait = (ms) => new Promise(r => setTimeout(r, ms));
     const $ = (s) => document.querySelector(s);
 
-    // --- i18n: переключение языка на английский меняет статичные и динамические строки ---
+    // --- i18n: кастомный дропдаун языка (не нативный <select>) переключает статичные и динамические строки ---
     out.defaultLangIsRu = document.querySelector('.nav-label[data-i18n="nav.home"]').textContent === 'Обзор';
-    const langSelect = document.getElementById('lang-select');
-    langSelect.value = 'en';
-    langSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    document.getElementById('lang-toggle').click();
+    await wait(40);
+    out.langMenuOpenedWithFourOptions = document.querySelectorAll('#ctx-menu .ctx-item').length === 4;
+    out.langMenuMarksCurrentSelected = !!document.querySelector('#ctx-menu .ctx-item.sel');
+    [...document.querySelectorAll('#ctx-menu .ctx-item')].find(b => b.textContent.includes('English')).click();
     await wait(60);
     out.navLabelTranslatedToEnglish = document.querySelector('.nav-label[data-i18n="nav.home"]').textContent === 'Overview';
     out.searchPlaceholderTranslated = document.getElementById('search-input').placeholder === 'Search (Ctrl+F)';
     out.statLabelTranslated = document.querySelector('.stat-card span[data-i18n="stats.worked"]').textContent === 'total worked';
 
-    // --- тема: цикл system -> light -> dark ---
+    // --- тема: icon-табы (не цикличная кнопка) ---
     const html = document.documentElement;
     out.themeStartsUnset = !html.hasAttribute('data-theme');
-    document.getElementById('theme-toggle').click();
+    document.querySelector('.theme-tab[data-theme="light"]').click();
     await wait(30);
     out.themeBecomesLight = html.getAttribute('data-theme') === 'light';
-    document.getElementById('theme-toggle').click();
+    out.lightTabMarkedOn = document.querySelector('.theme-tab[data-theme="light"]').classList.contains('on');
+    document.querySelector('.theme-tab[data-theme="dark"]').click();
     await wait(30);
     out.themeBecomesDark = html.getAttribute('data-theme') === 'dark';
-    document.getElementById('theme-toggle').click();
+    document.querySelector('.theme-tab[data-theme="system"]').click();
     await wait(30);
     out.themeBackToSystem = !html.hasAttribute('data-theme');
 
     // возвращаемся на русский для остальных проверок (не завязанных на язык)
-    langSelect.value = 'ru';
-    langSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    document.getElementById('lang-toggle').click();
+    await wait(40);
+    [...document.querySelectorAll('#ctx-menu .ctx-item')].find(b => b.textContent.includes('Русский')).click();
     await wait(60);
 
     // --- проект + несколько задач ---
@@ -163,9 +186,43 @@ app.whenReady().then(async () => {
     await wait(30);
     out.taskListHasThreeTasks = document.querySelectorAll('#task-list .task-item').length === 3;
 
-    // --- экспорт для проверки xlsx (теперь с переведёнными заголовками) ---
+    // --- карточки "Недавние задачи": фон = --panel (не --panel-2, чтобы не выглядели тускло) ---
     document.querySelector('.nav-item[data-view="home"]').click();
     await wait(40);
+    const rtile = document.querySelector('#recent-track .rtile');
+    const bgProbe = document.createElement('div');
+    bgProbe.style.background = 'var(--panel)';
+    document.body.appendChild(bgProbe);
+    const expectedPanelBg = getComputedStyle(bgProbe).backgroundColor;
+    bgProbe.remove();
+    out.recentTileUsesPanelBg = !!rtile && getComputedStyle(rtile).backgroundColor === expectedPanelBg;
+
+    // --- часовые строки в "День": не сжимаются флексом ниже контента (регресс — раньше чипы вылезали за границы часа) ---
+    document.querySelector('.nav-item[data-view="calendar"]').click();
+    await wait(40);
+    document.querySelector('.cal-modes button[data-mode="day"]').click();
+    await wait(60);
+    const hourRow = document.querySelector('.hour-row');
+    out.hourRowFlexShrinkIsZero = !!hourRow && getComputedStyle(hourRow).flexShrink === '0';
+    document.querySelector('.cal-modes button[data-mode="month"]').click();
+    await wait(40);
+
+    // --- стрелки карусели: полностью скрыты (не просто задизейблены opacity), когда скроллить некуда ---
+    document.querySelector('.nav-item[data-view="home"]').click();
+    await wait(40);
+    const recentCarousel = document.getElementById('recent-track').closest('.carousel');
+    const [rLeft, rRight] = recentCarousel.querySelectorAll('.car-arrow');
+    out.carouselArrowsHiddenWhenNoOverflow = !!rLeft && !!rRight && rLeft.hidden && rRight.hidden;
+
+    // --- диалог входа: открытие/закрытие (без реальных сетевых вызовов Supabase) ---
+    document.getElementById('account-btn').click();
+    await wait(40);
+    out.authModalOpensOnAccountClick = !$('#auth-backdrop').hidden;
+    document.getElementById('auth-cancel').click();
+    await wait(40);
+    out.authModalClosesOnCancel = $('#auth-backdrop').hidden;
+
+    // --- экспорт для проверки xlsx (теперь с переведёнными заголовками) ---
     [...document.querySelectorAll('#projects-track .ptile')]
       .find(t => /Проект №2/.test(t.textContent)).querySelector('.ptile-menu').click();
     await wait(40);
@@ -176,6 +233,22 @@ app.whenReady().then(async () => {
   })()`);
 
   await new Promise((r) => setTimeout(r, 200));
+
+  // --- автообновление: кнопка реагирует на события из главного процесса ---
+  win.webContents.send('update:available', { version: '9.9.9' });
+  await new Promise((r) => setTimeout(r, 60));
+  const updateAfterAvailable = await win.webContents.executeJavaScript(`
+    JSON.stringify({ hidden: document.getElementById('update-btn').hidden, label: document.getElementById('update-btn-label').textContent })
+  `);
+  win.webContents.send('update:progress', { percent: 42 });
+  await new Promise((r) => setTimeout(r, 30));
+  win.webContents.send('update:ready');
+  await new Promise((r) => setTimeout(r, 30));
+  const updateAfterReady = await win.webContents.executeJavaScript(`
+    JSON.stringify({ label: document.getElementById('update-btn-label').textContent })
+  `);
+  flow.updateBtnShowsOnAvailable = !JSON.parse(updateAfterAvailable).hidden;
+  flow.updateBtnLabelMatchesReady = JSON.parse(updateAfterReady).label === 'Перезапустить';
 
   const unzip = (buf) => {
     const files = {};
@@ -201,6 +274,7 @@ app.whenReady().then(async () => {
     probe,
     flow,
     exportOk,
+    overlaySyncedOnThemeChange: overlayCalls.includes('light') && overlayCalls.includes('dark'),
     errors,
     ok: errors.length === 0,
   };
