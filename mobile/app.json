@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Lancible",
+    "slug": "lancible",
+    "scheme": "lancible",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#2a2b2e",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lancible.app"
+    },
+    "android": {
+      "package": "com.lancible.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#2a2b2e",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#2a2b2e"
+        }
+      ],
+      "expo-font",
+      "expo-sharing"
+    ]
+  }
+}

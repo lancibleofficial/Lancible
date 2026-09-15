@@ -9,7 +9,7 @@ let state = {
   tasks: [],
   activeTimer: null,
   ui: { view: 'home', projectId: null, navCollapsed: false },
-  settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru' },
+  settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, syncResolvedFor: null },
 };
 let selectedId = null;
 let quill = null;
@@ -131,6 +131,8 @@ const T = {
     'sync.conflict_text': 'На сервере уже есть сохранённые данные, а на этом компьютере — свои. Какие использовать?',
     'sync.use_server': 'С сервера', 'sync.use_local': 'С этого компьютера',
     'sync.updated_toast': 'Данные обновлены с другого устройства',
+    'sync.toggle_label': 'Синхронизировать с аккаунтом',
+    'sync.enabled_toast': 'Синхронизация включена', 'sync.disabled_toast': 'Синхронизация выключена — данные остаются только на этом устройстве',
     'common.save': 'Сохранить', 'common.delete_q': 'Удалить?', 'common.delete': 'Удалить',
     'confirm.delete_task_named': 'Удалить «{name}»? Отменить нельзя.',
     'confirm.delete_task': 'Удалить эту задачу? Отменить нельзя.',
@@ -237,6 +239,8 @@ const T = {
     'sync.conflict_text': 'There is already saved data on the server, and this computer has its own too. Which should we use?',
     'sync.use_server': 'From the server', 'sync.use_local': 'From this computer',
     'sync.updated_toast': 'Data updated from another device',
+    'sync.toggle_label': 'Sync with account',
+    'sync.enabled_toast': 'Sync enabled', 'sync.disabled_toast': 'Sync disabled — data stays on this device only',
     'common.save': 'Save', 'common.delete_q': 'Delete?', 'common.delete': 'Delete',
     'confirm.delete_task_named': 'Delete "{name}"? This can’t be undone.',
     'confirm.delete_task': 'Delete this task? This can’t be undone.',
@@ -343,6 +347,8 @@ const T = {
     'sync.conflict_text': 'На сервері вже є збережені дані, а на цьому комп’ютері — свої. Які використати?',
     'sync.use_server': 'З сервера', 'sync.use_local': 'З цього комп’ютера',
     'sync.updated_toast': 'Дані оновлено з іншого пристрою',
+    'sync.toggle_label': 'Синхронізувати з акаунтом',
+    'sync.enabled_toast': 'Синхронізацію увімкнено', 'sync.disabled_toast': 'Синхронізацію вимкнено — дані залишаються лише на цьому пристрої',
     'common.save': 'Зберегти', 'common.delete_q': 'Видалити?', 'common.delete': 'Видалити',
     'confirm.delete_task_named': 'Видалити «{name}»? Скасувати не можна.',
     'confirm.delete_task': 'Видалити це завдання? Скасувати не можна.',
@@ -449,6 +455,8 @@ const T = {
     'sync.conflict_text': 'Серверде деректер бар, осы компьютерде де өз деректері бар. Қайсысын пайдаланамыз?',
     'sync.use_server': 'Сервердегі', 'sync.use_local': 'Осы компьютердегі',
     'sync.updated_toast': 'Деректер басқа құрылғыдан жаңартылды',
+    'sync.toggle_label': 'Аккаунтпен синхрондау',
+    'sync.enabled_toast': 'Синхрондау қосылды', 'sync.disabled_toast': 'Синхрондау өшірілді — деректер тек осы құрылғыда қалады',
     'common.save': 'Сақтау', 'common.delete_q': 'Жою керек пе?', 'common.delete': 'Жою',
     'confirm.delete_task_named': '«{name}» жойылсын ба? Қайтару мүмкін емес.',
     'confirm.delete_task': 'Бұл тапсырма жойылсын ба? Қайтару мүмкін емес.',
@@ -1154,8 +1162,13 @@ if (window.api.onOAuthCallback) {
 }
 
 el.accountBtn.addEventListener('click', () => {
-  if (currentUser) openMenu(el.accountBtn, [{ label: t('auth.sign_out'), danger: true, onClick: signOut }]);
-  else openAuthModal();
+  if (currentUser) {
+    openMenu(el.accountBtn, [
+      { label: t('sync.toggle_label'), selected: state.settings.syncEnabled !== false, onClick: toggleSyncEnabled },
+      { sep: true },
+      { label: t('auth.sign_out'), danger: true, onClick: signOut },
+    ]);
+  } else openAuthModal();
 });
 el.authCancel.addEventListener('click', closeAuthModal);
 el.authBackdrop.addEventListener('click', (e) => { if (e.target === el.authBackdrop) closeAuthModal(); });
@@ -1211,7 +1224,7 @@ function syncPayload() {
 }
 
 async function pushSyncState() {
-  if (!currentUser) return;
+  if (!currentUser || state.settings.syncEnabled === false) return;
   const payload = syncPayload();
   const json = JSON.stringify(payload);
   if (json === lastSyncedJSON) return; // с последнего синка ничего не поменялось
@@ -1225,6 +1238,12 @@ async function pushSyncState() {
     if (error) throw error;
     lastSyncedJSON = json;
     syncDirty = false;
+    // Держим "отпечаток" свежим при каждом обычном пуше, пока пользователь
+    // не выходил из аккаунта — иначе создание задачи, пока уже залогинен,
+    // само по себе устарило бы отпечаток и на следующем запуске диалог
+    // "какие данные оставить" всплыл бы просто из-за обычной, уже
+    // синхронизированной правки, а не из-за настоящего расхождения.
+    rememberSyncResolution();
   } catch (err) {
     console.error('Не удалось синхронизировать данные:', err);
     syncDirty = true;
@@ -1251,11 +1270,43 @@ function applyRemoteData(data) {
   scheduleSave(); // сохраняем локально; pushSyncState сам не отправит лишнего — см. lastSyncedJSON
 }
 
+// "Отпечаток" локальных данных на момент разрешения конфликта — используется
+// ниже, чтобы не спрашивать "какие данные оставить" повторно при каждом
+// входе/перезапуске, если с прошлого раза ничего не изменилось (раньше
+// диалог всплывал на КАЖДОЕ восстановление сессии на старте, а не только на
+// осознанный вход, потому что afterSignedIn({silent:true}) всё равно звал
+// syncOnSignIn). Отпечаток инвалидируется сам по себе, если пользователь
+// поработал локально (в том числе выйдя из аккаунта) — тогда хэш перестаёт
+// совпадать и при следующем входе диалог закономерно появится снова.
+function localSyncFingerprint() { return JSON.stringify(syncPayload()); }
+function isSyncAlreadyResolved() {
+  const r = state.settings.syncResolvedFor;
+  return !!(currentUser && r && r.userId === currentUser.id && r.hash === localSyncFingerprint());
+}
+function rememberSyncResolution() {
+  if (!currentUser) return;
+  state.settings.syncResolvedFor = { userId: currentUser.id, hash: localSyncFingerprint() };
+  scheduleSave();
+}
+
+let syncInFlightFor = null;
+
 /** При входе: если на сервере ничего нет — заливаем локальные данные; если
  * локально пусто — просто подтягиваем с сервера; если данные есть и там, и
- * там — спрашиваем пользователя (нетривиальный случай первого мерджа, который
- * план изначально откладывал на этот момент). */
+ * там — спрашиваем пользователя, но только один раз для этой пары
+ * (аккаунт, состояние локальных данных) — см. rememberSyncResolution. */
 async function syncOnSignIn() {
+  if (!currentUser || state.settings.syncEnabled === false) return;
+  if (syncInFlightFor === currentUser.id) return; // защита от почти одновременных повторных вызовов (см. afterSignedIn)
+  syncInFlightFor = currentUser.id;
+  try {
+    await syncOnSignInInner();
+  } finally {
+    syncInFlightFor = null;
+  }
+}
+
+async function syncOnSignInInner() {
   let row = null;
   try {
     const { data, error } = await sb.from('sync_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
@@ -1271,7 +1322,7 @@ async function syncOnSignIn() {
     if (localHasData) await pushSyncState();
   } else if (!localHasData) {
     applyRemoteData(row.data);
-  } else {
+  } else if (!isSyncAlreadyResolved()) {
     const useServer = await confirmDialog(t('sync.conflict_text'), {
       title: t('sync.conflict_title'),
       okLabel: t('sync.use_server'),
@@ -1281,24 +1332,37 @@ async function syncOnSignIn() {
     if (useServer) applyRemoteData(row.data);
     else await pushSyncState();
   }
+  rememberSyncResolution();
   subscribeSyncRealtime();
 }
 
 function subscribeSyncRealtime() {
   unsubscribeSyncRealtime();
-  if (!currentUser) return;
+  if (!currentUser || state.settings.syncEnabled === false) return;
   syncChannel = sb
     .channel('sync_state:' + currentUser.id)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sync_state', filter: `user_id=eq.${currentUser.id}` }, (payload) => {
       const row = payload.new;
       if (!row || row.updated_by === SYNC_CLIENT_ID) return; // эхо нашей же записи
       applyRemoteData(row.data);
+      rememberSyncResolution(); // см. комментарий в pushSyncState
       toast(t('sync.updated_toast'));
     })
     .subscribe();
 }
 function unsubscribeSyncRealtime() {
   if (syncChannel) { sb.removeChannel(syncChannel); syncChannel = null; }
+}
+
+/** Пункт меню аккаунта — источник данных: пользователь может полностью
+ * отключить облачную синхронизацию для этого устройства (данные остаются
+ * только локально, даже будучи залогиненным), не выходя из аккаунта. */
+function toggleSyncEnabled() {
+  const next = !(state.settings.syncEnabled !== false);
+  state.settings.syncEnabled = next;
+  scheduleSave();
+  if (next) { if (currentUser) syncOnSignIn(); } else { unsubscribeSyncRealtime(); }
+  toast(next ? t('sync.enabled_toast') : t('sync.disabled_toast'));
 }
 
 // ---------------------------------------------------------------------------
@@ -3209,6 +3273,8 @@ function migrate() {
   if (typeof state.ui.navCollapsed !== 'boolean') state.ui.navCollapsed = false;
   if (!['system', 'light', 'dark'].includes(state.settings.theme)) state.settings.theme = 'system';
   if (!T[state.settings.lang]) state.settings.lang = 'ru';
+  if (typeof state.settings.syncEnabled !== 'boolean') state.settings.syncEnabled = true;
+  if (!state.settings.syncResolvedFor || typeof state.settings.syncResolvedFor !== 'object') state.settings.syncResolvedFor = null;
 
   let cur = state.settings.currency || 'RUB';
   if (SYM2CODE[cur]) cur = SYM2CODE[cur];
