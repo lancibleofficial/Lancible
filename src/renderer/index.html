@@ -11,6 +11,36 @@
   <title>Lancible</title>
 </head>
 <body>
+  <!-- Скелетон начальной загрузки — показан статически до отработки init()
+       в app.js (см. комментарий там), скрывается сам после первого render(). -->
+  <div id="app-skeleton">
+    <div class="skel-topbar">
+      <div class="skel skel-logo"></div>
+      <div class="skel skel-search"></div>
+    </div>
+    <div class="skel-body">
+      <div class="skel-rail">
+        <div class="skel skel-rail-item"></div>
+        <div class="skel skel-rail-item"></div>
+        <div class="skel skel-rail-item"></div>
+      </div>
+      <div class="skel-main">
+        <div class="skel-stats">
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+        </div>
+        <div class="skel skel-line-lg"></div>
+        <div class="skel-tiles">
+          <div class="skel skel-tile"></div>
+          <div class="skel skel-tile"></div>
+          <div class="skel skel-tile"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <header id="titlebar">
     <div class="tb-logo" id="tb-logo">
       <svg class="tb-logo-mark" viewBox="0 0 256 256" aria-hidden="true">
@@ -23,8 +53,12 @@
     <div class="tb-rest">
       <div class="tb-search">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.8 1.2a5.6 5.6 0 104.02 9.5l3.2 3.2 1.4-1.4-3.2-3.2A5.6 5.6 0 006.8 1.2zm0 2a3.6 3.6 0 110 7.2 3.6 3.6 0 010-7.2z"/></svg>
-        <input id="search-input" type="text" data-i18n-ph="search.placeholder" placeholder="Поиск (Ctrl+F)" autocomplete="off" />
+        <input id="search-input" type="text" data-i18n-ph="search.placeholder" placeholder="Поиск" autocomplete="off" />
       </div>
+      <button type="button" id="account-btn" class="tb-account">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
+        <span id="account-label">Войти</span>
+      </button>
     </div>
   </header>
 
@@ -39,14 +73,13 @@
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
           <span class="nav-label" data-i18n="nav.calendar">Календарь</span>
         </button>
+        <button class="nav-item" data-view="settings">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zM8 6.8a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4zM6.9 1h2.2l.3 1.7c.5.15.95.37 1.37.63l1.5-.9 1.55 1.55-.9 1.5c.26.42.48.87.63 1.37L15.3 6.9v2.2l-1.7.3c-.15.5-.37.95-.63 1.37l.9 1.5-1.55 1.55-1.5-.9c-.42.26-.87.48-1.37.63L9.1 15H6.9l-.3-1.7a5.2 5.2 0 01-1.37-.63l-1.5.9-1.55-1.55.9-1.5A5.2 5.2 0 012.4 9.1L.7 8.8V6.6l1.7-.3c.15-.5.37-.95.63-1.37l-.9-1.5L3.68 1.88l1.5.9c.42-.26.87-.48 1.37-.63L6.9 1z"/></svg>
+          <span class="nav-label" data-i18n="nav.settings">Настройки</span>
+        </button>
       </div>
 
       <div class="nav-spacer"></div>
-
-      <button type="button" id="account-btn" class="nav-item">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
-        <span class="nav-label" id="account-label">Войти</span>
-      </button>
 
       <button type="button" id="lang-toggle" class="nav-item nav-lang" data-i18n-title="nav.language" title="Язык">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
@@ -313,6 +346,65 @@
             <ul class="cal-day-list" id="cal-day-list"></ul>
             <p class="muted" id="cal-day-empty" data-i18n="calendar.day_empty" hidden>В этот день записей не было.</p>
           </aside>
+        </div>
+      </div>
+
+      <!-- НАСТРОЙКИ -->
+      <div id="settings-view" class="view" hidden>
+        <div class="settings-wrap">
+          <div class="settings-profile" id="settings-profile"></div>
+
+          <div class="settings-section-label" data-i18n="settings.section_main">Основное</div>
+          <div class="settings-card">
+            <button type="button" class="settings-row settings-row-btn" id="settings-lang-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
+              <span class="settings-row-label" data-i18n="nav.language">Язык</span>
+              <span class="settings-row-value" id="settings-lang-value">Русский</span>
+            </button>
+            <div class="settings-row settings-row-last">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+              <span class="settings-row-label" data-i18n="settings.theme_label">Тема</span>
+              <div class="theme-tabs">
+                <button type="button" class="theme-tab" data-theme="system" data-i18n-title="nav.theme_system" title="Системная">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
+                </button>
+                <button type="button" class="theme-tab" data-theme="light" data-i18n-title="nav.theme_light" title="Светлая">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+                </button>
+                <button type="button" class="theme-tab" data-theme="dark" data-i18n-title="nav.theme_dark" title="Тёмная">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM2 2.6h1.2v1.2H2zM12.8 2.2h1v1h-1zM12.5 11.5h1.3v1.3h-1.3z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section-label" id="settings-data-label" data-i18n="settings.section_data" hidden>Данные</div>
+          <div class="settings-card" id="settings-data-card" hidden>
+            <button type="button" class="settings-row settings-row-last switch" id="settings-sync-toggle" aria-pressed="false">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 6.4a3.6 3.6 0 016.9-1.3A3 3 0 0114.8 8a3 3 0 01-3 3H4.9A2.9 2.9 0 012 8.1a2.9 2.9 0 012.6-2.88z"/></svg>
+              <span class="settings-row-label" data-i18n="sync.toggle_label">Синхронизировать с аккаунтом</span>
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </button>
+          </div>
+
+          <div class="settings-section-label" data-i18n="settings.section_work">Работа</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+              <span class="settings-row-label" data-i18n="rate.default_label">Ставка по умолчанию</span>
+              <div class="settings-row-input">
+                <input id="settings-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0" />
+                <span class="muted" data-i18n="rate.per_hour">/ч</span>
+              </div>
+            </div>
+            <div class="settings-row settings-row-last">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+              <span class="settings-row-label" data-i18n="settings.currency_label">Валюта</span>
+              <select id="settings-currency" class="settings-row-select" title="Валюта"></select>
+            </div>
+          </div>
+
+          <div class="settings-footer">Lancible</div>
         </div>
       </div>
     </div>

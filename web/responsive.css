@@ -155,6 +155,12 @@
   #search-input {
     font-size: 14.5px;
   }
+  /* На телефонной ширине доступ к аккаунту/теме/языку уже даёт нижняя
+     плашка (#mobile-account-btn) — свой пункт в шапке рядом с поиском тут
+     только отнимал бы и без того тесное место. */
+  .tb-account {
+    display: none;
+  }
 
   /* Рейл полностью скрыт — навигация через нижнюю плашку. .tb-rest сюда
      специально не входит — ему по-прежнему нужен отступ под лого (задан
@@ -178,7 +184,6 @@
     display: flex;
     background: var(--panel);
     border-top: none;
-    box-shadow: 0 -3px 18px rgba(0, 0, 0, 0.16);
     z-index: 40;
   }
   #mobile-tabbar .nav-item,
@@ -195,7 +200,7 @@
     color: var(--text-dim);
     font-family: inherit;
     font-size: 10.5px;
-    font-weight: 600;
+    font-weight: 400;
     padding: 0;
   }
   #mobile-tabbar .icon {
@@ -269,7 +274,6 @@
     border: none;
     border-top: 1px solid var(--border-strong);
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25);
     animation: sheetUp 0.2s var(--ease);
   }
   #ctx-menu::before {
@@ -363,7 +367,7 @@
     border-radius: 12px;
     gap: 8px;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 400;
     font-family: inherit;
   }
   #new-task-btn .icon {

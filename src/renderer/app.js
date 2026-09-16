@@ -56,17 +56,20 @@ const LANG_NAMES = { ru: 'Русский', en: 'English', uk: 'Українсь�
 const T = {
   ru: {
     'app.default_project_name': 'Мои задачи',
-    'search.placeholder': 'Поиск (Ctrl+F)',
+    'search.placeholder': 'Поиск',
     'search.start_typing': 'Начни вводить название проекта или задачи',
     'search.nothing_found': 'Ничего не найдено',
     'search.projects_group': 'Проекты',
     'search.tasks_group': 'Задачи',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проект: {name}',
-    'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.collapse': 'Свернуть',
+    'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.settings': 'Настройки', 'nav.collapse': 'Свернуть',
     'nav.language': 'Язык', 'nav.account': 'Аккаунт',
     'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
+    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа',
+    'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
+    'profile.guest': 'Гость', 'profile.guest_sub': 'Войдите, чтобы синхронизировать данные между устройствами',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
     'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
     'home.title': 'Проекты', 'home.create': 'Создать проект', 'home.pinned': 'Закреплённые',
@@ -164,17 +167,20 @@ const T = {
   },
   en: {
     'app.default_project_name': 'My tasks',
-    'search.placeholder': 'Search (Ctrl+F)',
+    'search.placeholder': 'Search',
     'search.start_typing': 'Start typing a project or task name',
     'search.nothing_found': 'Nothing found',
     'search.projects_group': 'Projects',
     'search.tasks_group': 'Tasks',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'project: {name}',
-    'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.collapse': 'Collapse',
+    'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.settings': 'Settings', 'nav.collapse': 'Collapse',
     'nav.language': 'Language', 'nav.account': 'Account',
     'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Restart to update',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
+    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work',
+    'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
+    'profile.guest': 'Guest', 'profile.guest_sub': 'Sign in to sync your data across devices',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
     'stats.month': 'earned this month', 'stats.done': 'tasks done',
     'home.title': 'Projects', 'home.create': 'Create project', 'home.pinned': 'Pinned',
@@ -272,17 +278,20 @@ const T = {
   },
   uk: {
     'app.default_project_name': 'Мої завдання',
-    'search.placeholder': 'Пошук (Ctrl+F)',
+    'search.placeholder': 'Пошук',
     'search.start_typing': 'Почни вводити назву проєкту або завдання',
     'search.nothing_found': 'Нічого не знайдено',
     'search.projects_group': 'Проєкти',
     'search.tasks_group': 'Завдання',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проєкт: {name}',
-    'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.collapse': 'Згорнути',
+    'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.settings': 'Налаштування', 'nav.collapse': 'Згорнути',
     'nav.language': 'Мова', 'nav.account': 'Акаунт',
     'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
+    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота',
+    'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
+    'profile.guest': 'Гість', 'profile.guest_sub': 'Увійдіть, щоб синхронізувати дані між пристроями',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
     'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
     'home.title': 'Проєкти', 'home.create': 'Створити проєкт', 'home.pinned': 'Закріплені',
@@ -380,17 +389,20 @@ const T = {
   },
   kk: {
     'app.default_project_name': 'Менің тапсырмаларым',
-    'search.placeholder': 'Іздеу (Ctrl+F)',
+    'search.placeholder': 'Іздеу',
     'search.start_typing': 'Жоба немесе тапсырма атауын тере баста',
     'search.nothing_found': 'Ештеңе табылмады',
     'search.projects_group': 'Жобалар',
     'search.tasks_group': 'Тапсырмалар',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'жоба: {name}',
-    'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.collapse': 'Жию',
+    'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.settings': 'Параметрлер', 'nav.collapse': 'Жию',
     'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
     'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
+    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс',
+    'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
+    'profile.guest': 'Қонақ', 'profile.guest_sub': 'Деректерді құрылғылар арасында синхрондау үшін кіріңіз',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
     'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
     'home.title': 'Жобалар', 'home.create': 'Жоба құру', 'home.pinned': 'Бекітілген',
@@ -553,7 +565,7 @@ const el = {
   updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
 
   accountBtn: $('account-btn'), accountLabel: $('account-label'),
-  mobileTabbar: $('mobile-tabbar'), mobileAccountBtn: $('mobile-account-btn'),
+  mobileTabbar: $('mobile-tabbar'),
   mobileBackToList: $('mobile-back-to-list'),
   authBackdrop: $('auth-backdrop'),
   authStepCredentials: $('auth-step-credentials'), authStepOnboarding: $('auth-step-onboarding'),
@@ -569,6 +581,11 @@ const el = {
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
 
   homeView: $('home-view'), projectView: $('project-view'), calendarView: $('calendar-view'),
+  settingsView: $('settings-view'), settingsProfile: $('settings-profile'),
+  settingsLangRow: $('settings-lang-row'), settingsLangValue: $('settings-lang-value'),
+  settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
+  settingsSyncToggle: $('settings-sync-toggle'),
+  settingsRate: $('settings-rate'), settingsCurrency: $('settings-currency'),
 
   homeCount: $('home-count'),
   pinnedSection: $('pinned-section'), pinnedTrack: $('pinned-track'),
@@ -773,6 +790,13 @@ function aggregateDays() {
   }
   return map;
 }
+/** Задачи, отмеченные выполненными в конкретный день (по task.doneAt) — для
+ * карточек дня в календаре. У задач, отмеченных выполненными до появления
+ * этого поля, doneAt нет, так что старые завершения просто не попадают ни в
+ * один день — это ожидаемо, а не баг. */
+function tasksDoneOnDay(key) {
+  return state.tasks.filter((t2) => t2.doneAt && dayKey(t2.doneAt) === key);
+}
 /** Сумма за диапазон дат [from, to] включительно (Date). */
 function rangeAgg(from, to) {
   let ms = 0;
@@ -870,46 +894,34 @@ function setLang(code) {
   render();
   scheduleSave();
 }
-function openLangMenu() {
+function openLangMenu(anchor) {
   const items = Object.keys(LANG_NAMES).map((code) => ({
     label: LANG_NAMES[code],
     selected: code === ((state.settings && state.settings.lang) || 'ru'),
     onClick: () => setLang(code),
   }));
-  openMenu(el.langToggle, items);
+  openMenu(anchor || el.langToggle, items);
 }
-el.langToggle.addEventListener('click', openLangMenu);
+el.langToggle.addEventListener('click', () => openLangMenu(el.langToggle));
+el.settingsLangRow.addEventListener('click', () => openLangMenu(el.settingsLangRow));
 
-/** Мобильная нижняя плашка (см. web/responsive.css) складывает тему,
- * язык и вход/выход в один пункт "Аккаунт" — на десктопе для них есть
- * отдельные элементы рейла, здесь их не показывают вовсе. */
-function openMobileAccountMenu(anchor) {
-  const currentTheme = (state.settings && state.settings.theme) || 'system';
-  const items = [
-    { key: 'system', i18n: 'nav.theme_system' },
-    { key: 'light', i18n: 'nav.theme_light' },
-    { key: 'dark', i18n: 'nav.theme_dark' },
-  ].map(({ key, i18n }) => ({
-    label: t(i18n),
-    selected: key === currentTheme,
-    onClick: () => { state.settings.theme = key; applyTheme(); scheduleSave(); },
-  }));
-  items.push({ sep: true });
-  for (const code of Object.keys(LANG_NAMES)) {
-    items.push({
-      label: LANG_NAMES[code],
-      selected: code === ((state.settings && state.settings.lang) || 'ru'),
-      onClick: () => setLang(code),
-    });
-  }
-  items.push({ sep: true });
-  if (currentUser) items.push({ label: t('auth.sign_out'), danger: true, onClick: signOut });
-  else items.push({ label: t('auth.sign_in_nav'), onClick: openAuthModal });
-  openMenu(anchor, items);
-}
-if (el.mobileAccountBtn) {
-  el.mobileAccountBtn.addEventListener('click', () => openMobileAccountMenu(el.mobileAccountBtn));
-}
+el.settingsSyncToggle.addEventListener('click', () => {
+  toggleSyncEnabled();
+  renderSettings();
+});
+el.settingsRate.addEventListener('input', () => {
+  state.settings.hourlyRate = parseNum(el.settingsRate.value);
+  const task = getTask(selectedId);
+  if (task) renderMoney(task);
+  renderStats();
+  scheduleSave();
+});
+el.settingsCurrency.addEventListener('change', () => {
+  state.settings.currency = el.settingsCurrency.value;
+  render();
+  scheduleSave();
+});
+
 if (el.mobileBackToList) {
   el.mobileBackToList.addEventListener('click', () => {
     flushEditor();
@@ -969,6 +981,49 @@ let selectedUseCase = null;
 
 function renderAccountBtn() {
   el.accountLabel.textContent = currentUser ? (currentUser.name || currentUser.email) : t('auth.sign_in_nav');
+}
+
+/** Страница настроек — зеркалит то, что есть в настройках мобильного
+ * приложения: профиль/вход, язык, тема, синхронизация (только для вошедших),
+ * ставка и валюта по умолчанию. Языковой ряд/тема переиспользуют те же
+ * функции и .theme-tab кнопки (просто продублированные в разметке), что и
+ * навигационный рейл — второй набор .theme-tab автоматически попадает в
+ * el.themeTabs (querySelectorAll на старте) и получает те же обработчики. */
+function renderSettings() {
+  if (currentUser) {
+    const initial = (currentUser.name || currentUser.email || '?')[0].toUpperCase();
+    el.settingsProfile.innerHTML = `
+      <div class="settings-avatar">${escapeHtml(initial)}</div>
+      <div class="settings-profile-main">
+        <div class="settings-profile-name">${escapeHtml(currentUser.name || currentUser.email)}</div>
+        ${currentUser.name ? `<div class="settings-profile-sub">${escapeHtml(currentUser.email)}</div>` : ''}
+      </div>`;
+  } else {
+    el.settingsProfile.innerHTML = `
+      <div class="settings-avatar guest">?</div>
+      <div class="settings-profile-main">
+        <div class="settings-profile-name">${escapeHtml(t('profile.guest'))}</div>
+        <div class="settings-profile-sub">${escapeHtml(t('profile.guest_sub'))}</div>
+      </div>
+      <div class="settings-guest-actions">
+        <button type="button" class="ghost" id="settings-signin-btn">${escapeHtml(t('auth.sign_in'))}</button>
+        <button type="button" class="btn-accent" id="settings-signup-btn">${escapeHtml(t('auth.create_account'))}</button>
+      </div>`;
+    $('settings-signin-btn').addEventListener('click', openAuthModal);
+    $('settings-signup-btn').addEventListener('click', openAuthModal);
+  }
+
+  el.settingsLangValue.textContent = LANG_NAMES[(state.settings && state.settings.lang) || 'ru'];
+
+  const syncOn = state.settings.syncEnabled !== false;
+  el.settingsDataLabel.hidden = !currentUser;
+  el.settingsDataCard.hidden = !currentUser;
+  el.settingsSyncToggle.setAttribute('aria-pressed', String(syncOn));
+
+  if (document.activeElement !== el.settingsRate) {
+    el.settingsRate.value = state.settings.hourlyRate ? String(state.settings.hourlyRate) : '';
+  }
+  el.settingsCurrency.value = state.settings.currency;
 }
 
 function buildUsecaseButtons() {
@@ -1410,7 +1465,7 @@ function render() {
     tab.classList.toggle('active', active);
   });
 
-  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView };
+  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1419,6 +1474,7 @@ function render() {
 
   if (v === 'home') renderHome();
   else if (v === 'project') { renderProjectHeader(); renderSidebar(); renderDetail(); renderFooter(); }
+  else if (v === 'settings') renderSettings();
   else renderCalendar();
 }
 
@@ -1589,6 +1645,7 @@ function recentTile(task) {
   cb.addEventListener('click', (e) => e.stopPropagation());
   cb.addEventListener('change', () => {
     task.done = cb.checked;
+    task.doneAt = cb.checked ? new Date().toISOString() : null;
     task.updatedAt = new Date().toISOString();
     tile.classList.toggle('done', task.done);
     renderStats();
@@ -2060,6 +2117,16 @@ function renderCalendar() {
     }
     let html = `<span class="cc-num">${c.day}</span>`;
     if (agg) html += `<span class="cc-time">${fmtDur(agg.ms)}</span><span class="cc-money">${fmtMoney(agg.money)}</span>`;
+    const doneTasks = tasksDoneOnDay(c.key);
+    if (doneTasks.length) {
+      if (calState.mode === 'week') {
+        html += `<div class="cc-done-list">${doneTasks.map((t2) =>
+          `<span class="cc-done-item">${icon('check')}${escapeHtml(t2.title || t('task.no_name'))}</span>`,
+        ).join('')}</div>`;
+      } else {
+        html += `<span class="cc-done-badge">${icon('check')}${doneTasks.length}</span>`;
+      }
+    }
     cell.innerHTML = html;
     if (agg) {
       const bar = document.createElement('i');
@@ -2276,6 +2343,7 @@ function taskItem(task, i) {
   cb.addEventListener('click', (e) => e.stopPropagation());
   cb.addEventListener('change', () => {
     task.done = cb.checked;
+    task.doneAt = cb.checked ? new Date().toISOString() : null;
     task.updatedAt = new Date().toISOString();
     li.classList.toggle('done', task.done);
     renderStats();
@@ -3252,16 +3320,18 @@ document.addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 function buildCurrencyOptions() {
-  const cur = el.currency.value;
-  el.currency.innerHTML = '';
-  for (const [code, sym] of Object.entries(CURRENCIES)) {
-    const o = document.createElement('option');
-    o.value = code;
-    o.textContent = `${code} ${sym}`;
-    el.currency.appendChild(o);
+  for (const select of [el.currency, el.settingsCurrency]) {
+    const cur = select.value;
+    select.innerHTML = '';
+    for (const [code, sym] of Object.entries(CURRENCIES)) {
+      const o = document.createElement('option');
+      o.value = code;
+      o.textContent = `${code} ${sym}`;
+      select.appendChild(o);
+    }
+    select.title = t('currency.title');
+    if (cur) select.value = cur;
   }
-  el.currency.title = t('currency.title');
-  if (cur) el.currency.value = cur;
 }
 
 function migrate() {
@@ -3329,6 +3399,12 @@ async function init() {
   setCalMode(calState.mode);
   scheduleSave();
   render();
+
+  const skeleton = $('app-skeleton');
+  if (skeleton) {
+    skeleton.classList.add('hide');
+    setTimeout(() => skeleton.remove(), 200);
+  }
 }
 
 init();
