@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -26,6 +27,16 @@ export default function App() {
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  // app.json задаёт нативный фон окна СТАТИЧЕСКИ (#2a2b2e, тёмная тема) — на
+  // холодном старте это нормально, но при переходах между экранами на
+  // светлой теме нативный Android-фон окна на кадр-два просвечивал ИЗ-ПОД
+  // JS-отрисованного экрана этим тёмным цветом (не завязан на состояние
+  // темы) — выглядело как чёрная вспышка. Синхронизируем нативный фон окна с
+  // текущей темой при каждой смене.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.bg).catch(() => {});
+  }, [colors.bg]);
 
   if (!fontsLoaded) return null;
 

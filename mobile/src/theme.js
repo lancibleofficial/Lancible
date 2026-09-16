@@ -25,10 +25,18 @@ const dark = {
   tabActiveBg: '#2a2b2e',
 };
 
+// Раньше все нейтральные цвета светлой темы (bg/panel2/border/textDim) были
+// тёплыми, зеленоватыми оттенками (например border:#e1e6da, textDim:#5c6152 —
+// G-канал выше остальных) и слишком светлыми — bg (#f6f7f3) почти не
+// отличался от panel (#ffffff), из-за чего границы карточек были едва
+// видны. Переведены на холодную, синевато-серую шкалу (B-канал теперь
+// самый высокий в каждом нейтральном цвете) и затемнены на 1-2 ступени для
+// контраста — bg теперь заметно отличается от panel, а textDim/borderStrong
+// достаточно тёмные, чтобы не сливаться с фоном.
 const light = {
-  bg: '#f6f7f3', panel: '#ffffff', panel2: '#eef1ea',
-  border: '#e1e6da', borderStrong: '#c7cdba',
-  text: '#14160f', textDim: '#5c6152',
+  bg: '#e7ecf1', panel: '#ffffff', panel2: '#dbe2e9',
+  border: '#c3ccd6', borderStrong: '#8a9bb0',
+  text: '#10141a', textDim: '#4a5560',
   accent: '#7ae65b', accentHover: '#68c44d', accentText: '#16220e', accentMuted: 'rgba(122,230,91,0.18)',
   danger: '#d13a2c',
   tabActiveBg: '#ffffff',

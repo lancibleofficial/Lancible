@@ -56,7 +56,9 @@ export default function BottomSheet() {
         }).start();
       });
     } else if (visible) {
-      Animated.timing(translateY, { toValue: windowHeight, duration: CLOSE_MS, useNativeDriver: true }).start(({ finished }) => {
+      Animated.timing(translateY, {
+        toValue: windowHeight, duration: CLOSE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true,
+      }).start(({ finished }) => {
         if (finished) setVisible(false);
       });
     }
@@ -76,7 +78,9 @@ export default function BottomSheet() {
       },
       onPanResponderRelease: (_e, g) => {
         if (g.dy > DRAG_CLOSE_DISTANCE || g.vy > DRAG_CLOSE_VELOCITY) {
-          Animated.timing(translateY, { toValue: windowHeight, duration: CLOSE_MS, useNativeDriver: true }).start(({ finished }) => {
+          Animated.timing(translateY, {
+            toValue: windowHeight, duration: CLOSE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true,
+          }).start(({ finished }) => {
             if (finished) setVisible(false);
           });
           closeSheet();

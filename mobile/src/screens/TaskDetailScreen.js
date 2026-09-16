@@ -163,12 +163,14 @@ export default function TaskDetailScreen({ route, navigation }) {
   const sessions = [...(task.sessions || [])].map((s, i) => ({ s, i })).sort((a, b) => new Date(b.s.start) - new Date(a.s.start));
 
   return (
-    // На Android KeyboardAvoidingView НЕ нужен вообще (behavior=undefined) —
-    // окно и так ужимается системным windowSoftInputMode="adjustResize"
-    // (дефолт Expo/RN); проверено на эмуляторе: behavior="height" здесь
-    // задваивал сжатие поверх уже сжатого системой окна и утаскивал тулбар
-    // редактора за нижний край экрана, под клавиатуру.
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // behavior="height" на обеих платформах (не undefined на Android) —
+    // Expo Go грузит JS-бандл в СВОЙ собственный нативный контейнер, чей
+    // AndroidManifest (и его windowSoftInputMode) мы не контролируем через
+    // app.json — polагаться на системный adjustResize ненадёжно именно под
+    // Expo Go. Более ранняя правка на undefined опиралась на тест в
+    // эмуляторе с заведомо сломанной клавиатурой (см. историю) и была
+    // неверной: тулбар оставался под клавиатурой на реальном устройстве.
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
@@ -273,7 +275,7 @@ const makeStyles = (colors) => StyleSheet.create({
   // у последней иконки хедера, эквивалентный spacing.lg на вкладках без
   // вложенного стека.
   headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: 0 },
-  titleInput: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700', paddingVertical: spacing.sm },
+  titleInput: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', paddingVertical: spacing.sm },
   timerCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg,

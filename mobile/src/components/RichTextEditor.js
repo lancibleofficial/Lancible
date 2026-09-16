@@ -30,7 +30,7 @@ function buildHtml(colors, placeholder) {
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <link href="https://cdn.jsdelivr.net/npm/quill@${QUILL_VERSION}/dist/quill.snow.css" rel="stylesheet">
 <style>
-  html,body{margin:0;padding:0;background:${colors.bg};}
+  html,body{margin:0;padding:0;overflow:hidden;background:${colors.bg};}
   .ql-container.ql-snow{border:none;font-family:sans-serif;font-size:16px;}
   .ql-editor{padding:${spacing.lg}px;color:${colors.text};min-height:${MIN_HEIGHT}px;}
   .ql-editor.ql-blank::before{color:${colors.textDim};font-style:normal;left:${spacing.lg}px;right:${spacing.lg}px;}
@@ -68,6 +68,13 @@ try {
     post({ type: 'change', ops: quill.getContents().ops });
     reportFormat();
     reportCaret();
+    // Не полагаемся только на ResizeObserver ниже — на некоторых WebView он
+    // может сработать на кадр-два позже самого текста, из-за чего контент
+    // кратко не помещается в ещё не выросшую высоту и мелькает собственный
+    // скролл. Явный вызов сразу (плюс с небольшой задержкой — на случай,
+    // если Quill ещё не успел доотрисовать DOM синхронно) убирает эту гонку.
+    reportHeight();
+    setTimeout(reportHeight, 50);
   });
   quill.on('selection-change', function (range) {
     if (range) { reportFormat(); reportCaret(); }

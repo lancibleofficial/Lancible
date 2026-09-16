@@ -13,14 +13,24 @@ const PAD = 3;
 export default function Toggle({ value, onValueChange }) {
   const colors = useColors();
   const styles = makeStyles(colors);
-  const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  // Два отдельных Animated.Value вместо одного: translateX (transform) может
+  // идти на нативном драйвере и оставаться плавным независимо от загрузки
+  // JS-потока, а backgroundColor нативным драйвером не поддерживается и
+  // обязательно тянет за собой useNativeDriver:false — если гнать ОБА из
+  // одного value, вся анимация (включая самое заметное — бегунок) шла бы по
+  // JS-потоку и могла дёргаться. Оба стартуют одновременно с одинаковыми
+  // duration, визуально это одна анимация.
+  const thumbAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const colorAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: value ? 1 : 0, duration: 180, useNativeDriver: false }).start();
-  }, [value, anim]);
+    const toValue = value ? 1 : 0;
+    Animated.timing(thumbAnim, { toValue, duration: 180, useNativeDriver: true }).start();
+    Animated.timing(colorAnim, { toValue, duration: 180, useNativeDriver: false }).start();
+  }, [value, thumbAnim, colorAnim]);
 
-  const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [PAD, TRACK_W - THUMB - PAD] });
-  const trackColor = anim.interpolate({ inputRange: [0, 1], outputRange: [colors.panel2, colors.accent] });
+  const translateX = thumbAnim.interpolate({ inputRange: [0, 1], outputRange: [PAD, TRACK_W - THUMB - PAD] });
+  const trackColor = colorAnim.interpolate({ inputRange: [0, 1], outputRange: [colors.panel2, colors.accent] });
 
   return (
     <Pressable onPress={() => onValueChange(!value)} hitSlop={8}>
