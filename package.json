@@ -12,7 +12,7 @@
     "serve:web": "npm run build:web && node scripts/serve-web.js",
     "icon": "electron scripts/make-icon.js",
     "package:win": "electron-builder --win nsis",
-    "package:mac": "electron-builder --mac dmg zip",
+    "package:mac": "electron-builder --mac dmg zip --universal",
     "build:exe": "npm run icon && npm run package:win",
     "build:dmg": "npm run icon && npm run package:mac",
     "publish:release": "node scripts/publish-release.js",
