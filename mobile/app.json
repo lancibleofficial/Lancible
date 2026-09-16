@@ -10,7 +10,11 @@
     "backgroundColor": "#2a2b2e",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lancible.app"
+      "bundleIdentifier": "com.lancible.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.lancible.app",
