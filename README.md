@@ -6,6 +6,23 @@
 > приложение, exe и данные теперь `Lancible`. Данные из `%APPDATA%\task-timer\`
 > переносятся автоматически при первом запуске.
 
+## Скачать
+
+Установщики для Windows и macOS собираются на GitHub Actions
+(`.github/workflows/release.yml` — macOS-раннер обязателен, `electron-builder`
+отказывается собирать `.dmg` не на самом маке) и публикуются на странице
+релизов:
+
+- **Windows** — [последняя версия](https://github.com/lancibleofficial/Lancible/releases/latest) → файл `Lancible Setup *.exe`
+- **macOS** — [последняя версия](https://github.com/lancibleofficial/Lancible/releases/latest) → файл `Lancible-*.dmg` (universal — подходит и Apple Silicon, и Intel)
+
+Все релизы: <https://github.com/lancibleofficial/Lancible/releases>
+
+> Ни один из установщиков пока не подписан платным сертификатом (Windows
+> Authenticode / Apple Developer ID) — ОС может предупредить о неизвестном
+> разработчике. На Windows — «Подробнее» → «Выполнить в любом случае»; на
+> маке — правый клик по приложению → «Открыть».
+
 ## Оформление
 
 - **Тёмная и светлая темы** + системная (следует за `prefers-color-scheme` ОС).
@@ -231,38 +248,53 @@ npm start
 `npm install` заодно копирует файлы редактора Quill в `src/renderer/vendor/`
 (скрипт `scripts/copy-vendor.js`).
 
-## Сборка .exe и автообновление
+## Сборка установщиков и автообновление
 
 ```bash
-npm run build:exe
+npm run build:exe   # Windows — можно собирать на любой ОС
+npm run build:dmg   # macOS — только на самом маке (ограничение electron-builder)
 ```
 
-Это:
+`build:exe` — это:
 
-1. `npm run icon` — рисует `build/icon.ico` (графит + акцентное лого-ракета из
-   `build/logo-accent.svg`);
-2. `npm run package` — **`electron-builder`** собирает NSIS-инсталлятор
+1. `npm run icon` — рисует `build/icon.ico` **и** `build/icon.png` (1024×1024,
+   графит + акцентное лого-ракета из `build/logo-accent.svg`; `icon.png` —
+   заодно источник для `.icns` на маке, `electron-builder` конвертирует сам);
+2. `npm run package:win` — **`electron-builder`** собирает NSIS-инсталлятор
    `dist/Lancible Setup X.Y.Z.exe` (one-click, ставится в
    `%LOCALAPPDATA%\Programs\Lancible`, сам создаёт ярлыки на рабочем столе и в
    «Пуск») + `dist/latest.yml` — метаданные для автообновления.
 
-Приложение теперь **обновляет себя само**: при запуске (только в собранном
-`.exe`, не в `npm start`) `src/main.js` через `electron-updater` тихо проверяет
-`dist/latest.yml`, опубликованный в Supabase Storage (см. ниже); если версия
-новее — в левом рейле снизу появляется зелёная кнопка «Доступно обновление»;
-клик скачивает файл, кнопка становится «Перезапустить» — второй клик тихо
-ставит новую версию и перезапускает приложение. Никакого мастера/диалогов
-между двумя кликами не показывается (`oneClick: true` обязателен для этого —
+`build:dmg` аналогично собирает `dist/Lancible-X.Y.Z.dmg` +
+`dist/Lancible-X.Y.Z-mac.zip` (universal, arm64+x64) + `dist/latest-mac.yml`
+через `npm run package:mac`.
+
+Приложение **обновляет себя само** на обеих платформах: при запуске
+(только в собранном приложении, не в `npm start`) `src/main.js` через
+`electron-updater` тихо проверяет манифест (`latest.yml`/`latest-mac.yml`),
+опубликованный в Supabase Storage (см. ниже); если версия новее — в левом
+рейле снизу появляется зелёная кнопка «Доступно обновление»; клик скачивает
+файл, кнопка становится «Перезапустить» — второй клик тихо ставит новую
+версию и перезапускает приложение. Никакого мастера/диалогов между двумя
+кликами не показывается (`oneClick: true` обязателен для этого на Windows —
 без него `quitAndInstall()` открывает полный мастер установки и не завершает
 процесс).
 
-**Публикация новой версии**:
+**Публикация новой версии для автообновления** (существующим пользователям):
 1. Подними `"version"` в `package.json`.
-2. `npm run build:exe`.
-3. `npm run publish:release` — заливает `dist/*.exe` + `.blockmap` +
-   `latest.yml` в публичный Supabase Storage bucket `releases` (нужны
-   `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` в `.env`, см. комментарий в
-   `scripts/publish-release.js` — файл `.env` никогда не коммитится).
+2. `npm run build:exe` и/или `npm run build:dmg`.
+3. `npm run publish:release` — заливает всё, что нашлось в `dist/`
+   (`.exe`/`.dmg`/`.zip` + `.blockmap` + `latest*.yml`), в публичный Supabase
+   Storage bucket `releases` (нужны `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`
+   в `.env`, см. комментарий в `scripts/publish-release.js` — файл `.env`
+   никогда не коммитится).
+
+**Публикация релиза на GitHub** (страница «Скачать» выше, для новых
+пользователей — отдельный канал от автообновления, не трогает feed
+`electron-updater`): запушить тег `vX.Y.Z` — `.github/workflows/release.yml`
+соберёт установщики на настоящих Windows- и macOS-раннерах и опубликует их
+как ассеты GitHub Release. Тот же workflow можно запустить вручную (Actions →
+Build desktop installers → Run workflow) с тегом в поле ввода.
 
 > На этой машине у `npm` есть allowlist на install-скрипты зависимостей
 > (`npm-lavamoat`) — после `npm install` может появиться предупреждение
@@ -338,7 +370,8 @@ npm run build:exe
 | `src/renderer/app.js` | Логика: **i18n** (словарь `T`, `t()`, `pluralForm()`, `applyStaticTranslations()`, `LOCALE_MAP`), **темы** (`applyTheme`/`cycleTheme`), рейл (сворачивание — один класс `body.nav-collapsed`, элементы вынесены в `position:absolute` ради плавной анимации ширины), поиск из шапки, маршрутизатор видов, плитки/карусели, недавние задачи (без готовых), календарь (`aggregateDays`/`rangeAgg`, режимы month/week/day, `renderViewTotal` — итог за месяц/неделю всегда в правой панели, `calState.periodOn` + `renderPeriodSummary`), обобщённые попапы даты/времени (`openDatePicker`/`openTimePicker`, принимают anchor+value+callback — используются и календарём, и диалогом записи времени), фильтр задач по статусу (`taskFilter`, `filteredProjectTasks`), вкладки задачи (`setTaskTab`), диалог подтверждения (`confirmDialog`, замена `window.confirm`), диалоги проекта и записи времени, меню, пины, редактор (цвет текста + таблицы + `cellBg` через Parchment StyleAttributor), таймер, деньги (`sessionRate`), экспорт (заголовки тоже через `t()`), миграция. |
 | `scripts/copy-vendor.js` | Копирует Quill + шрифт в `src/renderer/vendor/` (postinstall). |
 | `scripts/make-icon.js` | Генерирует `build/icon.*` из `build/logo-accent.svg` (canvas + `Path2D`/`Image`, собирает `.ico` через `png-to-ico`). |
-| `scripts/publish-release.js` | Заливает `dist/*.exe`/`latest.yml` в Supabase Storage (`npm run publish:release`). |
+| `scripts/publish-release.js` | Заливает всё, что есть в `dist/` (Windows и/или macOS), в Supabase Storage — канал автообновления (`npm run publish:release`). |
+| `.github/workflows/release.yml` | Собирает установщики на Windows- и macOS-раннерах GitHub Actions и публикует их как ассеты GitHub Release — канал скачивания для новых пользователей (см. «Скачать» выше), с автообновлением никак не связан. |
 | `supabase/schema.sql` | Схема БД для аккаунтов/синхронизации (таблицы + RLS-политики), выполняется вручную в SQL Editor проекта. |
 | `scripts/smoke.js` | Headless-проверка UI (`npm run smoke`); окно рендерера — на изолированной сессии (`partition: 'nopersist:smoke'`), чтобы реальная Supabase-сессия из ручных прогонов не протекала между запусками. |
 | `scripts/xlsx-check.js` | Проверка генератора .xlsx (`npm run check:xlsx`). |
