@@ -12,7 +12,7 @@ import TaskListItem from '../components/TaskListItem';
 import Icon from '../components/Icon';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
 import { openSheet, closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, buttonHeight } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function ProjectScreen({ route, navigation }) {
@@ -133,12 +133,18 @@ export default function ProjectScreen({ route, navigation }) {
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   summary: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  // Белый, как карточки проектов на главной (ProjectListItem) — раньше был
+  // panel2, что на этом экране (тоже белый шит поверх bg) выглядело как
+  // отдельная серая подложка, а не единая карточка того же уровня.
   statCard: {
-    flex: 1, backgroundColor: colors.panel2, borderRadius: radius.md,
+    flex: 1, backgroundColor: colors.panel, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, justifyContent: 'center', gap: 2,
   },
   statValue: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  exportBtn: { width: undefined, flexShrink: 0, paddingHorizontal: spacing.md },
+  // Квадрат buttonHeight×buttonHeight вместо ширины "по контенту" (icon +
+  // horizontal padding), которая на практике давала прямоугольник уже, чем
+  // высота кнопки.
+  exportBtn: { width: buttonHeight, height: buttonHeight, paddingHorizontal: 0 },
   list: { flex: 1 },
   listContent: { padding: spacing.lg, paddingTop: 0, paddingBottom: spacing.lg },
   headerActions: { flexDirection: 'row' },

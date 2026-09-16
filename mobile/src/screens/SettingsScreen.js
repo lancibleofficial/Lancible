@@ -1,4 +1,6 @@
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
+import Constants from 'expo-constants';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
 import ThemeSwitch from '../components/ThemeSwitch';
@@ -16,6 +18,7 @@ import { CURRENCIES } from '../lib/migrate';
 import { CURRENCY_SYMBOLS, fmtMoney } from '../lib/format';
 import { openSheet } from '../store/useSheetStore';
 import { setSyncEnabled } from '../lib/sync';
+import { checkForUpdate } from '../lib/updateCheck';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, useThemeMode, spacing, radius, fontSize, tabBarClearance } from '../theme';
 import { t, LANG_NAMES } from '../lib/i18n';
@@ -29,6 +32,16 @@ export default function SettingsScreen() {
   const settings = useAppStore((s) => s.settings);
   const setSettings = useAppStore((s) => s.setSettings);
   const resolvedMode = useThemeMode();
+  const appVersion = (Constants.expoConfig && Constants.expoConfig.version) || '1.0.0';
+  const [update, setUpdate] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    checkForUpdate().then((result) => {
+      if (!cancelled && result.available) setUpdate(result);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   if (authStatus === 'needsOnboarding') return <OnboardingScreen />;
 
@@ -74,6 +87,16 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {update ? (
+        <Pressable style={styles.updateBanner} onPress={() => Linking.openURL(update.url)}>
+          <Icon name="download" size={18} color={colors.accentText} />
+          <Text style={styles.updateBannerText} numberOfLines={1}>
+            {t(settings.lang, 'settings.update_available', { version: update.version })}
+          </Text>
+          <Text style={styles.updateBannerAction}>{t(settings.lang, 'settings.update_download')}</Text>
+        </Pressable>
+      ) : null}
+
       {authStatus === 'signedIn' ? (
         <Pressable style={styles.profileCard} onPress={onOpenProfile}>
           <View style={styles.profileCardTop}>
@@ -132,7 +155,7 @@ export default function SettingsScreen() {
         <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
       </SettingsCard>
 
-      <Text style={styles.footer}>Lancible · 1.0.0</Text>
+      <Text style={styles.footer}>Lancible · {appVersion}</Text>
     </ScrollView>
   );
 }
@@ -144,6 +167,12 @@ const makeStyles = (colors, insets) => StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg,
   },
+  updateBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.accent, borderRadius: radius.lg, padding: spacing.md,
+  },
+  updateBannerText: { flex: 1, color: colors.accentText, fontSize: fontSize.sm, fontWeight: '700' },
+  updateBannerAction: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: '800', textDecorationLine: 'underline' },
   profileCardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.accentText, fontSize: fontSize.lg, fontWeight: '800' },

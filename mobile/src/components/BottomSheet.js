@@ -127,10 +127,9 @@ const makeStyles = (colors) => StyleSheet.create({
   grabberZone: { alignItems: 'center', paddingVertical: spacing.sm },
   grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong },
   scroll: { flexShrink: 1 },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
   contentWithFooter: { paddingBottom: spacing.md },
   footer: {
     backgroundColor: colors.panel, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
 });

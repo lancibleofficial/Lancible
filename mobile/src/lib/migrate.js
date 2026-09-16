@@ -5,7 +5,10 @@ import { T, t } from './i18n';
 
 export const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
 
-export const PALETTE = ['#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5'];
+export const PALETTE = [
+  '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5',
+  '#e63950', '#2dd4bf', '#5468ff', '#ff9142', '#d946a8', '#6ee7b7', '#c8956d', '#6b7cad',
+];
 
 export const CURRENCIES = {
   USD: '$', EUR: '€', GBP: '£', RUB: '₽', KZT: '₸',

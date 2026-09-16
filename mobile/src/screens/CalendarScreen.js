@@ -477,7 +477,6 @@ const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
   viewTotalBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm,
     backgroundColor: colors.panel, borderRadius: radius.md,
-    borderWidth: 1.5, borderColor: colors.accent,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, marginBottom: spacing.md,
   },
   viewTotalLabel: { flexShrink: 1, color: colors.textDim, fontSize: fontSize.md, fontWeight: '600' },
