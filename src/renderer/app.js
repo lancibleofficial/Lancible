@@ -65,7 +65,7 @@ const LANG_NAMES = { ru: 'Русский', en: 'English', uk: 'Українсь�
 const T = {
   ru: {
     'app.default_project_name': 'Мои задачи',
-    'search.placeholder': 'Поиск (Ctrl+F)',
+    'search.placeholder': 'Поиск',
     'search.start_typing': 'Начни вводить название проекта или задачи',
     'search.nothing_found': 'Ничего не найдено',
     'search.projects_group': 'Проекты',
@@ -173,7 +173,7 @@ const T = {
   },
   en: {
     'app.default_project_name': 'My tasks',
-    'search.placeholder': 'Search (Ctrl+F)',
+    'search.placeholder': 'Search',
     'search.start_typing': 'Start typing a project or task name',
     'search.nothing_found': 'Nothing found',
     'search.projects_group': 'Projects',
@@ -281,7 +281,7 @@ const T = {
   },
   uk: {
     'app.default_project_name': 'Мої завдання',
-    'search.placeholder': 'Пошук (Ctrl+F)',
+    'search.placeholder': 'Пошук',
     'search.start_typing': 'Почни вводити назву проєкту або завдання',
     'search.nothing_found': 'Нічого не знайдено',
     'search.projects_group': 'Проєкти',
@@ -389,7 +389,7 @@ const T = {
   },
   kk: {
     'app.default_project_name': 'Менің тапсырмаларым',
-    'search.placeholder': 'Іздеу (Ctrl+F)',
+    'search.placeholder': 'Іздеу',
     'search.start_typing': 'Жоба немесе тапсырма атауын тере баста',
     'search.nothing_found': 'Ештеңе табылмады',
     'search.projects_group': 'Жобалар',

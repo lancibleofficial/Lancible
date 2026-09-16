@@ -149,56 +149,34 @@ body {
   background: var(--bg);
   -webkit-app-region: drag;
 }
-/* Само лого вынесено из flex-потока (position:absolute) — так его width можно
-   плавно анимировать при сворачивании рейла: у Chromium 33 есть застарелый баг,
-   где transition на flex-basis/width ФЛЕКС-РЕБЁНКА залипает на стартовом
-   значении навсегда (проверено несколькими debug-скриптами); у абсолютно
-   спозиционированного элемента это другой алгоритм раскладки — та же ширина
-   анимируется штатно. */
-.tb-logo {
+/* Полоса под нативными кнопками окна — ширина ВСЕГДА var(--nav-w), не
+   зависит от сворачивания рейла (в отличие от #navrail/#main ниже, которые
+   по-прежнему сжимаются): это то, что держит поиск и лого на месте, когда
+   рейл схлопывается — раньше .tb-rest уезжал вместе с рейлом через
+   margin-left, теперь у него фиксированный отступ. На маке под этой
+   полосой — нативные трафик-лайты (см. trafficLightPosition в
+   src/main.js), на Windows — просто пустая зона слева от поиска. Только
+   нижняя граница (не правая, как раньше у .tb-logo, когда лого жило тут) —
+   отделяет её от рейла под ней; фон совпадает с общим фоном тайтлбара (не
+   отдельный --panel — зона больше не бокс с собственным содержимым). */
+.tb-nav-strip {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
   width: var(--nav-w);
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0 14px;
-  background: var(--panel);
-  border-right: 1px solid var(--border);
-  user-select: none;
-  overflow: hidden;
-  transition: width 0.24s var(--ease);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
 }
-body.nav-collapsed .tb-logo { width: var(--nav-w-collapsed); padding: 0 17px; }
-.tb-logo-mark { width: 22px; height: 22px; flex: none; color: var(--accent); }
-.tb-logo-text {
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: 0.4px;
-  white-space: nowrap;
-  transition: opacity 0.12s var(--ease);
-}
-body.nav-collapsed .tb-logo-text { opacity: 0; pointer-events: none; }
-
-/* Мак: нативные трафик-лайты (закрыть/свернуть/развернуть) рисуются ОС в
-   левом верхнем углу окна (см. trafficLightPosition в src/main.js) —
-   раздвигаем лого, чтобы не перекрывалось. В свёрнутом рейле (56px) для
-   иконки+кнопок вместе места физически не хватает — там просто прячем саму
-   иконку, кнопки остаются единственным, что видно в этом углу (обычная
-   практика для мак-приложений со свёрнутым сайдбаром). */
-body.platform-mac .tb-logo { padding-left: 78px; }
-body.platform-mac.nav-collapsed .tb-logo-mark { opacity: 0; }
 
 .tb-rest {
   display: flex;
   align-items: stretch;
   height: 100%;
   margin-left: var(--nav-w);
-  transition: margin-left 0.24s var(--ease);
+  padding-right: 16px;
 }
-body.nav-collapsed .tb-rest { margin-left: var(--nav-w-collapsed); }
 
 .tb-search {
   flex: 1;
@@ -206,7 +184,7 @@ body.nav-collapsed .tb-rest { margin-left: var(--nav-w-collapsed); }
   align-items: center;
   gap: 8px;
   max-width: 460px;
-  margin: auto 0 auto 16px;
+  margin: auto 16px;
   height: 32px;
   padding: 0 12px;
   background: var(--panel-2);
@@ -216,6 +194,30 @@ body.nav-collapsed .tb-rest { margin-left: var(--nav-w-collapsed); }
   transition: border-color 0.12s var(--ease);
 }
 .tb-search:focus-within { border-color: var(--accent); }
+
+/* Лого — теперь в одном ряду с поиском, у правого края (margin-left:auto
+   вместе с .tb-search's flex:1+max-width съедает всё, что search не занял).
+   На Windows там же рисуются нативные кнопки окна (titleBarOverlay) —
+   зарезервирован отступ под них; на маке они слева (.tb-nav-strip), справа
+   свободно, так что лого может стоять у самого края. */
+.tb-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  flex: none;
+  user-select: none;
+  -webkit-app-region: drag;
+}
+body.platform-mac .tb-logo { padding-right: 16px; }
+body:not(.platform-mac) .tb-logo { padding-right: 150px; }
+.tb-logo-mark { width: 22px; height: 22px; flex: none; color: var(--accent); }
+.tb-logo-text {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
 .tb-search .icon { color: var(--icon); flex: none; }
 #search-input {
   flex: 1;
