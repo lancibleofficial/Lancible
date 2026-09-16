@@ -43,5 +43,10 @@ export default function Toggle({ value, onValueChange }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   track: { width: TRACK_W, height: TRACK_H, borderRadius: TRACK_H / 2, justifyContent: 'center' },
-  thumb: { position: 'absolute', width: THUMB, height: THUMB, borderRadius: THUMB / 2, backgroundColor: '#fff' },
+  // Тонкая рамка вместо чистой заливки: белый бегунок на светлом (теперь
+  // осветлённом) panel2-треке в OFF-состоянии терял контраст без неё.
+  thumb: {
+    position: 'absolute', width: THUMB, height: THUMB, borderRadius: THUMB / 2,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border,
+  },
 });
