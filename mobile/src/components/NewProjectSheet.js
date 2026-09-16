@@ -71,7 +71,7 @@ const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.sm },
   input: {
-    backgroundColor: colors.panel2, borderRadius: radius.md,
+    backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },

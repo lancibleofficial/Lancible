@@ -37,6 +37,7 @@ export default function ProjectScreen({ route, navigation }) {
   function onDeleteProject() {
     if (!project) return;
     confirmSheet({
+      title: t(LANG, 'confirm.are_you_sure'),
       message: t(LANG, 'confirm.delete_project', { name: project.name }),
       actions: [
         { label: t(LANG, 'project.delete'), destructive: true, onPress: () => { deleteProject(project.id); navigation.goBack(); } },

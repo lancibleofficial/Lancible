@@ -109,11 +109,11 @@ const makeStyles = (colors) => StyleSheet.create({
   field: { gap: spacing.sm },
   label: { color: colors.textDim, fontSize: fontSize.xs },
   input: {
-    backgroundColor: colors.panel2, borderRadius: radius.md,
+    backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
   },
   inputDisabled: {
-    backgroundColor: colors.panel2, borderRadius: radius.md, opacity: 0.6,
+    backgroundColor: colors.inputBg, borderRadius: radius.md, opacity: 0.6,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
   },
   inputDisabledText: { color: colors.textDim, fontSize: fontSize.md },

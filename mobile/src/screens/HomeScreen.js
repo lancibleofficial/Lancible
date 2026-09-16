@@ -139,6 +139,7 @@ export default function HomeScreen({ navigation, route }) {
           label: t(lang, 'project.delete'),
           destructive: true,
           onPress: () => confirmSheet({
+            title: t(lang, 'confirm.are_you_sure'),
             message: t(lang, 'confirm.delete_project', { name: p.name }),
             actions: [
               { label: t(lang, 'project.delete'), destructive: true, onPress: () => deleteProject(p.id) },
@@ -265,7 +266,7 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   brandText: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'BasiquePro-Regular' },
   searchInput: {
-    backgroundColor: colors.panel2, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 8,
+    backgroundColor: colors.inputBg, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 8,
     color: colors.text, fontSize: fontSize.md, width: '100%',
   },
   addTile: {

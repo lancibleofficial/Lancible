@@ -38,7 +38,7 @@ export default function ThemeSwitch({ value, onValueChange }) {
 const makeStyles = (colors) => StyleSheet.create({
   track: {
     width: TRACK_W, height: TRACK_H, borderRadius: 10,
-    backgroundColor: colors.panel2, justifyContent: 'center',
+    backgroundColor: colors.inputBg, justifyContent: 'center',
   },
   thumb: {
     position: 'absolute', width: THUMB, height: THUMB, borderRadius: 7,

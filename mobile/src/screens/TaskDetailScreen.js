@@ -114,6 +114,7 @@ export default function TaskDetailScreen({ route, navigation }) {
       ? t(LANG, 'confirm.delete_task_named', { name: task.title })
       : t(LANG, 'confirm.delete_task');
     confirmSheet({
+      title: t(LANG, 'confirm.are_you_sure'),
       message: msg,
       actions: [
         { label: t(LANG, 'task.delete_title'), destructive: true, onPress: () => { deleteTask(taskId); navigation.goBack(); } },
@@ -139,6 +140,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   function onDeleteSession(index) {
     if (!task) return;
     confirmSheet({
+      title: t(LANG, 'confirm.are_you_sure'),
       message: t(LANG, 'session.delete_title'),
       actions: [
         {

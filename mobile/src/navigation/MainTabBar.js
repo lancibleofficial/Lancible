@@ -63,10 +63,10 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   bar: {
     flexDirection: 'row', alignItems: 'flex-end',
     backgroundColor: colors.panel,
-    paddingTop: spacing.sm, paddingBottom: spacing.xs + insets.bottom,
+    paddingTop: spacing.md, paddingBottom: spacing.sm + insets.bottom,
     elevation: 8, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6, shadowOffset: { width: 0, height: -2 },
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 2, paddingBottom: spacing.xs },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 2, paddingBottom: spacing.sm },
   tabLabel: { fontSize: 10, fontWeight: '600' },
   centerSlot: { flex: 1, alignItems: 'center' },
   centerBtn: {
