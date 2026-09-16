@@ -33,7 +33,8 @@
         }
       ],
       "expo-font",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-web-browser"
     ]
   }
 }
