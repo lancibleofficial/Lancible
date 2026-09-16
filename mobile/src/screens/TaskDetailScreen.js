@@ -1,13 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
-import RichTextEditor from '../components/RichTextEditor';
+import RichTextEditor, { LinkPromptSheet } from '../components/RichTextEditor';
+import EditorToolbar from '../components/EditorToolbar';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
 import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney } from '../lib/format';
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
+import { openSheet } from '../store/useSheetStore';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
 import { useColors, spacing, radius, fontSize } from '../theme';
@@ -37,8 +39,46 @@ export default function TaskDetailScreen({ route, navigation }) {
   const [tab, setTab] = useState('notes');
   const [title, setTitle] = useState(task ? task.title : '');
   const [rateText, setRateText] = useState(task && task.rate != null ? String(task.rate) : '');
+  const [format, setFormat] = useState({});
   const titleTimer = useRef(null);
   const notesTimer = useRef(null);
+  const editorRef = useRef(null);
+
+  // Автопрокрутка страницы, чтобы курсор в заметках не уезжал под клавиатуру
+  // (сам WebView этого не умеет — RN не видит, что происходит внутри него).
+  // scrollY/editorY/scrollViewH — три числа, из которых считаем, перекрывает
+  // ли клавиатура текущую позицию каретки, и на сколько доскроллить.
+  const scrollRef = useRef(null);
+  const scrollYRef = useRef(0);
+  const editorYRef = useRef(0);
+  const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
+  function onCaret({ bottom }) {
+    if (!keyboardHeight || !scrollViewHeight) return;
+    const visibleBottom = scrollViewHeight - keyboardHeight;
+    const caretBottomInScroll = editorYRef.current + bottom - scrollYRef.current;
+    const overflow = caretBottomInScroll - visibleBottom;
+    if (overflow > 0) {
+      scrollRef.current?.scrollTo({ y: scrollYRef.current + overflow + spacing.md, animated: true });
+    }
+  }
+
+  function onToolbarCommand(item) {
+    if (item.type === 'link') {
+      openSheet(
+        <LinkPromptSheet lang={LANG} initialValue={format.link} onConfirm={(url) => editorRef.current?.send({ type: 'link', value: url })} />,
+      );
+      return;
+    }
+    editorRef.current?.send(item);
+  }
 
   function onExport() {
     if (!task) return;
@@ -123,64 +163,82 @@ export default function TaskDetailScreen({ route, navigation }) {
   const sessions = [...(task.sessions || [])].map((s, i) => ({ s, i })).sort((a, b) => new Date(b.s.start) - new Date(a.s.start));
 
   return (
+    // На Android KeyboardAvoidingView НЕ нужен вообще (behavior=undefined) —
+    // окно и так ужимается системным windowSoftInputMode="adjustResize"
+    // (дефолт Expo/RN); проверено на эмуляторе: behavior="height" здесь
+    // задваивал сжатие поверх уже сжатого системой окна и утаскивал тулбар
+    // редактора за нижний край экрана, под клавиатуру.
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.header}>
-        <TextInput
-          style={styles.titleInput}
-          value={title}
-          onChangeText={onTitleChange}
-          placeholder={t(LANG, 'task.title_ph')}
-          placeholderTextColor={colors.textDim}
-        />
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
+        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.header}>
+          <TextInput
+            style={styles.titleInput}
+            value={title}
+            onChangeText={onTitleChange}
+            placeholder={t(LANG, 'task.title_ph')}
+            placeholderTextColor={colors.textDim}
+          />
 
-        <View style={styles.timerCard}>
-          <Text style={styles.clock}>{fmtClock(elapsedMs)}</Text>
-          <Pressable
-            style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
-            onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
-          >
-            <Icon name={isRunning ? 'pause' : 'play'} size={20} color={isRunning ? colors.accentText : colors.text} />
-          </Pressable>
+          <View style={styles.timerCard}>
+            <Text style={styles.clock}>{fmtClock(elapsedMs)}</Text>
+            <Pressable
+              style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
+              onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
+            >
+              <Icon name={isRunning ? 'pause' : 'play'} size={20} color={isRunning ? colors.accentText : colors.text} />
+            </Pressable>
+          </View>
+
+          <View style={styles.splitRow}>
+            <View style={styles.splitHalf}>
+              <Text style={styles.label}>{t(LANG, 'task.rate_label')}</Text>
+              <TextInput
+                style={styles.input}
+                value={rateText}
+                onChangeText={onRateChange}
+                keyboardType="decimal-pad"
+                placeholder={String(hourlyRate || 0)}
+                placeholderTextColor={colors.textDim}
+              />
+            </View>
+            <View style={styles.splitHalf}>
+              <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
+              <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.tabRow}>
+            <Pressable style={[styles.tab, tab === 'notes' && styles.tabActive]} onPress={() => setTab('notes')}>
+              <Text style={[styles.tabText, tab === 'notes' && styles.tabTextActive]}>{t(LANG, 'tabs.notes')}</Text>
+            </Pressable>
+            <Pressable style={[styles.tab, tab === 'history' && styles.tabActive]} onPress={() => setTab('history')}>
+              <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>{t(LANG, 'tabs.history')}</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View style={styles.splitRow}>
-          <View style={styles.splitHalf}>
-            <Text style={styles.label}>{t(LANG, 'task.rate_label')}</Text>
-            <TextInput
-              style={styles.input}
-              value={rateText}
-              onChangeText={onRateChange}
-              keyboardType="decimal-pad"
-              placeholder={String(hourlyRate || 0)}
-              placeholderTextColor={colors.textDim}
+        {tab === 'notes' ? (
+          <View onLayout={(e) => { editorYRef.current = e.nativeEvent.layout.y; }}>
+            <RichTextEditor
+              ref={editorRef}
+              value={task.notes}
+              onChange={onNotesChange}
+              onFormatChange={setFormat}
+              onCaret={onCaret}
+              placeholder={t(LANG, 'editor.placeholder')}
+              lang={LANG}
             />
           </View>
-          <View style={styles.splitHalf}>
-            <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
-            <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.tabRow}>
-          <Pressable style={[styles.tab, tab === 'notes' && styles.tabActive]} onPress={() => setTab('notes')}>
-            <Text style={[styles.tabText, tab === 'notes' && styles.tabTextActive]}>{t(LANG, 'tabs.notes')}</Text>
-          </Pressable>
-          <Pressable style={[styles.tab, tab === 'history' && styles.tabActive]} onPress={() => setTab('history')}>
-            <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>{t(LANG, 'tabs.history')}</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.body}>
-        {tab === 'notes' ? (
-          <RichTextEditor
-            value={task.notes}
-            onChange={onNotesChange}
-            placeholder={t(LANG, 'editor.placeholder')}
-            lang={LANG}
-          />
         ) : (
-          <ScrollView contentContainerStyle={styles.historyScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.historyScroll}>
             {sessions.length === 0 ? <Text style={styles.historyEmpty}>{t(LANG, 'history.empty')}</Text> : null}
             {sessions.map(({ s, i }) => (
               <View key={i} style={styles.sessionRow}>
@@ -194,20 +252,27 @@ export default function TaskDetailScreen({ route, navigation }) {
                 </Pressable>
               </View>
             ))}
-          </ScrollView>
+          </View>
         )}
-      </View>
+      </ScrollView>
+
+      {tab === 'notes' ? <EditorToolbar format={format} onCommand={onToolbarCommand} colors={colors} /> : null}
     </KeyboardAvoidingView>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
   header: { padding: spacing.lg, paddingBottom: spacing.sm, gap: spacing.lg },
-  body: { flex: 1 },
   headerActions: { flexDirection: 'row' },
   headerIconBtn: { paddingHorizontal: spacing.sm },
-  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: spacing.lg },
+  // paddingRight:0 — см. подробный комментарий в HomeScreen.js: этот экран
+  // тоже внутри HomeStack (native-stack), у которого свой встроенный отступ
+  // у последней иконки хедера, эквивалентный spacing.lg на вкладках без
+  // вложенного стека.
+  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: 0 },
   titleInput: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700', paddingVertical: spacing.sm },
   timerCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -221,8 +286,9 @@ const makeStyles = (colors) => StyleSheet.create({
   timerBtnOn: { backgroundColor: colors.accent },
   label: { color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   input: {
-    backgroundColor: colors.panel, borderRadius: radius.md,
+    backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
+    textAlignVertical: 'center',
   },
   splitRow: { flexDirection: 'row', gap: spacing.md },
   splitHalf: { flex: 1, gap: spacing.xs },
@@ -230,12 +296,14 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     color: colors.accent, fontSize: fontSize.md, fontWeight: '700',
+    textAlignVertical: 'center',
   },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
-  tabActive: { backgroundColor: colors.accentMuted },
+  tabActive: { backgroundColor: colors.tabActiveBg },
   tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  tabTextActive: { color: colors.accent },
+  // См. комментарий у modeTextActive в CalendarScreen.js — тот же принцип.
+  tabTextActive: { color: colors.text },
   historyScroll: { padding: spacing.lg, paddingTop: 0, gap: spacing.sm },
   historyEmpty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.lg },
   sessionRow: {

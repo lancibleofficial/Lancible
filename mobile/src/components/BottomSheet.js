@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSheetStore, closeSheet } from '../store/useSheetStore';
 import { useColors, radius, spacing } from '../theme';
@@ -51,7 +51,9 @@ export default function BottomSheet() {
       setVisible(true);
       translateY.setValue(windowHeight);
       requestAnimationFrame(() => {
-        Animated.timing(translateY, { toValue: 0, duration: OPEN_MS, useNativeDriver: true }).start();
+        Animated.timing(translateY, {
+          toValue: 0, duration: OPEN_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }).start();
       });
     } else if (visible) {
       Animated.timing(translateY, { toValue: windowHeight, duration: CLOSE_MS, useNativeDriver: true }).start(({ finished }) => {

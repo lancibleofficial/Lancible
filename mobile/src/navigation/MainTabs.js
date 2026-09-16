@@ -54,6 +54,10 @@ export default function MainTabs() {
         headerTitleStyle: { fontFamily: 'BasiquePro-Regular', fontWeight: 'normal', fontSize: fontSize.lg },
         headerShadowVisible: false,
         headerRight: () => <SearchHeaderButton navigation={navigation} colors={colors} />,
+        // См. тот же комментарий в HomeStack.js — обнуляем встроенный отступ
+        // хедера, чтобы единственным источником правого отступа была
+        // paddingRight самих Pressable-ов, одинаково на всех вкладках.
+        headerRightContainerStyle: { paddingRight: 0 },
         animation: 'shift',
       })}
     >

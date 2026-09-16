@@ -117,9 +117,10 @@ const makeStyles = (colors) => StyleSheet.create({
   subtitle: { color: colors.textDim, fontSize: fontSize.sm },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
-  tabActive: { backgroundColor: colors.accentMuted },
+  tabActive: { backgroundColor: colors.tabActiveBg },
   tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  tabTextActive: { color: colors.accent },
+  // См. комментарий у modeTextActive в CalendarScreen.js — тот же принцип.
+  tabTextActive: { color: colors.text },
   field: { gap: spacing.xs },
   label: { color: colors.textDim, fontSize: fontSize.xs },
   input: {

@@ -45,6 +45,7 @@ export default function HomeScreen({ navigation, route }) {
     () => computeTodayStats(tasks, activeTimer, hourlyRate),
     [tasks, activeTimer, hourlyRate],
   );
+  const doneCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks]);
 
   // Иконка поиска в хедере есть на всех вкладках (см. MainTabs.js) — с
   // других вкладок она переключает на Home и просит открыть поиск здесь же.
@@ -89,7 +90,7 @@ export default function HomeScreen({ navigation, route }) {
       headerRight: () => (
         <Pressable
           hitSlop={10}
-          style={{ paddingLeft: spacing.sm, paddingRight: spacing.lg }}
+          style={styles.headerIconBtnLast}
           onPress={() => { setSearchOpen((v) => !v); setQuery(''); }}
         >
           <Icon name={searchOpen ? 'x' : 'search'} size={20} color={colors.text} />
@@ -175,6 +176,7 @@ export default function HomeScreen({ navigation, route }) {
               <View style={styles.todayGrid}>
                 <StatCard icon="wallet" label={t(lang, 'stats.today_earned')} value={fmtMoney(todayMoney, lang, currency)} />
                 <StatCard icon="clock" label={t(lang, 'stats.today_worked')} value={fmtDur(todayMs, lang)} />
+                <StatCard icon="check" label={t(lang, 'stats.done')} value={`${doneCount}/${tasks.length}`} />
               </View>
             )}
             {isSearching ? (
@@ -244,6 +246,15 @@ function SearchTaskRow({ task, projects, activeTimer, lang, styles, colors, onPr
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   listContent: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
+  // paddingRight:0, не spacing.lg — этот экран лежит внутри native-stack
+  // (HomeStack.js), у которого свой встроенный отступ у последней иконки
+  // хедера (нативный Android-тулбар через react-native-screens, а не тот же
+  // JS Header, что у вкладок Stats/Calendar/Settings напрямую в bottom-tabs)
+  // — он не обнуляется через headerRightContainerStyle. Экспериментально
+  // подтверждено (uiautomator): нативный отступ там сам по себе уже равен
+  // тому, что здесь дают spacing.lg на вкладках без вложенного стека —
+  // добавлять spacing.lg ещё и сверху удваивало итоговый зазор.
+  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: 0 },
   todayGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   recentSection: { marginBottom: spacing.lg, gap: spacing.sm },
   sectionTitle: {

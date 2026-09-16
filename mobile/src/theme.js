@@ -17,6 +17,12 @@ const dark = {
   text: '#ecedef', textDim: '#9a9ba4',
   accent: '#87ff65', accentHover: '#aceb98', accentText: '#16220e', accentMuted: 'rgba(135,255,101,0.16)',
   danger: '#ef7a72',
+  // Фон ВЫБРАННОГО таба (Заметки/История, Месяц/Неделя/День и т.п.) —
+  // раньше был accentMuted (зеленоватая подложка), но на светлой теме такой
+  // тон плохо читался. Нейтральный фон: тот же графит, что на общем фоне
+  // приложения (на тёмной теме это и есть bg) — активный текст поверх него
+  // всё ещё accent (зелёный), контраст в обеих темах достаточный.
+  tabActiveBg: '#2a2b2e',
 };
 
 const light = {
@@ -25,6 +31,7 @@ const light = {
   text: '#14160f', textDim: '#5c6152',
   accent: '#7ae65b', accentHover: '#68c44d', accentText: '#16220e', accentMuted: 'rgba(122,230,91,0.18)',
   danger: '#d13a2c',
+  tabActiveBg: '#ffffff',
 };
 
 // Экспорт по умолчанию (для мест вроде StatusBar/навигационной темы, которым

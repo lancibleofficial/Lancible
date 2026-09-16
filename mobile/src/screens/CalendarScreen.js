@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { View, Pressable, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnJS } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { useIsFocused } from '@react-navigation/native';
 import Text from '../components/AppText';
 import { useAppStore, getProject } from '../store/useAppStore';
@@ -22,9 +22,21 @@ const SWIPE_THRESHOLD = 50;
 const GRID_GAP = 4;
 // Раньше сетка уезжала на всю ширину экрана (windowWidth) — между
 // исчезновением одного месяца и появлением следующего был большой пустой
-// пролёт. Сократили дистанцию до скромного слайда, близкого к тому, что
-// обычно используют календарные пикеры.
-const SHIFT_DISTANCE = 90;
+// пролёт. Сократили дистанцию до совсем небольшого слайда — просто
+// достаточно, чтобы почувствовался переход, без явного "проезда" по экрану.
+const SHIFT_DISTANCE = 28;
+// Во время самого свайпа сетка не едет 1:1 за пальцем (даже с маленьким
+// SHIFT_DISTANCE это выглядело бы как долгий пустой пробег для быстрого
+// свайпа) — вместо этого лёгкое "резиновое" смещение с потолком, зажатым
+// рядом с итоговой дистанцией анимации. Это и убирает ощущение "рывка" на
+// отпускании пальца: раньше анимация могла начинаться от любой точки, куда
+// утащил палец (вплоть до сотен пикселей), и почти мгновенно "доезжать"
+// обратно к небольшому SHIFT_DISTANCE — такой большой перепад за
+// фиксированные 150мс и ощущался как поломанное движение.
+const DRAG_RUBBER_BAND = 0.3;
+const MAX_DRAG = SHIFT_DISTANCE + 16;
+const ANIM_MS = 170;
+const SHIFT_EASING = Easing.out(Easing.cubic);
 
 export default function CalendarScreen({ navigation }) {
   const colors = useColors();
@@ -95,41 +107,65 @@ export default function CalendarScreen({ navigation }) {
     }
   }
 
-  // Общая анимация "пролистывания" — сетка уезжает за край, месяц/неделя
-  // меняются, новая сетка влетает с противоположного края. Используется и
-  // свайпом (см. onEnd ниже), и стрелками нав-бара (onPress), чтобы смена
-  // месяца выглядела одинаково независимо от способа. Обычная JS-функция (не
-  // ворклет): вызывается напрямую из onPress (уже JS-поток) и через
-  // runOnJS(...) из жеста (UI-поток) — присвоение .value и запуск withTiming
-  // из JS-потока в Reanimated штатно поддерживается.
+  // Направление, "ожидающее" второй фазы анимации (влёт новой сетки) — см.
+  // useLayoutEffect ниже. Обычный ref, не shared value: читается/пишется
+  // только из JS-потока (внутри commitShift и эффекта), в ворклеты не
+  // передаётся.
+  const pendingShiftDirRef = useRef(0);
+
+  function commitShift(dir) {
+    pendingShiftDirRef.current = dir;
+    shift(dir);
+  }
+
+  // Общая анимация "пролистывания" — сетка чуть уезжает за край, месяц/
+  // неделя меняются, новая сетка влетает с противоположного края. Используется
+  // и свайпом (см. onEnd ниже), и стрелками нав-бара (onPress). Раньше "влёт"
+  // (прыжок на -outTo и анимация к 0) запускался сразу в колбэке withTiming,
+  // до того как React успевал перерисовать сетку с новыми данными — из-за
+  // этой гонки на кадр-два мог мелькнуть старый месяц в уже сдвинутой
+  // позиции, что и ощущалось как "поломанная" анимация. Теперь прыжок и
+  // обратная анимация вынесены в useLayoutEffect, завязанный на сами данные
+  // (year/month/weekStart) — он гарантированно срабатывает уже ПОСЛЕ того,
+  // как новая сетка отрисована, но ДО того, как кадр показан на экране.
   function animateShift(dir) {
     const outTo = dir === 1 ? -SHIFT_DISTANCE : SHIFT_DISTANCE;
-    translateX.value = withTiming(outTo, { duration: 150 }, (finished) => {
-      if (finished) {
-        runOnJS(shift)(dir);
-        translateX.value = -outTo;
-        translateX.value = withTiming(0, { duration: 150 });
-      }
+    translateX.value = withTiming(outTo, { duration: ANIM_MS, easing: SHIFT_EASING }, (finished) => {
+      if (finished) runOnJS(commitShift)(dir);
     });
   }
 
-  // Свайп для смены месяца/недели — виден процесс (сетка тянется за пальцем
-  // и доезжает до края), не просто мгновенная подмена данных. Отключён
-  // (.enabled), когда вкладка не в фокусе или открыт режим "День" — экран
-  // остаётся смонтированным в фоне таббара, и активный жест на неактивной
-  // вкладке иначе мог перехватывать нажатия на других вкладках.
+  useLayoutEffect(() => {
+    const dir = pendingShiftDirRef.current;
+    if (!dir) return;
+    pendingShiftDirRef.current = 0;
+    translateX.value = dir === 1 ? SHIFT_DISTANCE : -SHIFT_DISTANCE;
+    translateX.value = withTiming(0, { duration: ANIM_MS, easing: SHIFT_EASING });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month, weekStart]);
+
+  // Свайп для смены месяца/недели — виден процесс (сетка чуть тянется за
+  // пальцем), не просто мгновенная подмена данных. "Резиновое" смещение
+  // (см. DRAG_RUBBER_BAND/MAX_DRAG) — сетка не едет 1:1 за пальцем на весь
+  // экран, а лишь слегка "выглядывает", независимо от того, как далеко
+  // утащили палец, поэтому и последующая анимация к финальной точке всегда
+  // короткая и ровная. Отключён (.enabled), когда вкладка не в фокусе или
+  // открыт режим "День" — экран остаётся смонтированным в фоне таббара, и
+  // активный жест на неактивной вкладке иначе мог перехватывать нажатия на
+  // других вкладках.
   const swipeGesture = useMemo(
     () => Gesture.Pan()
       .enabled(isFocused && mode !== 'day')
       .activeOffsetX([-20, 20])
       .failOffsetY([-15, 15])
       .onUpdate((e) => {
-        translateX.value = e.translationX;
+        const damped = e.translationX * DRAG_RUBBER_BAND;
+        translateX.value = Math.max(-MAX_DRAG, Math.min(MAX_DRAG, damped));
       })
       .onEnd((e) => {
         const shouldSwipe = Math.abs(e.translationX) > SWIPE_THRESHOLD;
         if (!shouldSwipe) {
-          translateX.value = withSpring(0, { damping: 20, stiffness: 200 });
+          translateX.value = withTiming(0, { duration: ANIM_MS, easing: SHIFT_EASING });
           return;
         }
         const dir = e.translationX < 0 ? 1 : -1;
@@ -293,18 +329,19 @@ export default function CalendarScreen({ navigation }) {
                     <Text style={styles.viewTotalLabel}>{mode === 'month' ? t(lang, 'calendar.for_month') : t(lang, 'calendar.for_week')}</Text>
                     <Text style={styles.viewTotalValue}>{fmtDur(viewTotal.ms, lang)} · {fmtMoney(viewTotal.money, lang, currency)}</Text>
                   </View>
-                ) : null}
+                ) : (
+                  <View style={styles.viewTotalBar}>
+                    <Text style={styles.viewTotalLabel} numberOfLines={1}>
+                      {rangeBounds ? `${dayKey(rangeBounds[0])} – ${dayKey(rangeBounds[1])}` : t(lang, 'calendar.choose_period')}
+                    </Text>
+                    {periodSummary && periodSummary.rows.length ? (
+                      <Text style={styles.viewTotalValue}>{fmtDur(periodSummary.totalMs, lang)} · {fmtMoney(periodSummary.totalMoney, lang, currency)}</Text>
+                    ) : null}
+                  </View>
+                )}
 
                 {periodOn ? (
                   <>
-                    <View style={styles.dayHeadRow}>
-                      <Text style={styles.dayHead}>
-                        {rangeBounds ? `${dayKey(rangeBounds[0])} – ${dayKey(rangeBounds[1])}` : t(lang, 'calendar.choose_period')}
-                      </Text>
-                      {periodSummary && periodSummary.rows.length ? (
-                        <Text style={styles.dayHeadTot}>{fmtDur(periodSummary.totalMs, lang)} · {fmtMoney(periodSummary.totalMoney, lang, currency)}</Text>
-                      ) : null}
-                    </View>
                     {periodSummary && periodSummary.rows.length ? (
                       <View style={styles.exportBtnWrap}>
                         <PrimaryButton icon="download" title={t(lang, 'export.title')} onPress={onExportPeriod} />
@@ -367,9 +404,12 @@ const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: insets.bottom + tabBarClearance },
   modeRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4, marginBottom: spacing.md },
   modeTab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
-  modeTabActive: { backgroundColor: colors.accentMuted },
+  modeTabActive: { backgroundColor: colors.tabActiveBg },
   modeText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  modeTextActive: { color: colors.accent },
+  // Текст выбранного таба — обычный "текстовый" цвет (чёрный на светлой,
+  // белый на тёмной), не акцентный зелёный: сам факт выбора уже видно по
+  // подложке (tabActiveBg), а зелёный текст на некоторых фонах читался хуже.
+  modeTextActive: { color: colors.text },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   navBtn: { padding: spacing.sm },
   navTitle: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '700', textAlign: 'center' },
@@ -387,12 +427,13 @@ const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
   periodBtnActive: { backgroundColor: colors.accent },
   periodBtnTextActive: { color: colors.accentText },
   viewTotalBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.panel2, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.md,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm,
+    backgroundColor: colors.panel, borderRadius: radius.md,
+    borderWidth: 1.5, borderColor: colors.accent,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, marginBottom: spacing.md,
   },
-  viewTotalLabel: { color: colors.textDim, fontSize: fontSize.sm },
-  viewTotalValue: { color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
+  viewTotalLabel: { flexShrink: 1, color: colors.textDim, fontSize: fontSize.md, fontWeight: '600' },
+  viewTotalValue: { color: colors.accent, fontSize: fontSize.lg, fontWeight: '800' },
   weekdaysRow: { flexDirection: 'row', marginBottom: spacing.xs, gap: GRID_GAP },
   weekday: { width: cellSize, textAlign: 'center', color: colors.textDim, fontSize: fontSize.xs },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: spacing.lg, gap: GRID_GAP },
