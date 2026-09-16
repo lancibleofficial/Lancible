@@ -73,7 +73,6 @@ const makeStyles = (colors, insets) => StyleSheet.create({
     width: CENTER_BTN_SIZE, height: CENTER_BTN_SIZE, borderRadius: radius.lg,
     marginTop: -CENTER_BTN_LIFT,
     backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 4, borderColor: colors.panel,
     elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
   },
 });

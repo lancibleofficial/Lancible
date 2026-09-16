@@ -25,6 +25,11 @@ const GRID_GAP = 4;
 // засчитывается, даже если протащили немного.
 const COMMIT_FRACTION = 0.22;
 const FLING_VELOCITY = 700;
+// Небольшой зазор между панелями карусели — раньше панели шли впритык, и на
+// свайпе соседний месяц/неделя наезжал(а) без единого просвета, что и
+// ощущалось "поломанным". Зазор входит в шаг слайда (step), а не в ширину
+// самой панели (pageWidth) — размеры сетки внутри панели не меняются.
+const PANEL_GAP = 14;
 // overshootClamping:true — пружина останавливается ровно в цели без
 // "перелёта"/пружинения назад (это выглядело бы как ещё один излишний рывок
 // поверх самого перелистывания); velocity из жеста передаётся в конфиг при
@@ -72,6 +77,10 @@ export default function CalendarScreen({ navigation }) {
   // величина: сетка внутри панели всегда влезает ровно по краям страницы.
   const cellSize = (windowWidth - spacing.lg * 2 - GRID_GAP * 6) / 7;
   const pageWidth = windowWidth - spacing.lg * 2;
+  // Шаг слайда карусели = ширина панели + зазор между ними (см. PANEL_GAP) —
+  // используется везде, где раньше был просто pageWidth для позиционирования
+  // (translateX/пороги жеста), сама ширина панели (pageWidth) не меняется.
+  const step = pageWidth + PANEL_GAP;
   const styles = makeStyles(colors, cellSize, insets);
   const tasks = useAppStore((s) => s.tasks);
   const projects = useAppStore((s) => s.projects);
@@ -91,14 +100,15 @@ export default function CalendarScreen({ navigation }) {
   const [rangeTo, setRangeTo] = useState(null);
   const [picking, setPicking] = useState(false);
 
-  // Карусель из трёх панелей [пред][текущая][след], каждая шириной pageWidth,
-  // выровненных в ряд — translateX = -pageWidth показывает среднюю (текущую)
-  // панель по центру видимой области. Во время свайпа translateX следует за
-  // пальцем 1:1 (зажато между -2*pageWidth и 0, т.е. не дальше соседних
-  // панелей) — в отличие от прежней версии, где сетка лишь символически
-  // "подглядывала" на несколько пикселей, тут действительно видно реальное
-  // содержимое соседнего месяца/недели, наезжающее с края экрана.
-  const translateX = useSharedValue(-pageWidth);
+  // Карусель из трёх панелей [пред][текущая][след], каждая шириной pageWidth
+  // и разделённых зазором PANEL_GAP, выровненных в ряд — translateX = -step
+  // показывает среднюю (текущую) панель по центру видимой области. Во время
+  // свайпа translateX следует за пальцем 1:1 (зажато между -2*step и 0, т.е.
+  // не дальше соседних панелей) — в отличие от прежней версии, где сетка
+  // лишь символически "подглядывала" на несколько пикселей, тут
+  // действительно видно реальное содержимое соседнего месяца/недели,
+  // наезжающее с края экрана, с небольшим просветом между страницами.
+  const translateX = useSharedValue(-step);
   const carouselAnimatedStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
 
   const days = useMemo(() => aggregateDays(tasks, hourlyRate), [tasks, hourlyRate]);
@@ -157,22 +167,22 @@ export default function CalendarScreen({ navigation }) {
   // к этому моменту "текущая" панель уже отрисована с новыми данными, скачка
   // не видно.
   function animateShift(dir, velocity = 0) {
-    const target = dir === 1 ? -2 * pageWidth : 0;
+    const target = dir === 1 ? -2 * step : 0;
     translateX.value = withSpring(target, springConfig(velocity), (finished) => {
       if (finished) runOnJS(commitShift)(dir);
     });
   }
 
   function cancelShift(velocity = 0) {
-    translateX.value = withSpring(-pageWidth, springConfig(velocity));
+    translateX.value = withSpring(-step, springConfig(velocity));
   }
 
   useLayoutEffect(() => {
     if (!pendingShiftDirRef.current) return;
     pendingShiftDirRef.current = 0;
-    translateX.value = -pageWidth;
+    translateX.value = -step;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, weekStart, pageWidth]);
+  }, [year, month, weekStart, step]);
 
   // Свайп для смены месяца/недели — карусель едет строго за пальцем (см.
   // комментарий у translateX выше), поэтому чувствуется как настоящее
@@ -186,12 +196,12 @@ export default function CalendarScreen({ navigation }) {
       .activeOffsetX([-20, 20])
       .failOffsetY([-15, 15])
       .onUpdate((e) => {
-        const raw = -pageWidth + e.translationX;
-        translateX.value = Math.max(-2 * pageWidth, Math.min(0, raw));
+        const raw = -step + e.translationX;
+        translateX.value = Math.max(-2 * step, Math.min(0, raw));
       })
       .onEnd((e) => {
-        const delta = translateX.value + pageWidth;
-        const shouldCommit = Math.abs(delta) > pageWidth * COMMIT_FRACTION || Math.abs(e.velocityX) > FLING_VELOCITY;
+        const delta = translateX.value + step;
+        const shouldCommit = Math.abs(delta) > step * COMMIT_FRACTION || Math.abs(e.velocityX) > FLING_VELOCITY;
         if (shouldCommit) {
           const dir = delta < 0 ? 1 : -1;
           runOnJS(animateShift)(dir, e.velocityX);
@@ -199,7 +209,7 @@ export default function CalendarScreen({ navigation }) {
           runOnJS(cancelShift)(e.velocityX);
         }
       }),
-    [isFocused, mode, year, month, weekStart, pageWidth],
+    [isFocused, mode, year, month, weekStart, step],
   );
 
   function goToday() {
@@ -351,7 +361,7 @@ export default function CalendarScreen({ navigation }) {
 
               <View style={[styles.carouselViewport, { width: pageWidth }]}>
                 <GestureDetector gesture={swipeGesture}>
-                  <Animated.View style={[styles.carouselTrack, { width: pageWidth * 3 }, carouselAnimatedStyle]}>
+                  <Animated.View style={[styles.carouselTrack, { width: pageWidth * 3 + PANEL_GAP * 2 }, carouselAnimatedStyle]}>
                     <View style={{ width: pageWidth }}>{renderGridPanel(prevCells)}</View>
                     <View style={{ width: pageWidth }}>{renderGridPanel(currCells)}</View>
                     <View style={{ width: pageWidth }}>{renderGridPanel(nextCells)}</View>
@@ -467,13 +477,13 @@ const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, marginBottom: spacing.md,
   },
   viewTotalLabel: { flexShrink: 1, color: colors.textDim, fontSize: fontSize.md, fontWeight: '600' },
-  viewTotalValue: { color: colors.accent, fontSize: fontSize.lg, fontWeight: '800' },
+  viewTotalValue: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
   weekdaysRow: { flexDirection: 'row', marginBottom: spacing.xs, gap: GRID_GAP },
   weekday: { width: cellSize, textAlign: 'center', color: colors.textDim, fontSize: fontSize.xs },
   // overflow:hidden — окно, через которое видна только одна из трёх панелей
   // карусели одновременно; сама карусель (carouselTrack) в 3 раза шире.
   carouselViewport: { overflow: 'hidden', marginBottom: spacing.lg },
-  carouselTrack: { flexDirection: 'row' },
+  carouselTrack: { flexDirection: 'row', gap: PANEL_GAP },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
   cell: { width: cellSize, minHeight: 56, alignItems: 'center', paddingVertical: spacing.xs, borderRadius: radius.sm, gap: 2, backgroundColor: colors.panel2 },
   cellEmpty: { backgroundColor: 'transparent' },
@@ -487,7 +497,7 @@ const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
   cellBar: { height: '100%', backgroundColor: colors.accent },
   dayHeadRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   dayHead: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  dayHeadTot: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700' },
+  dayHeadTot: { color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
   empty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.md },
   dayStub: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xxl },
   exportBtnWrap: { marginBottom: spacing.md },

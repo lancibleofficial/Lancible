@@ -197,6 +197,17 @@ const RichTextEditor = forwardRef(function RichTextEditor(
         source={{ html }}
         onMessage={onMessage}
         scrollEnabled={false}
+        // nestedScrollEnabled по умолчанию true — WebView тогда участвует в
+        // Android-протоколе nested scrolling с ancestor ScrollView экрана
+        // задачи, из-за чего он сам решает, "может" ли он проскроллить,
+        // прежде чем отдать жест наружу — ощущается как отдельный,
+        // конкурирующий скролл внутри редактора, даже когда высота уже
+        // подогнана под контент. false отдаёт скролл-жест целиком странице.
+        nestedScrollEnabled={false}
+        overScrollMode="never"
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
       />
     </View>
   );

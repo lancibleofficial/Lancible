@@ -102,7 +102,7 @@ export default function ProjectScreen({ route, navigation }) {
           <Icon name="clock" size={14} color={colors.textDim} />
           <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmtDur(ms, LANG)}</Text>
         </View>
-        <PrimaryButton icon="download" title={t(LANG, 'export.short')} onPress={onOpenExport} style={styles.exportBtn} shrinkText />
+        <PrimaryButton icon="download" onPress={onOpenExport} style={styles.exportBtn} />
       </View>
       <SectionList
         style={styles.list}
@@ -137,7 +137,7 @@ const makeStyles = (colors, insets) => StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, justifyContent: 'center', gap: 2,
   },
   statValue: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  exportBtn: { width: undefined, flexShrink: 0 },
+  exportBtn: { width: undefined, flexShrink: 0, paddingHorizontal: spacing.md },
   list: { flex: 1 },
   listContent: { padding: spacing.lg, paddingTop: 0, paddingBottom: spacing.lg },
   headerActions: { flexDirection: 'row' },

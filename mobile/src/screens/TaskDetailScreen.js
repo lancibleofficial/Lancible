@@ -162,19 +162,26 @@ export default function TaskDetailScreen({ route, navigation }) {
   const earned = earnedOf(task, hourlyRate, activeTimer);
   const sessions = [...(task.sessions || [])].map((s, i) => ({ s, i })).sort((a, b) => new Date(b.s.start) - new Date(a.s.start));
 
+  // На Android и KeyboardAvoidingView behavior="height", и "padding" зависят
+  // от того, как ОС резайзит окно (windowSoftInputMode) — а под Expo Go этот
+  // манифест не наш, приложение грузится в чужой контейнер (см. историю
+  // правок этого файла: два предыдущих захода на "height" не сработали на
+  // реальном устройстве, хотя выглядели корректно и даже проверялись на
+  // эмуляторе). Вместо попытки угадать поведение автоматического режима —
+  // считаем сами: keyboardHeight уже отслеживается ниже (Keyboard.addListener)
+  // для автопрокрутки каретки, используем то же число напрямую как
+  // marginBottom тулбара и paddingBottom скролла на Android. Это не зависит
+  // ни от какого manifest/resize-режима — просто сдвигает контент на
+  // измеренную высоту клавиатуры, минуя автоматику совсем.
+  const isIOS = Platform.OS === 'ios';
+  const androidKeyboardOffset = !isIOS && tab === 'notes' ? keyboardHeight : 0;
+
   return (
-    // behavior="height" на обеих платформах (не undefined на Android) —
-    // Expo Go грузит JS-бандл в СВОЙ собственный нативный контейнер, чей
-    // AndroidManifest (и его windowSoftInputMode) мы не контролируем через
-    // app.json — polагаться на системный adjustResize ненадёжно именно под
-    // Expo Go. Более ранняя правка на undefined опиралась на тест в
-    // эмуляторе с заведомо сломанной клавиатурой (см. историю) и была
-    // неверной: тулбар оставался под клавиатурой на реальном устройстве.
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={styles.container} behavior={isIOS ? 'padding' : undefined}>
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, androidKeyboardOffset ? { paddingBottom: androidKeyboardOffset } : null]}
         keyboardShouldPersistTaps="handled"
         onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
@@ -258,7 +265,11 @@ export default function TaskDetailScreen({ route, navigation }) {
         )}
       </ScrollView>
 
-      {tab === 'notes' ? <EditorToolbar format={format} onCommand={onToolbarCommand} colors={colors} /> : null}
+      {tab === 'notes' ? (
+        <View style={androidKeyboardOffset ? { marginBottom: androidKeyboardOffset } : null}>
+          <EditorToolbar format={format} onCommand={onToolbarCommand} colors={colors} />
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -267,7 +278,7 @@ const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm, gap: spacing.lg },
+  header: { padding: spacing.lg, paddingBottom: spacing.sm },
   headerActions: { flexDirection: 'row' },
   headerIconBtn: { paddingHorizontal: spacing.sm },
   // paddingRight:0 — см. подробный комментарий в HomeScreen.js: этот экран
@@ -275,10 +286,13 @@ const makeStyles = (colors) => StyleSheet.create({
   // у последней иконки хедера, эквивалентный spacing.lg на вкладках без
   // вложенного стека.
   headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: 0 },
-  titleInput: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', paddingVertical: spacing.sm },
+  // marginBottom меньше, чем зазор между остальными блоками ниже (timerCard/
+  // splitRow/tabRow держат spacing.lg сами) — раньше был общий gap на .header,
+  // одинаковый везде; тут именно название-таймер должен быть теснее.
+  titleInput: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', paddingVertical: spacing.sm, marginBottom: spacing.xs },
   timerCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg,
+    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg,
   },
   clock: { color: colors.text, fontSize: 32, fontWeight: '700', fontVariant: ['tabular-nums'] },
   timerBtn: {
@@ -292,7 +306,7 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
     textAlignVertical: 'center',
   },
-  splitRow: { flexDirection: 'row', gap: spacing.md },
+  splitRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
   splitHalf: { flex: 1, gap: spacing.xs },
   earnedValue: {
     backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
