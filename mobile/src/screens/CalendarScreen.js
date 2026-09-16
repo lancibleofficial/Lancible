@@ -463,12 +463,16 @@ const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
     backgroundColor: colors.panel2, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill,
   },
   todayBtnText: { color: colors.text, fontSize: fontSize.xs, fontWeight: '700' },
+  // В отличие от todayBtn (плоская пилюля) у этой — рамка и заливка "panel"
+  // вместо "panel2": рядом с одинаковой на вид todayBtn пользователь не считывал
+  // её как кнопку. Не зелёная (это состояние занято periodBtnActive).
   periodBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.panel2, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill,
+    backgroundColor: colors.panel, borderWidth: 1.5, borderColor: colors.borderStrong,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill,
   },
   periodBtnText: { color: colors.text, fontSize: fontSize.xs, fontWeight: '700' },
-  periodBtnActive: { backgroundColor: colors.accent },
+  periodBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   periodBtnTextActive: { color: colors.accentText },
   viewTotalBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm,

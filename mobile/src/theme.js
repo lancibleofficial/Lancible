@@ -11,10 +11,15 @@
 import { useColorScheme } from 'react-native';
 import { useAppStore } from './store/useAppStore';
 
+// Нейтральная шкала темы: холоднее (B-канал растёт быстрее R/G с каждой
+// ступенью — bg почти нейтральный, borderStrong заметно синее) и с большим
+// разбросом между ступенями, чем раньше (bg было 2a2b2e..borderStrong 5a5a66,
+// разброс ~48-56; теперь 24252b..5c5f70, разброс ~56-69) — больше контраста
+// между уровнями поверхностей (bg/panel/panel2/border), а не только ярче.
 const dark = {
-  bg: '#2a2b2e', panel: '#313236', panel2: '#3b3c42',
-  border: '#4a4b53', borderStrong: '#5a5a66',
-  text: '#ecedef', textDim: '#9a9ba4',
+  bg: '#24252b', panel: '#2c2e36', panel2: '#383a45',
+  border: '#484b58', borderStrong: '#5c5f70',
+  text: '#eef0f4', textDim: '#9598a8',
   accent: '#87ff65', accentHover: '#aceb98', accentText: '#16220e', accentMuted: 'rgba(135,255,101,0.16)',
   danger: '#ef7a72',
   // Фон ВЫБРАННОГО таба (Заметки/История, Месяц/Неделя/День и т.п.) —
@@ -22,7 +27,7 @@ const dark = {
   // тон плохо читался. Нейтральный фон: тот же графит, что на общем фоне
   // приложения (на тёмной теме это и есть bg) — активный текст поверх него
   // всё ещё accent (зелёный), контраст в обеих темах достаточный.
-  tabActiveBg: '#2a2b2e',
+  tabActiveBg: '#24252b',
 };
 
 // Раньше все нейтральные цвета светлой темы (bg/panel2/border/textDim) были
@@ -33,8 +38,11 @@ const dark = {
 // самый высокий в каждом нейтральном цвете) и затемнены на 1-2 ступени для
 // контраста — bg теперь заметно отличается от panel, а textDim/borderStrong
 // достаточно тёмные, чтобы не сливаться с фоном.
+// panel2 (фон инпутов и трека свитчеров) был темнее самого bg — на белых
+// шитах/карточках это читалось как "инпут слишком тёмный". Осветлён на
+// ступень, ближе к bg, но всё ещё отличим от белого panel.
 const light = {
-  bg: '#e7ecf1', panel: '#ffffff', panel2: '#dbe2e9',
+  bg: '#e7ecf1', panel: '#ffffff', panel2: '#e2e8ee',
   border: '#c3ccd6', borderStrong: '#8a9bb0',
   text: '#10141a', textDim: '#4a5560',
   accent: '#7ae65b', accentHover: '#68c44d', accentText: '#16220e', accentMuted: 'rgba(122,230,91,0.18)',
