@@ -1,6 +1,8 @@
-// Заливает собранные dist/*.exe (+ .blockmap, latest.yml) в публичный Supabase
-// Storage bucket "releases" — оттуда их скачивает electron-updater. Запуск
-// после npm run build:exe:
+// Заливает собранные артефакты релиза (Windows: .exe/.exe.blockmap/latest.yml;
+// macOS: .dmg/.zip/.zip.blockmap/latest-mac.yml — какие есть в dist/, те и
+// заливаются) в публичный Supabase Storage bucket "releases" — оттуда их
+// скачивает electron-updater на обеих платформах. Запуск после
+// npm run build:exe и/или npm run build:dmg:
 //   npm run publish:release
 //
 // Нужны переменные окружения (проще всего — файл .env рядом с package.json,
@@ -46,19 +48,26 @@ async function upload(filePath, destName) {
   console.log('uploaded:', destName);
 }
 
+// latest.yml/latest-mac.yml — манифесты, по которым electron-updater находит
+// файл для скачивания на каждой платформе; должны заливаться последними,
+// чтобы клиент не увидел ссылку на ещё не залитый инсталлятор/архив.
+const RELEASE_EXTENSIONS = ['.exe', '.exe.blockmap', '.dmg', '.dmg.blockmap', '.zip', '.zip.blockmap'];
+const MANIFEST_NAMES = ['latest.yml', 'latest-mac.yml'];
+const isManifest = (f) => MANIFEST_NAMES.includes(f);
+const isReleaseFile = (f) => isManifest(f) || RELEASE_EXTENSIONS.some((ext) => f.endsWith(ext));
+
 async function main() {
   const distDir = path.join(__dirname, '..', 'dist');
   if (!fs.existsSync(distDir)) {
-    console.error('Нет папки dist/ — сначала npm run build:exe');
+    console.error('Нет папки dist/ — сначала npm run build:exe и/или npm run build:dmg');
     process.exit(1);
   }
-  const files = fs.readdirSync(distDir).filter((f) => f.endsWith('.exe') || f.endsWith('.exe.blockmap') || f === 'latest.yml');
+  const files = fs.readdirSync(distDir).filter(isReleaseFile);
   if (!files.length) {
-    console.error('В dist/ нет файлов релиза — сначала npm run build:exe');
+    console.error('В dist/ нет файлов релиза — сначала npm run build:exe и/или npm run build:dmg');
     process.exit(1);
   }
-  // latest.yml — последним, чтобы клиенты не увидели ссылку на ещё не залитый инсталлятор.
-  files.sort((a, b) => (a === 'latest.yml') - (b === 'latest.yml'));
+  files.sort((a, b) => Number(isManifest(a)) - Number(isManifest(b)));
   for (const f of files) await upload(path.join(distDir, f), f);
   console.log('Готово:', `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`);
 }

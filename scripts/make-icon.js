@@ -1,6 +1,10 @@
-// Генерирует build/icon.ico (и build/icon.png) — рисует иконку на canvas
-// в скрытом окне Electron (графитовый фон + логотип из build/logo-accent.svg)
-// и собирает многоразмерный .ico через png-to-ico.
+// Генерирует build/icon.ico (Windows) и build/icon.png (источник для мака) —
+// рисует иконку на canvas в скрытом окне Electron (графитовый фон + логотип
+// из build/logo-accent.svg). .ico собирается многоразмерным через png-to-ico;
+// electron-builder сам конвертирует icon.png в .icns при сборке mac-таргета
+// (см. package.json build.mac.icon) — отдельного шага/утилиты для .icns не
+// нужно, но источник должен быть не меньше 512×512, поэтому icon.png
+// рендерится отдельно на 1024, а не переиспользует крупнейший ico-размер.
 // Запуск: npm run icon
 const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
@@ -8,7 +12,8 @@ const fs = require('node:fs');
 
 const OUT_DIR = path.join(__dirname, '..', 'build');
 const LOGO_SVG = path.join(OUT_DIR, 'logo-accent.svg');
-const SIZES = [256, 128, 64, 48, 32, 16];
+const ICO_SIZES = [256, 128, 64, 48, 32, 16];
+const PNG_SIZE = 1024;
 
 const BG_1 = '#2a2b2e';
 const BG_2 = '#33343a';
@@ -52,16 +57,19 @@ app.whenReady().then(async () => {
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const buffers = [];
-  for (const size of SIZES) {
+  for (const size of ICO_SIZES) {
     const dataUrl = await win.webContents.executeJavaScript(draw(size, logoDataUrl));
-    const buf = Buffer.from(dataUrl.split(',')[1], 'base64');
-    buffers.push(buf);
-    if (size === 256) fs.writeFileSync(path.join(OUT_DIR, 'icon.png'), buf);
+    buffers.push(Buffer.from(dataUrl.split(',')[1], 'base64'));
   }
 
   const { default: pngToIco } = await import('png-to-ico');
   const ico = await pngToIco(buffers);
   fs.writeFileSync(path.join(OUT_DIR, 'icon.ico'), ico);
   console.log('icon.ico written:', ico.length, 'bytes');
+
+  const pngDataUrl = await win.webContents.executeJavaScript(draw(PNG_SIZE, logoDataUrl));
+  const pngBuf = Buffer.from(pngDataUrl.split(',')[1], 'base64');
+  fs.writeFileSync(path.join(OUT_DIR, 'icon.png'), pngBuf);
+  console.log('icon.png written:', pngBuf.length, 'bytes');
   app.quit();
 });

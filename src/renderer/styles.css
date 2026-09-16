@@ -182,6 +182,15 @@ body.nav-collapsed .tb-logo { width: var(--nav-w-collapsed); padding: 0 17px; }
 }
 body.nav-collapsed .tb-logo-text { opacity: 0; pointer-events: none; }
 
+/* Мак: нативные трафик-лайты (закрыть/свернуть/развернуть) рисуются ОС в
+   левом верхнем углу окна (см. trafficLightPosition в src/main.js) —
+   раздвигаем лого, чтобы не перекрывалось. В свёрнутом рейле (56px) для
+   иконки+кнопок вместе места физически не хватает — там просто прячем саму
+   иконку, кнопки остаются единственным, что видно в этом углу (обычная
+   практика для мак-приложений со свёрнутым сайдбаром). */
+body.platform-mac .tb-logo { padding-left: 78px; }
+body.platform-mac.nav-collapsed .tb-logo-mark { opacity: 0; }
+
 .tb-rest {
   display: flex;
   align-items: stretch;
