@@ -25,7 +25,9 @@
 // ключей ниже резолвился в то начертание, которое загрузилось первым.
 // Файлы в assets/fonts пересобраны с уникальными PostScript-именами
 // (BasiquePro-Light/-Regular/-Bold/-Black) и весами 300/400/700/900;
-// ключи ниже совпадают с полными именами (nameID 4) каждого файла.
+// ключи ниже — ровно эти PostScript-имена: expo-font по ним же и мапит
+// алиас, а RN на iOS резолвит такое имя напрямую в один файл, минуя подбор
+// по весу внутри семейства.
 import { Children, forwardRef } from 'react';
 import { Text as RNText, StyleSheet, Platform } from 'react-native';
 
@@ -34,11 +36,11 @@ import { Text as RNText, StyleSheet, Platform } from 'react-native';
 // по цепочке) — по просьбе "уменьшить жирность текста на одно значение
 // ниже" по всему приложению. Ниже Light сдвигать некуда — там потолок.
 const FAMILY_BY_WEIGHT = {
-  100: 'Basique Pro Light', 200: 'Basique Pro Light', 300: 'Basique Pro Light',
-  400: 'Basique Pro Light', normal: 'Basique Pro Light',
-  500: 'Basique Pro Light', 600: 'Basique Pro',
-  700: 'Basique Pro', bold: 'Basique Pro',
-  800: 'Basique Pro Bold', 900: 'Basique Pro Bold',
+  100: 'BasiquePro-Light', 200: 'BasiquePro-Light', 300: 'BasiquePro-Light',
+  400: 'BasiquePro-Light', normal: 'BasiquePro-Light',
+  500: 'BasiquePro-Light', 600: 'BasiquePro-Regular',
+  700: 'BasiquePro-Regular', bold: 'BasiquePro-Regular',
+  800: 'BasiquePro-Bold', 900: 'BasiquePro-Bold',
 };
 
 // В Basique Pro нет глифов ₽ ₸ ₴ ₺ (проверено по cmap всех четырёх файлов;
@@ -50,7 +52,7 @@ const FAMILY_BY_WEIGHT = {
 const MISSING_GLYPHS = /([₽₸₴₺])/;
 const FALLBACK_FAMILY = Platform.select({ ios: 'System', default: 'sans-serif' });
 const FALLBACK_WEIGHT = {
-  'Basique Pro Light': '300', 'Basique Pro': '500', 'Basique Pro Bold': '700', 'Basique Pro Black': '900',
+  'BasiquePro-Light': '300', 'BasiquePro-Regular': '500', 'BasiquePro-Bold': '700', 'BasiquePro-Black': '900',
 };
 
 function withGlyphFallback(children, family) {
@@ -65,7 +67,7 @@ function withGlyphFallback(children, family) {
 
 const Text = forwardRef(({ style, children, ...props }, ref) => {
   const flat = StyleSheet.flatten(style) || {};
-  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'Basique Pro Light';
+  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'BasiquePro-Light';
   return (
     <RNText ref={ref} {...props} style={[style, { fontFamily: family, fontWeight: undefined, fontStyle: flat.fontStyle === 'italic' ? 'italic' : 'normal' }]}>
       {withGlyphFallback(children, family)}

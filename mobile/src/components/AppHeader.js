@@ -53,5 +53,5 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   },
   back: { paddingRight: spacing.sm, marginLeft: -4 },
   titleSlot: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  title: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'Basique Pro' },
+  title: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'BasiquePro-Regular' },
 });

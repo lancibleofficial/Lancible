@@ -254,7 +254,7 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   },
   empty: { color: colors.textDim, textAlign: 'center', marginTop: spacing.xxl, fontSize: fontSize.sm },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  brandText: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'Basique Pro' },
+  brandText: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'BasiquePro-Regular' },
   // Белый, а не inputBg: это поле сидит прямо на colors.bg экрана (не на
   // белом шите), так что для контраста ему нужен тот же цвет, что у карточек.
   searchInput: {
