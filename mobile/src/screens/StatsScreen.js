@@ -46,20 +46,6 @@ export default function StatsScreen({ navigation }) {
     openSheet(<ExportPeriodSheet lang={lang} onConfirm={onExportRange} onCancel={closeSheet} />);
   }
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Pressable
-          hitSlop={10}
-          style={styles.headerIconBtnLast}
-          onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openSearch: true } })}
-        >
-          <Icon name="search" size={20} color={colors.text} />
-        </Pressable>
-      ),
-    });
-  }, [navigation, colors]);
-
   const totalMs = tasks.reduce((a, task) => a + taskElapsedMs(task, activeTimer), 0);
   const totalMoney = tasks.reduce((a, task) => a + earnedOf(task, hourlyRate, activeTimer), 0);
   const runningTask = activeTimer && tasks.find((task) => task.id === activeTimer.taskId);
@@ -149,7 +135,6 @@ export default function StatsScreen({ navigation }) {
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
-  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: spacing.lg },
   grid: { flexDirection: 'row', gap: spacing.sm },
   exportRow: { flexDirection: 'row', gap: spacing.sm },
   exportRowBtn: { flex: 1, width: undefined },

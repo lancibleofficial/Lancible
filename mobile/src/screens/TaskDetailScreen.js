@@ -222,7 +222,9 @@ export default function TaskDetailScreen({ route, navigation }) {
             </View>
             <View style={styles.splitHalf}>
               <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
-              <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
+              <View style={styles.earnedBox}>
+                <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
+              </View>
             </View>
           </View>
 
@@ -283,11 +285,7 @@ const makeStyles = (colors) => StyleSheet.create({
   header: { padding: spacing.lg, paddingBottom: spacing.sm },
   headerActions: { flexDirection: 'row' },
   headerIconBtn: { paddingHorizontal: spacing.sm },
-  // paddingRight:0 — см. подробный комментарий в HomeScreen.js: этот экран
-  // тоже внутри HomeStack (native-stack), у которого свой встроенный отступ
-  // у последней иконки хедера, эквивалентный spacing.lg на вкладках без
-  // вложенного стека.
-  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: 0 },
+  headerIconBtnLast: { paddingLeft: spacing.sm },
   // marginBottom меньше, чем зазор между остальными блоками ниже (timerCard/
   // splitRow/tabRow держат spacing.lg сами) — раньше был общий gap на .header,
   // одинаковый везде; тут именно название-таймер должен быть теснее.
@@ -310,12 +308,15 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   splitRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
   splitHalf: { flex: 1, gap: spacing.xs },
-  earnedValue: {
+  // Та же геометрия, что у поля ставки слева (minHeight 48, тот же
+  // горизонтальный паддинг), сумма прижата к левому краю и отцентрована по
+  // вертикали контейнером, а не текстовыми свойствами — textAlignVertical
+  // работает только на Android.
+  earnedBox: {
     backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    color: colors.accent, fontSize: fontSize.md, fontWeight: '700',
-    textAlign: 'center', textAlignVertical: 'center',
+    paddingHorizontal: spacing.md, justifyContent: 'center',
   },
+  earnedValue: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
   tabActive: { backgroundColor: colors.tabActiveBg },

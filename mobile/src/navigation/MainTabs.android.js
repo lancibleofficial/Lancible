@@ -1,31 +1,30 @@
 import { Pressable } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeStack from './HomeStack';
 import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import Icon from '../components/Icon';
+import AppHeader from '../components/AppHeader';
 import MainTabBar from './MainTabBar';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
-import { useColors, spacing, fontSize } from '../theme';
+import { useColors, spacing } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
 const HEADER_ICON_SIZE = 20;
 
 // Иконка поиска в хедере — общая для всех табов (кроме Home, у которой
-// своя versия с реально раскрывающимся полем — см. HomeScreen.js). С любой
-// другой вкладки просто переkey на Home и просит её открыть поиск. Правый
-// отступ = spacing.lg — так же, как везде в приложении отступ контента от
-// края экрана (paddingLeft меньше — слева от неё в хедере ничего нет).
+// своя версия с реально раскрывающимся полем — см. HomeScreen.js). С любой
+// другой вкладки просто переключает на Home и просит её открыть поиск.
+// Правый отступ даёт сам AppHeader (spacing.lg от края экрана).
 function SearchHeaderButton({ navigation, colors }) {
   return (
     <Pressable
       hitSlop={10}
-      style={{ paddingLeft: spacing.sm, paddingRight: spacing.lg }}
+      style={{ paddingLeft: spacing.sm }}
       onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openSearch: true } })}
     >
       <Icon name="search" size={HEADER_ICON_SIZE} color={colors.text} />
@@ -33,32 +32,16 @@ function SearchHeaderButton({ navigation, colors }) {
   );
 }
 
-// Высота хедера у @react-navigation/elements по умолчанию фиксированная
-// (64dp на Android, см. getDefaultHeaderHeight) и не зависит от размера
-// заголовка — поэтому под текстом всегда оставался большой зазор вне
-// зависимости от lineHeight/fontSize. Задаём высоту сами (компактнее
-// материального стандарта) поверх top-inset статус-бара.
-const HEADER_CONTENT_HEIGHT = 48;
-
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
-  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
       tabBar={(props) => <MainTabBar {...props} />}
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: colors.bg, height: insets.top + HEADER_CONTENT_HEIGHT },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: 'Basique Pro', fontWeight: 'normal', fontSize: fontSize.lg },
-        headerShadowVisible: false,
-        headerTitleAlign: 'left',
+        header: (props) => <AppHeader {...props} />,
         headerRight: () => <SearchHeaderButton navigation={navigation} colors={colors} />,
-        // См. тот же комментарий в HomeStack.js — обнуляем встроенный отступ
-        // хедера, чтобы единственным источником правого отступа была
-        // paddingRight самих Pressable-ов, одинаково на всех вкладках.
-        headerRightContainerStyle: { paddingRight: 0 },
         animation: 'shift',
       })}
     >

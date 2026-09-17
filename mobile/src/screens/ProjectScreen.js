@@ -149,11 +149,7 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   listContent: { padding: spacing.lg, paddingTop: 0, paddingBottom: spacing.lg },
   headerActions: { flexDirection: 'row' },
   headerIconBtn: { paddingHorizontal: spacing.sm },
-  // paddingRight:0 — см. подробный комментарий в HomeScreen.js: этот экран
-  // тоже внутри HomeStack (native-stack), у которого свой встроенный отступ
-  // у последней иконки хедера, эквивалентный spacing.lg на вкладках без
-  // вложенного стека.
-  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: 0 },
+  headerIconBtnLast: { paddingLeft: spacing.sm },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginTop: spacing.lg, marginBottom: spacing.sm, paddingBottom: spacing.xs,

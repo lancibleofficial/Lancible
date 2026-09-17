@@ -6,9 +6,10 @@ import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import Icon from '../components/Icon';
+import AppHeader from '../components/AppHeader';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
-import { useColors, spacing, fontSize } from '../theme';
+import { useColors, spacing } from '../theme';
 
 // iOS-only: renders through UIKit's real UITabBarController (via
 // react-native-screens' native bottom-tabs integration) instead of the
@@ -19,30 +20,37 @@ import { useColors, spacing, fontSize } from '../theme';
 // Liquid Glass has no Android equivalent, so there is nothing to gain from
 // forcing the two to stay pixel-identical here the way desktop Win/Mac do.
 //
-// Real trade-offs versus the custom bar, accepted deliberately rather than
-// worked around:
-// - No raised circular "+" center button -- native tab items are always
-//   N equal-width slots. "Create" is a normal 5th tab, kept in the visual
-//   center of the row by simple ordering, with tabBarSelectionEnabled:false
-//   + a tabPress listener so tapping it opens the create-project sheet
-//   instead of ever actually becoming the selected tab.
-// - Icons must be SF Symbols or bundled images, not this app's custom SVG
-//   Icon.js component -- used the closest stock SF Symbol per tab instead.
-// - This navigator's own header always centers its title on iOS (the
-//   library's docs state headerTitleAlign has no effect there) -- that's
-//   the genuine native tab-root convention (Settings.app, Photos.app, etc.
-//   all do this), so it's kept rather than fought. HomeStack's nested
-//   Project/TaskDetail screens are a separate native-stack underneath this
-//   tab and keep the left-aligned title fix applied there.
+// What is and isn't controllable through the native bar:
+// - Icons are the app's own Icon.js glyphs rasterised to PNG template
+//   images (assets/tabs/, 24pt @1x/2x/3x) so the bar matches the rest of
+//   the app instead of stock SF Symbols. iOS tints them itself.
+// - "Create" uses the system `search` slot: on iOS 26 UIKit renders that
+//   slot as the detached round glass button to the right of the bar (the
+//   only detached-button placement the platform offers); on iOS 18 and
+//   below it is an ordinary tab in the row. Its glass body cannot be
+//   coloured -- only the glyph can, so the "+" is tinted accent via the
+//   per-item inactive tint (it is never actually selected: selection is
+//   disabled and tapping it opens the create-project sheet instead).
+// - The selected tab's label and icon share one tint on iOS (UITabBar's
+//   tintColor covers both); they cannot be split into black text + green
+//   icon natively.
 const Tab = createNativeBottomTabNavigator();
 
 const HEADER_ICON_SIZE = 20;
+
+const TAB_ICONS = {
+  home: require('../../assets/tabs/home.png'),
+  chart: require('../../assets/tabs/chart.png'),
+  plus: require('../../assets/tabs/plus.png'),
+  calendar: require('../../assets/tabs/calendar.png'),
+  settings: require('../../assets/tabs/settings.png'),
+};
 
 function SearchHeaderButton({ navigation, colors }) {
   return (
     <Pressable
       hitSlop={10}
-      style={{ paddingLeft: spacing.sm, paddingRight: spacing.lg }}
+      style={{ paddingLeft: spacing.sm }}
       onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openSearch: true } })}
     >
       <Icon name="search" size={HEADER_ICON_SIZE} color={colors.text} />
@@ -50,8 +58,8 @@ function SearchHeaderButton({ navigation, colors }) {
   );
 }
 
-function sfIcon(name) {
-  return { type: 'sfSymbol', name };
+function tabIcon(name) {
+  return { type: 'image', source: TAB_ICONS[name] };
 }
 
 export default function MainTabs() {
@@ -61,12 +69,11 @@ export default function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ navigation }) => ({
-        headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: 'Basique Pro', fontSize: fontSize.lg },
-        headerShadowVisible: false,
+        header: (props) => <AppHeader {...props} />,
         headerRight: () => <SearchHeaderButton navigation={navigation} colors={colors} />,
         tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textDim,
+        tabBarLabelStyle: { fontFamily: 'Basique Pro', fontSize: 11 },
       })}
     >
       <Tab.Screen
@@ -75,7 +82,7 @@ export default function MainTabs() {
         options={({ route }) => ({
           headerShown: false,
           tabBarLabel: t(lang, 'nav.home'),
-          tabBarIcon: ({ focused }) => sfIcon(focused ? 'house.fill' : 'house'),
+          tabBarIcon: tabIcon('home'),
           // Same nested-route hide as Android -- see the detailed comment in
           // MainTabs.android.js for why this has to be recomputed here
           // rather than left to the nested stack.
@@ -85,7 +92,7 @@ export default function MainTabs() {
       <Tab.Screen
         name="Stats"
         component={StatsScreen}
-        options={{ title: t(lang, 'nav.stats'), tabBarLabel: t(lang, 'nav.stats'), tabBarIcon: ({ focused }) => sfIcon(focused ? 'chart.bar.fill' : 'chart.bar') }}
+        options={{ title: t(lang, 'nav.stats'), tabBarLabel: t(lang, 'nav.stats'), tabBarIcon: tabIcon('chart') }}
       />
       <Tab.Screen
         name="Create"
@@ -95,20 +102,22 @@ export default function MainTabs() {
         })}
         options={{
           headerShown: false,
+          tabBarSystemItem: 'search',
           tabBarLabel: t(lang, 'home.create'),
-          tabBarIcon: sfIcon('plus.circle.fill'),
+          tabBarIcon: tabIcon('plus'),
+          tabBarInactiveTintColor: colors.accent,
           tabBarSelectionEnabled: false,
         }}
       />
       <Tab.Screen
         name="Calendar"
         component={CalendarScreen}
-        options={{ title: t(lang, 'home.calendar_link'), tabBarLabel: t(lang, 'home.calendar_link'), tabBarIcon: () => sfIcon('calendar') }}
+        options={{ title: t(lang, 'home.calendar_link'), tabBarLabel: t(lang, 'home.calendar_link'), tabBarIcon: tabIcon('calendar') }}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ title: t(lang, 'settings.title'), tabBarLabel: t(lang, 'settings.title'), tabBarIcon: ({ focused }) => sfIcon(focused ? 'gearshape.fill' : 'gearshape') }}
+        options={{ title: t(lang, 'settings.title'), tabBarLabel: t(lang, 'settings.title'), tabBarIcon: tabIcon('settings') }}
       />
     </Tab.Navigator>
   );

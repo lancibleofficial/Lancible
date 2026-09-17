@@ -85,8 +85,6 @@ export default function HomeScreen({ navigation, route }) {
             <Text style={styles.brandText}>Lancible</Text>
           </View>
         ),
-      headerTitleContainerStyle: searchOpen ? { flex: 1 } : undefined,
-      headerLeft: searchOpen ? () => null : undefined,
       headerRight: () => (
         <Pressable
           hitSlop={10}
@@ -247,15 +245,7 @@ function SearchTaskRow({ task, projects, activeTimer, lang, styles, colors, onPr
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   listContent: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
-  // paddingRight:0, не spacing.lg — этот экран лежит внутри native-stack
-  // (HomeStack.js), у которого свой встроенный отступ у последней иконки
-  // хедера (нативный Android-тулбар через react-native-screens, а не тот же
-  // JS Header, что у вкладок Stats/Calendar/Settings напрямую в bottom-tabs)
-  // — он не обнуляется через headerRightContainerStyle. Экспериментально
-  // подтверждено (uiautomator): нативный отступ там сам по себе уже равен
-  // тому, что здесь дают spacing.lg на вкладках без вложенного стека —
-  // добавлять spacing.lg ещё и сверху удваивало итоговый зазор.
-  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: 0 },
+  headerIconBtnLast: { paddingLeft: spacing.sm },
   todayGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   recentSection: { marginBottom: spacing.lg, gap: spacing.sm },
   sectionTitle: {

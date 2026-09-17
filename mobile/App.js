@@ -15,14 +15,11 @@ import { useColors, useThemeMode } from './src/theme';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
-  // Keyed by each file's REAL internal family name (checked via each .ttf's
-  // own name table: Light/Bold/Black each declare a distinct family
-  // ("Basique Pro Light" etc.), Regular declares plain "Basique Pro") --
-  // not an arbitrary alias. iOS resolves fontFamily against the font's own
-  // registered identity; a mismatched alias risked silently falling back to
-  // one shared weight for everything, which is what iOS testing showed (all
-  // text rendering the same weight regardless of the family string used in
-  // styles) even though the same aliases worked fine on Android.
+  // Keys match each file's full name (nameID 4). The .ttf files themselves
+  // were rebuilt with unique PostScript names and real weight classes --
+  // originally all four declared the same PostScript name ("Basique") and
+  // weight 400, so iOS (which registers fonts by PostScript name) treated
+  // them as one font and every weight rendered identically. See AppText.js.
   const [fontsLoaded] = useFonts({
     'Basique Pro Light': require('./assets/fonts/BasiquePro-Light.ttf'),
     'Basique Pro': require('./assets/fonts/BasiquePro-Regular.ttf'),
