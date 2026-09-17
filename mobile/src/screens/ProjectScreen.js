@@ -137,8 +137,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   // panel2, что на этом экране (тоже белый шит поверх bg) выглядело как
   // отдельная серая подложка, а не единая карточка того же уровня.
   statCard: {
-    flex: 1, backgroundColor: colors.panel, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, justifyContent: 'center', gap: 2,
+    flex: 1, height: buttonHeight, backgroundColor: colors.panel, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, justifyContent: 'center', gap: 2,
   },
   statValue: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   // Квадрат buttonHeight×buttonHeight вместо ширины "по контенту" (icon +

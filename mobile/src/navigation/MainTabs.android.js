@@ -51,8 +51,9 @@ export default function MainTabs() {
       screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: colors.bg, height: insets.top + HEADER_CONTENT_HEIGHT },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: 'BasiquePro-Regular', fontWeight: 'normal', fontSize: fontSize.lg },
+        headerTitleStyle: { fontFamily: 'Basique Pro', fontWeight: 'normal', fontSize: fontSize.lg },
         headerShadowVisible: false,
+        headerTitleAlign: 'left',
         headerRight: () => <SearchHeaderButton navigation={navigation} colors={colors} />,
         // См. тот же комментарий в HomeStack.js — обнуляем встроенный отступ
         // хедера, чтобы единственным источником правого отступа была

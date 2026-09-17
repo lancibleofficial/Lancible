@@ -11,12 +11,20 @@
 // Второй нюанс, из-за которого шрифт всё равно не был виден местами: если в
 // style одновременно есть кастомный fontFamily И числовой/строковый
 // fontWeight, Android пытается сам подобрать нужное начертание под пару
-// (family, weight) через системный Typeface — и поскольку "BasiquePro-Bold"
-// не зарегистрирован в системе как весовой вариант семейства "BasiquePro"
+// (family, weight) через системный Typeface — и поскольку "Basique Pro Bold"
+// не зарегистрирован в системе как весовой вариант семейства "Basique Pro"
 // (у нас 4 отдельных файла, а не один variable-font), система не находит
 // соответствие и тихо откатывается на системный шрифт. Поэтому здесь не
 // просто добавляется fontFamily, а ПОЛНОСТЬЮ убирается fontWeight из
 // итогового стиля — используется явно только семейство нужного начертания.
+//
+// Названия семейств ниже — РЕАЛЬНЫЕ внутренние имена из name-таблицы каждого
+// .ttf (проверено через System.Drawing.Text.PrivateFontCollection), не
+// произвольный ключ вида "BasiquePro-Bold": на iOS fontFamily резолвится
+// против имени, под которым шрифт зарегистрирован в CoreText, а не против
+// строки, которой его загрузили в useFonts — несовпадение объясняло, почему
+// на iOS все начертания выглядели одинаково, хотя тот же код с любым
+// произвольным ключом работал на Android без проблем.
 import { forwardRef } from 'react';
 import { Text as RNText, StyleSheet } from 'react-native';
 
@@ -25,16 +33,16 @@ import { Text as RNText, StyleSheet } from 'react-native';
 // по цепочке) — по просьбе "уменьшить жирность текста на одно значение
 // ниже" по всему приложению. Ниже Light сдвигать некуда — там потолок.
 const FAMILY_BY_WEIGHT = {
-  100: 'BasiquePro-Light', 200: 'BasiquePro-Light', 300: 'BasiquePro-Light',
-  400: 'BasiquePro-Light', normal: 'BasiquePro-Light',
-  500: 'BasiquePro-Light', 600: 'BasiquePro-Regular',
-  700: 'BasiquePro-Regular', bold: 'BasiquePro-Regular',
-  800: 'BasiquePro-Bold', 900: 'BasiquePro-Bold',
+  100: 'Basique Pro Light', 200: 'Basique Pro Light', 300: 'Basique Pro Light',
+  400: 'Basique Pro Light', normal: 'Basique Pro Light',
+  500: 'Basique Pro Light', 600: 'Basique Pro',
+  700: 'Basique Pro', bold: 'Basique Pro',
+  800: 'Basique Pro Bold', 900: 'Basique Pro Bold',
 };
 
 const Text = forwardRef(({ style, ...props }, ref) => {
   const flat = StyleSheet.flatten(style) || {};
-  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'BasiquePro-Light';
+  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'Basique Pro Light';
   return <RNText ref={ref} {...props} style={[style, { fontFamily: family, fontWeight: undefined, fontStyle: flat.fontStyle === 'italic' ? 'italic' : 'normal' }]} />;
 });
 

@@ -36,17 +36,21 @@ export default function MiniDatePicker({ valueKey, lang, onPick }) {
         {WEEKDAY_KEYS.map((k) => <Text key={k} style={styles.weekday}>{t(lang, k)}</Text>)}
       </View>
       <View style={styles.grid}>
-        {cells.map((d, i) => {
-          if (!d) return <View key={`e${i}`} style={styles.cell} />;
-          const key = dayKey(new Date(y, m, d));
-          const isSel = key === valueKey;
-          const isToday = key === todayKey;
-          return (
-            <Pressable key={key} onPress={() => onPick(key)} style={[styles.cell, isSel && styles.cellSel]}>
-              <Text style={[styles.cellText, isToday && !isSel && styles.cellTextToday, isSel && styles.cellTextSel]}>{d}</Text>
-            </Pressable>
-          );
-        })}
+        {Array.from({ length: Math.ceil(cells.length / 7) }, (_, ri) => cells.slice(ri * 7, ri * 7 + 7)).map((row, ri) => (
+          <View key={ri} style={styles.gridRow}>
+            {row.map((d, i) => {
+              if (!d) return <View key={`e${ri}-${i}`} style={styles.cell} />;
+              const key = dayKey(new Date(y, m, d));
+              const isSel = key === valueKey;
+              const isToday = key === todayKey;
+              return (
+                <Pressable key={key} onPress={() => onPick(key)} style={[styles.cell, isSel && styles.cellSel]}>
+                  <Text style={[styles.cellText, isToday && !isSel && styles.cellTextToday, isSel && styles.cellTextSel]}>{d}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -58,7 +62,8 @@ const makeStyles = (colors) => StyleSheet.create({
   navTitle: { color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
   weekdaysRow: { flexDirection: 'row' },
   weekday: { flexBasis: `${100 / 7}%`, textAlign: 'center', color: colors.textDim, fontSize: 10 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid: {},
+  gridRow: { flexDirection: 'row' },
   cell: { flexBasis: `${100 / 7}%`, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
   cellSel: { backgroundColor: colors.accent },
   cellText: { color: colors.text, fontSize: fontSize.sm },

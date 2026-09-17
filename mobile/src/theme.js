@@ -107,8 +107,8 @@ export const fontSize = { xs: 12, sm: 14, md: 16, lg: 20, xl: 28 };
 // системный шрифт). fontFamily ниже — для мест, где семейство нужно
 // прописать явно, минуя автоподбор AppText/AppTextInput по fontWeight.
 export const fontFamily = {
-  light: 'BasiquePro-Light', regular: 'BasiquePro-Regular',
-  bold: 'BasiquePro-Bold', black: 'BasiquePro-Black',
+  light: 'Basique Pro Light', regular: 'Basique Pro',
+  bold: 'Basique Pro Bold', black: 'Basique Pro Black',
 };
 
 // Именованные текстовые пресеты — то же назначение, что h1/h2/body/caption в

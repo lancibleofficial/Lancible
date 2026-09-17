@@ -20,9 +20,14 @@ export default function HomeStack() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: 'BasiquePro-Regular', fontWeight: 'normal', fontSize: fontSize.lg },
+        headerTitleStyle: { fontFamily: 'Basique Pro', fontWeight: 'normal', fontSize: fontSize.lg },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.bg },
+        // iOS centers header titles and shows a text back-label by default
+        // (Android already does left+icon-only) -- force the same convention
+        // on both platforms instead of letting them diverge.
+        headerTitleAlign: 'left',
+        headerBackButtonDisplayMode: 'minimal',
       }}
     >
       <Stack.Screen name="HomeMain" component={HomeScreen} />

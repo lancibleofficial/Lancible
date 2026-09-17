@@ -75,7 +75,7 @@ export default function CalendarScreen({ navigation }) {
   // ячейками) — процентная ширина+gap раньше давала неточное совпадение и
   // "плывущую" сетку. Ширина ОДНОЙ панели карусели (см. ниже) — та же самая
   // величина: сетка внутри панели всегда влезает ровно по краям страницы.
-  const cellSize = (windowWidth - spacing.lg * 2 - GRID_GAP * 6) / 7;
+  const cellSize = Math.floor((windowWidth - spacing.lg * 2 - GRID_GAP * 6) / 7);
   const pageWidth = windowWidth - spacing.lg * 2;
   // Шаг слайда карусели = ширина панели + зазор между ними (см. PANEL_GAP) —
   // используется везде, где раньше был просто pageWidth для позиционирования
@@ -291,28 +291,41 @@ export default function CalendarScreen({ navigation }) {
   }
 
   function renderGridPanel(panelCells) {
+    // Explicit 7-per-row chunks instead of flexWrap -- cellSize is a
+    // fractional pixel value (windowWidth doesn't divide evenly by 7), and
+    // relying on flexWrap to auto-break every 7th item is exactly the kind
+    // of layout that native rounding can push over by a sub-pixel and wrap
+    // early (observed on iOS: 6 columns instead of 7, every row after
+    // pushed down by one). Chunking rows ourselves removes that dependency
+    // on the layout engine's rounding entirely.
+    const rows = [];
+    for (let i = 0; i < panelCells.length; i += 7) rows.push(panelCells.slice(i, i + 7));
     return (
       <View style={styles.grid}>
-        {panelCells.map((c, i) => {
-          if (!c) return <View key={`e${i}`} style={[styles.cell, styles.cellEmpty]} />;
-          const agg = days.get(c.key);
-          const pct = agg ? Math.min(100, (agg.ms / (8 * 3_600_000)) * 100) : 0;
-          const isToday = c.key === todayKey;
-          const inRange = periodOn && rangeBounds && keyToDate(c.key) >= rangeBounds[0] && keyToDate(c.key) <= rangeBounds[1];
-          const isRangeEnd = periodOn && (c.key === rangeFrom || c.key === rangeTo);
-          const isSel = !periodOn && c.key === selected;
-          return (
-            <Pressable
-              key={c.key}
-              onPress={() => (periodOn ? pickRangeDay(c.key) : setSelected(c.key))}
-              style={[styles.cell, isSel && styles.cellSel, inRange && styles.cellInRange, isRangeEnd && styles.cellRangeEnd]}
-            >
-              <Text style={[styles.cellNum, isToday && styles.cellNumToday]}>{c.day}</Text>
-              {agg ? <Text style={styles.cellTime}>{fmtDur(agg.ms, lang)}</Text> : null}
-              {agg ? <View style={styles.cellBarTrack}><View style={[styles.cellBar, { width: `${pct}%` }]} /></View> : null}
-            </Pressable>
-          );
-        })}
+        {rows.map((row, ri) => (
+          <View key={ri} style={styles.gridRow}>
+            {row.map((c, i) => {
+              if (!c) return <View key={`e${ri}-${i}`} style={[styles.cell, styles.cellEmpty]} />;
+              const agg = days.get(c.key);
+              const pct = agg ? Math.min(100, (agg.ms / (8 * 3_600_000)) * 100) : 0;
+              const isToday = c.key === todayKey;
+              const inRange = periodOn && rangeBounds && keyToDate(c.key) >= rangeBounds[0] && keyToDate(c.key) <= rangeBounds[1];
+              const isRangeEnd = periodOn && (c.key === rangeFrom || c.key === rangeTo);
+              const isSel = !periodOn && c.key === selected;
+              return (
+                <Pressable
+                  key={c.key}
+                  onPress={() => (periodOn ? pickRangeDay(c.key) : setSelected(c.key))}
+                  style={[styles.cell, isSel && styles.cellSel, inRange && styles.cellInRange, isRangeEnd && styles.cellRangeEnd]}
+                >
+                  <Text style={[styles.cellNum, isToday && styles.cellNumToday]}>{c.day}</Text>
+                  {agg ? <Text style={styles.cellTime}>{fmtDur(agg.ms, lang)}</Text> : null}
+                  {agg ? <View style={styles.cellBarTrack}><View style={[styles.cellBar, { width: `${pct}%` }]} /></View> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </View>
     );
   }
@@ -487,7 +500,8 @@ const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
   // карусели одновременно; сама карусель (carouselTrack) в 3 раза шире.
   carouselViewport: { overflow: 'hidden', marginBottom: spacing.lg },
   carouselTrack: { flexDirection: 'row', gap: PANEL_GAP },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+  grid: { gap: GRID_GAP },
+  gridRow: { flexDirection: 'row', gap: GRID_GAP },
   cell: { width: cellSize, minHeight: 56, alignItems: 'center', paddingVertical: spacing.xs, borderRadius: radius.sm, gap: 2, backgroundColor: colors.panel2 },
   cellEmpty: { backgroundColor: 'transparent' },
   cellSel: { backgroundColor: colors.accentMuted },

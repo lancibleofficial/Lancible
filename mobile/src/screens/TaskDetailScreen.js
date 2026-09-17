@@ -294,11 +294,11 @@ const makeStyles = (colors) => StyleSheet.create({
   titleInput: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', paddingVertical: spacing.sm, marginBottom: spacing.xs },
   timerCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.lg,
+    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg,
   },
-  clock: { color: colors.text, fontSize: 32, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  clock: { color: colors.text, fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
   timerBtn: {
-    width: 56, height: 56, borderRadius: radius.lg, backgroundColor: colors.panel2,
+    width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.panel2,
     alignItems: 'center', justifyContent: 'center',
   },
   timerBtnOn: { backgroundColor: colors.accent },
@@ -314,7 +314,7 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     color: colors.accent, fontSize: fontSize.md, fontWeight: '700',
-    textAlignVertical: 'center',
+    textAlign: 'center', textAlignVertical: 'center',
   },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },

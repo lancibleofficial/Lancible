@@ -118,8 +118,8 @@ export default function SettingsScreen() {
             </View>
           </View>
           <View style={styles.guestActions}>
-            <View style={{ flex: 1 }}><PrimaryButton compact title={t(settings.lang, 'auth.sign_in')} variant="ghost" onPress={() => onOpenAuth('signin')} /></View>
-            <View style={{ flex: 1 }}><PrimaryButton compact title={t(settings.lang, 'auth.create_account')} onPress={() => onOpenAuth('signup')} /></View>
+            <View style={{ flex: 0.8 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.sign_in')} variant="ghost" onPress={() => onOpenAuth('signin')} /></View>
+            <View style={{ flex: 1.2 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.create_account')} onPress={() => onOpenAuth('signup')} /></View>
           </View>
         </View>
       )}
