@@ -139,6 +139,7 @@ const T = {
     'calendar.choose_period': 'Выбрать период', 'calendar.pick_day': 'Выбери день',
     'calendar.day_empty': 'В этот день записей не было.', 'calendar.pick_date': 'Выбрать дату',
     'calendar.for_month': 'За месяц', 'calendar.for_week': 'За неделю',
+    'calendar.period_label': 'За период',
     'calendar.for_period': 'За период: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперёд', 'common.cancel': 'Отмена', 'common.ok': 'ОК',
     'common.skip': 'Пропустить', 'common.continue': 'Продолжить',
@@ -272,6 +273,7 @@ const T = {
     'calendar.choose_period': 'Pick a period', 'calendar.pick_day': 'Pick a day',
     'calendar.day_empty': 'No entries on this day.', 'calendar.pick_date': 'Pick a date',
     'calendar.for_month': 'This month', 'calendar.for_week': 'This week',
+    'calendar.period_label': 'Period',
     'calendar.for_period': 'Period: {time} · {money}',
     'common.back': 'Back', 'common.forward': 'Forward', 'common.cancel': 'Cancel', 'common.ok': 'OK',
     'common.skip': 'Skip', 'common.continue': 'Continue',
@@ -405,6 +407,7 @@ const T = {
     'calendar.choose_period': 'Обрати період', 'calendar.pick_day': 'Обери день',
     'calendar.day_empty': 'Цього дня записів не було.', 'calendar.pick_date': 'Обрати дату',
     'calendar.for_month': 'За місяць', 'calendar.for_week': 'За тиждень',
+    'calendar.period_label': 'За період',
     'calendar.for_period': 'За період: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперед', 'common.cancel': 'Скасувати', 'common.ok': 'ОК',
     'common.skip': 'Пропустити', 'common.continue': 'Продовжити',
@@ -538,6 +541,7 @@ const T = {
     'calendar.choose_period': 'Кезеңді таңдау', 'calendar.pick_day': 'Күнді таңда',
     'calendar.day_empty': 'Бұл күні жазба болған жоқ.', 'calendar.pick_date': 'Күнді таңдау',
     'calendar.for_month': 'Ай бойынша', 'calendar.for_week': 'Апта бойынша',
+    'calendar.period_label': 'Кезең бойынша',
     'calendar.for_period': 'Кезең бойынша: {time} · {money}',
     'common.back': 'Артқа', 'common.forward': 'Алға', 'common.cancel': 'Бас тарту', 'common.ok': 'ОК',
     'common.skip': 'Өткізіп жіберу', 'common.continue': 'Жалғастыру',
@@ -728,7 +732,7 @@ const el = {
 
   calModes: [...document.querySelectorAll('.cal-modes button')],
   calPrev: $('cal-prev'), calNext: $('cal-next'), calToday: $('cal-today'),
-  calTitle: $('cal-title'), calPeriodTot: $('cal-period-tot'), calDays: $('cal-days'),
+  calTitle: $('cal-title'), calDays: $('cal-days'),
   calWeekdays: $('cal-weekdays'),
   calPeriodToggle: $('cal-period-toggle'), calRange: $('cal-range'),
   rangeFromBtn: $('range-from-btn'), rangeToBtn: $('range-to-btn'),
@@ -2389,6 +2393,7 @@ function renderViewTotal() {
   const { ms, money } = rangeAgg(from, toEnd);
   const label = calState.mode === 'month' ? t('calendar.for_month') : t('calendar.for_week');
   el.calViewTot.hidden = false;
+  el.calViewTot.classList.remove('period');
   el.calViewTot.innerHTML = `<span>${escapeHtml(label)}</span><b>${fmtDur(ms)} · ${fmtMoney(money)}</b>`;
 }
 
@@ -2558,7 +2563,10 @@ function renderPeriodSummary() {
   const totalMoney = tasks.reduce((a, x) => a + x.money, 0);
 
   el.calDayTot.textContent = tasks.length ? `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}` : '';
-  el.calPeriodTot.textContent = t('calendar.for_period', { time: fmtDur(totalMs), money: fmtMoney(totalMoney) });
+  el.calViewTot.hidden = false;
+  el.calViewTot.classList.add('period');
+  el.calViewTot.innerHTML = `<span>${escapeHtml(t('calendar.period_label'))}</span>`
+    + `<b>${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}</b>`;
   el.calDayEmpty.hidden = tasks.length > 0;
 
   el.calDayList.innerHTML = '';

@@ -454,6 +454,9 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 
 .view { flex: 1; min-height: 0; }
 #calendar-view { overflow: hidden; }
+/* .view только растягивается по высоте; этим двум нужен свой скролл,
+   иначе длинный список просто обрезается снизу. */
+#settings-view, #stats-view { overflow-y: auto; }
 #project-view { display: grid; grid-template-columns: 270px 1fr; }
 #project-view[hidden] { display: none !important; }
 
@@ -912,7 +915,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   border-radius: 6px; cursor: pointer; transition: background 0.1s var(--ease);
 }
 .ctx-item:hover { background: var(--panel-2); }
-.ctx-item.danger { color: var(--danger); }
+.ctx-item.danger { color: var(--danger); border: none; padding: 7px 9px; }
 .ctx-item.sel { color: var(--accent); font-weight: 400; }
 .ctx-item .ctx-check { color: var(--accent); flex: none; }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
@@ -1346,17 +1349,6 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .dp-day:hover:not(.empty) { background: var(--border); }
 .dp-day.today { outline: 1px solid var(--accent); }
 .dp-day.sel { background: var(--accent); color: var(--accent-text); font-weight: 400; }
-.cal-period-tot {
-  font-size: 13px;
-  font-weight: 400;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
-  border-radius: 8px;
-  padding: 4px 12px;
-  margin-left: auto;
-}
 .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 11px; color: var(--text-dim); padding: 0 2px 6px; }
 .cal-days {
   flex: 1;
@@ -1560,6 +1552,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   font-size: 12px;
   color: var(--text-dim);
 }
+/* Режим периода не заводит отдельную плашку: тот же блок итога меняет
+   содержимое и обводится акцентом. Текст при этом остаётся обычным —
+   зелёные цифры на светлой теме читались хуже чёрных. */
+.cal-view-tot.period { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel-2)); }
 .cal-view-tot b { color: var(--text); font-size: 13.5px; font-weight: 400; font-variant-numeric: tabular-nums; }
 .cal-day-head { font-size: 16px; font-weight: 400; }
 .cal-day-tot { font-size: 13px; color: var(--accent); font-variant-numeric: tabular-nums; margin: 4px 0 12px; }
