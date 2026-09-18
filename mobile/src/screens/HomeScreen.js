@@ -87,7 +87,7 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         ),
       headerRight: () => (
-        <View style={styles.headerRight}>
+        <View style={styles.headerActions}>
           <Pressable
             hitSlop={10}
             onPress={() => { setSearchOpen((v) => !v); setQuery(''); }}
@@ -249,6 +249,7 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   listContent: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
   headerIconBtnLast: { paddingLeft: spacing.sm },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
   todayGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   recentSection: { marginBottom: spacing.lg, gap: spacing.sm },
   sectionTitle: {
