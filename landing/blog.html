@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Блог Lancible — что нового в каждой версии: релизы, новые возможности и заметные улучшения.">
+<meta name="theme-color" content="#181a20">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 256 256%22><path d=%22M100.37 43.9496C101.421 42.8419 102.224 42.4168 103.822 42.0089C108.584 40.7933 113.436 39.703 118.22 38.5229L152.793 30.1718C164.966 27.2807 177.258 24.5912 189.67 22.1029C194.411 21.1485 230.917 14.2461 234.601 16.4218C235.109 16.9659 235.346 17.2512 235.55 17.8909C236.36 20.4235 233.088 29.9118 232.388 32.4172C227.816 48.0378 222.612 63.1832 216.785 77.8286C206.724 103.179 195.962 125.536 181.168 146.669C167.918 165.171 153.081 182.096 136.733 197.359C134.903 199.063 133.082 200.731 131.153 202.324C129.558 203.641 127.242 202.385 127.189 199.522C126.888 183.359 123.949 157.022 123.192 149.313C122.435 141.605 122.397 130.451 115.791 136.218C114.283 137.503 112.482 138.975 110.974 140.296L43.263 199.388C41.9506 200.53 36.3608 206.112 34.8232 205.711C34.416 205.606 33.978 205.308 33.6312 204.9C33.0986 204.279 32.4997 203.001 32.3381 202.348C30.8886 196.487 28.3181 189.357 31.7367 186.235C33.3426 184.769 34.8809 183.414 36.4834 182.025L105.443 121.79C108.603 119.014 111.788 116.23 114.909 113.411C116.238 112.211 116.227 109.964 116.921 108.224C117.384 107.063 118.291 106.077 119.149 105.295C125.142 99.9063 131.29 94.6932 137.59 89.6586C144.579 84.2589 151.749 79.3354 158.956 74.2203C165.973 69.11 173.071 64.0982 180.249 59.1869C182.095 57.9407 194.472 49.8661 196.332 50.624C196.782 51.4764 196.437 52.4807 196.147 52.9969C186.905 69.5091 173.663 83.1167 160.852 95.9024C157.326 99.428 153.752 102.9 150.13 106.318C148.09 108.257 145.187 110.695 143.447 112.834C140.961 115.889 142.005 125.516 142.142 130.632L142.682 150.328C142.834 154.647 142.887 159.232 143.344 163.714C143.4 164.268 143.588 164.618 144.039 165.125C145.598 165.62 151.041 157.316 152.028 155.972C174.087 126.247 192.383 92.8968 206.725 56.2742C208.397 52.1914 210.011 48.061 211.566 43.8852C212.119 42.3962 214.356 37.9476 213.015 35.8617C211.919 35.337 206.752 36.9039 205.591 37.1888C200.228 38.5019 194.907 39.885 189.63 41.3378C176.889 44.8234 164.303 48.5554 151.874 52.5337L137.527 57.006C135.027 57.7943 132.427 58.4779 130.027 59.4172C129.203 59.7394 128.366 60.1061 127.82 60.7766C125.237 63.9495 128.373 74.4111 126.895 78.883C126.302 80.6812 109.927 94.8774 107.454 96.5832C106.875 96.9835 106.186 97.4351 105.348 97.4316C103.782 96.3081 103.633 94.8643 103.538 93.5348C102.441 78.1464 101 62.6012 99.8311 47.1821C99.7232 45.7606 99.9067 44.987 100.37 43.9496Z%22 fill=%22%2387FF65%22/><path d=%22M21.207 150.033C25.5303 145.695 31.3626 141.066 36.0217 136.985L81.8216 96.9769C84.0832 95.0018 88.3241 90.9144 90.8234 89.7441C93.0884 90.2013 93.816 95.9908 94.2257 97.6634C95.2168 101.708 95.8054 104.618 94.5732 107.488C93.5958 109.154 89.3899 112.555 87.7259 114.005L74.2356 125.733L44.2161 151.96C38.3184 157.122 32.444 162.328 26.4496 167.379C26.026 167.721 25.5528 168.115 24.8788 168.077C23.5741 167.965 22.6682 166.025 22.3093 164.916C21.5057 162.434 21.0791 160.063 20.5061 157.646C20.1819 156.278 20.0051 155.035 20.0001 153.801C19.9937 152.259 20.5802 151.091 21.207 150.033Z%22 fill=%22%2387FF65%22/><path d=%22M48.8059 218.168C52.0324 214.935 56.1559 211.595 59.6206 208.569L78.2213 192.306L96.6413 176.25C99.3712 173.876 110.636 163.955 113.729 163.287C115.737 163.994 116.51 171.087 116.965 172.788C118.709 179.309 114.032 181.613 110.854 184.323L54.958 233.156C53.0975 234.794 48.5333 239.256 46.4091 239.837L45.8101 239.435C43.8092 237.136 43.2505 231.734 42.4986 229.028C40.9488 223.453 45.8277 220.756 48.8059 218.168Z%22 fill=%22%2387FF65%22/></svg>">
+<title>Блог Lancible</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800;900&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* Страница блога. Оформление намеренно повторяет index.html — токены,
+   * шапка, подвал и вёрстка записи те же. Лендинг состоит из статических
+   * файлов без сборки, поэтому общие правила здесь продублированы: если
+   * меняешь палитру или шапку — поправь оба файла. */
+  :root{
+    --bg:#181a20; --bg-deep:#121317;
+    --panel:#22252c; --panel-2:#2b2e37;
+    --border:#383c46; --border-soft:#2f333c;
+    --accent:#87ff65; --accent-deep:#57d637; --accent-text:#0f1c08;
+    --text:#f2f4ef; --text-dim:#9a9fac; --text-faint:#6a707d;
+    --radius-lg:20px; --radius-md:14px; --radius-sm:9px;
+    --maxw:1120px;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:'Sora', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important;}
+  }
+  h1,h2,h3{font-family:'Unbounded', system-ui, sans-serif; margin:0; text-wrap:balance; letter-spacing:-0.01em;}
+  p{margin:0;}
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%;}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding-inline:24px; width:100%;}
+  .mono{font-family:'JetBrains Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;}
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky; top:0; z-index:40;
+    background:rgba(24,26,32,.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .header-row{display:flex; align-items:center; justify-content:space-between; height:68px; gap:16px;}
+  .brand{display:flex; align-items:center; gap:10px; font-family:'Unbounded'; font-weight:700; font-size:1.05rem;}
+  .brand svg{width:26px; height:26px; flex:none;}
+  .status-pill{
+    display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:999px; padding:7px 14px 7px 10px;
+    white-space:nowrap;
+  }
+  .status-dot{width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 0 rgba(135,255,101,.55); animation:pulse-dot 2.2s ease-out infinite;}
+  @keyframes pulse-dot{
+    0%{box-shadow:0 0 0 0 rgba(135,255,101,.55);}
+    70%{box-shadow:0 0 0 8px rgba(135,255,101,0);}
+    100%{box-shadow:0 0 0 0 rgba(135,255,101,0);}
+  }
+  .gh-link{display:flex; align-items:center; gap:7px; font-size:.85rem; color:var(--text-dim); border:1px solid var(--border); border-radius:999px; padding:7px 14px; transition:border-color .2s, color .2s;}
+  .gh-link:hover{color:var(--text); border-color:var(--accent);}
+  .header-actions{display:flex; align-items:center; gap:10px;}
+
+  /* ---------- page head ---------- */
+  main{flex:1 0 auto;}
+  .blog-hero{padding-block:64px 40px; border-bottom:1px solid var(--border-soft); background:var(--bg-deep);}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; font-size:.74rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent); margin-bottom:18px;
+  }
+  .eyebrow::before{content:''; width:16px; height:1.5px; background:var(--accent);}
+  h1.blog-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-height:1.1;}
+  .blog-lede{margin-top:18px; font-size:1.02rem; line-height:1.65; color:var(--text-dim); max-width:58ch;}
+  .blog-hero-row{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+
+  .lang-switch{display:inline-flex; gap:2px; padding:3px; flex:none; background:var(--panel); border:1px solid var(--border); border-radius:999px;}
+  .lang-switch button{
+    font-family:'Sora', system-ui, sans-serif; font-size:.76rem; font-weight:600; letter-spacing:.04em;
+    padding:6px 14px; border:none; border-radius:999px; cursor:pointer;
+    background:transparent; color:var(--text-dim); transition:background .2s, color .2s;
+  }
+  .lang-switch button:hover{color:var(--text);}
+  .lang-switch button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text);}
+
+  /* Фильтр по типу записи. Типы уже есть в данных, и с ростом ленты это
+   * единственный способ быстро найти, скажем, только релизы. */
+  .blog-filter{display:flex; gap:8px; flex-wrap:wrap; margin-top:30px;}
+  .blog-filter button{
+    font-family:'Sora', system-ui, sans-serif; font-size:.82rem; font-weight:600;
+    display:inline-flex; align-items:center; gap:7px;
+    padding:8px 15px; border-radius:999px; cursor:pointer;
+    background:transparent; color:var(--text-dim); border:1px solid var(--border);
+    transition:border-color .2s, color .2s, background .2s;
+  }
+  .blog-filter button:hover{color:var(--text); border-color:var(--accent);}
+  .blog-filter button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
+  .filter-count{font-size:.74rem; opacity:.7; font-variant-numeric:tabular-nums;}
+
+  /* ---------- записи ---------- */
+  .blog-body{padding-block:48px 72px;}
+  .blog-list{display:flex; flex-direction:column;}
+  .blog-entry{display:grid; grid-template-columns:150px 1fr; gap:28px; padding-block:32px; border-top:1px solid var(--border-soft); scroll-margin-top:88px;}
+  .blog-entry:first-child{border-top:none; padding-top:0;}
+  .blog-when{display:flex; flex-direction:column; gap:6px; padding-top:2px;}
+  .blog-date{font-size:.82rem; color:var(--text-dim); white-space:nowrap;}
+  .blog-version{font-size:.76rem; color:var(--text-faint); transition:color .2s;}
+  a.blog-version:hover{color:var(--accent);}
+  .blog-main{position:relative; padding-left:26px; border-left:1px solid var(--border-soft);}
+  .blog-main::before{
+    content:''; position:absolute; left:-4.5px; top:7px; width:8px; height:8px; border-radius:50%;
+    background:var(--border);
+  }
+  .blog-entry.latest .blog-main::before{background:var(--accent); animation:pulse-dot 2.2s ease-out infinite;}
+  .blog-tag{
+    display:inline-block; font-size:.66rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    padding:4px 9px; border-radius:999px; border:1px solid transparent; margin-bottom:12px;
+  }
+  .blog-tag.release{background:var(--accent); color:var(--accent-text);}
+  .blog-tag.feature{background:rgba(135,255,101,.1); color:var(--accent-deep); border-color:rgba(135,255,101,.32);}
+  .blog-tag.improvement{background:var(--panel-2); color:var(--text-dim); border-color:var(--border);}
+  .blog-title{font-family:'Unbounded', system-ui, sans-serif; font-weight:700; font-size:1.12rem; line-height:1.35; color:var(--text);}
+  .blog-text{margin-top:10px; display:flex; flex-direction:column; gap:10px;}
+  .blog-text p{font-size:.92rem; line-height:1.7; color:var(--text-dim); max-width:68ch;}
+  .blog-empty{font-size:.9rem; color:var(--text-dim);}
+
+  .blog-back{display:flex; justify-content:center; margin-top:56px;}
+  .btn{
+    display:inline-flex; align-items:center; gap:9px; font-family:'Sora'; font-weight:600; font-size:.94rem;
+    padding:13px 22px; border-radius:999px; cursor:pointer; border:1px solid transparent;
+    transition:transform .22s cubic-bezier(.16,1,.3,1), border-color .22s, color .22s;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-ghost{background:transparent; color:var(--text); border-color:var(--border);}
+  .btn-ghost:hover{border-color:var(--accent); color:var(--accent); transform:translateY(-2px);}
+
+  /* ---------- footer ---------- */
+  footer{padding-block:44px; border-top:1px solid var(--border-soft); flex:none;}
+  .footer-row{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
+  .footer-brand{display:flex; align-items:center; gap:9px; color:var(--text-dim); font-size:.86rem;}
+  .footer-brand svg{width:18px; height:18px;}
+  .footer-links{display:flex; gap:22px; font-size:.86rem; color:var(--text-dim);}
+  .footer-links a:hover{color:var(--accent);}
+
+  @media (max-width: 860px){
+    .blog-hero-row{align-items:flex-start; flex-direction:column; gap:22px;}
+  }
+  @media (max-width: 560px){
+    .header-row{height:60px;}
+    .gh-link span.long{display:none;}
+    .status-pill{display:none;}
+    .blog-hero{padding-block:44px 32px;}
+    .blog-entry{grid-template-columns:1fr; gap:14px; padding-block:26px;}
+    .blog-when{flex-direction:row; align-items:baseline; gap:10px; padding-top:0;}
+    .blog-main{padding-left:0; border-left:none;}
+    .blog-main::before{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-row">
+    <a class="brand" href="index.html">
+      <svg viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M100.37 43.9496C101.421 42.8419 102.224 42.4168 103.822 42.0089C108.584 40.7933 113.436 39.703 118.22 38.5229L152.793 30.1718C164.966 27.2807 177.258 24.5912 189.67 22.1029C194.411 21.1485 230.917 14.2461 234.601 16.4218C235.109 16.9659 235.346 17.2512 235.55 17.8909C236.36 20.4235 233.088 29.9118 232.388 32.4172C227.816 48.0378 222.612 63.1832 216.785 77.8286C206.724 103.179 195.962 125.536 181.168 146.669C167.918 165.171 153.081 182.096 136.733 197.359C134.903 199.063 133.082 200.731 131.153 202.324C129.558 203.641 127.242 202.385 127.189 199.522C126.888 183.359 123.949 157.022 123.192 149.313C122.435 141.605 122.397 130.451 115.791 136.218C114.283 137.503 112.482 138.975 110.974 140.296L43.263 199.388C41.9506 200.53 36.3608 206.112 34.8232 205.711C34.416 205.606 33.978 205.308 33.6312 204.9C33.0986 204.279 32.4997 203.001 32.3381 202.348C30.8886 196.487 28.3181 189.357 31.7367 186.235C33.3426 184.769 34.8809 183.414 36.4834 182.025L105.443 121.79C108.603 119.014 111.788 116.23 114.909 113.411C116.238 112.211 116.227 109.964 116.921 108.224C117.384 107.063 118.291 106.077 119.149 105.295C125.142 99.9063 131.29 94.6932 137.59 89.6586C144.579 84.2589 151.749 79.3354 158.956 74.2203C165.973 69.11 173.071 64.0982 180.249 59.1869C182.095 57.9407 194.472 49.8661 196.332 50.624C196.782 51.4764 196.437 52.4807 196.147 52.9969C186.905 69.5091 173.663 83.1167 160.852 95.9024C157.326 99.428 153.752 102.9 150.13 106.318C148.09 108.257 145.187 110.695 143.447 112.834C140.961 115.889 142.005 125.516 142.142 130.632L142.682 150.328C142.834 154.647 142.887 159.232 143.344 163.714C143.4 164.268 143.588 164.618 144.039 165.125C145.598 165.62 151.041 157.316 152.028 155.972C174.087 126.247 192.383 92.8968 206.725 56.2742C208.397 52.1914 210.011 48.061 211.566 43.8852C212.119 42.3962 214.356 37.9476 213.015 35.8617C211.919 35.337 206.752 36.9039 205.591 37.1888C200.228 38.5019 194.907 39.885 189.63 41.3378C176.889 44.8234 164.303 48.5554 151.874 52.5337L137.527 57.006C135.027 57.7943 132.427 58.4779 130.027 59.4172C129.203 59.7394 128.366 60.1061 127.82 60.7766C125.237 63.9495 128.373 74.4111 126.895 78.883C126.302 80.6812 109.927 94.8774 107.454 96.5832C106.875 96.9835 106.186 97.4351 105.348 97.4316C103.782 96.3081 103.633 94.8643 103.538 93.5348C102.441 78.1464 101 62.6012 99.8311 47.1821C99.7232 45.7606 99.9067 44.987 100.37 43.9496Z" fill="#87FF65"/>
+        <path d="M21.207 150.033C25.5303 145.695 31.3626 141.066 36.0217 136.985L81.8216 96.9769C84.0832 95.0018 88.3241 90.9144 90.8234 89.7441C93.0884 90.2013 93.816 95.9908 94.2257 97.6634C95.2168 101.708 95.8054 104.618 94.5732 107.488C93.5958 109.154 89.3899 112.555 87.7259 114.005L74.2356 125.733L44.2161 151.96C38.3184 157.122 32.444 162.328 26.4496 167.379C26.026 167.721 25.5528 168.115 24.8788 168.077C23.5741 167.965 22.6682 166.025 22.3093 164.916C21.5057 162.434 21.0791 160.063 20.5061 157.646C20.1819 156.278 20.0051 155.035 20.0001 153.801C19.9937 152.259 20.5802 151.091 21.207 150.033Z" fill="#87FF65"/>
+        <path d="M48.8059 218.168C52.0324 214.935 56.1559 211.595 59.6206 208.569L78.2213 192.306L96.6413 176.25C99.3712 173.876 110.636 163.955 113.729 163.287C115.737 163.994 116.51 171.087 116.965 172.788C118.709 179.309 114.032 181.613 110.854 184.323L54.958 233.156C53.0975 234.794 48.5333 239.256 46.4091 239.837L45.8101 239.435C43.8092 237.136 43.2505 231.734 42.4986 229.028C40.9488 223.453 45.8277 220.756 48.8059 218.168Z" fill="#87FF65"/>
+      </svg>
+      Lancible
+    </a>
+    <div class="header-actions">
+      <div class="status-pill"><span class="status-dot"></span><span>В активной разработке</span><span>· v0.2</span></div>
+      <a class="gh-link" href="index.html#platforms" data-blog="nav_download">Скачать</a>
+      <a class="gh-link" href="https://github.com/lancibleofficial/Lancible" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.49c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.17-.89-1.17-.72-.5.06-.49.06-.49.8.06 1.22.82 1.22.82.71 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        <span class="long">GitHub</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="blog-hero">
+    <div class="wrap">
+      <div class="blog-hero-row">
+        <div>
+          <div class="eyebrow" data-blog="eyebrow">Блог</div>
+          <h1 class="blog-headline" data-blog="title">Что нового в Lancible</h1>
+          <p class="blog-lede" data-blog="lede">Сюда попадает всё заметное: новые платформы, релизы и крупные возможности. Мелкие правки остаются в истории коммитов.</p>
+        </div>
+        <div class="lang-switch" role="group" aria-label="Язык записей">
+          <button type="button" data-lang="ru" aria-pressed="true">RU</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+      <div class="blog-filter" id="blogFilter" role="group" aria-label="Тип записи"></div>
+    </div>
+  </section>
+
+  <section class="blog-body">
+    <div class="wrap">
+      <div class="blog-list" id="blogList"></div>
+      <div class="blog-back">
+        <a class="btn btn-ghost" href="index.html" data-blog="back">← На главную</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-row">
+    <div class="footer-brand">
+      <svg viewBox="0 0 256 256" fill="#87FF65"><path d="M100.37 43.9496C101.421 42.8419 102.224 42.4168 103.822 42.0089C108.584 40.7933 113.436 39.703 118.22 38.5229L152.793 30.1718C164.966 27.2807 177.258 24.5912 189.67 22.1029C194.411 21.1485 230.917 14.2461 234.601 16.4218C235.109 16.9659 235.346 17.2512 235.55 17.8909C236.36 20.4235 233.088 29.9118 232.388 32.4172C227.816 48.0378 222.612 63.1832 216.785 77.8286C206.724 103.179 195.962 125.536 181.168 146.669C167.918 165.171 153.081 182.096 136.733 197.359C134.903 199.063 133.082 200.731 131.153 202.324C129.558 203.641 127.242 202.385 127.189 199.522C126.888 183.359 123.949 157.022 123.192 149.313C122.435 141.605 122.397 130.451 115.791 136.218C114.283 137.503 112.482 138.975 110.974 140.296L43.263 199.388C41.9506 200.53 36.3608 206.112 34.8232 205.711C34.416 205.606 33.978 205.308 33.6312 204.9C33.0986 204.279 32.4997 203.001 32.3381 202.348C30.8886 196.487 28.3181 189.357 31.7367 186.235C33.3426 184.769 34.8809 183.414 36.4834 182.025L105.443 121.79C108.603 119.014 111.788 116.23 114.909 113.411C116.238 112.211 116.227 109.964 116.921 108.224C117.384 107.063 118.291 106.077 119.149 105.295C125.142 99.9063 131.29 94.6932 137.59 89.6586C144.579 84.2589 151.749 79.3354 158.956 74.2203C165.973 69.11 173.071 64.0982 180.249 59.1869C182.095 57.9407 194.472 49.8661 196.332 50.624C196.782 51.4764 196.437 52.4807 196.147 52.9969C186.905 69.5091 173.663 83.1167 160.852 95.9024C157.326 99.428 153.752 102.9 150.13 106.318C148.09 108.257 145.187 110.695 143.447 112.834C140.961 115.889 142.005 125.516 142.142 130.632L142.682 150.328C142.834 154.647 142.887 159.232 143.344 163.714C143.4 164.268 143.588 164.618 144.039 165.125C145.598 165.62 151.041 157.316 152.028 155.972C174.087 126.247 192.383 92.8968 206.725 56.2742C208.397 52.1914 210.011 48.061 211.566 43.8852C212.119 42.3962 214.356 37.9476 213.015 35.8617C211.919 35.337 206.752 36.9039 205.591 37.1888C200.228 38.5019 194.907 39.885 189.63 41.3378C176.889 44.8234 164.303 48.5554 151.874 52.5337L137.527 57.006C135.027 57.7943 132.427 58.4779 130.027 59.4172C129.203 59.7394 128.366 60.1061 127.82 60.7766C125.237 63.9495 128.373 74.4111 126.895 78.883C126.302 80.6812 109.927 94.8774 107.454 96.5832C106.875 96.9835 106.186 97.4351 105.348 97.4316C103.782 96.3081 103.633 94.8643 103.538 93.5348C102.441 78.1464 101 62.6012 99.8311 47.1821C99.7232 45.7606 99.9067 44.987 100.37 43.9496Z"/><path d="M21.207 150.033C25.5303 145.695 31.3626 141.066 36.0217 136.985L81.8216 96.9769C84.0832 95.0018 88.3241 90.9144 90.8234 89.7441C93.0884 90.2013 93.816 95.9908 94.2257 97.6634C95.2168 101.708 95.8054 104.618 94.5732 107.488C93.5958 109.154 89.3899 112.555 87.7259 114.005L74.2356 125.733L44.2161 151.96C38.3184 157.122 32.444 162.328 26.4496 167.379C26.026 167.721 25.5528 168.115 24.8788 168.077C23.5741 167.965 22.6682 166.025 22.3093 164.916C21.5057 162.434 21.0791 160.063 20.5061 157.646C20.1819 156.278 20.0051 155.035 20.0001 153.801C19.9937 152.259 20.5802 151.091 21.207 150.033Z"/><path d="M48.8059 218.168C52.0324 214.935 56.1559 211.595 59.6206 208.569L78.2213 192.306L96.6413 176.25C99.3712 173.876 110.636 163.955 113.729 163.287C115.737 163.994 116.51 171.087 116.965 172.788C118.709 179.309 114.032 181.613 110.854 184.323L54.958 233.156C53.0975 234.794 48.5333 239.256 46.4091 239.837L45.8101 239.435C43.8092 237.136 43.2505 231.734 42.4986 229.028C40.9488 223.453 45.8277 220.756 48.8059 218.168Z"/></svg>
+      <span>Lancible — учёт времени, который не мешает работать</span>
+    </div>
+    <div class="footer-links">
+      <a href="index.html">Главная</a>
+      <a href="https://github.com/lancibleofficial/Lancible" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/lancibleofficial/Lancible/releases" target="_blank" rel="noopener">Все версии</a>
+      <a href="https://lancible-yrkx.vercel.app" target="_blank" rel="noopener">Веб-версия</a>
+    </div>
+  </div>
+</footer>
+
+<script src="blog-posts.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const TAGS = {
+      release:     { ru: 'Релиз',     en: 'Release' },
+      feature:     { ru: 'Новое',     en: 'New' },
+      improvement: { ru: 'Улучшение', en: 'Improved' },
+    };
+    const FILTERS = {
+      all:         { ru: 'Все',        en: 'All' },
+      release:     { ru: 'Релизы',     en: 'Releases' },
+      feature:     { ru: 'Новое',      en: 'New' },
+      improvement: { ru: 'Улучшения',  en: 'Improvements' },
+    };
+    const UI = {
+      ru: {
+        eyebrow: 'Блог',
+        title: 'Что нового в Lancible',
+        lede: 'Сюда попадает всё заметное: новые платформы, релизы и крупные возможности. Мелкие правки остаются в истории коммитов.',
+        back: '← На главную',
+        nav_download: 'Скачать',
+        empty: 'Записей пока нет — скоро здесь появится первое обновление.',
+        emptyFiltered: 'В этой категории пока ничего нет.',
+        docTitle: 'Блог Lancible',
+      },
+      en: {
+        eyebrow: 'Blog',
+        title: 'What’s new in Lancible',
+        lede: 'Everything worth noticing lands here: new platforms, releases and major features. Small fixes stay in the commit history.',
+        back: '← Back to home',
+        nav_download: 'Download',
+        empty: 'No posts yet — the first update will show up here soon.',
+        emptyFiltered: 'Nothing in this category yet.',
+        docTitle: 'Lancible Blog',
+      },
+    };
+    const LANG_KEY = 'lancible:blog-lang';
+
+    const posts = Array.isArray(window.LANCIBLE_POSTS) ? window.LANCIBLE_POSTS : [];
+    const list = document.getElementById('blogList');
+    const filterRow = document.getElementById('blogFilter');
+    const langBtns = [...document.querySelectorAll('.lang-switch button')];
+
+    let filter = 'all';
+    let lang = 'ru';
+    // ?lang=en делает ссылку на англоязычную ленту самодостаточной; в
+    // остальных случаях помним выбор, общий с лентой на главной.
+    const fromUrl = new URLSearchParams(location.search).get('lang');
+    if (fromUrl === 'ru' || fromUrl === 'en') {
+      lang = fromUrl;
+    } else {
+      try {
+        const saved = localStorage.getItem(LANG_KEY);
+        if (saved === 'ru' || saved === 'en') lang = saved;
+      } catch (e) { /* приватный режим — остаёмся на русском */ }
+    }
+
+    const tagOf = (post) => (TAGS[post.tag] ? post.tag : 'improvement');
+    // Запись может не иметь перевода — тогда показываем любой доступный язык.
+    const pick = (field) => (field && (field[lang] || field.ru || field.en)) || '';
+    const paragraphs = (field) => {
+      const value = pick(field);
+      return Array.isArray(value) ? value : (value ? [value] : []);
+    };
+    const formatDate = (iso) => {
+      const d = new Date(`${iso}T00:00:00`);
+      if (Number.isNaN(d.getTime())) return iso;
+      const text = d.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      return text.replace(/\s*г\.$/, ''); // ru-RU добавляет « г.» — в ленте он лишний
+    };
+    // Якорь записи — её дата: она читается в ссылке и не зависит от порядка.
+    // Даты в ленте повторяются (в один день выходит и релиз, и заметная
+    // возможность), поэтому второй и следующим записям того же дня
+    // добавляется номер — иначе в документе оказались бы одинаковые id и
+    // ссылка вела бы всегда на первую из них.
+    const anchors = new Map();
+    (() => {
+      const used = new Map();
+      posts.forEach((post) => {
+        const base = `p-${post.date || 'post'}`;
+        const seen = (used.get(base) || 0) + 1;
+        used.set(base, seen);
+        anchors.set(post, seen === 1 ? base : `${base}-${seen}`);
+      });
+    })();
+    const anchorOf = (post) => anchors.get(post) || 'p-post';
+
+    const buildEntry = (post, isLatest) => {
+      const entry = document.createElement('article');
+      entry.className = isLatest ? 'blog-entry latest' : 'blog-entry';
+      entry.id = anchorOf(post);
+
+      const when = document.createElement('div');
+      when.className = 'blog-when';
+      const date = document.createElement('time');
+      date.className = 'blog-date';
+      date.dateTime = post.date || '';
+      date.textContent = formatDate(post.date);
+      when.append(date);
+      if (post.version) {
+        // Версия заодно служит постоянной ссылкой на запись.
+        const version = document.createElement('a');
+        version.className = 'blog-version mono';
+        version.href = `#${anchorOf(post)}`;
+        version.textContent = post.version;
+        when.append(version);
+      }
+
+      const main = document.createElement('div');
+      main.className = 'blog-main';
+      const tagKey = tagOf(post);
+      const tag = document.createElement('span');
+      tag.className = `blog-tag ${tagKey}`;
+      tag.textContent = TAGS[tagKey][lang];
+      const title = document.createElement('h2');
+      title.className = 'blog-title';
+      title.textContent = pick(post.title);
+      const text = document.createElement('div');
+      text.className = 'blog-text';
+      paragraphs(post.body).forEach((par) => {
+        const p = document.createElement('p');
+        p.textContent = par;
+        text.append(p);
+      });
+      main.append(tag, title, text);
+
+      entry.append(when, main);
+      return entry;
+    };
+
+    const renderFilters = () => {
+      filterRow.replaceChildren();
+      // Показываем только те категории, в которых что-то есть, — пустая
+      // кнопка «Улучшения» на ленте из трёх релизов выглядит поломкой.
+      const keys = ['all', ...Object.keys(TAGS).filter((k) => posts.some((p) => tagOf(p) === k))];
+      if (keys.length <= 2) return; // «Все» + одна категория — фильтровать нечего
+      keys.forEach((key) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.filter = key;
+        btn.setAttribute('aria-pressed', String(key === filter));
+        const label = document.createElement('span');
+        label.textContent = FILTERS[key][lang];
+        const count = document.createElement('span');
+        count.className = 'filter-count';
+        count.textContent = key === 'all' ? posts.length : posts.filter((p) => tagOf(p) === key).length;
+        btn.append(label, count);
+        btn.addEventListener('click', () => {
+          if (filter === key) return;
+          filter = key;
+          render();
+        });
+        filterRow.append(btn);
+      });
+    };
+
+    const render = () => {
+      const ui = UI[lang];
+      document.documentElement.lang = lang;
+      document.title = ui.docTitle;
+      document.querySelectorAll('[data-blog]').forEach((el) => { el.textContent = ui[el.dataset.blog]; });
+      langBtns.forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.lang === lang)));
+      renderFilters();
+
+      const shown = filter === 'all' ? posts : posts.filter((p) => tagOf(p) === filter);
+      list.replaceChildren();
+      if (!shown.length) {
+        const empty = document.createElement('p');
+        empty.className = 'blog-empty';
+        empty.textContent = posts.length ? ui.emptyFiltered : ui.empty;
+        list.append(empty);
+        return;
+      }
+      // «Свежая» точка на таймлайне — только у самой новой записи ленты,
+      // а не у первой попавшей под фильтр.
+      shown.forEach((post) => list.append(buildEntry(post, post === posts[0])));
+    };
+
+    langBtns.forEach((btn) => btn.addEventListener('click', () => {
+      if (btn.dataset.lang === lang) return;
+      lang = btn.dataset.lang;
+      try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* не критично */ }
+      render();
+    }));
+
+    render();
+
+    // Ссылка вида blog.html#p-2026-09-18 ведёт на конкретную запись: список
+    // строится скриптом, поэтому браузер к этому моменту уже не прокрутит
+    // страницу сам.
+    if (location.hash) {
+      const target = document.getElementById(location.hash.slice(1));
+      if (target) target.scrollIntoView({ block: 'start' });
+    }
+  });
+</script>
+</body>
+</html>
