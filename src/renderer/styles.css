@@ -30,6 +30,7 @@
 
   --input-bg: #3b3c42;
   --tab-active-bg: #2a2b2e;
+  --nav-active-bg: color-mix(in srgb, var(--accent) 15%, transparent);
 
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -61,6 +62,7 @@
     --running: #68c44d;
     --input-bg: #ffffff;
     --tab-active-bg: #ffffff;
+    --nav-active-bg: color-mix(in srgb, var(--accent) 34%, transparent);
     --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
   }
 }
@@ -82,6 +84,7 @@
   --running: #68c44d;
   --input-bg: #ffffff;
   --tab-active-bg: #ffffff;
+  --nav-active-bg: color-mix(in srgb, var(--accent) 34%, transparent);
   --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
 }
 
@@ -281,7 +284,7 @@ body.nav-collapsed #navrail { width: var(--nav-w-collapsed); }
 body.nav-collapsed .nav-item .nav-label { opacity: 0; }
 .nav-item:hover { background: var(--panel-2); color: var(--text); }
 .nav-item:active { transform: scale(0.98); }
-.nav-item.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--text); }
+.nav-item.active { background: var(--nav-active-bg); color: var(--text); }
 
 .nav-update {
   position: relative;
@@ -547,33 +550,38 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 
 #task-list { list-style: none; margin: 0; padding: 4px 8px 12px; overflow-y: auto; flex: 1; }
 
+/* Две строки: сверху чекбокс + название + закрепить, снизу дедлайн и
+   потраченное время. В один ряд название делило ширину со всеми метриками
+   и обрезалось уже на втором слове. */
 .task-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 10px;
   border-radius: 8px;
   cursor: pointer;
   border: 1px solid transparent;
   transition: background 0.12s var(--ease);
   animation: tileIn 0.2s var(--ease) backwards;
 }
+.ti-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
+.ti-bottom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 23px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.ti-bottom .task-time { margin-left: auto; }
 .task-item:hover { background: var(--panel-2); }
 .task-item.selected { background: var(--panel-2); border-color: var(--border); }
 .task-item.pinned { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .task-item.pinned.selected { background: color-mix(in srgb, var(--accent) 12%, var(--panel-2)); }
 .task-item .task-done { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
-.task-item .task-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-item .task-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .task-item.done .task-name { text-decoration: line-through; color: var(--text-dim); }
-.task-item .task-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  color: var(--text-dim);
-}
 .running-dot { color: var(--running); font-size: 10px; animation: pulse 1.4s ease-in-out infinite; }
 
 .task-sep {
@@ -706,7 +714,7 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 .timer-display { font-size: 26px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
 .timer-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
-.money-bar { display: flex; align-items: center; gap: 10px; margin: -4px 0 14px; padding: 0 2px; font-size: 13px; flex-wrap: wrap; }
+.money-bar { display: flex; align-items: center; gap: 10px; margin: -4px 0 6px; padding: 0 2px; font-size: 13px; flex-wrap: wrap; }
 .money-bar label { color: var(--text-dim); }
 #task-rate {
   width: 90px;
@@ -774,6 +782,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
    абсолютно спозиционированная) обрезается границами этого блока и видна
    лишь частично. Скруглённые углы теперь держат сами тулбар/контейнер. */
 #editor-wrap {
+  margin-top: 14px;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -1275,7 +1284,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .tp-pop {
   position: fixed;
-  z-index: 95;
+  z-index: 120;
   display: flex;
   gap: 4px;
   background: var(--panel);
@@ -1310,7 +1319,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .dp-pop {
   position: fixed;
-  z-index: 95;
+  z-index: 120;
   width: 232px;
   background: var(--panel);
   border: 1px solid var(--border-strong);
@@ -1604,19 +1613,15 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  margin: auto 0 auto auto;
-  background: var(--input-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  /* Прижимает вправо только аккаунт — колокольчик остаётся у поиска. */
+  margin: auto 0 auto 4px;
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: border-color 0.12s var(--ease);
 }
-/* Аккаунт стоит справа от колокольчика, поэтому прижимать вправо должен
-   только первый из них — иначе между ними появится весь свободный зазор. */
-.tb-notif + .tb-account { margin-left: 8px; }
-.tb-notif:hover { border-color: var(--border-strong); }
+.tb-notif:hover .icon { color: var(--text); }
 .tb-notif .icon { width: 15px; height: 15px; color: var(--icon); }
 .tb-notif.on .icon { color: var(--text); }
 .notif-badge {

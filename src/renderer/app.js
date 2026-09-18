@@ -110,7 +110,7 @@ const T = {
     'task.unpin_title': 'Открепить задачу', 'task.delete_title': 'Удалить задачу',
     'task.pin_short': 'Закрепить наверх', 'task.unpin_short': 'Открепить',
     'task.no_name': 'Без названия',
-    'due.label': 'Срок',
+    'due.label': 'Дедлайн',
     'notif.title': 'Уведомления', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
     'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
     'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
@@ -142,6 +142,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
     'auth.no_account': 'Нет аккаунта с таким email.', 'auth.create_account': 'Создать аккаунт',
     'auth.sign_in': 'Войти', 'auth.sign_in_nav': 'Войти', 'auth.sign_out': 'Выйти',
+    'auth.sign_out_confirm': 'Выйти из аккаунта? Локальные данные останутся на этом устройстве.',
     'auth.onboarding_title': 'Расскажите о себе', 'auth.name_label': 'Как вас зовут?',
     'auth.usecase_label': 'Для чего будете использовать Lancible?',
     'auth.usecase_personal': 'Личные задачи', 'auth.usecase_freelance': 'Фриланс / клиенты',
@@ -238,7 +239,7 @@ const T = {
     'task.unpin_title': 'Unpin task', 'task.delete_title': 'Delete task',
     'task.pin_short': 'Pin to top', 'task.unpin_short': 'Unpin',
     'task.no_name': 'Untitled',
-    'due.label': 'Due',
+    'due.label': 'Deadline',
     'notif.title': 'Notifications', 'notif.empty': 'No due dates or reminders yet.', 'notif.mark_seen': 'Mark read',
     'notif.overdue': 'Overdue', 'notif.soon': 'Due soon', 'notif.reminder': 'Reminder', 'due.none': 'not set', 'due.clear': 'Clear due date', 'due.remind_at': 'Remind',
     'due.overdue': 'overdue', 'due.today': 'today', 'due.tomorrow': 'tomorrow', 'due.in_days': 'in {n} d',
@@ -270,6 +271,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Password',
     'auth.no_account': 'No account with this email yet.', 'auth.create_account': 'Create account',
     'auth.sign_in': 'Sign in', 'auth.sign_in_nav': 'Sign in', 'auth.sign_out': 'Sign out',
+    'auth.sign_out_confirm': 'Sign out? Local data stays on this device.',
     'auth.onboarding_title': 'Tell us about yourself', 'auth.name_label': "What's your name?",
     'auth.usecase_label': 'What will you use Lancible for?',
     'auth.usecase_personal': 'Personal tasks', 'auth.usecase_freelance': 'Freelance / clients',
@@ -398,6 +400,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
     'auth.no_account': 'Немає акаунта з таким email.', 'auth.create_account': 'Створити акаунт',
     'auth.sign_in': 'Увійти', 'auth.sign_in_nav': 'Увійти', 'auth.sign_out': 'Вийти',
+    'auth.sign_out_confirm': 'Вийти з акаунта? Локальні дані залишаться на цьому пристрої.',
     'auth.onboarding_title': 'Розкажіть про себе', 'auth.name_label': 'Як вас звати?',
     'auth.usecase_label': 'Для чого будете використовувати Lancible?',
     'auth.usecase_personal': 'Особисті завдання', 'auth.usecase_freelance': 'Фриланс / клієнти',
@@ -526,6 +529,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Құпия сөз',
     'auth.no_account': 'Бұл email-мен аккаунт жоқ.', 'auth.create_account': 'Аккаунт құру',
     'auth.sign_in': 'Кіру', 'auth.sign_in_nav': 'Кіру', 'auth.sign_out': 'Шығу',
+    'auth.sign_out_confirm': 'Аккаунттан шығу керек пе? Жергілікті деректер осы құрылғыда қалады.',
     'auth.onboarding_title': 'Өзіңіз туралы айтыңыз', 'auth.name_label': 'Атыңыз кім?',
     'auth.usecase_label': 'Lancible-ды не үшін пайдаланасыз?',
     'auth.usecase_personal': 'Жеке тапсырмалар', 'auth.usecase_freelance': 'Фриланс / клиенттер',
@@ -1426,10 +1430,17 @@ async function changePassword(newPassword) {
 }
 
 async function signOut() {
+  const ok = await confirmDialog(t('auth.sign_out_confirm'), {
+    title: t('auth.sign_out'), okLabel: t('auth.sign_out'), danger: true,
+  });
+  if (!ok) return;
   await sb.auth.signOut();
   unsubscribeSyncRealtime();
   currentUser = null;
   renderAccountBtn();
+  // Страница настроек показывает карточку профиля и раздел «Аккаунт» —
+  // без этого после выхода она продолжала показывать вошедшего.
+  if (state.ui.view === 'settings') renderSettings();
   toast(t('auth.signed_out_toast'));
 }
 
@@ -2622,35 +2633,37 @@ function taskItem(task, i) {
   name.className = 'task-name';
   name.textContent = task.title || t('task.no_name');
 
-  const meta = document.createElement('span');
-  meta.className = 'task-meta';
-
   const pin = document.createElement('button');
   pin.className = 'task-pin';
   pin.innerHTML = icon('pin');
   pin.title = task.pinnedAt ? t('task.unpin_short') : t('task.pin_short');
   pin.addEventListener('click', (e) => { e.stopPropagation(); togglePinTask(task.id); });
-  meta.appendChild(pin);
 
-  if (state.activeTimer && state.activeTimer.taskId === task.id) {
-    const dot = document.createElement('span');
-    dot.className = 'running-dot';
-    dot.textContent = '●';
-    meta.appendChild(dot);
-  }
+  const top = document.createElement('div');
+  top.className = 'ti-top';
+  top.append(cb, name, pin);
+
+  const bottom = document.createElement('div');
+  bottom.className = 'ti-bottom';
   const ds = dueState(task);
   if (ds) {
     const badge = document.createElement('span');
     badge.className = `task-due ${ds}`;
     badge.textContent = dueShort(task);
-    meta.appendChild(badge);
+    bottom.appendChild(badge);
+  }
+  if (state.activeTimer && state.activeTimer.taskId === task.id) {
+    const dot = document.createElement('span');
+    dot.className = 'running-dot';
+    dot.textContent = '●';
+    bottom.appendChild(dot);
   }
   const time = document.createElement('span');
   time.className = 'task-time';
   time.textContent = fmtShort(taskElapsedMs(task));
-  meta.appendChild(time);
+  bottom.appendChild(time);
 
-  li.append(cb, name, meta);
+  li.append(top, bottom);
   li.addEventListener('click', () => selectTask(task.id));
   return li;
 }
