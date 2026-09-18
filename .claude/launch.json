@@ -9,15 +9,6 @@
         "serve:web"
       ],
       "port": 5173
-    },
-    {
-      "name": "web-parity",
-      "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "../task-timer-parity/scripts/serve-web.js",
-        "5178"
-      ],
-      "port": 5178
     }
   ]
 }
