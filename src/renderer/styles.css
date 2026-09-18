@@ -739,8 +739,40 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 .timer-display { font-size: 26px; font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
 .timer-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
+/* Ставка и дедлайн — параметры одной задачи, поэтому живут в одной карточке,
+   а не двумя строками, висящими в воздухе между таймером и заметками. Внутри
+   каждая строка начинается с иконки и подписи одинаковой ширины: подписи и
+   поля выстраиваются в две колонки, и сразу видно, что здесь два параметра,
+   а не россыпь кнопок. */
+.task-params {
+  margin: 2px 0 12px;
+  padding: 4px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.task-params > .due-bar + .due-bar { margin-top: 0; }
+/* Разделитель между параметрами — только между строками, не по краям. */
+.task-params > .money-bar + .due-bar {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+/* Явная ширина обеим иконкам: без неё они рисуются чуть по-разному, и подписи
+   рядом с ними уезжают друг относительно друга на пару пикселей. */
+.task-params > .money-bar > .icon,
+.task-params > .due-bar > .icon { color: var(--icon); flex: none; width: 15px; height: 15px; }
+/* Одинаковая ширина подписей в обеих строках — иначе поля не встают в колонку. */
+.task-params .money-bar label,
+.task-params .due-label { min-width: 68px; }
+
 .money-bar { display: flex; align-items: center; gap: 10px; margin: -4px 0 6px; padding: 0 2px; font-size: 13px; flex-wrap: wrap; }
+.task-params .money-bar { margin: 6px 0; padding: 0; }
 .money-bar label { color: var(--text-dim); }
+/* Пустой дедлайн — это действие, а не пустое поле: акцент даёт понять, что
+   сюда можно нажать, а не что здесь чего-то не хватает. */
+.dp-btn.is-empty { color: var(--text-dim); border-style: dashed; }
+.dp-btn.is-empty:hover { color: var(--text); border-style: solid; }
 #task-rate {
   width: 90px;
   background: var(--panel-2);

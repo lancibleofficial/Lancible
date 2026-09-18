@@ -133,7 +133,7 @@ const T = {
     'notif.system_hint': 'Разрешение на уведомления меняется в настройках браузера для этого сайта.', 'notif.enable': 'Напоминания о дедлайнах',
     'notif.system': 'Уведомления в системе', 'notif.perm_granted': 'разрешены',
     'notif.perm_denied': 'запрещены', 'notif.perm_ask': 'разрешить', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
-    'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
+    'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.set': 'Поставить дедлайн', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
     'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
     'remind.none': 'Без напоминания', 'remind.at': 'В момент срока', 'remind.15m': 'За 15 минут',
     'remind.1h': 'За час', 'remind.3h': 'За 3 часа', 'remind.1d': 'За день', 'remind.custom': 'Своё время',
@@ -267,7 +267,7 @@ const T = {
     'notif.system_hint': 'Notification permission is changed in your browser settings for this site.', 'notif.enable': 'Deadline reminders',
     'notif.system': 'System notifications', 'notif.perm_granted': 'allowed',
     'notif.perm_denied': 'blocked', 'notif.perm_ask': 'allow', 'notif.empty': 'No due dates or reminders yet.', 'notif.mark_seen': 'Mark read',
-    'notif.overdue': 'Overdue', 'notif.soon': 'Due soon', 'notif.reminder': 'Reminder', 'due.none': 'not set', 'due.clear': 'Clear due date', 'due.remind_at': 'Remind',
+    'notif.overdue': 'Overdue', 'notif.soon': 'Due soon', 'notif.reminder': 'Reminder', 'due.none': 'not set', 'due.set': 'Set a deadline', 'due.clear': 'Clear due date', 'due.remind_at': 'Remind',
     'due.overdue': 'overdue', 'due.today': 'today', 'due.tomorrow': 'tomorrow', 'due.in_days': 'in {n} d',
     'remind.none': 'No reminder', 'remind.at': 'At due time', 'remind.15m': '15 minutes before',
     'remind.1h': 'An hour before', 'remind.3h': '3 hours before', 'remind.1d': 'A day before', 'remind.custom': 'Custom time',
@@ -401,7 +401,7 @@ const T = {
     'notif.system_hint': 'Дозвіл на сповіщення змінюється в налаштуваннях браузера для цього сайту.', 'notif.enable': 'Нагадування про дедлайни',
     'notif.system': 'Сповіщення в системі', 'notif.perm_granted': 'дозволено',
     'notif.perm_denied': 'заборонено', 'notif.perm_ask': 'дозволити', 'notif.empty': 'Термінів і нагадувань поки немає.', 'notif.mark_seen': 'Прочитано',
-    'notif.overdue': 'Протерміновано', 'notif.soon': 'Скоро термін', 'notif.reminder': 'Нагадування', 'due.none': 'не задано', 'due.clear': 'Прибрати термін', 'due.remind_at': 'Нагадати',
+    'notif.overdue': 'Протерміновано', 'notif.soon': 'Скоро термін', 'notif.reminder': 'Нагадування', 'due.none': 'не задано', 'due.set': 'Встановити термін', 'due.clear': 'Прибрати термін', 'due.remind_at': 'Нагадати',
     'due.overdue': 'протерміновано', 'due.today': 'сьогодні', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
     'remind.none': 'Без нагадування', 'remind.at': 'У момент терміну', 'remind.15m': 'За 15 хвилин',
     'remind.1h': 'За годину', 'remind.3h': 'За 3 години', 'remind.1d': 'За день', 'remind.custom': 'Свій час',
@@ -535,7 +535,7 @@ const T = {
     'notif.system_hint': 'Хабарлама рұқсаты осы сайт үшін браузер параметрлерінде өзгереді.', 'notif.enable': 'Дедлайн еске салулары',
     'notif.system': 'Жүйедегі хабарламалар', 'notif.perm_granted': 'рұқсат етілген',
     'notif.perm_denied': 'тыйым салынған', 'notif.perm_ask': 'рұқсат беру', 'notif.empty': 'Мерзімдер мен еске салулар жоқ.', 'notif.mark_seen': 'Оқылды',
-    'notif.overdue': 'Мерзімі өтті', 'notif.soon': 'Мерзімі жақын', 'notif.reminder': 'Еске салу', 'due.none': 'қойылмаған', 'due.clear': 'Мерзімді алып тастау', 'due.remind_at': 'Еске салу',
+    'notif.overdue': 'Мерзімі өтті', 'notif.soon': 'Мерзімі жақын', 'notif.reminder': 'Еске салу', 'due.none': 'қойылмаған', 'due.set': 'Мерзім қою', 'due.clear': 'Мерзімді алып тастау', 'due.remind_at': 'Еске салу',
     'due.overdue': 'мерзімі өтті', 'due.today': 'бүгін', 'due.tomorrow': 'ертең', 'due.in_days': '{n} күнде',
     'remind.none': 'Еске салусыз', 'remind.at': 'Мерзім сәтінде', 'remind.15m': '15 минут бұрын',
     'remind.1h': 'Бір сағат бұрын', 'remind.3h': '3 сағат бұрын', 'remind.1d': 'Бір күн бұрын', 'remind.custom': 'Өз уақыты',
@@ -2880,7 +2880,8 @@ function checkReminders() {
 function renderDue(task) {
   const has = !!task.dueAt;
   const due = has ? new Date(task.dueAt) : null;
-  el.dueDateBtn.textContent = has ? fmtDpBtn(dayKey(due)) : t('due.none');
+  el.dueDateBtn.textContent = has ? fmtDpBtn(dayKey(due)) : t('due.set');
+  el.dueDateBtn.classList.toggle('is-empty', !has);
   el.dueDateBtn.classList.toggle('muted-btn', !has);
   el.dueTimeBtn.hidden = !has;
   if (has) el.dueTimeBtn.textContent = `${pad2(due.getHours())}:${pad2(due.getMinutes())}`;

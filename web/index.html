@@ -271,30 +271,32 @@
                 <button id="timer-btn" class="timer-btn"><span id="timer-btn-icon">▶</span> <span id="timer-btn-label" data-i18n="timer.start">Старт</span></button>
               </div>
 
-              <div class="money-bar">
-                <label for="task-rate" data-i18n="money.rate_label">Ставка</label>
-                <input id="task-rate" type="text" inputmode="decimal" autocomplete="off" />
-                <span id="rate-unit" class="muted"></span>
-                <span id="money-calc" class="money-calc"></span>
-              </div>
+              <div class="task-params">
+                <div class="money-bar">
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M2.2 4.4A2.2 2.2 0 014.4 2.2h7.2a2.2 2.2 0 012.2 2.2v.6H4.4a.6.6 0 100 1.2h9.4a2.2 2.2 0 012.2 2.2v3.2a2.2 2.2 0 01-2.2 2.2H4.4a2.2 2.2 0 01-2.2-2.2V4.4zm9.6 5.2a1 1 0 100 2 1 1 0 000-2z"/></svg>
+                  <label for="task-rate" data-i18n="money.rate_label">Ставка</label>
+                  <input id="task-rate" type="text" inputmode="decimal" autocomplete="off" />
+                  <span id="rate-unit" class="muted"></span>
+                  <span id="money-calc" class="money-calc"></span>
+                </div>
 
-              <div class="due-bar">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
-                <span class="due-label" data-i18n="due.label">Срок</span>
-                <button type="button" class="dp-btn" id="due-date-btn"></button>
-                <button type="button" class="dp-btn" id="due-time-btn" hidden></button>
-                <span class="due-state" id="due-state" hidden></span>
-                <span class="due-gap"></span>
-                <button type="button" class="dp-btn" id="due-remind" hidden></button>
-                <button type="button" class="icon-btn" id="due-clear-btn" hidden data-i18n-title="due.clear" title="Убрать срок">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z"/></svg>
-                </button>
-              </div>
-              <div class="due-bar due-custom" id="due-custom-row" hidden>
-                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
-                <span class="due-label" data-i18n="due.remind_at">Напомнить</span>
-                <button type="button" class="dp-btn" id="remind-date-btn"></button>
-                <button type="button" class="dp-btn" id="remind-time-btn"></button>
+                <div class="due-bar">
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+                  <span class="due-label" data-i18n="due.label">Срок</span>
+                  <button type="button" class="dp-btn" id="due-date-btn"></button>
+                  <button type="button" class="dp-btn" id="due-time-btn" hidden></button>
+                  <span class="due-state" id="due-state" hidden></span>
+                  <button type="button" class="dp-btn" id="due-remind" hidden></button>
+                  <button type="button" class="icon-btn" id="due-clear-btn" hidden data-i18n-title="due.clear" title="Убрать срок">
+                    <svg class="icon" viewBox="0 0 16 16"><path d="M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z"/></svg>
+                  </button>
+                </div>
+                <div class="due-bar due-custom" id="due-custom-row" hidden>
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+                  <span class="due-label" data-i18n="due.remind_at">Напомнить</span>
+                  <button type="button" class="dp-btn" id="remind-date-btn"></button>
+                  <button type="button" class="dp-btn" id="remind-time-btn"></button>
+                </div>
               </div>
 
               <div id="editor-wrap">
