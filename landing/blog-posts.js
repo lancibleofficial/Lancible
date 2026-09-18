@@ -18,6 +18,27 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-09-18',
+    tag: 'release',
+    version: '0.2.0 · mobile 1.1.0',
+    title: {
+      ru: 'Дедлайны, напоминания и уведомления на всех платформах',
+      en: 'Deadlines, reminders and notifications on every platform',
+    },
+    body: {
+      ru: [
+        'У задач появился дедлайн: дата, время и напоминание — в момент срока, за 15 минут, за час, за 3 часа, за день или в своё время. Перенесёте дедлайн — напоминание переедет вместе с ним.',
+        'Рядом с поиском поселился колокольчик: в нём просроченные задачи, те, чей срок наступит в ближайшие сутки, и сработавшие напоминания. Системные уведомления приходят и на компьютер, и на телефон; на телефоне они планируются заранее, поэтому срабатывают, даже когда приложение закрыто.',
+        'На компьютере и в вебе появились отдельные страницы настроек и статистики, выгрузка в Excel из календаря и изнутри проекта, выбор периода выгрузки, настройки аккаунта и 16 цветов проектов вместо восьми. Светлая тема стала заметно контрастнее.',
+      ],
+      en: [
+        'Tasks now have a deadline: date, time and a reminder — at the deadline, or 15 minutes, an hour, 3 hours or a day before, or at a time you pick. Move the deadline and the reminder moves with it.',
+        'A bell sits next to the search field, holding overdue tasks, anything due within a day, and reminders that have fired. System notifications arrive on desktop and phone alike; on the phone they are scheduled ahead of time, so they fire even when the app is closed.',
+        'Desktop and web gained separate settings and stats pages, Excel export from the calendar and from inside a project, an export period picker, account settings, and 16 project colours instead of eight. The light theme is considerably more legible.',
+      ],
+    },
+  },
+  {
     date: '2026-09-17',
     tag: 'feature',
     title: {
