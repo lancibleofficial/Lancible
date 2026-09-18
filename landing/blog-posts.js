@@ -25,6 +25,27 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-09-20',
+    tag: 'improvement',
+    version: '0.2.2 · mobile 1.1.1',
+    title: {
+      ru: 'Обновление прямо из приложения, переделанная шапка и понятные параметры задачи',
+      en: 'Updates without leaving the app, a rebuilt header and clearer task settings',
+    },
+    body: {
+      ru: [
+        'За новой версией больше не нужно ходить на сайт. На компьютере она скачивается сама в фоне, а кнопка предлагает установить её, когда вам удобно: установка перезапускает приложение, и делать это внезапно посреди работы неправильно. На Android приложение скачивает файл у себя и передаёт системному установщику. На iOS так сделать нельзя — установка вне App Store и TestFlight закрыта самой системой.',
+        'Шапка собрана заново: логотип у левого края, за ним поиск, сразу следом колокольчик. Она стала одной полосой во всю ширину окна и больше не переламывается, когда сворачивается боковая панель. На Windows и macOS кнопка входа из неё убрана — аккаунт живёт на странице настроек.',
+        'Ставка и дедлайн в задаче собраны в одну карточку с выровненными подписями, а пустой дедлайн теперь предлагает его поставить, вместо того чтобы сообщать, что он не задан. Выбор периода для выгрузки стал таким же, как в мобильном приложении: семь вариантов и календарь прямо в окне, без всплывающих поверх него. Закрепить проект можно с самой карточки. В настройках появились ссылки на сайт и этот блог, а мобильные приложения на запуске показывают заготовку экрана вместо крутящегося кружка.',
+      ],
+      en: [
+        'Getting a new version no longer means a trip to the site. On desktop it downloads itself in the background and the button offers to install it when you are ready: installing restarts the app, and doing that mid-task is not something to spring on anyone. On Android the app downloads the file itself and hands it to the system installer. iOS cannot work this way — installing outside the App Store and TestFlight is closed off by the OS.',
+        'The header is rebuilt: logo at the left edge, then the search field, then the bell right beside it. It is one bar across the window now and no longer breaks apart when the side panel collapses. On Windows and macOS the sign-in button is gone from it, since the account lives on the settings page.',
+        'A task’s rate and deadline now share one card with aligned labels, and an empty deadline offers to set one instead of reporting that none is set. The export period picker matches the phone app: seven choices and a calendar inside the dialog rather than popping up over it. Projects can be pinned from the card itself. Settings gained links to the site and to this blog, and the mobile apps now show the shape of the screen while loading instead of a spinner.',
+      ],
+    },
+  },
+  {
     date: '2026-09-19',
     tag: 'improvement',
     version: '0.2.1',
