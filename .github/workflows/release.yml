@@ -104,11 +104,18 @@ jobs:
       # package.json). Без этого шага обновление пришлось бы заливать руками с
       # локальной машины, и о нём легко забыть.
       #
+      # В бакет уезжают только манифесты: сами установщики (78 и 174 МБ) Supabase
+      # Storage не принимает, поэтому ссылки внутри манифестов переписываются на
+      # ассеты только что опубликованного релиза — их GitHub раздаёт без
+      # ограничений по размеру. Подробности в шапке скрипта.
+      #
       # Если секрет не задан, шаг пропускается и релиз всё равно выходит — без
       # фида, но со ссылками на скачивание.
       - name: Залить фид автообновления в Supabase Storage
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
-        run: node scripts/publish-release.js artifacts
+        run: >
+          node scripts/publish-release.js artifacts
+          --release-base https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}
 
       - name: Предупредить, если фид не залит
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}

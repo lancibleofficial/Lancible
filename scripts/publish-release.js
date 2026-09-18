@@ -1,15 +1,26 @@
-// Заливает собранные артефакты релиза (Windows: .exe/.exe.blockmap/latest.yml;
-// macOS: .dmg/.zip/.zip.blockmap/latest-mac.yml — какие есть, те и заливаются)
-// в публичный Supabase Storage bucket "releases" — оттуда их скачивает
-// electron-updater на обеих платформах. Это ОТДЕЛЬНЫЙ канал от страницы
-// релизов на GitHub: там ссылки для новых пользователей, здесь — фид
-// обновлений для уже установленных копий.
+// Наполняет фид автообновления в публичном Supabase Storage bucket "releases":
+// оттуда electron-updater в уже установленных копиях узнаёт о новой версии.
+// Это ОТДЕЛЬНЫЙ канал от страницы релизов на GitHub — там ссылки для новых
+// пользователей, здесь фид для существующих.
+//
+// ВАЖНО, откуда такая схема. Установщики весят под 80 МБ (Windows) и 174 МБ
+// (macOS), а Supabase Storage отклоняет такие файлы: 413 EntityTooLarge.
+// Поэтому с ключом --release-base в хранилище уезжают ТОЛЬКО манифесты
+// (latest.yml и latest-mac.yml, сотни байт), а ссылки внутри них переписываются
+// на ассеты релиза GitHub, который раздаёт большие файлы без ограничений.
+// electron-updater это поддерживает: абсолютный url в манифесте перекрывает
+// базовый адрес из build.publish.
+//
+// Почему манифест всё-таки лежит в хранилище, а не берётся прямо с GitHub:
+// в этом репозитории релизы общие для всех платформ, и тег mobile-* регулярно
+// оказывается свежее десктопного. Адрес «последнего релиза» тогда уводил бы
+// обновлятор на сборку, где никакого latest.yml нет. Бакет же всегда описывает
+// именно актуальную десктопную версию.
 //
 // Обычно запускается не руками, а последним шагом .github/workflows/release.yml
-// по тегу v*: там уже собраны обе платформы, и локальная машина не нужна.
-// Вручную — после npm run build:exe и/или npm run build:dmg:
-//   npm run publish:release            # берёт файлы из dist/
-//   node scripts/publish-release.js X  # или из любой другой папки
+// по тегу v*. Вручную — после npm run build:exe и/или npm run build:dmg:
+//   npm run publish:release      # всё из dist/ целиком, для своего хостинга
+//   node scripts/publish-release.js artifacts --release-base <URL релиза>
 //
 // Нужны переменные окружения (локально проще всего — файл .env рядом с
 // package.json, НЕ коммитить; в CI — секрет репозитория):
@@ -38,8 +49,28 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
   process.exit(1);
 }
 
-async function upload(filePath, destName) {
-  const body = fs.readFileSync(filePath);
+// GitHub при загрузке ассета заменяет всё, что вне [A-Za-z0-9._-], на точку:
+// «Lancible Setup 0.2.1.exe» превращается в «Lancible.Setup.0.2.1.exe», и
+// только по второму имени файл отдаётся. Проверено запросом: форма с
+// пробелами и форма с дефисами обе дают 404.
+const githubAssetName = (name) => name.replace(/[^A-Za-z0-9._-]/g, '.');
+
+// Переписывает в манифесте ссылки на файлы с голых имён на абсолютные адреса
+// ассетов релиза. Трогает поля url (внутри files) и path (легаси-поле для
+// старых клиентов); sha512 и size остаются как есть, они и проверяют,
+// что скачалось именно то. Значение, уже являющееся ссылкой, не трогаем.
+function rewriteManifest(text, releaseBase) {
+  const base = releaseBase.replace(/\/+$/, '');
+  return text.replace(
+    /^(\s*(?:-\s+)?(?:url|path):[ \t]*)(\S.*?)[ \t]*$/gm,
+    (line, head, value) => {
+      if (/^(https?:)?\/\//i.test(value)) return line;
+      return `${head}${base}/${githubAssetName(value)}`;
+    },
+  );
+}
+
+async function upload(filePath, destName, body = fs.readFileSync(filePath)) {
   const url = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${destName}`;
   const res = await fetch(url, {
     method: 'POST',
@@ -82,9 +113,16 @@ function collect(dir, found = new Map()) {
 }
 
 async function main() {
-  const root = process.argv[2]
-    ? path.resolve(process.argv[2])
-    : path.join(__dirname, '..', 'dist');
+  const args = process.argv.slice(2);
+  const baseIdx = args.indexOf('--release-base');
+  const releaseBase = baseIdx === -1 ? null : args[baseIdx + 1];
+  if (baseIdx !== -1 && !releaseBase) {
+    console.error('--release-base указан без значения');
+    process.exit(1);
+  }
+  const dirArg = args.find((a, i) => !a.startsWith('--') && i !== baseIdx + 1);
+
+  const root = dirArg ? path.resolve(dirArg) : path.join(__dirname, '..', 'dist');
   const hint = 'сначала npm run build:exe и/или npm run build:dmg';
   if (!fs.existsSync(root)) {
     console.error(`Нет папки ${root} — ${hint}`);
@@ -95,9 +133,25 @@ async function main() {
     console.error(`В ${root} нет файлов релиза — ${hint}`);
     process.exit(1);
   }
-  // Манифесты — последними, чтобы клиент не увидел ссылку на ещё не залитый файл.
-  const names = [...found.keys()].sort((a, b) => Number(isManifest(a)) - Number(isManifest(b)));
-  for (const name of names) await upload(found.get(name), name);
+
+  if (releaseBase) {
+    // Большие файлы уже лежат в релизе GitHub — в бакет уходят только
+    // манифесты со ссылками на них.
+    const manifests = [...found.keys()].filter(isManifest);
+    if (!manifests.length) {
+      console.error(`В ${root} нет ни latest.yml, ни latest-mac.yml — заливать нечего`);
+      process.exit(1);
+    }
+    for (const name of manifests) {
+      const text = rewriteManifest(fs.readFileSync(found.get(name), 'utf8'), releaseBase);
+      console.log(`--- ${name} ---\n${text}`);
+      await upload(found.get(name), name, Buffer.from(text, 'utf8'));
+    }
+  } else {
+    // Манифесты последними, чтобы клиент не увидел ссылку на ещё не залитый файл.
+    const names = [...found.keys()].sort((a, b) => Number(isManifest(a)) - Number(isManifest(b)));
+    for (const name of names) await upload(found.get(name), name);
+  }
   console.log('Готово:', `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`);
 }
 main().catch((err) => { console.error(err); process.exit(1); });
