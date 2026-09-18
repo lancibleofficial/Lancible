@@ -25,6 +25,27 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-09-19',
+    tag: 'improvement',
+    version: '0.2.1',
+    title: {
+      ru: 'Починили шапку на телефоне, строку дедлайна и обновление приложения',
+      en: 'Fixes for the phone header, the deadline row and in-app updates',
+    },
+    body: {
+      ru: [
+        'В веб-версии на узком экране логотип уезжал в правый верхний угол и обрезался, а строка поиска налезала на содержимое. Шапка перебрана: слева логотип, дальше поиск, справа колокольчик.',
+        'Строка дедлайна не помещалась, когда у задачи наступал срок: кнопка напоминания ломалась пополам и уезжала за край панели. Теперь она переносится на вторую строку и остаётся на виду.',
+        'Главное под капотом: приложение для компьютера искало обновления по неверному адресу и не нашло бы их никогда. Адрес исправлен, но старые копии об этом не узнают — версию 0.2.1 нужно один раз скачать вручную, дальше обновления будут приходить сами.',
+      ],
+      en: [
+        'On a narrow screen the web version threw the logo into the top-right corner, clipped, and let the search bar spill over the content. The header is rebuilt: logo, then search, then the bell.',
+        'The deadline row could not fit once a task came due: the reminder button broke across two lines and slid past the edge of the panel. It now wraps onto a second line and stays in view.',
+        'The important one is under the hood: the desktop app was looking for updates at the wrong address and would never have found any. The address is fixed, but copies already installed cannot be told about it, so 0.2.1 has to be downloaded by hand once. Updates arrive on their own from then on.',
+      ],
+    },
+  },
+  {
     date: '2026-09-18',
     tag: 'release',
     version: '0.2.0 · mobile 1.1.0',

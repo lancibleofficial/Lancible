@@ -1,14 +1,20 @@
 // Заливает собранные артефакты релиза (Windows: .exe/.exe.blockmap/latest.yml;
-// macOS: .dmg/.zip/.zip.blockmap/latest-mac.yml — какие есть в dist/, те и
-// заливаются) в публичный Supabase Storage bucket "releases" — оттуда их
-// скачивает electron-updater на обеих платформах. Запуск после
-// npm run build:exe и/или npm run build:dmg:
-//   npm run publish:release
+// macOS: .dmg/.zip/.zip.blockmap/latest-mac.yml — какие есть, те и заливаются)
+// в публичный Supabase Storage bucket "releases" — оттуда их скачивает
+// electron-updater на обеих платформах. Это ОТДЕЛЬНЫЙ канал от страницы
+// релизов на GitHub: там ссылки для новых пользователей, здесь — фид
+// обновлений для уже установленных копий.
 //
-// Нужны переменные окружения (проще всего — файл .env рядом с package.json,
-// НЕ коммитить: service_role-ключ даёт полный доступ на запись):
+// Обычно запускается не руками, а последним шагом .github/workflows/release.yml
+// по тегу v*: там уже собраны обе платформы, и локальная машина не нужна.
+// Вручную — после npm run build:exe и/или npm run build:dmg:
+//   npm run publish:release            # берёт файлы из dist/
+//   node scripts/publish-release.js X  # или из любой другой папки
+//
+// Нужны переменные окружения (локально проще всего — файл .env рядом с
+// package.json, НЕ коммитить; в CI — секрет репозитория):
 //   SUPABASE_URL=https://<project>.supabase.co
-//   SUPABASE_SERVICE_ROLE_KEY=...
+//   SUPABASE_SERVICE_ROLE_KEY=...   ← полный доступ на запись, не светить
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
@@ -56,19 +62,42 @@ const MANIFEST_NAMES = ['latest.yml', 'latest-mac.yml'];
 const isManifest = (f) => MANIFEST_NAMES.includes(f);
 const isReleaseFile = (f) => isManifest(f) || RELEASE_EXTENSIONS.some((ext) => f.endsWith(ext));
 
+// Обход в глубину: локально файлы лежат прямо в dist/, а в CI — в
+// подпапках, по одной на платформу (actions/download-artifact кладёт каждый
+// артефакт отдельно). В бакет всё попадает плоско, под своим именем:
+// именно эти имена записаны в latest.yml, по ним обновлятор и скачивает.
+function collect(dir, found = new Map()) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) { collect(full, found); continue; }
+    if (!isReleaseFile(entry.name)) continue;
+    const prev = found.get(entry.name);
+    if (prev && prev !== full) {
+      console.error(`Два файла с именем ${entry.name}: ${prev} и ${full}`);
+      process.exit(1);
+    }
+    found.set(entry.name, full);
+  }
+  return found;
+}
+
 async function main() {
-  const distDir = path.join(__dirname, '..', 'dist');
-  if (!fs.existsSync(distDir)) {
-    console.error('Нет папки dist/ — сначала npm run build:exe и/или npm run build:dmg');
+  const root = process.argv[2]
+    ? path.resolve(process.argv[2])
+    : path.join(__dirname, '..', 'dist');
+  const hint = 'сначала npm run build:exe и/или npm run build:dmg';
+  if (!fs.existsSync(root)) {
+    console.error(`Нет папки ${root} — ${hint}`);
     process.exit(1);
   }
-  const files = fs.readdirSync(distDir).filter(isReleaseFile);
-  if (!files.length) {
-    console.error('В dist/ нет файлов релиза — сначала npm run build:exe и/или npm run build:dmg');
+  const found = collect(root);
+  if (!found.size) {
+    console.error(`В ${root} нет файлов релиза — ${hint}`);
     process.exit(1);
   }
-  files.sort((a, b) => Number(isManifest(a)) - Number(isManifest(b)));
-  for (const f of files) await upload(path.join(distDir, f), f);
+  // Манифесты — последними, чтобы клиент не увидел ссылку на ещё не залитый файл.
+  const names = [...found.keys()].sort((a, b) => Number(isManifest(a)) - Number(isManifest(b)));
+  for (const name of names) await upload(found.get(name), name);
   console.log('Готово:', `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`);
 }
 main().catch((err) => { console.error(err); process.exit(1); });

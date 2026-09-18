@@ -62,7 +62,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Ключ service_role даёт полный доступ на запись в проект Supabase, поэтому
+    # живёт секретом репозитория и никогда не попадает в код. Поднят на уровень
+    # задачи, чтобы шаг заливки мог проверить его наличие в своём `if`:
+    # контекст secrets в условиях шага недоступен, а env — доступен.
+    env:
+      SUPABASE_URL: https://yiglgfkjjvwijukdzutw.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
+      # Нужен сам репозиторий: страницу релиза собирает готовый экшен, а вот
+      # фид автообновления заливает наш скрипт из scripts/.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -84,3 +97,19 @@ jobs:
           files: |
             artifacts/windows-installer/*
             artifacts/mac-installer/*
+
+      # Второй, отдельный канал: страница релиза выше — это ссылки для новых
+      # пользователей, а здесь заполняется фид, из которого уже установленные
+      # копии узнают о новой версии (electron-updater, см. build.publish в
+      # package.json). Без этого шага обновление пришлось бы заливать руками с
+      # локальной машины, и о нём легко забыть.
+      #
+      # Если секрет не задан, шаг пропускается и релиз всё равно выходит — без
+      # фида, но со ссылками на скачивание.
+      - name: Залить фид автообновления в Supabase Storage
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: node scripts/publish-release.js artifacts
+
+      - name: Предупредить, если фид не залит
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
+        run: echo "::warning::Секрет SUPABASE_SERVICE_ROLE_KEY не задан — фид автообновления не обновлён, установленные копии о новой версии не узнают."
