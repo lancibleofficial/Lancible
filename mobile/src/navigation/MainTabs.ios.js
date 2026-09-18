@@ -74,6 +74,12 @@ function tabIcon(name) {
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
+  // Per-screen tabBarStyle replaces the navigator-level one wholesale (an
+  // explicit undefined wipes it too), so the Home tab's show/hide branch
+  // below has to hand back this same object instead of undefined -- that
+  // is what left Home with the translucent default bar while every other
+  // tab had the opaque panel one.
+  const legacyTabBarStyle = HAS_LIQUID_GLASS ? undefined : { backgroundColor: colors.panel, shadowColor: colors.border };
 
   return (
     <Tab.Navigator
@@ -83,7 +89,7 @@ export default function MainTabs() {
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
         tabBarLabelStyle: { fontFamily: 'BasiquePro-Regular', fontSize: 11 },
-        tabBarStyle: HAS_LIQUID_GLASS ? undefined : { backgroundColor: colors.panel, shadowColor: colors.border },
+        tabBarStyle: legacyTabBarStyle,
         tabBarBlurEffect: HAS_LIQUID_GLASS ? undefined : 'none',
       })}
     >
@@ -97,7 +103,7 @@ export default function MainTabs() {
           // Same nested-route hide as Android -- see the detailed comment in
           // MainTabs.android.js for why this has to be recomputed here
           // rather than left to the nested stack.
-          tabBarStyle: ['Project', 'TaskDetail'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
+          tabBarStyle: ['Project', 'TaskDetail'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : legacyTabBarStyle,
         })}
       />
       <Tab.Screen
@@ -114,7 +120,7 @@ export default function MainTabs() {
         options={{
           headerShown: false,
           tabBarSystemItem: HAS_LIQUID_GLASS ? 'search' : undefined,
-          tabBarLabel: t(lang, 'home.create'),
+          tabBarLabel: t(lang, 'nav.create'),
           tabBarIcon: tabIcon('plus'),
           tabBarInactiveTintColor: colors.accent,
           tabBarSelectionEnabled: false,

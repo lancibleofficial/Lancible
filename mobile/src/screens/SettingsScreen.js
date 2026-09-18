@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet, Linking } from 'react-native';
+import { View, Pressable, ScrollView, StyleSheet, Linking, Switch } from 'react-native';
 import Constants from 'expo-constants';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
 import ThemeSwitch from '../components/ThemeSwitch';
-import Toggle from '../components/Toggle';
 import SettingsRow, { SettingsCard } from '../components/SettingsRow';
 import PickerSheet from '../components/PickerSheet';
 import RateSheet from '../components/RateSheet';
@@ -142,7 +141,15 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="cloud"
               label={t(settings.lang, 'sync.toggle_label')}
-              right={<Toggle value={settings.syncEnabled !== false} onValueChange={setSyncEnabled} />}
+              right={(
+                <Switch
+                  value={settings.syncEnabled !== false}
+                  onValueChange={setSyncEnabled}
+                  trackColor={{ false: colors.panel2, true: colors.accent }}
+                  ios_backgroundColor={colors.panel2}
+                  thumbColor="#fff"
+                />
+              )}
               last
             />
           </SettingsCard>
