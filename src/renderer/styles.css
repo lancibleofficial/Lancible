@@ -231,7 +231,11 @@ b, strong { font-weight: 400; }
   -webkit-app-region: drag;
 }
 body.platform-mac .tb-logo { padding-right: 16px; }
-body:not(.platform-mac) .tb-logo { padding-right: 150px; }
+body.platform-web .tb-logo { padding-right: 16px; }
+/* Только Windows: там titleBarOverlay рисует кнопки окна поверх правого края
+   шапки. Ни маку, ни браузеру этот отступ не нужен — отсюда два исключения,
+   а не одно «не мак». */
+body:not(.platform-mac):not(.platform-web) .tb-logo { padding-right: 150px; }
 .tb-logo-mark { width: 22px; height: 22px; flex: none; color: var(--accent); }
 .tb-logo-text {
   font-weight: 700;
@@ -1696,13 +1700,22 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 /* ---------- Срок и напоминание у задачи ---------- */
 
+/* Перенос обязателен: когда у задачи наступает срок, в строку добавляется
+   плашка «просрочено»/«скоро», и содержимое перестаёт помещаться — при
+   nowrap кнопка напоминания и крестик уезжали за правый край панели, а сама
+   кнопка ломалась на две строки. */
 .due-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  row-gap: 6px;
   margin-top: 10px;
   font-size: 13px;
 }
+/* .due-gap растягивается только когда всё уместилось в одну строку; после
+   переноса он не должен рвать ряд пополам. */
+.due-bar > .due-gap { min-width: 0; }
 .due-bar > .icon { color: var(--icon); flex: none; }
 .due-label { color: var(--text-dim); flex: none; }
 .due-gap { flex: 1; }

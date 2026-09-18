@@ -119,9 +119,25 @@
   #titlebar {
     height: 50px;
   }
+  /* Полоса слева резервирует место под нативные кнопки окна (на маке) и под
+     рейл. В браузере кнопок окна нет, а рейл на телефоне скрыт совсем —
+     полоса и отступ под неё только съедали бы левый край. */
+  .tb-nav-strip {
+    display: none;
+  }
+  .tb-rest {
+    margin-left: 0 !important;
+    padding-right: 10px;
+  }
+  /* Лого живёт в одном ряду с поиском и в общих стилях прижато к правому
+     краю через margin-left:auto. На телефоне привычный порядок обратный —
+     [лого][поиск][колокольчик], поэтому здесь оно возвращается в начало
+     ряда, а автоотступ снимается: с фиксированной шириной он выталкивал лого
+     за правый край экрана. */
   .tb-logo {
-    width: 50px !important;
-    padding: 0 13px !important;
+    order: -1;
+    margin-left: 0 !important;
+    padding: 0 2px 0 12px !important;
     gap: 0;
   }
   .tb-logo-mark {
@@ -131,17 +147,10 @@
   .tb-logo-text {
     display: none;
   }
-  .tb-rest {
-    margin-left: 50px !important;
-  }
-  .tb-logo {
-    border-right: none;
-    background: var(--panel-2);
-  }
   .tb-search {
     max-width: none;
     height: 38px;
-    margin: auto 12px auto 10px;
+    margin: auto 10px;
     border-radius: 12px;
     padding: 0 13px;
   }

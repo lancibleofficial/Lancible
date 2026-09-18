@@ -1,11 +1,19 @@
 'use strict';
 
-// На маке нативные светофор-кнопки (трафик-лайты) окна рисуются самой ОС
-// поверх страницы в левом верхнем углу (см. trafficLightPosition в
-// src/main.js) — без этого класса лого в шапке (.tb-logo, см. styles.css)
-// оказалось бы под ними. На Windows и в вебе window.api.platform не 'darwin'
-// (в вебе вообще undefined), класс не добавляется — там правки не нужны.
-if (window.api && window.api.platform === 'darwin') {
+// Класс платформы на <body> — по нему styles.css резервирует место под
+// нативные кнопки окна, которые ОС рисует поверх страницы.
+//
+// На маке это светофор-кнопки слева (см. trafficLightPosition в
+// src/main.js); без класса лого в шапке (.tb-logo) оказалось бы под ними.
+// На Windows кнопки «свернуть/развернуть/закрыть» справа (titleBarOverlay),
+// под них у лого зарезервирован правый отступ.
+//
+// В браузере никаких кнопок окна нет вовсе, поэтому вебу нужен СВОЙ класс, а
+// не отсутствие маковского: правило «не мак — значит Windows» отдавало вебу
+// 150 пикселей пустоты справа от лого.
+if (window.__LANCIBLE_PLATFORM__ === 'web') {
+  document.body.classList.add('platform-web');
+} else if (window.api && window.api.platform === 'darwin') {
   document.body.classList.add('platform-mac');
 }
 
@@ -2267,7 +2275,10 @@ const dp = { open: false, anchor: null, value: null, view: new Date(), onPick: n
 
 function fmtDpBtn(key) {
   if (!key) return t('calendar.pick_date');
-  return keyToDate(key).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
+  const text = keyToDate(key).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
+  // ru-RU дописывает к году « г.» — на кнопке это лишний хвост, который ещё и
+  // отъедает ширину у и без того тесной строки дедлайна.
+  return text.replace(/\s*г\.$/, '');
 }
 function updateRangeBtns() {
   el.rangeFromBtn.textContent = fmtDpBtn(calState.rangeFrom);
