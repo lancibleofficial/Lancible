@@ -646,8 +646,20 @@
       renderBlog();
     }
 
-    // Scroll reveal
-    const reveals = document.querySelectorAll('.reveal.pending');
+    // Появление блоков по мере прокрутки.
+    //
+    // Важно: .reveal.pending прячет блок средствами CSS, то есть до прихода
+    // скрипта его не видно. Поэтому любой сбой наблюдателя означает не
+    // «не будет анимации», а «половины страницы не будет вовсе»: статус
+    // проекта, возможности и блог просто не появятся. Такое уже наблюдалось,
+    // когда окно браузера оказывалось за другим окном и страница переставала
+    // отрисовываться — IntersectionObserver тогда не вызывается ни разу.
+    //
+    // Отсюда страховка ниже: через несколько секунд всё оставшееся
+    // показывается принудительно. Для обычного посетителя она не срабатывает,
+    // он к этому моменту уже пролистал страницу и блоки появились сами.
+    const reveals = [...document.querySelectorAll('.reveal.pending')];
+    const revealAll = () => reveals.forEach((el) => el.classList.add('in'));
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
@@ -658,8 +670,9 @@
         });
       }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
       reveals.forEach((el) => io.observe(el));
+      setTimeout(() => { io.disconnect(); revealAll(); }, 6000);
     } else {
-      reveals.forEach((el) => el.classList.add('in'));
+      revealAll();
     }
 
     // Live-looking timer tick (purely illustrative)
