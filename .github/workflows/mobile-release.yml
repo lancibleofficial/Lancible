@@ -1,0 +1,111 @@
+name: Build Android APK
+
+# Собирает APK через EAS Build (облачные сборщики Expo) и публикует его
+# ассетом GitHub Release. Отдельно от .github/workflows/release.yml, потому
+# что там десктоп: другие раннеры, другой тег, другой цикл выпуска.
+#
+# Почему именно EAS, а не gradle на раннере: подписывать APK надо ТЕМ ЖЕ
+# ключом, что и предыдущие версии, иначе Android откажется ставить новую
+# поверх старой и пользователю придётся сносить приложение с потерей данных.
+# Ключ лежит на стороне EAS и переиспользуется автоматически; воспроизвести
+# его в CI нельзя, да и не нужно.
+#
+# Нужен секрет репозитория EXPO_TOKEN — токен доступа Expo:
+# expo.dev → Account settings → Access tokens → Create token.
+on:
+  push:
+    tags:
+      - 'mobile-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег релиза (например mobile-v1.1.0) — обязателен для ручного запуска'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Проверить, что токен Expo задан
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Нет секрета EXPO_TOKEN. expo.dev → Account settings → Access tokens → Create token, затем добавить секрет в репозиторий."
+            exit 1
+          fi
+
+      - name: Определить тег и версию
+        id: meta
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          version=$(node -p "require('./mobile/app.json').expo.version")
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # Тег и версия в app.json обязаны совпадать: имя файла ниже собирается
+          # из версии, а ссылка на лендинге — из тега. Разойдутся — ссылка
+          # укажет в пустоту, и это выяснится уже после публикации.
+          if [ "$tag" != "mobile-v$version" ]; then
+            echo "::error::Тег $tag не совпадает с версией $version из mobile/app.json — ожидался mobile-v$version"
+            exit 1
+          fi
+
+      # Сама сборка идёт в облаке Expo, локальные зависимости для неё не нужны,
+      # но EAS CLI по ним определяет версию SDK и конфигурацию проекта.
+      - name: Установить зависимости мобильного проекта
+        working-directory: mobile
+        run: npm ci
+
+      - name: Собрать APK на EAS
+        id: build
+        working-directory: mobile
+        run: |
+          # --wait держит шаг до конца сборки, --json отдаёт машиночитаемый
+          # результат. Профиль preview собирает именно apk (в production —
+          # aab для Google Play, его нельзя поставить напрямую с сайта).
+          npx eas-cli@latest build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait \
+            --json > build.json
+          url=$(node -p "const b=require('./build.json'); const x=Array.isArray(b)?b[0]:b; x.artifacts?.applicationArchiveUrl || x.artifacts?.buildUrl || ''")
+          if [ -z "$url" ]; then
+            echo "::error::EAS не вернул ссылку на артефакт"
+            cat build.json
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Скачать APK под нужным именем
+        run: |
+          name="Lancible-${{ steps.meta.outputs.version }}.apk"
+          curl -fsSL "${{ steps.build.outputs.url }}" -o "$name"
+          ls -la "$name"
+          # Проверка, что это действительно APK: zip-архив начинается с PK.
+          head -c 2 "$name" | grep -q 'PK' || { echo "::error::Скачанный файл не похож на APK"; exit 1; }
+          echo "APK_NAME=$name" >> "$GITHUB_ENV"
+
+      - name: Опубликовать GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Lancible Mobile v${{ steps.meta.outputs.version }} (Android)
+          draft: false
+          generate_release_notes: true
+          files: ${{ env.APK_NAME }}
+
+      - name: Напомнить про манифест обновлений
+        run: |
+          echo "::notice::APK опубликован. Осталось поднять версию до ${{ steps.meta.outputs.version }} в latest.json репозитория lancible-updates — иначе установленные копии о новой версии не узнают."
