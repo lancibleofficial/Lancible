@@ -9,6 +9,10 @@
   ],
   "rewrites": [
     {
+      "source": "/app/",
+      "destination": "https://lancible-yrkx.vercel.app/index.html"
+    },
+    {
       "source": "/app/:path*",
       "destination": "https://lancible-yrkx.vercel.app/:path*"
     }
