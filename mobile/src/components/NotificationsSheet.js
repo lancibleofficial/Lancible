@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import Text from './AppText';
 import Icon from './Icon';
 import { useAppStore, getProject } from '../store/useAppStore';
@@ -12,10 +11,14 @@ import { t } from '../lib/i18n';
 // Лента уведомлений. Открытие листа само отмечает всё прочитанным — как на
 // десктопе: отдельная кнопка «прочитано» там есть, но здесь лист и так
 // закрывается жестом, и лишний элемент управления в нём только мешал бы.
-export default function NotificationsSheet() {
+// navigation приходит пропом, а не из useNavigation(): лист рендерится в
+// BottomSheet, который в App.js стоит РЯДОМ с NavigationContainer, а не
+// внутри него, поэтому навигационного контекста здесь нет. Кнопка, которая
+// открывает лист, живёт в шапке — то есть внутри навигатора — и передаёт
+// свой объект сюда.
+export default function NotificationsSheet({ navigation }) {
   const colors = useColors();
   const styles = makeStyles(colors);
-  const navigation = useNavigation();
   const lang = useAppStore((s) => s.settings.lang);
   const tasks = useAppStore((s) => s.tasks);
   const projects = useAppStore((s) => s.projects);

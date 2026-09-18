@@ -1,4 +1,5 @@
 import { View, Pressable, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Text from './AppText';
 import Icon from './Icon';
 import NotificationsSheet from './NotificationsSheet';
@@ -16,9 +17,12 @@ export default function NotifButton() {
   const tasks = useAppStore((s) => s.tasks);
   const seenAt = useAppStore((s) => s.ui.notifSeenAt);
   const unread = notificationFeed(tasks, seenAt).filter((n) => n.unread).length;
+  // Кнопка стоит в шапке, то есть внутри навигатора — в отличие от самого
+  // листа, который рендерится вне NavigationContainer (см. NotificationsSheet).
+  const navigation = useNavigation();
 
   return (
-    <Pressable hitSlop={10} style={styles.btn} onPress={() => openSheet(<NotificationsSheet />)}>
+    <Pressable hitSlop={10} style={styles.btn} onPress={() => openSheet(<NotificationsSheet navigation={navigation} />)}>
       <Icon name="bell" size={20} color={colors.text} />
       {unread > 0 ? (
         <View style={styles.badge}>

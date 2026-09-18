@@ -8,12 +8,28 @@
 //
 // Локальные уведомления работают в Expo Go (в отличие от push, которых там
 // нет с SDK 53) — дев-билд ради этого не нужен.
-import * as Notifications from 'expo-notifications';
+// Импорты намеренно идут в конкретные подмодули, а не в `expo-notifications`
+// целиком. Баррель реэкспортирует DevicePushTokenAutoRegistration.fx, а тот
+// на уровне модуля зовёт addPushTokenListener → warnOfExpoGoPushUsage, и на
+// Android в Expo Go эта функция не предупреждает, а БРОСАЕТ исключение
+// («push notifications removed from Expo Go since SDK 53»). То есть один
+// только импорт барреля роняет приложение на Android, хотя локальные
+// уведомления, которыми мы и пользуемся, работают прекрасно. Перечисленные
+// ниже модули проверены — ни один из них не тянет TokenEmitter или .fx.
+import { setNotificationHandler } from 'expo-notifications/build/NotificationsHandler';
+import { getPermissionsAsync, requestPermissionsAsync } from 'expo-notifications/build/NotificationPermissions';
+import { setNotificationChannelAsync } from 'expo-notifications/build/setNotificationChannelAsync';
+import { scheduleNotificationAsync } from 'expo-notifications/build/scheduleNotificationAsync';
+import { cancelScheduledNotificationAsync } from 'expo-notifications/build/cancelScheduledNotificationAsync';
+import { cancelAllScheduledNotificationsAsync } from 'expo-notifications/build/cancelAllScheduledNotificationsAsync';
+import { AndroidImportance } from 'expo-notifications/build/NotificationChannelManager.types';
+import { SchedulableTriggerInputTypes } from 'expo-notifications/build/Notifications.types';
+import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 import { reminderTime } from './due';
 import { t } from './i18n';
 
-Notifications.setNotificationHandler({
+setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
@@ -29,10 +45,10 @@ let permissionChecked = false;
 
 export async function ensurePermission() {
   try {
-    const current = await Notifications.getPermissionsAsync();
+    const current = await getPermissionsAsync();
     if (current.granted) return true;
     if (!current.canAskAgain) return false;
-    const asked = await Notifications.requestPermissionsAsync();
+    const asked = await requestPermissionsAsync();
     return !!asked.granted;
   } catch (err) {
     console.warn('Не удалось запросить разрешение на уведомления:', err);
@@ -44,7 +60,7 @@ export async function ensurePermission() {
 
 export async function permissionStatus() {
   try {
-    const current = await Notifications.getPermissionsAsync();
+    const current = await getPermissionsAsync();
     if (current.granted) return 'granted';
     return current.canAskAgain ? 'ask' : 'denied';
   } catch {
@@ -52,14 +68,25 @@ export async function permissionStatus() {
   }
 }
 
-/** На Android уведомления без канала не показываются вовсе. */
+/** Свой канал на Android — чтобы уведомления назывались «Уведомления», а не
+ *  «Miscellaneous», и чтобы их можно было настроить отдельно в системе.
+ *
+ *  В Expo Go его создать нельзя: нативный провайдер каналов там не подключён,
+ *  и setNotificationChannelAsync падает с NullPointerException
+ *  (`null cannot be cast to ... NotificationsChannelsProvider`). Это ровно то
+ *  же ограничение Expo Go, что и с push. Поэтому там канал не создаём вовсе и
+ *  шлём уведомления в канал по умолчанию — они всё равно показываются. В
+ *  дев-сборке и в релизном APK канал создаётся нормально. */
+let androidChannelReady = false;
+
 export async function prepareAndroidChannel(langCode) {
-  if (Platform.OS !== 'android') return;
+  if (Platform.OS !== 'android' || isRunningInExpoGo()) return;
   try {
-    await Notifications.setNotificationChannelAsync('deadlines', {
+    await setNotificationChannelAsync('deadlines', {
       name: t(langCode, 'notif.title'),
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: AndroidImportance.DEFAULT,
     });
+    androidChannelReady = true;
   } catch (err) {
     console.warn('Не удалось создать канал уведомлений:', err);
   }
@@ -67,7 +94,7 @@ export async function prepareAndroidChannel(langCode) {
 
 export async function cancelTaskReminder(taskId) {
   try {
-    await Notifications.cancelScheduledNotificationAsync(idFor(taskId));
+    await cancelScheduledNotificationAsync(idFor(taskId));
   } catch {
     // Уведомления с таким id могло и не быть — это нормальный путь, а не сбой.
   }
@@ -83,14 +110,14 @@ export async function scheduleTaskReminder(task, langCode, enabled) {
   const status = await permissionStatus();
   if (status !== 'granted') return false;
   try {
-    await Notifications.scheduleNotificationAsync({
+    await scheduleNotificationAsync({
       identifier: idFor(task.id),
       content: {
         title: t(langCode, 'notif.reminder'),
         body: task.title || t(langCode, 'task.no_name'),
-        ...(Platform.OS === 'android' ? { channelId: 'deadlines' } : null),
+        ...(Platform.OS === 'android' && androidChannelReady ? { channelId: 'deadlines' } : null),
       },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+      trigger: { type: SchedulableTriggerInputTypes.DATE, date: at },
     });
     return true;
   } catch (err) {
@@ -104,7 +131,7 @@ export async function scheduleTaskReminder(task, langCode, enabled) {
  *  синхронизации с другого устройства оно может разойтись. */
 export async function rescheduleAll(tasks, langCode, enabled) {
   try {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await cancelAllScheduledNotificationsAsync();
   } catch (err) {
     console.warn('Не удалось очистить расписание уведомлений:', err);
   }
