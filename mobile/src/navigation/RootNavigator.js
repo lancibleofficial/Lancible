@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import MainTabs from './MainTabs';
+import { HomeSkeleton } from '../components/Skeleton';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
-import { useColors } from '../theme';
 
 // Вход опционален — офлайн-первое приложение всегда показывает основной UI
 // (см. план: "Необязательно — приложение и так работает офлайн"). Экраны
@@ -12,24 +11,15 @@ import { useColors } from '../theme';
 // начальная сессия Supabase и восстановится локальный стор из AsyncStorage,
 // чтобы не мигало пустым состоянием на старте.
 export default function RootNavigator() {
-  const colors = useColors();
-  const styles = makeStyles(colors);
   const authStatus = useAuthStore((s) => s.status);
   const initAuth = useAuthStore((s) => s.init);
   const hasHydrated = useAppStore((s) => s.hasHydrated);
 
   useEffect(() => { initAuth(); }, [initAuth]);
 
-  if (authStatus === 'loading' || !hasHydrated) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.accent} size="large" />
-      </View>
-    );
-  }
+  // Пока читается локальное хранилище и разрешается сессия, показываем не
+  // спиннер по центру пустого экрана, а заглушку будущей главной: так видно,
+  // что именно грузится, и переход к готовому экрану не выглядит рывком.
+  if (authStatus === 'loading' || !hasHydrated) return <HomeSkeleton />;
   return <MainTabs />;
 }
-
-const makeStyles = (colors) => StyleSheet.create({
-  center: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-});
