@@ -340,18 +340,18 @@
                 <button id="cal-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
                 <span id="cal-title"></span>
                 <button id="cal-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
-                <button id="cal-today" class="linklike" data-i18n="calendar.today">Сегодня</button>
               </div>
               <span class="spacer"></span>
+              <button id="cal-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
               <button id="cal-period-toggle" class="switch" aria-pressed="false">
                 <span class="switch-track"><span class="switch-thumb"></span></span>
                 <span data-i18n="calendar.choose_period">Выбрать период</span>
               </button>
             </div>
             <div class="cal-range" id="cal-range" hidden>
-              <button type="button" class="dp-btn" id="range-from-btn"></button>
+              <span class="cal-range-val" id="range-from"></span>
               <span class="muted">—</span>
-              <button type="button" class="dp-btn" id="range-to-btn"></button>
+              <span class="cal-range-val" id="range-to"></span>
             </div>
             <div class="cal-weekdays" id="cal-weekdays">
               <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>

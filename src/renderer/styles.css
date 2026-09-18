@@ -1136,8 +1136,14 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ptile-main { flex: 1; cursor: pointer; display: flex; flex-direction: column; }
 .ptile:hover { border-color: var(--border-strong); transform: translateY(-2px); }
 .ptile-menu { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity 0.12s var(--ease); }
-.ptile:hover .ptile-menu, .ptile-menu.open { opacity: 1; }
-.ptile-name { font-weight: 400; font-size: 15px; padding-right: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Закрепление — слева от троеточия. Появляется по наведению вместе с ним, но
+   у закреплённого проекта остаётся видимым всегда: иначе нечем открепить и
+   непонятно, почему карточка стоит выше остальных. */
+.ptile-pin { position: absolute; top: 8px; right: 46px; opacity: 0; transition: opacity 0.12s var(--ease), color 0.12s var(--ease); }
+.ptile:hover .ptile-menu, .ptile-menu.open,
+.ptile:hover .ptile-pin, .ptile-pin:focus-visible, .ptile-pin.on { opacity: 1; }
+.ptile-pin.on .icon { color: var(--accent); }
+.ptile-name { font-weight: 400; font-size: 15px; padding-right: 48px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ptile-badge { color: var(--accent); margin-left: 4px; }
 .ptile-badge .icon { width: 11px; height: 11px; color: var(--accent); }
 .ptile-desc {
@@ -1288,6 +1294,37 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .cal-range { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); margin: -4px 0 10px; }
 .cal-range.anim { animation: rangeIn 0.22s var(--ease); }
+/* Границы периода — показания, а не кнопки: даты набираются кликами по
+   большому календарю ниже. Обводка нейтральная, без акцента, чтобы их не
+   принимали за элемент управления. */
+.cal-range-val {
+  min-width: 116px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Вторичная кнопка: заметнее ссылки, но без акцентной заливки — «Сегодня»
+   не должна спорить по весу с зелёными действиями. */
+.btn-soft {
+  flex: none;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.12s var(--ease), background 0.12s var(--ease);
+}
+.btn-soft:hover { border-color: var(--border-strong); background: var(--panel-3, var(--panel-2)); }
+.btn-soft:active { transform: scale(0.97); }
 @keyframes rangeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 .dp-btn {

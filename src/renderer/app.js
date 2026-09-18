@@ -752,7 +752,7 @@ const el = {
   calTitle: $('cal-title'), calDays: $('cal-days'),
   calWeekdays: $('cal-weekdays'),
   calPeriodToggle: $('cal-period-toggle'), calRange: $('cal-range'),
-  rangeFromBtn: $('range-from-btn'), rangeToBtn: $('range-to-btn'),
+  rangeFrom: $('range-from'), rangeTo: $('range-to'),
   dpPop: $('dp-pop'), dpTitle: $('dp-title'), dpDays: $('dp-days'), dpPrev: $('dp-prev'), dpNext: $('dp-next'),
   tpPop: $('tp-pop'), tpHours: $('tp-hours'), tpMinutes: $('tp-minutes'),
   calViewTot: $('cal-view-tot'),
@@ -1396,11 +1396,16 @@ async function afterSignedIn(opts) {
   }
   currentUser = { id: user.id, email: user.email, name: profile.name };
   renderAccountBtn();
-  await syncOnSignIn();
+  // Окно входа закрывается сразу, ДО синхронизации. Раньше закрытие стояло
+  // после неё, а синхронизация умеет спрашивать про конфликт данных и умеет
+  // падать на сетевой ошибке — в обоих случаях окно оставалось висеть на
+  // экране, хотя вход давно прошёл. Своё дело оно сделало, как только
+  // аутентификация удалась.
   if (!silent) {
     closeAuthModal();
     toast(t('auth.signed_in_toast'));
   }
+  await syncOnSignIn();
 }
 
 async function handleAuthSubmit() {
@@ -1670,14 +1675,26 @@ function applyRemoteData(data) {
 // syncOnSignIn). Отпечаток инвалидируется сам по себе, если пользователь
 // поработал локально (в том числе выйдя из аккаунта) — тогда хэш перестаёт
 // совпадать и при следующем входе диалог закономерно появится снова.
-function localSyncFingerprint() { return JSON.stringify(syncPayload()); }
+/* Вопрос «взять данные с сервера или оставить локальные» задаётся один раз на
+ * аккаунт, и всё.
+ *
+ * Раньше решение помнилось вместе с отпечатком локальных данных, и любая
+ * правка — добавленная задача, запущенный таймер — делала отпечаток другим.
+ * Из-за этого приложение спрашивало заново при каждом запуске, хотя выбор был
+ * сделан давно. Дальше устройства и так сходятся: обычная синхронизация
+ * заливает и подтягивает изменения сама, конфликт возможен только в первый
+ * раз, когда на обеих сторонах уже лежат независимо накопленные данные.
+ *
+ * Отметка живёт в локальных настройках, поэтому на новом устройстве вопрос
+ * прозвучит ровно один раз — там он как раз уместен. */
 function isSyncAlreadyResolved() {
   const r = state.settings.syncResolvedFor;
-  return !!(currentUser && r && r.userId === currentUser.id && r.hash === localSyncFingerprint());
+  return !!(currentUser && r && r.userId === currentUser.id);
 }
 function rememberSyncResolution() {
   if (!currentUser) return;
-  state.settings.syncResolvedFor = { userId: currentUser.id, hash: localSyncFingerprint() };
+  if (isSyncAlreadyResolved()) return;
+  state.settings.syncResolvedFor = { userId: currentUser.id };
   scheduleSave();
 }
 
@@ -1919,7 +1936,15 @@ function projectTile(p) {
   tile.className = 'ptile';
   tile.style.setProperty('--pc', p.color || PALETTE[0]);
   tile.dataset.id = p.id;
+  // Закрепление вынесено из меню на саму карточку: это единственное действие,
+  // которое нажимают часто, и ради него не стоит каждый раз открывать список.
+  // Кнопка проявляется по наведению, чтобы не шуметь в сетке, но у уже
+  // закреплённого проекта видна всегда — иначе непонятно, чем его открепить.
+  const pinTitle = p.pinnedAt ? t('project.unpin') : t('project.pin');
   tile.innerHTML = `
+    <button class="ptile-pin icon-btn${p.pinnedAt ? ' on' : ''}" aria-label="${escapeHtml(pinTitle)}" title="${escapeHtml(pinTitle)}" aria-pressed="${p.pinnedAt ? 'true' : 'false'}" tabindex="-1">
+      ${icon('pin')}
+    </button>
     <button class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}" tabindex="-1">
       <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
     </button>
@@ -1935,6 +1960,10 @@ function projectTile(p) {
       <div class="ptile-progress"><i style="width:${pct}%"></i></div>
     </div>`;
   tile.querySelector('.ptile-main').addEventListener('click', () => openProject(p.id));
+  tile.querySelector('.ptile-pin').addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePinProject(p.id);
+  });
   tile.querySelector('.ptile-menu').addEventListener('click', (e) => {
     e.stopPropagation();
     openProjectMenu(p, e.currentTarget);
@@ -2281,8 +2310,8 @@ function fmtDpBtn(key) {
   return text.replace(/\s*г\.$/, '');
 }
 function updateRangeBtns() {
-  el.rangeFromBtn.textContent = fmtDpBtn(calState.rangeFrom);
-  el.rangeToBtn.textContent = fmtDpBtn(calState.rangeTo);
+  el.rangeFrom.textContent = fmtDpBtn(calState.rangeFrom);
+  el.rangeTo.textContent = fmtDpBtn(calState.rangeTo);
 }
 
 /** Открывает попап у anchor, показывая value ('YYYY-MM-DD' или null); onPick(key) вызывается при клике по дню. */
@@ -3159,7 +3188,8 @@ function openProjectMenu(p, anchor) {
   const items = [];
   if (!inProject) items.push({ label: t('project.open'), onClick: () => openProject(p.id) });
   items.push({ label: t('project.edit'), onClick: () => openProjectDialog(p) });
-  items.push({ label: p.pinnedAt ? t('project.unpin') : t('project.pin'), onClick: () => togglePinProject(p.id) });
+  // Закрепление здесь больше не дублируется — для него есть своя кнопка на
+  // карточке, слева от этого меню.
   items.push({ sep: true });
   items.push({ label: t('project.excel'), onClick: () => exportProjectById(p.id) });
   items.push({ label: t('project.copy_summary'), onClick: () => copyProjectSummary(p) });
@@ -3862,18 +3892,10 @@ el.calToday.addEventListener('click', () => {
   renderCalendar();
 });
 el.calPeriodToggle.addEventListener('click', togglePeriod);
-el.rangeFromBtn.addEventListener('click', () => {
-  if (dp.open && dp.anchor === el.rangeFromBtn) { closeDatePicker(); return; }
-  openDatePicker(el.rangeFromBtn, calState.rangeFrom, (key) => {
-    calState.rangeFrom = key; calState.picking = false; updateRangeBtns(); renderCalendar();
-  });
-});
-el.rangeToBtn.addEventListener('click', () => {
-  if (dp.open && dp.anchor === el.rangeToBtn) { closeDatePicker(); return; }
-  openDatePicker(el.rangeToBtn, calState.rangeTo, (key) => {
-    calState.rangeTo = key; calState.picking = false; updateRangeBtns(); renderCalendar();
-  });
-});
+// Границы периода больше не открывают собственный мини-календарь: большой
+// календарь прямо под ними и так на экране, и период набирается кликами по
+// нему (pickRangeDay). Два всплывающих календаря поверх третьего только
+// сбивали с толку. Даты здесь — просто показания.
 el.dpPrev.addEventListener('click', () => { dp.view = new Date(dp.view.getFullYear(), dp.view.getMonth() - 1, 1); renderDatePicker(); });
 el.dpNext.addEventListener('click', () => { dp.view = new Date(dp.view.getFullYear(), dp.view.getMonth() + 1, 1); renderDatePicker(); });
 
