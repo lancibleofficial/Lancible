@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/app",
+      "destination": "/app/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/app/:path*",
+      "destination": "https://lancible-yrkx.vercel.app/:path*"
+    }
+  ]
+}
