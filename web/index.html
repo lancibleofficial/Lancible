@@ -598,10 +598,21 @@
       <div class="modal-title" data-i18n="export.title">Экспорт в Excel</div>
       <label data-i18n="export.period_label">Период</label>
       <div class="exp-pills" id="exp-pills"></div>
-      <div class="exp-range" id="exp-range" hidden>
-        <button type="button" class="dp-btn" id="exp-from-btn"></button>
-        <span class="muted">—</span>
-        <button type="button" class="dp-btn" id="exp-to-btn"></button>
+            <div class="exp-range" id="exp-range" hidden>
+        <div class="exp-range-vals">
+          <span class="cal-range-val" id="exp-from"></span>
+          <span class="muted">—</span>
+          <span class="cal-range-val" id="exp-to"></span>
+        </div>
+        <div class="exp-cal">
+          <div class="dp-head">
+            <button type="button" class="icon-btn" id="exp-cal-prev" data-i18n-aria="common.back" aria-label="Прошлый месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+            <span id="exp-cal-title"></span>
+            <button type="button" class="icon-btn" id="exp-cal-next" data-i18n-aria="common.forward" aria-label="Следующий месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+          </div>
+          <div class="dp-weekdays"><span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span></div>
+          <div class="dp-days" id="exp-cal-days"></div>
+        </div>
       </div>
       <div class="modal-buttons">
         <button id="expdlg-cancel" data-i18n="common.cancel">Отмена</button>

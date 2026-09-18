@@ -102,7 +102,7 @@ const T = {
     'export.all_excel': 'Скачать всё в Excel', 'export.all_projects': 'все проекты',
     'export.title': 'Экспорт в Excel', 'export.pick_period': 'Выбрать период', 'export.period_label': 'Период',
     'export.period_all': 'Всё время', 'export.period_month': 'Месяц', 'export.period_week': 'Неделя',
-    'export.period_day': 'День', 'export.period_custom': 'Свой',
+    'export.period_day': 'День', 'export.period_half_year': 'Полгода', 'export.period_year': 'Год', 'export.period_custom': 'Свой',
     'home.title': 'Проекты', 'home.create': 'Создать проект', 'home.pinned': 'Закреплённые',
     'home.other': 'Остальные', 'home.recent': 'Недавние задачи',
     'home.empty': 'Пока нет ни одного проекта. Создай первый.', 'home.calendar_link': 'Календарь',
@@ -236,7 +236,7 @@ const T = {
     'export.all_excel': 'Export everything', 'export.all_projects': 'all projects',
     'export.title': 'Export to Excel', 'export.pick_period': 'Choose period', 'export.period_label': 'Period',
     'export.period_all': 'All time', 'export.period_month': 'Month', 'export.period_week': 'Week',
-    'export.period_day': 'Day', 'export.period_custom': 'Custom',
+    'export.period_day': 'Day', 'export.period_half_year': 'Six months', 'export.period_year': 'Year', 'export.period_custom': 'Custom',
     'home.title': 'Projects', 'home.create': 'Create project', 'home.pinned': 'Pinned',
     'home.other': 'Other', 'home.recent': 'Recent tasks',
     'home.empty': 'No projects yet. Create the first one.', 'home.calendar_link': 'Calendar',
@@ -370,7 +370,7 @@ const T = {
     'export.all_excel': 'Завантажити все в Excel', 'export.all_projects': 'усі проєкти',
     'export.title': 'Експорт в Excel', 'export.pick_period': 'Обрати період', 'export.period_label': 'Період',
     'export.period_all': 'Весь час', 'export.period_month': 'Місяць', 'export.period_week': 'Тиждень',
-    'export.period_day': 'День', 'export.period_custom': 'Свій',
+    'export.period_day': 'День', 'export.period_half_year': 'Півроку', 'export.period_year': 'Рік', 'export.period_custom': 'Свій',
     'home.title': 'Проєкти', 'home.create': 'Створити проєкт', 'home.pinned': 'Закріплені',
     'home.other': 'Інші', 'home.recent': 'Недавні завдання',
     'home.empty': 'Ще немає жодного проєкту. Створи перший.', 'home.calendar_link': 'Календар',
@@ -504,7 +504,7 @@ const T = {
     'export.all_excel': 'Барлығын Excel-ге', 'export.all_projects': 'барлық жобалар',
     'export.title': 'Excel-ге экспорт', 'export.pick_period': 'Кезеңді таңдау', 'export.period_label': 'Кезең',
     'export.period_all': 'Барлық уақыт', 'export.period_month': 'Ай', 'export.period_week': 'Апта',
-    'export.period_day': 'Күн', 'export.period_custom': 'Өз',
+    'export.period_day': 'Күн', 'export.period_half_year': 'Жарты жыл', 'export.period_year': 'Жыл', 'export.period_custom': 'Өз',
     'home.title': 'Жобалар', 'home.create': 'Жоба құру', 'home.pinned': 'Бекітілген',
     'home.other': 'Басқалары', 'home.recent': 'Соңғы тапсырмалар',
     'home.empty': 'Әзірге жоба жоқ. Біріншісін құр.', 'home.calendar_link': 'Күнтізбе',
@@ -733,7 +733,8 @@ const el = {
   exportAllBtn: $('export-all-btn'),
   exportPeriodBtn: $('export-period-btn'),
   expdlgBackdrop: $('expdlg-backdrop'), expPills: $('exp-pills'), expRange: $('exp-range'),
-  expFromBtn: $('exp-from-btn'), expToBtn: $('exp-to-btn'),
+  expFrom: $('exp-from'), expTo: $('exp-to'),
+  expCalPrev: $('exp-cal-prev'), expCalNext: $('exp-cal-next'), expCalTitle: $('exp-cal-title'), expCalDays: $('exp-cal-days'),
   expdlgOk: $('expdlg-ok'), expdlgCancel: $('expdlg-cancel'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
@@ -3540,8 +3541,10 @@ function exportProjectById(id) {
  *  пресеты плюс «Свой» с двумя датами. «Всё время» уходит в сводку по всем
  *  проектам (buildAllProjectsSheets), остальные — в лист сессий за диапазон
  *  (buildPeriodSheets), ровно как решает onExportRange на мобилке. */
-const EXPORT_PRESETS = ['all', 'month', 'week', 'day', 'custom'];
-const expdlg = { preset: 'all', from: null, to: null };
+// Порядок и разбивка строк — как в мобильном приложении: 3 сверху, 4 снизу.
+const EXPORT_PRESET_ROWS = [['all', 'day', 'week'], ['month', 'half_year', 'year', 'custom']];
+const EXPORT_PRESETS = EXPORT_PRESET_ROWS.flat();
+const expdlg = { preset: 'all', from: null, to: null, picking: false, view: new Date() };
 
 function expdlgRange() {
   const now = new Date();
@@ -3550,6 +3553,8 @@ function expdlgRange() {
   if (expdlg.preset === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1), endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
   if (expdlg.preset === 'week') { const ws = mondayOf(now); return [ws, endOfDay(new Date(ws.getTime() + 6 * 86400000))]; }
   if (expdlg.preset === 'day') return [new Date(now.getFullYear(), now.getMonth(), now.getDate()), endOfDay(now)];
+  if (expdlg.preset === 'half_year') return [new Date(now.getFullYear(), now.getMonth() - 5, 1), endOfDay(now)];
+  if (expdlg.preset === 'year') return [new Date(now.getFullYear(), now.getMonth() - 11, 1), endOfDay(now)];
   let a = keyToDate(expdlg.from);
   let b = keyToDate(expdlg.to);
   if (a > b) [a, b] = [b, a];
@@ -3557,31 +3562,94 @@ function expdlgRange() {
 }
 
 function renderExpdlg() {
+  // Пресеты — сеткой 3 + 4 на одной подложке, как в мобильном приложении.
+  // В одну строку семь вариантов не помещаются читаемо, а списком они
+  // занимали бы пол-модалки.
   el.expPills.innerHTML = '';
-  for (const p of EXPORT_PRESETS) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'exp-pill' + (p === expdlg.preset ? ' on' : '');
-    b.textContent = t(`export.period_${p}`);
-    b.addEventListener('click', () => { expdlg.preset = p; renderExpdlg(); });
-    el.expPills.appendChild(b);
+  for (const row of EXPORT_PRESET_ROWS) {
+    const line = document.createElement('div');
+    line.className = 'exp-tab-row';
+    for (const p of row) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'exp-tab' + (p === expdlg.preset ? ' on' : '');
+      b.textContent = t(`export.period_${p}`);
+      b.addEventListener('click', () => { expdlg.preset = p; renderExpdlg(); });
+      line.appendChild(b);
+    }
+    el.expPills.appendChild(line);
   }
   el.expRange.hidden = expdlg.preset !== 'custom';
-  el.expFromBtn.textContent = fmtDpBtn(expdlg.from);
-  el.expToBtn.textContent = fmtDpBtn(expdlg.to);
+  el.expFrom.textContent = fmtDpBtn(expdlg.from);
+  el.expTo.textContent = fmtDpBtn(expdlg.to);
+  // Подсвечена та граница, которую задаст следующий клик по календарю.
+  el.expFrom.classList.toggle('active', !expdlg.picking);
+  el.expTo.classList.toggle('active', !!expdlg.picking);
+  if (expdlg.preset === 'custom') renderExpCal();
+}
+
+/** Календарь внутри модалки экспорта: он всегда на виду, а не выскакивает
+ *  поверх неё по клику на поле. Диапазон набирается двумя кликами прямо по
+ *  сетке — первый задаёт начало, второй конец, — и подсвечивается целиком. */
+function renderExpCal() {
+  const y = expdlg.view.getFullYear();
+  const m = expdlg.view.getMonth();
+  el.expCalTitle.textContent = monthLabel(y, m);
+  const startOffset = (new Date(y, m, 1).getDay() + 6) % 7;
+  const dim = new Date(y, m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startOffset; i++) cells.push(null);
+  for (let d = 1; d <= dim; d++) cells.push(d);
+  const todayKey = dayKey(new Date());
+  let [lo, hi] = [expdlg.from, expdlg.to];
+  if (lo && hi && lo > hi) [lo, hi] = [hi, lo];
+
+  el.expCalDays.innerHTML = '';
+  for (const d of cells) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'dp-day';
+    if (d == null) { b.classList.add('empty'); b.disabled = true; el.expCalDays.appendChild(b); continue; }
+    const key = `${y}-${pad2(m + 1)}-${pad2(d)}`;
+    if (key === todayKey) b.classList.add('today');
+    if (key === lo || key === hi) b.classList.add('sel');
+    else if (lo && hi && key > lo && key < hi) b.classList.add('in-range');
+    b.textContent = String(d);
+    b.addEventListener('click', () => { pickExpDay(key); });
+    el.expCalDays.appendChild(b);
+  }
+}
+
+/** Первый клик задаёт начало и сбрасывает конец, второй — конец. Если второй
+ *  клик пришёлся раньше первого, границы меняются местами, а не игнорируются. */
+function pickExpDay(key) {
+  if (!expdlg.picking) {
+    expdlg.from = key;
+    expdlg.to = key;
+    expdlg.picking = true;
+  } else {
+    if (key < expdlg.from) { expdlg.to = expdlg.from; expdlg.from = key; }
+    else expdlg.to = key;
+    expdlg.picking = false;
+  }
+  renderExpdlg();
 }
 
 function openExportPeriodDialog() {
   const today = dayKey(new Date());
   if (!expdlg.from) expdlg.from = today;
   if (!expdlg.to) expdlg.to = today;
+  expdlg.picking = false;
+  expdlg.view = keyToDate(expdlg.from);
   renderExpdlg();
   el.expdlgBackdrop.hidden = false;
 }
 function closeExpdlg() { el.expdlgBackdrop.hidden = true; }
 
-el.expFromBtn.addEventListener('click', () => openDatePicker(el.expFromBtn, expdlg.from, (key) => { expdlg.from = key; renderExpdlg(); }));
-el.expToBtn.addEventListener('click', () => openDatePicker(el.expToBtn, expdlg.to, (key) => { expdlg.to = key; renderExpdlg(); }));
+// Границы диапазона больше не открывают отдельный календарь — он встроен в
+// модалку и всегда на виду. Стрелками листаются месяцы.
+el.expCalPrev.addEventListener('click', () => { expdlg.view = new Date(expdlg.view.getFullYear(), expdlg.view.getMonth() - 1, 1); renderExpCal(); });
+el.expCalNext.addEventListener('click', () => { expdlg.view = new Date(expdlg.view.getFullYear(), expdlg.view.getMonth() + 1, 1); renderExpCal(); });
 el.expdlgCancel.addEventListener('click', closeExpdlg);
 el.expdlgOk.addEventListener('click', () => {
   const range = expdlgRange();

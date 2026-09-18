@@ -1810,22 +1810,40 @@ body.platform-web .tb-account {
 
 /* ---------- Диалог выбора периода экспорта ---------- */
 
-.exp-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.exp-pill {
-  border: 1px solid var(--border);
-  background: var(--panel-2);
-  color: var(--text);
+/* Пресеты периода — два ряда на одной подложке, 3 сверху и 4 снизу, как в
+   мобильном приложении. Семь вариантов в одну строку не помещаются читаемо,
+   а перенос вразнобой выглядел бы случайным. */
+.exp-pills { background: var(--panel-2); border-radius: 10px; padding: 4px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.exp-tab-row { display: flex; gap: 4px; }
+.exp-tab {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: var(--text-dim);
   font-family: inherit;
-  font-size: 13px;
-  border-radius: 999px;
-  padding: 7px 14px;
+  font-size: 12.5px;
+  border-radius: 7px;
+  padding: 7px 6px;
   cursor: pointer;
-  transition: background 0.12s var(--ease), border-color 0.12s var(--ease);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.12s var(--ease), color 0.12s var(--ease);
 }
-.exp-pill:hover { border-color: var(--border-strong); }
-.exp-pill.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-.exp-range { display: flex; align-items: center; gap: 8px; }
-.exp-range .dp-btn { flex: 1; }
+.exp-tab:hover { color: var(--text); }
+.exp-tab.on { background: var(--tab-active-bg); color: var(--text); }
+
+.exp-range { display: flex; flex-direction: column; gap: 10px; }
+.exp-range-vals { display: flex; align-items: center; gap: 8px; }
+.exp-range-vals .cal-range-val { flex: 1; text-align: center; }
+/* Подсвечена та граница, которую задаст следующий клик по календарю. */
+.cal-range-val.active { border-color: var(--accent); }
+/* Календарь встроен в модалку, а не всплывает поверх неё. */
+.exp-cal { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
+.exp-cal .dp-head { margin-bottom: 4px; }
+/* Дни между границами диапазона. */
+.dp-day.in-range { background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 0; }
 
 /* ---------- Страница статистики ---------- */
 
