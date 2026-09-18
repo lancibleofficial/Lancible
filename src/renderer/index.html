@@ -321,10 +321,6 @@
                 <span class="switch-track"><span class="switch-thumb"></span></span>
                 <span data-i18n="calendar.choose_period">Выбрать период</span>
               </button>
-              <button id="export-calendar-btn" class="ghost" data-i18n-title="project.excel" title="Скачать Excel">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
-                <span data-i18n="export.excel">Экспорт</span>
-              </button>
             </div>
             <div class="cal-range" id="cal-range" hidden>
               <button type="button" class="dp-btn" id="range-from-btn"></button>
@@ -344,6 +340,10 @@
             <div class="cal-day-tot" id="cal-day-tot"></div>
             <ul class="cal-day-list" id="cal-day-list"></ul>
             <p class="muted" id="cal-day-empty" data-i18n="calendar.day_empty" hidden>В этот день записей не было.</p>
+            <button id="export-calendar-btn" class="btn-accent cal-export">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+              <span data-i18n="export.excel">Экспорт</span>
+            </button>
           </aside>
         </div>
       </div>
@@ -370,6 +370,9 @@
               <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
               <span data-i18n="export.all_excel">Скачать всё в Excel</span>
             </button>
+      <button id="export-period-btn" class="ghost">
+        <span data-i18n="export.pick_period">Выбрать период</span>
+      </button>
           </div>
           <button id="sp-running" class="st-running" hidden></button>
           <div class="row-label" id="sp-proj-label" data-i18n="stats.by_project">По проектам</div>
@@ -500,6 +503,23 @@
   </div>
 
   <!-- Диалог подтверждения удаления -->
+  <div id="expdlg-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-title" data-i18n="export.title">Экспорт в Excel</div>
+      <label data-i18n="export.period_label">Период</label>
+      <div class="exp-pills" id="exp-pills"></div>
+      <div class="exp-range" id="exp-range" hidden>
+        <button type="button" class="dp-btn" id="exp-from-btn"></button>
+        <span class="muted">—</span>
+        <button type="button" class="dp-btn" id="exp-to-btn"></button>
+      </div>
+      <div class="modal-buttons">
+        <button id="expdlg-cancel" data-i18n="common.cancel">Отмена</button>
+        <button id="expdlg-ok" class="primary" data-i18n="export.excel">Экспорт</button>
+      </div>
+    </div>
+  </div>
+
   <div id="confirm-backdrop" hidden>
     <div class="modal">
       <div class="modal-title" id="confirm-title" data-i18n="common.delete_q">Удалить?</div>

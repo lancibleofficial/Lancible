@@ -83,6 +83,9 @@ const T = {
     'nav.stats': 'Статистика', 'stats.by_project': 'По проектам', 'stats.by_task': 'По задачам',
     'stats.empty': 'Пока нет данных — запусти таймер на любой задаче',
     'export.all_excel': 'Скачать всё в Excel', 'export.all_projects': 'все проекты',
+    'export.title': 'Экспорт в Excel', 'export.pick_period': 'Выбрать период', 'export.period_label': 'Период',
+    'export.period_all': 'Всё время', 'export.period_month': 'Месяц', 'export.period_week': 'Неделя',
+    'export.period_day': 'День', 'export.period_custom': 'Свой',
     'home.title': 'Проекты', 'home.create': 'Создать проект', 'home.pinned': 'Закреплённые',
     'home.other': 'Остальные', 'home.recent': 'Недавние задачи',
     'home.empty': 'Пока нет ни одного проекта. Создай первый.', 'home.calendar_link': 'Календарь',
@@ -202,6 +205,9 @@ const T = {
     'nav.stats': 'Stats', 'stats.by_project': 'By project', 'stats.by_task': 'By task',
     'stats.empty': 'No data yet — start a timer on any task',
     'export.all_excel': 'Export everything', 'export.all_projects': 'all projects',
+    'export.title': 'Export to Excel', 'export.pick_period': 'Choose period', 'export.period_label': 'Period',
+    'export.period_all': 'All time', 'export.period_month': 'Month', 'export.period_week': 'Week',
+    'export.period_day': 'Day', 'export.period_custom': 'Custom',
     'home.title': 'Projects', 'home.create': 'Create project', 'home.pinned': 'Pinned',
     'home.other': 'Other', 'home.recent': 'Recent tasks',
     'home.empty': 'No projects yet. Create the first one.', 'home.calendar_link': 'Calendar',
@@ -321,6 +327,9 @@ const T = {
     'nav.stats': 'Статистика', 'stats.by_project': 'За проєктами', 'stats.by_task': 'За завданнями',
     'stats.empty': 'Поки немає даних — запусти таймер на будь-якому завданні',
     'export.all_excel': 'Завантажити все в Excel', 'export.all_projects': 'усі проєкти',
+    'export.title': 'Експорт в Excel', 'export.pick_period': 'Обрати період', 'export.period_label': 'Період',
+    'export.period_all': 'Весь час', 'export.period_month': 'Місяць', 'export.period_week': 'Тиждень',
+    'export.period_day': 'День', 'export.period_custom': 'Свій',
     'home.title': 'Проєкти', 'home.create': 'Створити проєкт', 'home.pinned': 'Закріплені',
     'home.other': 'Інші', 'home.recent': 'Недавні завдання',
     'home.empty': 'Ще немає жодного проєкту. Створи перший.', 'home.calendar_link': 'Календар',
@@ -440,6 +449,9 @@ const T = {
     'nav.stats': 'Статистика', 'stats.by_project': 'Жобалар бойынша', 'stats.by_task': 'Тапсырмалар бойынша',
     'stats.empty': 'Әзірге дерек жоқ — кез келген тапсырмада таймерді қос',
     'export.all_excel': 'Барлығын Excel-ге', 'export.all_projects': 'барлық жобалар',
+    'export.title': 'Excel-ге экспорт', 'export.pick_period': 'Кезеңді таңдау', 'export.period_label': 'Кезең',
+    'export.period_all': 'Барлық уақыт', 'export.period_month': 'Ай', 'export.period_week': 'Апта',
+    'export.period_day': 'Күн', 'export.period_custom': 'Өз',
     'home.title': 'Жобалар', 'home.create': 'Жоба құру', 'home.pinned': 'Бекітілген',
     'home.other': 'Басқалары', 'home.recent': 'Соңғы тапсырмалар',
     'home.empty': 'Әзірге жоба жоқ. Біріншісін құр.', 'home.calendar_link': 'Күнтізбе',
@@ -654,6 +666,10 @@ const el = {
   spRunning: $('sp-running'), spProjLabel: $('sp-proj-label'), spProjects: $('sp-projects'),
   spTaskLabel: $('sp-task-label'), spTasks: $('sp-tasks'), spEmpty: $('sp-empty'),
   exportAllBtn: $('export-all-btn'),
+  exportPeriodBtn: $('export-period-btn'),
+  expdlgBackdrop: $('expdlg-backdrop'), expPills: $('exp-pills'), expRange: $('exp-range'),
+  expFromBtn: $('exp-from-btn'), expToBtn: $('exp-to-btn'),
+  expdlgOk: $('expdlg-ok'), expdlgCancel: $('expdlg-cancel'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   tableTools: $('table-tools'), ttSwatches: $('tt-swatches'),
   sessionList: $('session-list'), sessionCount: $('session-count'),
@@ -869,7 +885,7 @@ function toast(message) {
 
 const anyDialogOpen = () =>
   !el.modalBackdrop.hidden || !el.pdlgBackdrop.hidden || !el.sdlgBackdrop.hidden ||
-  !el.confirmBackdrop.hidden || !el.searchPanel.hidden;
+  !el.confirmBackdrop.hidden || !el.searchPanel.hidden || !el.expdlgBackdrop.hidden;
 
 // ---------------------------------------------------------------------------
 // Диалог подтверждения (замена системного confirm())
@@ -3189,6 +3205,61 @@ function exportProjectById(id) {
   if (!p) return;
   runExport(`${p.name} — ${t('export.all_tasks')} — ${fmtDate(Date.now())}`, buildProjectSheets(p));
 }
+/** Выбор периода выгрузки — то же, что лист ExportPeriodSheet в мобильном:
+ *  пресеты плюс «Свой» с двумя датами. «Всё время» уходит в сводку по всем
+ *  проектам (buildAllProjectsSheets), остальные — в лист сессий за диапазон
+ *  (buildPeriodSheets), ровно как решает onExportRange на мобилке. */
+const EXPORT_PRESETS = ['all', 'month', 'week', 'day', 'custom'];
+const expdlg = { preset: 'all', from: null, to: null };
+
+function expdlgRange() {
+  const now = new Date();
+  const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+  if (expdlg.preset === 'all') return null;
+  if (expdlg.preset === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1), endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
+  if (expdlg.preset === 'week') { const ws = mondayOf(now); return [ws, endOfDay(new Date(ws.getTime() + 6 * 86400000))]; }
+  if (expdlg.preset === 'day') return [new Date(now.getFullYear(), now.getMonth(), now.getDate()), endOfDay(now)];
+  let a = keyToDate(expdlg.from);
+  let b = keyToDate(expdlg.to);
+  if (a > b) [a, b] = [b, a];
+  return [a, endOfDay(b)];
+}
+
+function renderExpdlg() {
+  el.expPills.innerHTML = '';
+  for (const p of EXPORT_PRESETS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'exp-pill' + (p === expdlg.preset ? ' on' : '');
+    b.textContent = t(`export.period_${p}`);
+    b.addEventListener('click', () => { expdlg.preset = p; renderExpdlg(); });
+    el.expPills.appendChild(b);
+  }
+  el.expRange.hidden = expdlg.preset !== 'custom';
+  el.expFromBtn.textContent = fmtDpBtn(expdlg.from);
+  el.expToBtn.textContent = fmtDpBtn(expdlg.to);
+}
+
+function openExportPeriodDialog() {
+  const today = dayKey(new Date());
+  if (!expdlg.from) expdlg.from = today;
+  if (!expdlg.to) expdlg.to = today;
+  renderExpdlg();
+  el.expdlgBackdrop.hidden = false;
+}
+function closeExpdlg() { el.expdlgBackdrop.hidden = true; }
+
+el.expFromBtn.addEventListener('click', () => openDatePicker(el.expFromBtn, expdlg.from, (key) => { expdlg.from = key; renderExpdlg(); }));
+el.expToBtn.addEventListener('click', () => openDatePicker(el.expToBtn, expdlg.to, (key) => { expdlg.to = key; renderExpdlg(); }));
+el.expdlgCancel.addEventListener('click', closeExpdlg);
+el.expdlgOk.addEventListener('click', () => {
+  const range = expdlgRange();
+  closeExpdlg();
+  if (!range) { exportAllProjects(); return; }
+  const [from, to] = range;
+  runExport(`Lancible — ${t('export.period')} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
+});
+
 function exportAllProjects() {
   runExport(`Lancible — ${t('export.all_projects')} — ${fmtDate(Date.now())}`, buildAllProjectsSheets());
 }
@@ -3531,6 +3602,7 @@ el.exportTaskBtn.addEventListener('click', exportTask);
 el.exportProjectBtn.addEventListener('click', exportProject);
 el.exportCalendarBtn.addEventListener('click', exportCalendar);
 el.exportAllBtn.addEventListener('click', exportAllProjects);
+el.exportPeriodBtn.addEventListener('click', openExportPeriodDialog);
 el.pinTaskBtn.addEventListener('click', () => selectedId && togglePinTask(selectedId));
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });
 

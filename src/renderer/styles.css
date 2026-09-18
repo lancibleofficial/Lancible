@@ -281,7 +281,7 @@ body.nav-collapsed #navrail { width: var(--nav-w-collapsed); }
 body.nav-collapsed .nav-item .nav-label { opacity: 0; }
 .nav-item:hover { background: var(--panel-2); color: var(--text); }
 .nav-item:active { transform: scale(0.98); }
-.nav-item.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.nav-item.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--text); }
 
 .nav-update {
   position: relative;
@@ -908,7 +908,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-item .ctx-check { color: var(--accent); flex: none; }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
-#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop {
+#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #expdlg-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
@@ -1517,7 +1517,27 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .pl-money { color: var(--accent); font-weight: 400; display: block; }
 .pl-time { color: var(--text-dim); font-size: 11px; }
 
-.cal-day { border-left: 1px solid var(--border); background: var(--panel); padding: 18px 16px; overflow-y: auto; }
+.cal-day {
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  padding: 18px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+/* Колонка нужна только ради кнопки экспорта внизу; всё остальное должно
+   сохранять свою высоту, иначе flex сожмёт список записей. */
+.cal-day > * { flex: none; }
+.cal-export {
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  justify-content: center;
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+.cal-day-list + .cal-export, .muted + .cal-export { margin-top: auto; }
 .cal-view-tot {
   display: flex;
   align-items: center;
@@ -1574,6 +1594,25 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .tb-account:hover { border-color: var(--border-strong); }
 .tb-account .icon { width: 15px; height: 15px; flex: none; color: var(--icon); }
 .tb-account span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Диалог выбора периода экспорта ---------- */
+
+.exp-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.exp-pill {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.12s var(--ease), border-color 0.12s var(--ease);
+}
+.exp-pill:hover { border-color: var(--border-strong); }
+.exp-pill.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.exp-range { display: flex; align-items: center; gap: 8px; }
+.exp-range .dp-btn { flex: 1; }
 
 /* ---------- Страница статистики ---------- */
 
