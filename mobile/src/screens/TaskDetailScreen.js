@@ -9,7 +9,9 @@ import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney } from '.
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
-import { openSheet } from '../store/useSheetStore';
+import { openSheet, closeSheet } from '../store/useSheetStore';
+import DueSheet from '../components/DueSheet';
+import { dueShort, remindKey, REMIND_LABEL } from '../lib/due';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
 import { useColors, spacing, radius, fontSize } from '../theme';
@@ -26,6 +28,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   const LANG = useAppStore((s) => s.settings.lang);
   const currency = useAppStore((s) => s.settings.currency);
   const updateTask = useAppStore((s) => s.updateTask);
+  const setTaskDue = useAppStore((s) => s.setTaskDue);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const togglePinTask = useAppStore((s) => s.togglePinTask);
   const startTimer = useAppStore((s) => s.startTimer);
@@ -156,6 +159,22 @@ export default function TaskDetailScreen({ route, navigation }) {
     });
   }
 
+  const fmtHm = (iso) => {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  function onOpenDue() {
+    openSheet(
+      <DueSheet
+        task={task}
+        lang={LANG}
+        onApply={(patch) => { setTaskDue(taskId, patch); closeSheet(); }}
+        onClear={() => { setTaskDue(taskId, { dueAt: null, remindAt: null, remindOffsetMin: null }); closeSheet(); }}
+      />,
+    );
+  }
+
   useEffect(() => () => { clearTimeout(titleTimer.current); clearTimeout(notesTimer.current); }, []);
 
   if (!task) return null;
@@ -227,6 +246,22 @@ export default function TaskDetailScreen({ route, navigation }) {
               </View>
             </View>
           </View>
+
+          <Pressable style={styles.dueRow} onPress={onOpenDue}>
+            <Icon name="clock" size={15} color={colors.textDim} />
+            <View style={styles.dueMain}>
+              <Text style={styles.dueLabel}>{t(LANG, 'due.label')}</Text>
+              {task.dueAt ? (
+                <Text style={styles.dueRemind}>{t(LANG, REMIND_LABEL[remindKey(task)])}</Text>
+              ) : null}
+            </View>
+            {task.dueAt ? (
+              <Text style={styles.dueValue}>{`${dueShort(task, LANG)}, ${fmtHm(task.dueAt)}`}</Text>
+            ) : (
+              <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
+            )}
+            <Icon name="chevron-right" size={14} color={colors.textDim} />
+          </Pressable>
 
           <View style={styles.tabRow}>
             <Pressable style={[styles.tab, tab === 'notes' && styles.tabActive]} onPress={() => setTab('notes')}>
@@ -317,6 +352,16 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: spacing.md, justifyContent: 'center',
   },
   earnedValue: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
+  dueRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.panel, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginBottom: spacing.lg,
+  },
+  dueMain: { flex: 1 },
+  dueLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  dueRemind: { color: colors.textDim, fontSize: fontSize.xs, marginTop: 1 },
+  dueValue: { color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
+  dueNone: { color: colors.textDim, fontSize: fontSize.sm },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
   tabActive: { backgroundColor: colors.tabActiveBg },

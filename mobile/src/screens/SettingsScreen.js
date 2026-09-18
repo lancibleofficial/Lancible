@@ -17,6 +17,7 @@ import { CURRENCIES } from '../lib/migrate';
 import { CURRENCY_SYMBOLS, fmtMoney } from '../lib/format';
 import { openSheet } from '../store/useSheetStore';
 import { setSyncEnabled } from '../lib/sync';
+import { permissionStatus, ensurePermission } from '../lib/notifications';
 import { checkForUpdate } from '../lib/updateCheck';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, useThemeMode, spacing, radius, fontSize, tabBarClearance } from '../theme';
@@ -25,10 +26,12 @@ import { t, LANG_NAMES } from '../lib/i18n';
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const [notifPerm, setNotifPerm] = useState('ask');
   const styles = makeStyles(colors, insets);
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const settings = useAppStore((s) => s.settings);
+  const setNotifyEnabled = useAppStore((s) => s.setNotifyEnabled);
   const setSettings = useAppStore((s) => s.setSettings);
   const resolvedMode = useThemeMode();
   const appVersion = (Constants.expoConfig && Constants.expoConfig.version) || '1.0.0';
@@ -39,7 +42,30 @@ export default function SettingsScreen() {
     checkForUpdate().then((result) => {
       if (!cancelled && result.available) setUpdate(result);
     });
-    return () => { cancelled = true; };
+    // Разрешение могли поменять в системных настройках, пока приложение
+  // было в фоне, — перечитываем его при каждом заходе на экран.
+  async function onToggleNotify(value) {
+    // Включение имеет смысл только вместе с разрешением: без него мы бы
+    // молча ничего не планировали, а тумблер показывал бы «включено».
+    if (value) {
+      await ensurePermission();
+      setNotifPerm(await permissionStatus());
+    }
+    setNotifyEnabled(value);
+  }
+
+  async function onOpenSystemNotifications() {
+    if (notifPerm === 'ask') {
+      await ensurePermission();
+      setNotifPerm(await permissionStatus());
+      return;
+    }
+    Linking.openSettings();
+  }
+
+  useEffect(() => { permissionStatus().then(setNotifPerm); }, []);
+
+  return () => { cancelled = true; };
   }, []);
 
   if (authStatus === 'needsOnboarding') return <OnboardingScreen />;
@@ -155,6 +181,30 @@ export default function SettingsScreen() {
           </SettingsCard>
         </>
       ) : null}
+
+      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_notifications')}</Text>
+      <SettingsCard>
+        <SettingsRow
+          icon="bell"
+          label={t(settings.lang, 'notif.enable')}
+          right={(
+            <Switch
+              value={settings.notifyEnabled !== false}
+              onValueChange={onToggleNotify}
+              trackColor={{ false: colors.panel2, true: colors.accent }}
+              ios_backgroundColor={colors.panel2}
+              thumbColor="#fff"
+            />
+          )}
+        />
+        <SettingsRow
+          icon="settings"
+          label={t(settings.lang, 'notif.system')}
+          value={t(settings.lang, `notif.perm_${notifPerm === 'granted' ? 'granted' : notifPerm === 'denied' ? 'denied' : 'ask'}`)}
+          onPress={onOpenSystemNotifications}
+          last
+        />
+      </SettingsCard>
 
       <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_work')}</Text>
       <SettingsCard>

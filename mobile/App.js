@@ -11,6 +11,8 @@ import RootNavigator from './src/navigation/RootNavigator';
 import Toast from './src/components/Toast';
 import BottomSheet from './src/components/BottomSheet';
 import { useColors, useThemeMode } from './src/theme';
+import { useAppStore } from './src/store/useAppStore';
+import { prepareAndroidChannel, rescheduleAll } from './src/lib/notifications';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -33,6 +35,17 @@ export default function App() {
   });
   const colors = useColors();
   const mode = useThemeMode();
+
+  // Система хранит расписание уведомлений отдельно от нашего state, и
+  // после синхронизации с другого устройства они расходятся — поэтому на
+  // старте (когда данные уже подняты из хранилища) собираем его заново.
+  const hydrated = useAppStore((s) => s.hasHydrated);
+  useEffect(() => {
+    if (!hydrated) return;
+    const { tasks, settings } = useAppStore.getState();
+    prepareAndroidChannel(settings.lang);
+    rescheduleAll(tasks, settings.lang, settings.notifyEnabled !== false);
+  }, [hydrated]);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});

@@ -11,6 +11,7 @@ import RecentTaskCard from '../components/RecentTaskCard';
 import NewProjectSheet from '../components/NewProjectSheet';
 import StatCard from '../components/StatCard';
 import Icon from '../components/Icon';
+import NotifButton from '../components/NotifButton';
 import Logo from '../components/Logo';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useTicker } from '../hooks/useTicker';
@@ -86,13 +87,15 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         ),
       headerRight: () => (
-        <Pressable
-          hitSlop={10}
-          style={styles.headerIconBtnLast}
-          onPress={() => { setSearchOpen((v) => !v); setQuery(''); }}
-        >
-          <Icon name={searchOpen ? 'x' : 'search'} size={20} color={colors.text} />
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable
+            hitSlop={10}
+            onPress={() => { setSearchOpen((v) => !v); setQuery(''); }}
+          >
+            <Icon name={searchOpen ? 'x' : 'search'} size={20} color={colors.text} />
+          </Pressable>
+          <NotifButton />
+        </View>
       ),
     });
   }, [navigation, searchOpen, query, colors, lang]);

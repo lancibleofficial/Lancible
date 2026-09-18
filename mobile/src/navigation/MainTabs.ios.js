@@ -1,4 +1,4 @@
-import { Pressable, Platform } from 'react-native';
+import { View, Pressable, Platform } from 'react-native';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import HomeStack from './HomeStack';
@@ -6,6 +6,7 @@ import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import Icon from '../components/Icon';
+import NotifButton from '../components/NotifButton';
 import AppHeader from '../components/AppHeader';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
@@ -85,7 +86,12 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={({ navigation }) => ({
         header: (props) => <AppHeader {...props} />,
-        headerRight: () => <SearchHeaderButton navigation={navigation} colors={colors} />,
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SearchHeaderButton navigation={navigation} colors={colors} />
+            <NotifButton />
+          </View>
+        ),
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
         tabBarLabelStyle: { fontFamily: 'BasiquePro-Regular', fontSize: 11 },
