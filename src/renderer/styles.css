@@ -753,7 +753,7 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
   min-width: 108px;
   transition: background 0.13s var(--ease), transform 0.08s var(--ease);
 }
-.timer-btn.running { background: var(--danger); }
+.timer-btn.running { background: var(--danger); color: #fff; }
 .timer-btn:hover { background: var(--accent-hover); }
 .timer-btn.running:hover { background: var(--danger); filter: brightness(1.08); }
 .timer-btn:active { transform: scale(0.97); }
@@ -989,7 +989,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .modal-buttons button:hover { border-color: var(--border-strong); }
 .modal-buttons button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .modal-buttons button:active { transform: scale(0.97); }
-.modal-buttons button.confirm-danger { background: var(--danger); border-color: var(--danger); color: #2a1210; }
+.modal-buttons button.confirm-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .modal-buttons button.confirm-danger:hover { filter: brightness(1.08); background: var(--danger); border-color: var(--danger); }
 
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1279,7 +1279,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   transition: border-color 0.12s var(--ease), color 0.12s var(--ease);
 }
 .dp-btn:hover { border-color: var(--border-strong); }
-.dp-btn.on { border-color: var(--accent); color: var(--accent); }
+.dp-btn.on, .dp-btn.open { border-color: var(--accent); color: var(--text); }
 .dp-btn-wide { width: 100%; min-width: 0; }
 
 .tp-pop {
@@ -1639,10 +1639,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+/* left/top выставляет toggleNotifPanel по фактическому положению кнопки:
+   колокольчик стоит у поиска, а не у края окна. */
 #notif-panel {
   position: fixed;
-  top: 56px;
-  right: 14px;
   width: 340px;
   max-width: calc(100vw - 24px);
   max-height: 70vh;

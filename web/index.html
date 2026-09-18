@@ -282,7 +282,7 @@
                 <button type="button" class="dp-btn" id="due-time-btn" hidden></button>
                 <span class="due-state" id="due-state" hidden></span>
                 <span class="due-gap"></span>
-                <select id="due-remind" class="settings-row-select" hidden></select>
+                <button type="button" class="dp-btn" id="due-remind" hidden></button>
                 <button type="button" class="icon-btn" id="due-clear-btn" hidden data-i18n-title="due.clear" title="Убрать срок">
                   <svg class="icon" viewBox="0 0 16 16"><path d="M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z"/></svg>
                 </button>
@@ -464,6 +464,20 @@
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 6.4a3.6 3.6 0 016.9-1.3A3 3 0 0114.8 8a3 3 0 01-3 3H4.9A2.9 2.9 0 012 8.1a2.9 2.9 0 012.6-2.88z"/></svg>
               <span class="settings-row-label" data-i18n="sync.toggle_label">Синхронизировать с аккаунтом</span>
               <span class="switch-track"><span class="switch-thumb"></span></span>
+            </button>
+          </div>
+
+          <div class="settings-section-label" data-i18n="settings.section_notifications">Уведомления</div>
+          <div class="settings-card">
+            <button type="button" class="settings-row switch" id="settings-notif-toggle" aria-pressed="true">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+              <span class="settings-row-label" data-i18n="notif.enable">Напоминания о дедлайнах</span>
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </button>
+            <button type="button" class="settings-row settings-row-btn settings-row-last" id="settings-notif-system">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.55 1.4h2.9l.4 1.85a5.1 5.1 0 011.05.6l1.8-.6 1.45 2.5-1.4 1.25a5.1 5.1 0 010 1.2l1.4 1.25-1.45 2.5-1.8-.6a5.1 5.1 0 01-1.05.6l-.4 1.85h-2.9l-.4-1.85a5.1 5.1 0 01-1.05-.6l-1.8.6-1.45-2.5 1.4-1.25a5.1 5.1 0 010-1.2L1.5 5.95 2.95 3.45l1.8.6a5.1 5.1 0 011.05-.6zM8 5.6a2.4 2.4 0 100 4.8 2.4 2.4 0 000-4.8z"/></svg>
+              <span class="settings-row-label" data-i18n="notif.system">Уведомления в системе</span>
+              <span class="settings-row-value" id="settings-notif-state"></span>
             </button>
           </div>
 

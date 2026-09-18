@@ -191,6 +191,14 @@ app.whenReady().then(() => {
     if (win) win.setTitleBarOverlay(resolveTitlebarOverlay(theme));
     return true;
   });
+  // Отдельный канал, а не shell:open-external: тот намеренно пропускает
+  // только https, а системные настройки открываются своей схемой.
+  ipcMain.handle('shell:open-notification-settings', () => {
+    shell.openExternal(process.platform === 'darwin'
+      ? 'x-apple.systempreferences:com.apple.preference.notifications'
+      : 'ms-settings:notifications');
+    return true;
+  });
   ipcMain.handle('shell:open-external', (_event, url) => {
     if (typeof url === 'string' && /^https:\/\//.test(url)) {
       shell.openExternal(url);

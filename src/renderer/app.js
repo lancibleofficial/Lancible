@@ -111,7 +111,11 @@ const T = {
     'task.pin_short': 'Закрепить наверх', 'task.unpin_short': 'Открепить',
     'task.no_name': 'Без названия',
     'due.label': 'Дедлайн',
-    'notif.title': 'Уведомления', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
+    'notif.title': 'Уведомления',
+    'settings.section_notifications': 'Уведомления',
+    'notif.system_hint': 'Разрешение на уведомления меняется в настройках браузера для этого сайта.', 'notif.enable': 'Напоминания о дедлайнах',
+    'notif.system': 'Уведомления в системе', 'notif.perm_granted': 'разрешены',
+    'notif.perm_denied': 'запрещены', 'notif.perm_ask': 'разрешить', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
     'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
     'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
     'remind.none': 'Без напоминания', 'remind.at': 'В момент срока', 'remind.15m': 'За 15 минут',
@@ -240,7 +244,11 @@ const T = {
     'task.pin_short': 'Pin to top', 'task.unpin_short': 'Unpin',
     'task.no_name': 'Untitled',
     'due.label': 'Deadline',
-    'notif.title': 'Notifications', 'notif.empty': 'No due dates or reminders yet.', 'notif.mark_seen': 'Mark read',
+    'notif.title': 'Notifications',
+    'settings.section_notifications': 'Notifications',
+    'notif.system_hint': 'Notification permission is changed in your browser settings for this site.', 'notif.enable': 'Deadline reminders',
+    'notif.system': 'System notifications', 'notif.perm_granted': 'allowed',
+    'notif.perm_denied': 'blocked', 'notif.perm_ask': 'allow', 'notif.empty': 'No due dates or reminders yet.', 'notif.mark_seen': 'Mark read',
     'notif.overdue': 'Overdue', 'notif.soon': 'Due soon', 'notif.reminder': 'Reminder', 'due.none': 'not set', 'due.clear': 'Clear due date', 'due.remind_at': 'Remind',
     'due.overdue': 'overdue', 'due.today': 'today', 'due.tomorrow': 'tomorrow', 'due.in_days': 'in {n} d',
     'remind.none': 'No reminder', 'remind.at': 'At due time', 'remind.15m': '15 minutes before',
@@ -369,7 +377,11 @@ const T = {
     'task.pin_short': 'Закріпити вгорі', 'task.unpin_short': 'Відкріпити',
     'task.no_name': 'Без назви',
     'due.label': 'Термін',
-    'notif.title': 'Сповіщення', 'notif.empty': 'Термінів і нагадувань поки немає.', 'notif.mark_seen': 'Прочитано',
+    'notif.title': 'Сповіщення',
+    'settings.section_notifications': 'Сповіщення',
+    'notif.system_hint': 'Дозвіл на сповіщення змінюється в налаштуваннях браузера для цього сайту.', 'notif.enable': 'Нагадування про дедлайни',
+    'notif.system': 'Сповіщення в системі', 'notif.perm_granted': 'дозволено',
+    'notif.perm_denied': 'заборонено', 'notif.perm_ask': 'дозволити', 'notif.empty': 'Термінів і нагадувань поки немає.', 'notif.mark_seen': 'Прочитано',
     'notif.overdue': 'Протерміновано', 'notif.soon': 'Скоро термін', 'notif.reminder': 'Нагадування', 'due.none': 'не задано', 'due.clear': 'Прибрати термін', 'due.remind_at': 'Нагадати',
     'due.overdue': 'протерміновано', 'due.today': 'сьогодні', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
     'remind.none': 'Без нагадування', 'remind.at': 'У момент терміну', 'remind.15m': 'За 15 хвилин',
@@ -498,7 +510,11 @@ const T = {
     'task.pin_short': 'Жоғарыға бекіту', 'task.unpin_short': 'Бекітуден алу',
     'task.no_name': 'Атаусыз',
     'due.label': 'Мерзім',
-    'notif.title': 'Хабарламалар', 'notif.empty': 'Мерзімдер мен еске салулар жоқ.', 'notif.mark_seen': 'Оқылды',
+    'notif.title': 'Хабарламалар',
+    'settings.section_notifications': 'Хабарламалар',
+    'notif.system_hint': 'Хабарлама рұқсаты осы сайт үшін браузер параметрлерінде өзгереді.', 'notif.enable': 'Дедлайн еске салулары',
+    'notif.system': 'Жүйедегі хабарламалар', 'notif.perm_granted': 'рұқсат етілген',
+    'notif.perm_denied': 'тыйым салынған', 'notif.perm_ask': 'рұқсат беру', 'notif.empty': 'Мерзімдер мен еске салулар жоқ.', 'notif.mark_seen': 'Оқылды',
     'notif.overdue': 'Мерзімі өтті', 'notif.soon': 'Мерзімі жақын', 'notif.reminder': 'Еске салу', 'due.none': 'қойылмаған', 'due.clear': 'Мерзімді алып тастау', 'due.remind_at': 'Еске салу',
     'due.overdue': 'мерзімі өтті', 'due.today': 'бүгін', 'due.tomorrow': 'ертең', 'due.in_days': '{n} күнде',
     'remind.none': 'Еске салусыз', 'remind.at': 'Мерзім сәтінде', 'remind.15m': '15 минут бұрын',
@@ -700,6 +716,8 @@ const el = {
   expdlgOk: $('expdlg-ok'), expdlgCancel: $('expdlg-cancel'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
+  settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
+  settingsNotifState: $('settings-notif-state'),
   notifList: $('notif-list'), notifEmpty: $('notif-empty'), notifSeen: $('notif-seen'),
   dueDateBtn: $('due-date-btn'), dueTimeBtn: $('due-time-btn'), dueState: $('due-state'),
   dueRemind: $('due-remind'), dueClearBtn: $('due-clear-btn'), dueCustomRow: $('due-custom-row'),
@@ -1078,6 +1096,20 @@ function openLangMenu(anchor) {
 el.langToggle.addEventListener('click', () => openLangMenu(el.langToggle));
 el.settingsLangRow.addEventListener('click', () => openLangMenu(el.settingsLangRow));
 
+el.settingsNotifToggle.addEventListener('click', () => {
+  state.settings.notifyEnabled = state.settings.notifyEnabled === false;
+  if (state.settings.notifyEnabled) ensureNotifPermission();
+  renderSettings();
+  scheduleSave();
+});
+el.settingsNotifSystem.addEventListener('click', () => {
+  if (window.api && window.api.openNotificationSettings) { window.api.openNotificationSettings(); return; }
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission().then(renderSettings).catch(() => {});
+    return;
+  }
+  toast(t('notif.system_hint'));
+});
 el.settingsSyncToggle.addEventListener('click', () => {
   toggleSyncEnabled();
   renderSettings();
@@ -1262,6 +1294,13 @@ function renderSettings() {
   if (currentUser) el.settingsNameValue.textContent = currentUser.name || t('profile.no_name');
 
   el.settingsLangValue.textContent = LANG_NAMES[(state.settings && state.settings.lang) || 'ru'];
+
+  const notifyOn = state.settings.notifyEnabled !== false;
+  el.settingsNotifToggle.setAttribute('aria-pressed', String(notifyOn));
+  // На десктопе ведём в системные настройки, в браузере — показываем
+  // состояние разрешения и предлагаем выдать его, если ещё не спрашивали.
+  const perm = typeof Notification === 'undefined' ? 'denied' : Notification.permission;
+  el.settingsNotifState.textContent = t(perm === 'granted' ? 'notif.perm_granted' : perm === 'denied' ? 'notif.perm_denied' : 'notif.perm_ask');
 
   const syncOn = state.settings.syncEnabled !== false;
   el.settingsDataLabel.hidden = !currentUser;
@@ -2738,6 +2777,13 @@ function toggleNotifPanel() {
   renderNotifPanel();
   el.notifPanel.hidden = false;
   el.notifBtn.classList.add('on');
+  // Колокольчик стоит у поиска, а не у края экрана, поэтому панель
+  // выравнивается по нему, а не по правому краю окна.
+  const r = el.notifBtn.getBoundingClientRect();
+  const w = el.notifPanel.offsetWidth;
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+  el.notifPanel.style.left = `${Math.round(left)}px`;
+  el.notifPanel.style.top = `${Math.round(r.bottom + 6)}px`;
   markNotifSeen();
 }
 
@@ -2750,6 +2796,7 @@ function ensureNotifPermission() {
 }
 function notifyOS(title, body) {
   try {
+    if (state.settings.notifyEnabled === false) return;
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     new Notification(title, { body });
   } catch (err) { console.warn('Не удалось показать системное уведомление:', err); }
@@ -2788,15 +2835,8 @@ function renderDue(task) {
   el.dueState.className = `due-state ${state2 || ''}`;
   if (!el.dueState.hidden) el.dueState.textContent = dueShort(task);
 
-  el.dueRemind.innerHTML = '';
-  for (const p of REMIND_PRESETS) {
-    const o = document.createElement('option');
-    o.value = String(p);
-    o.textContent = t(REMIND_LABEL[String(p)]);
-    el.dueRemind.appendChild(o);
-  }
   const isCustom = (task.remindOffsetMin === null || task.remindOffsetMin === undefined) && !!task.remindAt;
-  el.dueRemind.value = isCustom ? 'custom' : String(task.remindOffsetMin === undefined ? null : task.remindOffsetMin);
+  el.dueRemind.textContent = t(REMIND_LABEL[remindKey(task)]);
   el.dueCustomRow.hidden = !has || !isCustom;
   if (isCustom) {
     const r = new Date(task.remindAt);
@@ -3862,10 +3902,12 @@ el.dueClearBtn.addEventListener('click', () => {
   task.remindOffsetMin = null;
   touchTask(task);
 });
-el.dueRemind.addEventListener('change', () => {
-  const task = getTask(selectedId);
-  if (!task) return;
-  const v = el.dueRemind.value;
+/** Ключ текущего варианта напоминания: 'null' | 'custom' | число минут. */
+function remindKey(task) {
+  if ((task.remindOffsetMin === null || task.remindOffsetMin === undefined) && task.remindAt) return 'custom';
+  return String(task.remindOffsetMin === undefined ? null : task.remindOffsetMin);
+}
+function applyRemind(task, v) {
   if (v !== 'null') ensureNotifPermission();
   if (v === 'custom') {
     task.remindOffsetMin = null;
@@ -3878,6 +3920,16 @@ el.dueRemind.addEventListener('change', () => {
     task.remindAt = null;
   }
   touchTask(task);
+}
+el.dueRemind.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.dueAt) return;
+  const current = remindKey(task);
+  openMenu(el.dueRemind, REMIND_PRESETS.map((p) => ({
+    label: t(REMIND_LABEL[String(p)]),
+    selected: String(p) === current,
+    onClick: () => applyRemind(task, String(p)),
+  })));
 });
 el.remindDateBtn.addEventListener('click', () => {
   const task = getTask(selectedId);
@@ -4011,6 +4063,7 @@ function migrate() {
   if (!['system', 'light', 'dark'].includes(state.settings.theme)) state.settings.theme = 'system';
   if (!T[state.settings.lang]) state.settings.lang = 'ru';
   if (typeof state.settings.syncEnabled !== 'boolean') state.settings.syncEnabled = true;
+  if (typeof state.settings.notifyEnabled !== 'boolean') state.settings.notifyEnabled = true;
   if (!state.settings.syncResolvedFor || typeof state.settings.syncResolvedFor !== 'object') state.settings.syncResolvedFor = null;
 
   let cur = state.settings.currency || 'RUB';
