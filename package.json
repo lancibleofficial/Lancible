@@ -70,7 +70,7 @@
     },
     "publish": {
       "provider": "generic",
-      "url": "http://localhost:8934/"
+      "url": "https://yiglgfkjjvwijukdzutw.supabase.co/storage/v1/object/public/releases/"
     }
   }
 }
