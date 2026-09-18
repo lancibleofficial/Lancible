@@ -8,7 +8,7 @@ import { dayKey, keyToDate } from '../lib/calendarMath';
 import { REMIND_PRESETS, REMIND_LABEL, remindKey } from '../lib/due';
 import { setSheetFooter } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize } from '../theme';
-import { t } from '../lib/i18n';
+import { t, LOCALE_MAP } from '../lib/i18n';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -81,7 +81,7 @@ export default function DueSheet({ task, lang, onApply, onClear }) {
       <View style={styles.summary}>
         <Icon name="clock" size={14} color={colors.textDim} />
         <Text style={styles.summaryText}>
-          {`${keyToDate(dateKey).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${pad2(hour)}:${pad2(minute)}`}
+          {`${keyToDate(dateKey).toLocaleDateString(LOCALE_MAP[lang] || 'ru-RU', { day: 'numeric', month: 'short' })}, ${pad2(hour)}:${pad2(minute)}`}
         </Text>
         <Text style={styles.summaryRemind}>{t(lang, REMIND_LABEL[remind])}</Text>
       </View>
