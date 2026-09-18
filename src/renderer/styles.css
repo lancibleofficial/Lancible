@@ -28,6 +28,9 @@
   --danger: #ef7a72;
   --running: #aceb98;
 
+  --input-bg: #3b3c42;
+  --tab-active-bg: #2a2b2e;
+
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --nav-w: 208px;
@@ -56,6 +59,8 @@
     --link: #1c72b0;
     --danger: #d13a2c;
     --running: #68c44d;
+    --input-bg: #ffffff;
+    --tab-active-bg: #ffffff;
     --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
   }
 }
@@ -75,6 +80,8 @@
   --link: #1c72b0;
   --danger: #d13a2c;
   --running: #68c44d;
+  --input-bg: #ffffff;
+  --tab-active-bg: #ffffff;
   --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
 }
 
@@ -154,6 +161,11 @@ b, strong { font-weight: 400; }
   height: 52px;
   background: var(--bg);
   -webkit-app-region: drag;
+  /* На Windows кнопки окна рисует система поверх страницы
+     (titleBarOverlay), и без этого отступа кнопка аккаунта уезжала бы
+     прямо под «свернуть/закрыть». env(titlebar-area-width) — ширина
+     шапки без них; в вебе переменной нет и фолбэк 100% даёт ноль. */
+  padding-right: calc(100% - env(titlebar-area-width, 100%));
 }
 /* Само лого вынесено из flex-потока (position:absolute) — так его width можно
    плавно анимировать при сворачивании рейла: у Chromium 33 есть застарелый баг,
@@ -206,7 +218,7 @@ body.nav-collapsed .tb-rest { margin-left: var(--nav-w-collapsed); }
   margin: auto 0 auto 16px;
   height: 32px;
   padding: 0 12px;
-  background: var(--panel-2);
+  background: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
   -webkit-app-region: no-drag;
@@ -294,8 +306,8 @@ body.nav-collapsed .nav-item .nav-label { opacity: 0; }
 .theme-tabs {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   margin: 2px 0;
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -309,16 +321,14 @@ body.nav-collapsed .nav-item .nav-label { opacity: 0; }
   border: none;
   background: none;
   color: var(--icon);
-  padding: 7px 0;
+  padding: 7px 14px;
   border-radius: 7px;
   cursor: pointer;
   transition: background 0.13s var(--ease), color 0.13s var(--ease);
 }
 .theme-tab .icon { color: inherit; }
 .theme-tab:hover { color: var(--text); }
-.theme-tab.on { background: var(--bg); color: var(--accent); }
-body.nav-collapsed .theme-tabs { padding: 3px 2px; }
-body.nav-collapsed .theme-tab:not(.on) { display: none; }
+.theme-tab.on { background: var(--tab-active-bg); color: var(--text); }
 
 /* ---------- Панель поиска ---------- */
 
@@ -533,7 +543,7 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
   font-size: 11px; font-weight: 400; padding: 4px 6px; border-radius: 5px; cursor: pointer;
   transition: background 0.12s var(--ease), color 0.12s var(--ease);
 }
-.tf-status button.on { background: var(--bg); color: var(--accent); }
+.tf-status button.on { background: var(--tab-active-bg); color: var(--text); }
 
 #task-list { list-style: none; margin: 0; padding: 4px 8px 12px; overflow-y: auto; flex: 1; }
 
@@ -676,7 +686,7 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
   cursor: pointer;
   transition: background 0.12s var(--ease), color 0.12s var(--ease);
 }
-.task-tabs button.on { background: var(--bg); color: var(--accent); }
+.task-tabs button.on { background: var(--tab-active-bg); color: var(--text); }
 
 .tab-panel { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 #tab-history { overflow-y: auto; padding-top: 2px; }
@@ -1198,7 +1208,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   font-size: 12px; font-weight: 400; padding: 5px 11px; border-radius: 6px; cursor: pointer;
   transition: background 0.12s var(--ease), color 0.12s var(--ease);
 }
-.cal-modes button.on { background: var(--bg); color: var(--accent); }
+.cal-modes button.on { background: var(--tab-active-bg); color: var(--text); }
 /* Группа prev/title/next/today держится вместе одним flex-элементом — если
    места не хватает даже на неё, переносится целиком, а не разваливается по
    одной кнопке на строку. */
@@ -1548,7 +1558,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   gap: 7px;
   flex: none;
   height: 32px;
-  margin: auto 0 auto auto;
+  margin: auto 12px auto auto;
   padding: 0 12px 0 10px;
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -1564,6 +1574,31 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .tb-account:hover { border-color: var(--border-strong); }
 .tb-account .icon { width: 15px; height: 15px; flex: none; color: var(--icon); }
 .tb-account span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Страница статистики ---------- */
+
+.stats-wrap { max-width: 760px; margin: 0 auto; padding: 24px 24px 40px; }
+.stats-wrap .stat-cards { margin-bottom: 14px; }
+.stats-actions { display: flex; gap: 8px; margin-bottom: 18px; }
+.stats-wrap .st-running { margin-bottom: 18px; }
+.stats-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; }
+.stats-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.stats-list li:first-child { border-radius: 10px 10px 0 0; }
+.stats-list li:last-child { border-bottom: none; border-radius: 0 0 10px 10px; }
+.stats-list li:only-child { border-radius: 10px; }
+.stats-list li.clickable { cursor: pointer; }
+.stats-list li.clickable:hover { background: var(--panel-2); }
+.stats-dot { width: 8px; height: 8px; border-radius: 3px; flex: none; background: var(--pc, var(--accent)); }
+.stats-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats-val { flex: none; color: var(--text-dim); font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 76px; text-align: right; }
+.stats-empty { color: var(--text-dim); text-align: center; padding: 28px 0; font-size: 13px; }
 
 /* ---------- Страница настроек ---------- */
 
@@ -1589,7 +1624,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .settings-profile-name { font-size: 14.5px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .settings-profile-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 .settings-guest-actions { display: flex; gap: 8px; width: 100%; }
-.settings-guest-actions button { flex: 1; }
+.settings-guest-actions button { flex: 1; justify-content: center; }
 
 .settings-section-label {
   font-size: 11px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-dim);

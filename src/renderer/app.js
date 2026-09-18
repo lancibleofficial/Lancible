@@ -80,6 +80,9 @@ const T = {
     'profile.guest': 'Гость', 'profile.guest_sub': 'Войдите, чтобы синхронизировать данные между устройствами',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
     'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
+    'nav.stats': 'Статистика', 'stats.by_project': 'По проектам', 'stats.by_task': 'По задачам',
+    'stats.empty': 'Пока нет данных — запусти таймер на любой задаче',
+    'export.all_excel': 'Скачать всё в Excel', 'export.all_projects': 'все проекты',
     'home.title': 'Проекты', 'home.create': 'Создать проект', 'home.pinned': 'Закреплённые',
     'home.other': 'Остальные', 'home.recent': 'Недавние задачи',
     'home.empty': 'Пока нет ни одного проекта. Создай первый.', 'home.calendar_link': 'Календарь',
@@ -196,6 +199,9 @@ const T = {
     'profile.guest': 'Guest', 'profile.guest_sub': 'Sign in to sync your data across devices',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
     'stats.month': 'earned this month', 'stats.done': 'tasks done',
+    'nav.stats': 'Stats', 'stats.by_project': 'By project', 'stats.by_task': 'By task',
+    'stats.empty': 'No data yet — start a timer on any task',
+    'export.all_excel': 'Export everything', 'export.all_projects': 'all projects',
     'home.title': 'Projects', 'home.create': 'Create project', 'home.pinned': 'Pinned',
     'home.other': 'Other', 'home.recent': 'Recent tasks',
     'home.empty': 'No projects yet. Create the first one.', 'home.calendar_link': 'Calendar',
@@ -312,6 +318,9 @@ const T = {
     'profile.guest': 'Гість', 'profile.guest_sub': 'Увійдіть, щоб синхронізувати дані між пристроями',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
     'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
+    'nav.stats': 'Статистика', 'stats.by_project': 'За проєктами', 'stats.by_task': 'За завданнями',
+    'stats.empty': 'Поки немає даних — запусти таймер на будь-якому завданні',
+    'export.all_excel': 'Завантажити все в Excel', 'export.all_projects': 'усі проєкти',
     'home.title': 'Проєкти', 'home.create': 'Створити проєкт', 'home.pinned': 'Закріплені',
     'home.other': 'Інші', 'home.recent': 'Недавні завдання',
     'home.empty': 'Ще немає жодного проєкту. Створи перший.', 'home.calendar_link': 'Календар',
@@ -428,6 +437,9 @@ const T = {
     'profile.guest': 'Қонақ', 'profile.guest_sub': 'Деректерді құрылғылар арасында синхрондау үшін кіріңіз',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
     'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
+    'nav.stats': 'Статистика', 'stats.by_project': 'Жобалар бойынша', 'stats.by_task': 'Тапсырмалар бойынша',
+    'stats.empty': 'Әзірге дерек жоқ — кез келген тапсырмада таймерді қос',
+    'export.all_excel': 'Барлығын Excel-ге', 'export.all_projects': 'барлық жобалар',
     'home.title': 'Жобалар', 'home.create': 'Жоба құру', 'home.pinned': 'Бекітілген',
     'home.other': 'Басқалары', 'home.recent': 'Соңғы тапсырмалар',
     'home.empty': 'Әзірге жоба жоқ. Біріншісін құр.', 'home.calendar_link': 'Күнтізбе',
@@ -638,6 +650,10 @@ const el = {
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
   exportProjectBtn: $('export-project-btn'), exportCalendarBtn: $('export-calendar-btn'),
+  statsView: $('stats-view'), spTime: $('sp-time'), spMoney: $('sp-money'), spDone: $('sp-done'),
+  spRunning: $('sp-running'), spProjLabel: $('sp-proj-label'), spProjects: $('sp-projects'),
+  spTaskLabel: $('sp-task-label'), spTasks: $('sp-tasks'), spEmpty: $('sp-empty'),
+  exportAllBtn: $('export-all-btn'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   tableTools: $('table-tools'), ttSwatches: $('tt-swatches'),
   sessionList: $('session-list'), sessionCount: $('session-count'),
@@ -1080,9 +1096,61 @@ function renderAccountBtn() {
 /** Страница настроек — зеркалит то, что есть в настройках мобильного
  * приложения: профиль/вход, язык, тема, синхронизация (только для вошедших),
  * ставка и валюта по умолчанию. Языковой ряд/тема переиспользуют те же
- * функции и .theme-tab кнопки (просто продублированные в разметке), что и
- * навигационный рейл — второй набор .theme-tab автоматически попадает в
- * el.themeTabs (querySelectorAll на старте) и получает те же обработчики. */
+ * функции, что и раньше делал навигационный рейл: .theme-tab кнопки живут
+ * теперь только здесь и попадают в el.themeTabs тем же querySelectorAll на
+ * старте, так что обработчики к ним цепляются без изменений. */
+/** Отдельная страница статистики — зеркалит экран «Статистика» мобильного
+ *  приложения. Карточки сверху дублируют топбар главной намеренно: там
+ *  они идут довеском к списку проектов, здесь — заголовок собственной
+ *  страницы, на которой ниже лежат разбивки по проектам и по задачам. */
+function renderStatsPage() {
+  const totalMs = state.tasks.reduce((a, t2) => a + taskElapsedMs(t2), 0);
+  const totalMoney = state.tasks.reduce((a, t2) => a + earnedOf(t2), 0);
+  el.spTime.textContent = fmtDur(totalMs);
+  el.spMoney.textContent = fmtMoney(totalMoney);
+  const done = state.tasks.filter((t2) => t2.done).length;
+  el.spDone.textContent = state.tasks.length ? `${done} / ${state.tasks.length}` : '0';
+
+  const running = state.activeTimer && getTask(state.activeTimer.taskId);
+  el.spRunning.hidden = !running;
+  if (running) {
+    const sec = fmtClock(Date.now() - new Date(state.activeTimer.startedAt).getTime());
+    el.spRunning.innerHTML = `<span class="r-name">${icon('clock')} ${escapeHtml(running.title || t('task.no_name'))}</span><span class="r-time">${sec}</span>`;
+    el.spRunning.onclick = () => { openProject(running.projectId); selectTask(running.id); };
+  }
+
+  const byProject = state.projects
+    .map((p) => ({ p, ms: tasksOf(p.id).reduce((a, t2) => a + taskElapsedMs(t2), 0), money: tasksOf(p.id).reduce((a, t2) => a + earnedOf(t2), 0) }))
+    .filter((r) => r.ms > 0)
+    .sort((a, b) => b.ms - a.ms);
+  const byTask = state.tasks
+    .map((t2) => ({ t2, ms: taskElapsedMs(t2), money: earnedOf(t2) }))
+    .filter((r) => r.ms > 0)
+    .sort((a, b) => b.ms - a.ms);
+
+  const row = (color, name, ms, money, onClick) => {
+    const li = document.createElement('li');
+    li.style.setProperty('--pc', color);
+    li.innerHTML = `<span class="stats-dot"></span><span class="stats-name">${escapeHtml(name)}</span>`
+      + `<span class="stats-val">${fmtDur(ms)}</span><span class="stats-val">${fmtMoney(money)}</span>`;
+    if (onClick) { li.classList.add('clickable'); li.addEventListener('click', onClick); }
+    return li;
+  };
+
+  el.spProjects.innerHTML = '';
+  for (const { p, ms, money } of byProject) {
+    el.spProjects.appendChild(row(p.color || PALETTE[0], p.name, ms, money, () => openProject(p.id)));
+  }
+  el.spTasks.innerHTML = '';
+  for (const { t2, ms, money } of byTask) {
+    const p = getProject(t2.projectId);
+    el.spTasks.appendChild(row(p ? p.color : PALETTE[0], t2.title || t('task.no_name'), ms, money, () => { openProject(t2.projectId); selectTask(t2.id); }));
+  }
+  el.spProjLabel.hidden = !byProject.length;
+  el.spTaskLabel.hidden = !byTask.length;
+  el.spEmpty.hidden = byProject.length > 0 || byTask.length > 0;
+}
+
 function renderSettings() {
   if (currentUser) {
     const initial = (currentUser.name || currentUser.email || '?')[0].toUpperCase();
@@ -1585,7 +1653,7 @@ function render() {
     tab.classList.toggle('active', active);
   });
 
-  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView, settings: el.settingsView };
+  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView, stats: el.statsView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1594,6 +1662,7 @@ function render() {
 
   if (v === 'home') renderHome();
   else if (v === 'project') { renderProjectHeader(); renderSidebar(); renderDetail(); renderFooter(); }
+  else if (v === 'stats') renderStatsPage();
   else if (v === 'settings') renderSettings();
   else renderCalendar();
 }
@@ -3021,6 +3090,55 @@ function buildProjectSheets(project) {
   ];
 }
 
+/** Сводка по всем проектам: первый лист — итоги по каждому проекту,
+ *  дальше по листу на проект. Порт buildAllProjectsSheets() из
+ *  mobile/src/lib/xlsxReports.js. Имена листов Excel ограничены 31
+ *  символом и не терпят []:*?/\\, плюс не могут повторяться — отсюда
+ *  uniqueName(). */
+function buildAllProjectsSheets() {
+  const cur = currencySym();
+  const stamp = `${fmtDate(Date.now())} ${fmtTime(Date.now())}`;
+  const rows = [
+    [cellBold(t('xlsx.exported')), stamp],
+    [],
+    [t('xlsx.num'), t('xlsx.project'), t('xlsx.total_time'), t('xlsx.hours'), t('xlsx.sum', { cur }), t('xlsx.sessions')].map(cellBold),
+  ];
+  const first = rows.length + 1;
+  let grandMs = 0;
+  let grandMoney = 0;
+  let grandSessions = 0;
+  state.projects.forEach((project, i) => {
+    const tasks = tasksOf(project.id);
+    const ms = tasks.reduce((a, t2) => a + (t2.totalMs || 0), 0);
+    const money = tasks.reduce((a, t2) => a + (t2.sessions || []).reduce((b, ses) => b + sessionMoney(ses, t2), 0), 0);
+    const count = tasks.reduce((a, t2) => a + (t2.sessions ? t2.sessions.length : 0), 0);
+    grandMs += ms; grandMoney += money; grandSessions += count;
+    rows.push([i + 1, project.name, fmtClock(ms), cellHours(hoursOf(ms)), cellHours(money), count]);
+  });
+  const last = first + state.projects.length - 1;
+  rows.push([
+    cellBold(t('xlsx.total')), '', fmtClock(grandMs),
+    state.projects.length ? { f: `SUM(D${first}:D${last})`, n: hoursOf(grandMs), s: 2 } : cellHours(0),
+    state.projects.length ? { f: `SUM(E${first}:E${last})`, n: grandMoney, s: 2 } : cellHours(0),
+    grandSessions,
+  ]);
+  const used = new Set();
+  const uniqueName = (raw) => {
+    const base = (raw || '').replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, 28) || t('xlsx.default_task_sheet');
+    let name = base;
+    let n = 2;
+    while (used.has(name)) name = `${base} ${n++}`;
+    used.add(name);
+    return name;
+  };
+  const sheets = [{ name: uniqueName(t('xlsx.sheet_tasks')), cols: [6, 34, 14, 9, 12, 10].map((width) => ({ width })), rows }];
+  for (const project of state.projects) {
+    const [tasksSheet] = buildProjectSheets(project);
+    sheets.push({ ...tasksSheet, name: uniqueName(project.name) });
+  }
+  return sheets;
+}
+
 /** Один лист «Сессии» за произвольный промежуток — для выгрузки из
  *  календаря. Порт buildPeriodSheets() из mobile/src/lib/xlsxReports.js;
  *  в отличие от buildProjectSheets он не привязан к проекту и собирает
@@ -3070,6 +3188,9 @@ function exportProjectById(id) {
   const p = getProject(id);
   if (!p) return;
   runExport(`${p.name} — ${t('export.all_tasks')} — ${fmtDate(Date.now())}`, buildProjectSheets(p));
+}
+function exportAllProjects() {
+  runExport(`Lancible — ${t('export.all_projects')} — ${fmtDate(Date.now())}`, buildAllProjectsSheets());
 }
 /** Экспорт открытого проекта — та же выгрузка, что в контекстном меню
  *  плитки на главной, но доступная изнутри проекта (как в мобильном). */
@@ -3409,6 +3530,7 @@ el.deleteBtn.addEventListener('click', () => deleteTask(selectedId));
 el.exportTaskBtn.addEventListener('click', exportTask);
 el.exportProjectBtn.addEventListener('click', exportProject);
 el.exportCalendarBtn.addEventListener('click', exportCalendar);
+el.exportAllBtn.addEventListener('click', exportAllProjects);
 el.pinTaskBtn.addEventListener('click', () => selectedId && togglePinTask(selectedId));
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });
 

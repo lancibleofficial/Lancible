@@ -83,9 +83,6 @@
   #navrail:not([data-user-expanded]) .nav-label {
     opacity: 0;
   }
-  #navrail:not([data-user-expanded]) .theme-tab:not(.on) {
-    display: none;
-  }
   body:not(.nav-collapsed) #main,
   body:not(.nav-collapsed) .tb-rest {
     margin-left: var(--nav-w-collapsed);
