@@ -1595,6 +1595,115 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .tb-account .icon { width: 15px; height: 15px; flex: none; color: var(--icon); }
 .tb-account span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
+/* ---------- Колокольчик и панель уведомлений ---------- */
+
+.tb-notif {
+  -webkit-app-region: no-drag;
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: auto 0 auto auto;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease);
+}
+/* Аккаунт стоит справа от колокольчика, поэтому прижимать вправо должен
+   только первый из них — иначе между ними появится весь свободный зазор. */
+.tb-notif + .tb-account { margin-left: 8px; }
+.tb-notif:hover { border-color: var(--border-strong); }
+.tb-notif .icon { width: 15px; height: 15px; color: var(--icon); }
+.tb-notif.on .icon { color: var(--text); }
+.notif-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+#notif-panel {
+  position: fixed;
+  top: 56px;
+  right: 14px;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  max-height: 70vh;
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn 0.14s var(--ease);
+}
+.notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+#notif-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+#notif-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+#notif-list li:last-child { border-bottom: none; }
+#notif-list li:hover { background: var(--panel-2); }
+#notif-list li.unread { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+#notif-list li.unread:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.notif-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--pc, var(--accent)); }
+.notif-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notif-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notif-sub { font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notif-when { flex: none; font-size: 11px; border-radius: 999px; padding: 2px 7px; background: var(--panel-2); color: var(--text-dim); white-space: nowrap; }
+.notif-when.overdue { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+.notif-when.soon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-hover); }
+.notif-empty { padding: 26px 14px; text-align: center; font-size: 13px; }
+
+/* ---------- Срок и напоминание у задачи ---------- */
+
+.due-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.due-bar > .icon { color: var(--icon); flex: none; }
+.due-label { color: var(--text-dim); flex: none; }
+.due-gap { flex: 1; }
+.due-custom { padding-left: 24px; }
+.due-state { flex: none; font-size: 12px; border-radius: 999px; padding: 3px 9px; background: var(--panel-2); color: var(--text-dim); }
+.due-state.soon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-hover); }
+.due-state.overdue { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+
+/* Метка срока в списке задач — тот же цветовой код, что у .due-state. */
+.task-due { flex: none; font-size: 11px; border-radius: 999px; padding: 2px 7px; background: var(--panel-2); color: var(--text-dim); white-space: nowrap; }
+.task-due.soon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-hover); }
+.task-due.overdue { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+
 /* ---------- Диалог выбора периода экспорта ---------- */
 
 .exp-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }

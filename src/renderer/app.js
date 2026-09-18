@@ -110,6 +110,12 @@ const T = {
     'task.unpin_title': 'Открепить задачу', 'task.delete_title': 'Удалить задачу',
     'task.pin_short': 'Закрепить наверх', 'task.unpin_short': 'Открепить',
     'task.no_name': 'Без названия',
+    'due.label': 'Срок',
+    'notif.title': 'Уведомления', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
+    'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
+    'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
+    'remind.none': 'Без напоминания', 'remind.at': 'В момент срока', 'remind.15m': 'За 15 минут',
+    'remind.1h': 'За час', 'remind.3h': 'За 3 часа', 'remind.1d': 'За день', 'remind.custom': 'Своё время',
     'tabs.notes': 'Заметки', 'tabs.history': 'История',
     'timer.sub_default': 'общее время по задаче', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
     'timer.recording': 'идёт запись · сессия {time}', 'timer.other_task': 'таймер идёт по другой задаче',
@@ -232,6 +238,12 @@ const T = {
     'task.unpin_title': 'Unpin task', 'task.delete_title': 'Delete task',
     'task.pin_short': 'Pin to top', 'task.unpin_short': 'Unpin',
     'task.no_name': 'Untitled',
+    'due.label': 'Due',
+    'notif.title': 'Notifications', 'notif.empty': 'No due dates or reminders yet.', 'notif.mark_seen': 'Mark read',
+    'notif.overdue': 'Overdue', 'notif.soon': 'Due soon', 'notif.reminder': 'Reminder', 'due.none': 'not set', 'due.clear': 'Clear due date', 'due.remind_at': 'Remind',
+    'due.overdue': 'overdue', 'due.today': 'today', 'due.tomorrow': 'tomorrow', 'due.in_days': 'in {n} d',
+    'remind.none': 'No reminder', 'remind.at': 'At due time', 'remind.15m': '15 minutes before',
+    'remind.1h': 'An hour before', 'remind.3h': '3 hours before', 'remind.1d': 'A day before', 'remind.custom': 'Custom time',
     'tabs.notes': 'Notes', 'tabs.history': 'History',
     'timer.sub_default': 'total time on task', 'timer.start': 'Start', 'timer.stop': 'Stop',
     'timer.recording': 'recording · session {time}', 'timer.other_task': 'timer is running on another task',
@@ -354,6 +366,12 @@ const T = {
     'task.unpin_title': 'Відкріпити завдання', 'task.delete_title': 'Видалити завдання',
     'task.pin_short': 'Закріпити вгорі', 'task.unpin_short': 'Відкріпити',
     'task.no_name': 'Без назви',
+    'due.label': 'Термін',
+    'notif.title': 'Сповіщення', 'notif.empty': 'Термінів і нагадувань поки немає.', 'notif.mark_seen': 'Прочитано',
+    'notif.overdue': 'Протерміновано', 'notif.soon': 'Скоро термін', 'notif.reminder': 'Нагадування', 'due.none': 'не задано', 'due.clear': 'Прибрати термін', 'due.remind_at': 'Нагадати',
+    'due.overdue': 'протерміновано', 'due.today': 'сьогодні', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
+    'remind.none': 'Без нагадування', 'remind.at': 'У момент терміну', 'remind.15m': 'За 15 хвилин',
+    'remind.1h': 'За годину', 'remind.3h': 'За 3 години', 'remind.1d': 'За день', 'remind.custom': 'Свій час',
     'tabs.notes': 'Нотатки', 'tabs.history': 'Історія',
     'timer.sub_default': 'загальний час по завданню', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
     'timer.recording': 'триває запис · сесія {time}', 'timer.other_task': 'таймер працює на іншому завданні',
@@ -476,6 +494,12 @@ const T = {
     'task.unpin_title': 'Бекітуден алу', 'task.delete_title': 'Тапсырманы жою',
     'task.pin_short': 'Жоғарыға бекіту', 'task.unpin_short': 'Бекітуден алу',
     'task.no_name': 'Атаусыз',
+    'due.label': 'Мерзім',
+    'notif.title': 'Хабарламалар', 'notif.empty': 'Мерзімдер мен еске салулар жоқ.', 'notif.mark_seen': 'Оқылды',
+    'notif.overdue': 'Мерзімі өтті', 'notif.soon': 'Мерзімі жақын', 'notif.reminder': 'Еске салу', 'due.none': 'қойылмаған', 'due.clear': 'Мерзімді алып тастау', 'due.remind_at': 'Еске салу',
+    'due.overdue': 'мерзімі өтті', 'due.today': 'бүгін', 'due.tomorrow': 'ертең', 'due.in_days': '{n} күнде',
+    'remind.none': 'Еске салусыз', 'remind.at': 'Мерзім сәтінде', 'remind.15m': '15 минут бұрын',
+    'remind.1h': 'Бір сағат бұрын', 'remind.3h': '3 сағат бұрын', 'remind.1d': 'Бір күн бұрын', 'remind.custom': 'Өз уақыты',
     'tabs.notes': 'Жазбалар', 'tabs.history': 'Тарих',
     'timer.sub_default': 'тапсырма бойынша жалпы уақыт', 'timer.start': 'Старт', 'timer.stop': 'Тоқтату',
     'timer.recording': 'жазылуда · сессия {time}', 'timer.other_task': 'таймер басқа тапсырмада жүріп жатыр',
@@ -671,6 +695,11 @@ const el = {
   expFromBtn: $('exp-from-btn'), expToBtn: $('exp-to-btn'),
   expdlgOk: $('expdlg-ok'), expdlgCancel: $('expdlg-cancel'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
+  notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
+  notifList: $('notif-list'), notifEmpty: $('notif-empty'), notifSeen: $('notif-seen'),
+  dueDateBtn: $('due-date-btn'), dueTimeBtn: $('due-time-btn'), dueState: $('due-state'),
+  dueRemind: $('due-remind'), dueClearBtn: $('due-clear-btn'), dueCustomRow: $('due-custom-row'),
+  remindDateBtn: $('remind-date-btn'), remindTimeBtn: $('remind-time-btn'),
   tableTools: $('table-tools'), ttSwatches: $('tt-swatches'),
   sessionList: $('session-list'), sessionCount: $('session-count'),
   sessionEmpty: $('session-empty'), addSessionBtn: $('add-session-btn'),
@@ -857,6 +886,39 @@ function aggregateDays() {
 function tasksDoneOnDay(key) {
   return state.tasks.filter((t2) => t2.doneAt && dayKey(t2.doneAt) === key);
 }
+const REMIND_PRESETS = [null, 0, 15, 60, 180, 1440, 'custom'];
+const REMIND_LABEL = { null: 'remind.none', 0: 'remind.at', 15: 'remind.15m', 60: 'remind.1h', 180: 'remind.3h', 1440: 'remind.1d', custom: 'remind.custom' };
+
+/** Момент напоминания: либо смещение от срока, либо своё время. */
+function reminderTime(task) {
+  if (task.remindOffsetMin !== null && task.remindOffsetMin !== undefined && task.dueAt) {
+    return new Date(new Date(task.dueAt).getTime() - task.remindOffsetMin * 60000);
+  }
+  return task.remindAt ? new Date(task.remindAt) : null;
+}
+
+/** 'overdue' | 'soon' (в пределах суток) | 'later' | null. Выполненная
+ *  задача срока не имеет — она уже не горит. */
+function dueState(task) {
+  if (!task.dueAt || task.done) return null;
+  const diff = new Date(task.dueAt).getTime() - Date.now();
+  if (diff < 0) return 'overdue';
+  return diff <= 86400000 ? 'soon' : 'later';
+}
+
+/** Короткая подпись срока для списка: «просрочено» / «сегодня» / дата. */
+function dueShort(task) {
+  if (!task.dueAt) return '';
+  const due = new Date(task.dueAt);
+  const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOf(due) - startOf(new Date())) / 86400000);
+  if (dueState(task) === 'overdue') return t('due.overdue');
+  if (days === 0) return t('due.today');
+  if (days === 1) return t('due.tomorrow');
+  if (days > 1 && days < 7) return t('due.in_days', { n: days });
+  return fmtDateShort(due);
+}
+
 /** Сумма за диапазон дат [from, to] включительно (Date). */
 function rangeAgg(from, to) {
   let ms = 0;
@@ -1662,6 +1724,7 @@ function render() {
   document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
   document.body.classList.toggle('has-selected-task', v === 'project' && !!selectedId);
   renderStats();
+  renderNotifBadge();
   el.topbar.hidden = v !== 'home';
 
   el.navItems.forEach((tab) => {
@@ -2575,6 +2638,13 @@ function taskItem(task, i) {
     dot.textContent = '●';
     meta.appendChild(dot);
   }
+  const ds = dueState(task);
+  if (ds) {
+    const badge = document.createElement('span');
+    badge.className = `task-due ${ds}`;
+    badge.textContent = dueShort(task);
+    meta.appendChild(badge);
+  }
   const time = document.createElement('span');
   time.className = 'task-time';
   time.textContent = fmtShort(taskElapsedMs(task));
@@ -2588,6 +2658,139 @@ function taskItem(task, i) {
 // ---------------------------------------------------------------------------
 // Деталь задачи
 // ---------------------------------------------------------------------------
+
+/** Строки «Срок» и «Напомнить» под ставкой. Время срока показывается
+ *  только когда сама дата задана — до этого показывать «00:00» не о чем. */
+/** Лента уведомлений собирается из задач на лету, отдельного хранилища у
+ *  неё нет: просроченные, те, чей срок в пределах суток, и те, у кого уже
+ *  сработало напоминание. Непрочитанным считается то, чей момент
+ *  наступил позже последнего открытия панели (ui.notifSeenAt). */
+function notificationFeed() {
+  const now = Date.now();
+  const seen = state.ui.notifSeenAt ? new Date(state.ui.notifSeenAt).getTime() : 0;
+  const out = [];
+  for (const task of state.tasks) {
+    if (task.done || !task.dueAt) continue;
+    const due = new Date(task.dueAt).getTime();
+    const rt = reminderTime(task);
+    const fired = !!rt && rt.getTime() <= now;
+    let kind = null;
+    let at = due;
+    if (due < now) kind = 'overdue';
+    else if (due - now <= 86400000) { kind = 'soon'; at = due - 86400000; }
+    else if (fired) { kind = 'reminder'; at = rt.getTime(); }
+    if (!kind) continue;
+    out.push({ task, kind, at, due, unread: at > seen });
+  }
+  return out.sort((a, b) => a.due - b.due);
+}
+
+function renderNotifBadge() {
+  const unread = notificationFeed().filter((n) => n.unread).length;
+  el.notifBadge.hidden = unread === 0;
+  el.notifBadge.textContent = unread > 99 ? '99+' : String(unread);
+}
+
+function renderNotifPanel() {
+  const feed = notificationFeed();
+  el.notifList.innerHTML = '';
+  el.notifEmpty.hidden = feed.length > 0;
+  for (const n of feed) {
+    const p = getProject(n.task.projectId);
+    const li = document.createElement('li');
+    if (n.unread) li.classList.add('unread');
+    li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
+    const when = n.kind === 'overdue' ? 'overdue' : n.kind === 'soon' ? 'soon' : '';
+    li.innerHTML = `<span class="notif-dot"></span>`
+      + `<span class="notif-main"><span class="notif-name">${escapeHtml(n.task.title || t('task.no_name'))}</span>`
+      + `<span class="notif-sub">${escapeHtml(t(`notif.${n.kind}`))} · ${escapeHtml(p ? p.name : '')}</span></span>`
+      + `<span class="notif-when ${when}">${escapeHtml(dueShort(n.task))}</span>`;
+    li.addEventListener('click', () => { closeNotifPanel(); openProject(n.task.projectId); selectTask(n.task.id); });
+    el.notifList.appendChild(li);
+  }
+}
+
+function markNotifSeen() {
+  state.ui.notifSeenAt = new Date().toISOString();
+  renderNotifBadge();
+  renderNotifPanel();
+  scheduleSave();
+}
+function closeNotifPanel() {
+  el.notifPanel.hidden = true;
+  el.notifBtn.classList.remove('on');
+}
+function toggleNotifPanel() {
+  if (!el.notifPanel.hidden) { closeNotifPanel(); return; }
+  renderNotifPanel();
+  el.notifPanel.hidden = false;
+  el.notifBtn.classList.add('on');
+  markNotifSeen();
+}
+
+/** Системное уведомление. В Electron разрешение выдано по умолчанию, в
+ *  браузере его спрашивают один раз; отказ просто гасит эту ветку —
+ *  внутренняя лента работает в любом случае. */
+function ensureNotifPermission() {
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+}
+function notifyOS(title, body) {
+  try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    new Notification(title, { body });
+  } catch (err) { console.warn('Не удалось показать системное уведомление:', err); }
+}
+
+/** Раз в полминуты проверяем, не пора ли напомнить. notifiedAt пишется в
+ *  саму задачу и синхронизируется, поэтому второе устройство про эту же
+ *  задачу молчит. */
+function checkReminders() {
+  const now = Date.now();
+  let fired = false;
+  for (const task of state.tasks) {
+    if (task.done || task.notifiedAt) continue;
+    const rt = reminderTime(task);
+    if (!rt || rt.getTime() > now) continue;
+    task.notifiedAt = new Date().toISOString();
+    fired = true;
+    notifyOS(t('notif.reminder'), task.title || t('task.no_name'));
+  }
+  if (fired) scheduleSave();
+  renderNotifBadge();
+}
+
+function renderDue(task) {
+  const has = !!task.dueAt;
+  const due = has ? new Date(task.dueAt) : null;
+  el.dueDateBtn.textContent = has ? fmtDpBtn(dayKey(due)) : t('due.none');
+  el.dueDateBtn.classList.toggle('muted-btn', !has);
+  el.dueTimeBtn.hidden = !has;
+  if (has) el.dueTimeBtn.textContent = `${pad2(due.getHours())}:${pad2(due.getMinutes())}`;
+  el.dueClearBtn.hidden = !has;
+  el.dueRemind.hidden = !has;
+
+  const state2 = dueState(task);
+  el.dueState.hidden = !state2 || state2 === 'later';
+  el.dueState.className = `due-state ${state2 || ''}`;
+  if (!el.dueState.hidden) el.dueState.textContent = dueShort(task);
+
+  el.dueRemind.innerHTML = '';
+  for (const p of REMIND_PRESETS) {
+    const o = document.createElement('option');
+    o.value = String(p);
+    o.textContent = t(REMIND_LABEL[String(p)]);
+    el.dueRemind.appendChild(o);
+  }
+  const isCustom = (task.remindOffsetMin === null || task.remindOffsetMin === undefined) && !!task.remindAt;
+  el.dueRemind.value = isCustom ? 'custom' : String(task.remindOffsetMin === undefined ? null : task.remindOffsetMin);
+  el.dueCustomRow.hidden = !has || !isCustom;
+  if (isCustom) {
+    const r = new Date(task.remindAt);
+    el.remindDateBtn.textContent = fmtDpBtn(dayKey(r));
+    el.remindTimeBtn.textContent = `${pad2(r.getHours())}:${pad2(r.getMinutes())}`;
+  }
+}
 
 function renderDetail() {
   const task = getTask(selectedId);
@@ -2603,6 +2806,7 @@ function renderDetail() {
 
   renderTimer(task);
   renderMoney(task);
+  renderDue(task);
   renderSessions(task);
 }
 
@@ -3599,6 +3803,91 @@ el.newTaskBtn.addEventListener('click', newTask);
 el.timerBtn.addEventListener('click', toggleTimer);
 el.deleteBtn.addEventListener('click', () => deleteTask(selectedId));
 el.exportTaskBtn.addEventListener('click', exportTask);
+
+/** Правки срока пишутся прямо в задачу: отдельного «сохранить» в этом
+ *  интерфейсе нет нигде, всё уходит через scheduleSave, как и остальное. */
+function touchTask(task) {
+  task.updatedAt = new Date().toISOString();
+  task.notifiedAt = null;
+  renderDue(task);
+  renderSidebar();
+  scheduleSave();
+}
+el.notifBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleNotifPanel(); });
+el.notifSeen.addEventListener('click', (e) => { e.stopPropagation(); markNotifSeen(); });
+el.notifPanel.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => { if (!el.notifPanel.hidden) closeNotifPanel(); });
+setInterval(checkReminders, 30000);
+
+el.dueDateBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  openDatePicker(el.dueDateBtn, task.dueAt ? dayKey(new Date(task.dueAt)) : dayKey(new Date()), (key) => {
+    const prev = task.dueAt ? new Date(task.dueAt) : null;
+    const d = keyToDate(key);
+    d.setHours(prev ? prev.getHours() : 18, prev ? prev.getMinutes() : 0, 0, 0);
+    task.dueAt = d.toISOString();
+    touchTask(task);
+  });
+});
+el.dueTimeBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.dueAt) return;
+  const d = new Date(task.dueAt);
+  openTimePicker(el.dueTimeBtn, `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, (val) => {
+    const [h, m] = val.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    task.dueAt = d.toISOString();
+    touchTask(task);
+  });
+});
+el.dueClearBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  task.dueAt = null;
+  task.remindAt = null;
+  task.remindOffsetMin = null;
+  touchTask(task);
+});
+el.dueRemind.addEventListener('change', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  const v = el.dueRemind.value;
+  if (v !== 'null') ensureNotifPermission();
+  if (v === 'custom') {
+    task.remindOffsetMin = null;
+    task.remindAt = task.remindAt || new Date(new Date(task.dueAt).getTime() - 3600000).toISOString();
+  } else if (v === 'null') {
+    task.remindOffsetMin = null;
+    task.remindAt = null;
+  } else {
+    task.remindOffsetMin = Number(v);
+    task.remindAt = null;
+  }
+  touchTask(task);
+});
+el.remindDateBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.remindAt) return;
+  openDatePicker(el.remindDateBtn, dayKey(new Date(task.remindAt)), (key) => {
+    const prev = new Date(task.remindAt);
+    const d = keyToDate(key);
+    d.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
+    task.remindAt = d.toISOString();
+    touchTask(task);
+  });
+});
+el.remindTimeBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.remindAt) return;
+  const d = new Date(task.remindAt);
+  openTimePicker(el.remindTimeBtn, `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, (val) => {
+    const [h, m] = val.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    task.remindAt = d.toISOString();
+    touchTask(task);
+  });
+});
 el.exportProjectBtn.addEventListener('click', exportProject);
 el.exportCalendarBtn.addEventListener('click', exportCalendar);
 el.exportAllBtn.addEventListener('click', exportAllProjects);
@@ -3705,6 +3994,7 @@ function migrate() {
   if (!state.settings || typeof state.settings !== 'object') state.settings = {};
   if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;
   if (typeof state.ui.navCollapsed !== 'boolean') state.ui.navCollapsed = false;
+  if (typeof state.ui.notifSeenAt !== 'string') state.ui.notifSeenAt = null;
   if (!['system', 'light', 'dark'].includes(state.settings.theme)) state.settings.theme = 'system';
   if (!T[state.settings.lang]) state.settings.lang = 'ru';
   if (typeof state.settings.syncEnabled !== 'boolean') state.settings.syncEnabled = true;
@@ -3723,6 +4013,15 @@ function migrate() {
   state.tasks.forEach((t2) => {
     if (t2.pinnedAt === undefined) t2.pinnedAt = null;
     if (t2.rate === undefined) t2.rate = null;
+    // Срок и напоминание. remindOffsetMin — «за сколько минут до срока»
+    // (0 = ровно в срок); когда он null, а remindAt задан — это выбранное
+    // вручную время. notifiedAt не даёт уведомить о задаче дважды и
+    // синхронизируется вместе с остальным, так что второе устройство
+    // не покажет то же самое ещё раз.
+    if (t2.dueAt === undefined) t2.dueAt = null;
+    if (t2.remindOffsetMin === undefined) t2.remindOffsetMin = null;
+    if (t2.remindAt === undefined) t2.remindAt = null;
+    if (t2.notifiedAt === undefined) t2.notifiedAt = null;
   });
 
   if (state.projects.length === 0 && state.tasks.length > 0) {
