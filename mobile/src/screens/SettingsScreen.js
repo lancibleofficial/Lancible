@@ -18,7 +18,7 @@ import { CURRENCY_SYMBOLS, fmtMoney } from '../lib/format';
 import { openSheet } from '../store/useSheetStore';
 import { setSyncEnabled } from '../lib/sync';
 import { permissionStatus, ensurePermission } from '../lib/notifications';
-import { checkForUpdate } from '../lib/updateCheck';
+import { checkForUpdate, downloadAndInstall } from '../lib/updateCheck';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, useThemeMode, spacing, radius, fontSize, tabBarClearance } from '../theme';
 import { t, LANG_NAMES } from '../lib/i18n';
@@ -39,6 +39,23 @@ export default function SettingsScreen() {
   const resolvedMode = useThemeMode();
   const appVersion = (Constants.expoConfig && Constants.expoConfig.version) || '1.0.0';
   const [update, setUpdate] = useState(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState(0);
+
+  // Android: качаем APK прямо здесь и отдаём системному установщику — ходить
+  // на сайт за файлом не нужно. iOS такого не позволяет вовсе (ставить можно
+  // только из App Store и TestFlight), поэтому там остаётся переход по ссылке.
+  async function onUpdatePress() {
+    if (!update) return;
+    if (!update.canInstall) { Linking.openURL(update.url); return; }
+    setUpdating(true);
+    setUpdateProgress(0);
+    const res = await downloadAndInstall(update, setUpdateProgress);
+    setUpdating(false);
+    // Не получилось — не оставляем пользователя ни с чем: открываем страницу
+    // релиза, оттуда файл можно забрать руками.
+    if (!res.ok) Linking.openURL(update.url);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -116,12 +133,18 @@ export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       {update ? (
-        <Pressable style={styles.updateBanner} onPress={() => Linking.openURL(update.url)}>
+        <Pressable style={styles.updateBanner} onPress={onUpdatePress} disabled={updating}>
           <Icon name="download" size={18} color={colors.accentText} />
           <Text style={styles.updateBannerText} numberOfLines={1}>
-            {t(settings.lang, 'settings.update_available', { version: update.version })}
+            {updating
+              ? t(settings.lang, 'settings.update_downloading', { percent: Math.round(updateProgress * 100) })
+              : t(settings.lang, 'settings.update_available', { version: update.version })}
           </Text>
-          <Text style={styles.updateBannerAction}>{t(settings.lang, 'settings.update_download')}</Text>
+          {updating ? null : (
+            <Text style={styles.updateBannerAction}>
+              {t(settings.lang, update.canInstall ? 'settings.update_install' : 'settings.update_download')}
+            </Text>
+          )}
         </Pressable>
       ) : null}
 

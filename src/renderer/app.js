@@ -85,7 +85,7 @@ const T = {
     'search.task_sub': 'проект: {name}',
     'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.settings': 'Настройки', 'nav.collapse': 'Свернуть',
     'nav.language': 'Язык', 'nav.account': 'Аккаунт',
-    'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Перезапустить',
+    'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Установить и перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
     'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'about.us': 'О нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
@@ -219,7 +219,7 @@ const T = {
     'search.task_sub': 'project: {name}',
     'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.settings': 'Settings', 'nav.collapse': 'Collapse',
     'nav.language': 'Language', 'nav.account': 'Account',
-    'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Restart to update',
+    'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Install and restart',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
     'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'about.us': 'About us', 'about.blog': 'Blog',
     'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
@@ -353,7 +353,7 @@ const T = {
     'search.task_sub': 'проєкт: {name}',
     'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.settings': 'Налаштування', 'nav.collapse': 'Згорнути',
     'nav.language': 'Мова', 'nav.account': 'Акаунт',
-    'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Перезапустити',
+    'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Встановити й перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
     'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'about.us': 'Про нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
@@ -487,7 +487,7 @@ const T = {
     'search.task_sub': 'жоба: {name}',
     'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.settings': 'Параметрлер', 'nav.collapse': 'Жию',
     'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
-    'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Қайта іске қосу',
+    'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Орнатып қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
     'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
     'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
@@ -1207,27 +1207,22 @@ function renderUpdateBtn() {
   el.updateBtnLabel.textContent = t(key);
 }
 
+// В вебе обновлений нет вовсе: страница и так всегда свежая, а window.api там
+// этих методов не предоставляет (см. web/api-shim.js). Проверка на их наличие
+// заодно и есть проверка «мы в десктопе».
 if (window.api.onUpdateAvailable) {
-  window.api.onUpdateAvailable(() => { updateState = 'available'; renderUpdateBtn(); });
+  // Скачивание начинается само (autoDownload в src/main.js), поэтому «доступно»
+  // и «скачивается» для пользователя — одно и то же состояние: ходить и
+  // нажимать «скачать» больше не нужно, нажатие остаётся ровно одно — «Установить».
+  window.api.onUpdateAvailable(() => { updateState = 'downloading'; renderUpdateBtn(); });
   window.api.onUpdateProgress(({ percent }) => { el.updateProgress.style.width = `${Math.round(percent || 0)}%`; });
   window.api.onUpdateReady(() => { updateState = 'ready'; renderUpdateBtn(); });
   window.api.onUpdateError(() => { updateState = 'idle'; renderUpdateBtn(); });
 }
 
-el.updateBtn.addEventListener('click', async () => {
-  if (updateState === 'available') {
-    updateState = 'downloading';
-    renderUpdateBtn();
-    try {
-      const r = await window.api.downloadUpdate();
-      if (!r || !r.ok) { updateState = 'available'; renderUpdateBtn(); }
-    } catch {
-      updateState = 'available';
-      renderUpdateBtn();
-    }
-  } else if (updateState === 'ready') {
-    window.api.installUpdate();
-  }
+el.updateBtn.addEventListener('click', () => {
+  // Пока идёт скачивание, кнопка только показывает прогресс — нажимать нечего.
+  if (updateState === 'ready') window.api.installUpdate();
 });
 
 // ---------------------------------------------------------------------------
