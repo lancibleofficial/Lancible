@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSheetStore, closeSheet } from '../store/useSheetStore';
+import { HEADER_CONTENT_HEIGHT } from './AppHeader';
 import { useColors, radius, spacing } from '../theme';
 
 const OPEN_MS = 260;
@@ -93,7 +94,10 @@ export default function BottomSheet() {
 
   if (!visible) return null;
 
-  const maxHeight = windowHeight * 0.9;
+  // Раскрывается ровно до нижней границы шапки, а не на условные 90%
+  // высоты экрана: прежняя доля не была ни к чему привязана и оставляла
+  // произвольный зазор, который на разных экранах выглядел по-разному.
+  const maxHeight = windowHeight - insets.top - HEADER_CONTENT_HEIGHT;
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={closeSheet}>

@@ -13,7 +13,9 @@ import { useColors, spacing, fontSize } from '../theme';
 //
 // Пропсы — то, что React Navigation передаёт в option `header`: `back`
 // приходит только из стека и только когда есть куда вернуться.
-const HEADER_CONTENT_HEIGHT = 48;
+// Экспортируется, потому что от неё считается максимальная высота нижнего
+// листа: он раскрывается ровно до нижней границы шапки.
+export const HEADER_CONTENT_HEIGHT = 48;
 
 export default function AppHeader({ navigation, route, options, back }) {
   const colors = useColors();

@@ -3,20 +3,25 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import PrimaryButton from './PrimaryButton';
 import MiniDatePicker from './MiniDatePicker';
-import Icon from './Icon';
 import { dayKey, keyToDate, mondayOf } from '../lib/calendarMath';
 import { setSheetFooter } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
-const PRESETS = [
-  { value: 'all', key: 'export.period_all' },
-  { value: 'day', key: 'export.period_day' },
-  { value: 'week', key: 'export.period_week' },
-  { value: 'month', key: 'export.period_month' },
-  { value: 'half_year', key: 'export.period_half_year' },
-  { value: 'year', key: 'export.period_year' },
-  { value: 'custom', key: 'export.period_custom' },
+// Два ряда на одной подложке: 3 сверху, 4 снизу. В один ряд семь вариантов
+// не помещаются читаемо, а списком они занимали пол-листа.
+const PRESET_ROWS = [
+  [
+    { value: 'all', key: 'export.period_all' },
+    { value: 'day', key: 'export.period_day' },
+    { value: 'week', key: 'export.period_week' },
+  ],
+  [
+    { value: 'month', key: 'export.period_month' },
+    { value: 'half_year', key: 'export.period_half_year' },
+    { value: 'year', key: 'export.period_year' },
+    { value: 'custom', key: 'export.period_custom' },
+  ],
 ];
 
 function endOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999); }
@@ -78,22 +83,30 @@ export default function ExportPeriodSheet({ lang, onConfirm, onCancel }) {
     <View style={{ gap: spacing.sm }}>
       <Text style={styles.title}>{t(lang, 'export.title')}</Text>
 
-      {/* Список со строками, а не чипсы: вариантов стало семь, в ряд они
-          переносились неровно, а вкладок на такое количество не хватает. */}
-      <View style={styles.card}>
-        {PRESETS.map((p, i) => {
-          const active = p.value === preset;
-          return (
-            <Pressable
-              key={p.value}
-              onPress={() => setPreset(p.value)}
-              style={[styles.row, i === PRESETS.length - 1 && styles.rowLast, active && styles.rowActive]}
-            >
-              <Text style={[styles.rowLabel, active && styles.rowLabelActive]}>{t(lang, p.key)}</Text>
-              {active ? <Icon name="check" size={15} color={colors.accent} /> : null}
-            </Pressable>
-          );
-        })}
+      <View style={styles.tabCard}>
+        {PRESET_ROWS.map((row, ri) => (
+          <View key={ri} style={styles.tabRow}>
+            {row.map((p) => {
+              const active = p.value === preset;
+              return (
+                <Pressable
+                  key={p.value}
+                  onPress={() => setPreset(p.value)}
+                  style={[styles.tab, active && styles.tabActive]}
+                >
+                  <Text
+                    style={[styles.tabText, active && styles.tabTextActive]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                  >
+                    {t(lang, p.key)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
       </View>
 
       {preset === 'custom' ? (
@@ -117,16 +130,14 @@ export default function ExportPeriodSheet({ lang, onConfirm, onCancel }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.xs },
-  card: { backgroundColor: colors.panel2, borderRadius: radius.md, overflow: 'hidden' },
-  row: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  rowLast: { borderBottomWidth: 0 },
-  rowActive: { backgroundColor: colors.accentMuted },
-  rowLabel: { color: colors.text, fontSize: fontSize.md },
-  rowLabelActive: { fontWeight: '700' },
+  // Одна подложка на оба ряда — как у переключателя «Заметки/История»,
+  // только в две строки.
+  tabCard: { backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4, gap: 4 },
+  tabRow: { flexDirection: 'row', gap: 4 },
+  tab: { flex: 1, paddingVertical: spacing.sm, paddingHorizontal: 4, alignItems: 'center', borderRadius: radius.sm },
+  tabActive: { backgroundColor: colors.tabActiveBg },
+  tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
+  tabTextActive: { color: colors.text },
   rangeRow: { flexDirection: 'row', gap: spacing.sm },
   rangeBox: {
     flex: 1, backgroundColor: colors.panel2, borderRadius: radius.md, padding: spacing.md,
