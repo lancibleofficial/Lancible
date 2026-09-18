@@ -83,17 +83,14 @@
   #navrail:not([data-user-expanded]) .nav-label {
     opacity: 0;
   }
-  body:not(.nav-collapsed) #main,
-  body:not(.nav-collapsed) .tb-rest {
+  /* Сдвигается только основная область — шапка идёт во всю ширину окна и не
+     зависит от того, свёрнут рейл или нет. Раньше .tb-rest уезжал вместе с
+     ним, и лого отрывалось от левого края. */
+  body:not(.nav-collapsed) #main {
     margin-left: var(--nav-w-collapsed);
   }
-  body:not(.nav-collapsed) .tb-logo {
-    width: var(--nav-w-collapsed);
-    padding: 0 17px;
-  }
-  body:not(.nav-collapsed) .tb-logo-text {
-    opacity: 0;
-  }
+  /* Места в шапке на этой ширине ещё хватает, подпись рядом со значком
+     остаётся — прятать её начинаем только на телефоне. */
 }
 
 /* =========================================================================
