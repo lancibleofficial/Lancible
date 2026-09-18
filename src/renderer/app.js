@@ -753,7 +753,7 @@ const el = {
   calPrev: $('cal-prev'), calNext: $('cal-next'), calToday: $('cal-today'),
   calTitle: $('cal-title'), calDays: $('cal-days'),
   calWeekdays: $('cal-weekdays'),
-  calPeriodToggle: $('cal-period-toggle'), calRange: $('cal-range'),
+  calPeriodToggle: $('cal-period-toggle'),
   rangeFrom: $('range-from'), rangeTo: $('range-to'),
   dpPop: $('dp-pop'), dpTitle: $('dp-title'), dpDays: $('dp-days'), dpPrev: $('dp-prev'), dpNext: $('dp-next'),
   tpPop: $('tp-pop'), tpHours: $('tp-hours'), tpMinutes: $('tp-minutes'),
@@ -1960,7 +1960,7 @@ function projectTile(p) {
       <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
     </button>
     <div class="ptile-main">
-      <div class="ptile-name">${escapeHtml(p.name)}${p.pinnedAt ? `<span class="ptile-badge">${icon('pin')}</span>` : ''}</div>
+      <div class="ptile-name">${escapeHtml(p.name)}</div>
       ${p.description ? `<div class="ptile-desc">${escapeHtml(p.description)}</div>` : ''}
       <div class="ptile-foot">
         <span class="ptile-stat">${icon('clock')} ${fmtDur(ms)}</span>
@@ -2265,22 +2265,16 @@ function seedRangeFromView() {
   calState.rangeFrom = dayKey(from);
   calState.rangeTo = dayKey(to);
   calState.picking = false;
-  updateRangeBtns();
 }
 
 function togglePeriod() {
   calState.periodOn = !calState.periodOn;
   el.calPeriodToggle.setAttribute('aria-pressed', String(calState.periodOn));
-  if (calState.periodOn) {
-    seedRangeFromView();
-    el.calRange.hidden = false;
-    el.calRange.classList.remove('anim');
-    void el.calRange.offsetWidth;
-    el.calRange.classList.add('anim');
-  } else {
-    el.calRange.hidden = true;
-    closeDatePicker();
-  }
+  // Границы периода нигде не выписываются текстом: выбранный диапазон и так
+  // подсвечен прямо на сетке календаря, а строка с датами под табами только
+  // повторяла её и отодвигала сам календарь вниз.
+  if (calState.periodOn) seedRangeFromView();
+  else closeDatePicker();
   renderCalendar();
 }
 
@@ -2302,7 +2296,6 @@ function pickRangeDay(key) {
     calState.rangeTo = key;
     calState.picking = false;
   }
-  updateRangeBtns();
   renderCalendar();
 }
 
@@ -2319,10 +2312,6 @@ function fmtDpBtn(key) {
   // ru-RU дописывает к году « г.» — на кнопке это лишний хвост, который ещё и
   // отъедает ширину у и без того тесной строки дедлайна.
   return text.replace(/\s*г\.$/, '');
-}
-function updateRangeBtns() {
-  el.rangeFrom.textContent = fmtDpBtn(calState.rangeFrom);
-  el.rangeTo.textContent = fmtDpBtn(calState.rangeTo);
 }
 
 /** Открывает попап у anchor, показывая value ('YYYY-MM-DD' или null); onPick(key) вызывается при клике по дню. */
@@ -2937,7 +2926,9 @@ function renderMoney(task) {
   if (document.activeElement !== el.taskRate) el.taskRate.value = own ? String(task.rate) : '';
   const def = Number(state.settings.hourlyRate) || 0;
   el.taskRate.placeholder = def ? String(def) : '0';
-  el.rateUnit.textContent = `${currencySym()}${t('rate.per_hour')}${own ? '' : t('money.default_suffix')}`;
+  // Без пометки «по умолчанию»: ставка по умолчанию задаётся в настройках, и
+  // повторять это в каждой задаче незачем — строка только удлинялась.
+  el.rateUnit.textContent = `${currencySym()}${t('rate.per_hour')}`;
 
   const rate = effectiveRate(task);
   const ms = taskElapsedMs(task);
