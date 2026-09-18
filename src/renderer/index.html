@@ -11,6 +11,36 @@
   <title>Lancible</title>
 </head>
 <body>
+  <!-- Скелетон начальной загрузки — показан статически до отработки init()
+       в app.js (см. комментарий там), скрывается сам после первого render(). -->
+  <div id="app-skeleton">
+    <div class="skel-topbar">
+      <div class="skel skel-logo"></div>
+      <div class="skel skel-search"></div>
+    </div>
+    <div class="skel-body">
+      <div class="skel-rail">
+        <div class="skel skel-rail-item"></div>
+        <div class="skel skel-rail-item"></div>
+        <div class="skel skel-rail-item"></div>
+      </div>
+      <div class="skel-main">
+        <div class="skel-stats">
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+          <div class="skel skel-stat"></div>
+        </div>
+        <div class="skel skel-line-lg"></div>
+        <div class="skel-tiles">
+          <div class="skel skel-tile"></div>
+          <div class="skel skel-tile"></div>
+          <div class="skel skel-tile"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <header id="titlebar">
     <div class="tb-nav-strip"></div>
     <div class="tb-rest">
@@ -26,6 +56,14 @@
         </svg>
         <span class="tb-logo-text">Lancible</span>
       </div>
+      <button type="button" id="notif-btn" class="tb-notif" data-i18n-title="notif.title" title="Уведомления">
+        <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+        <span class="notif-badge" id="notif-badge" hidden></span>
+      </button>
+      <button type="button" id="account-btn" class="tb-account">
+        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
+        <span id="account-label">Войти</span>
+      </button>
     </div>
   </header>
 
@@ -36,35 +74,26 @@
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3l6.6 5.5-1.15 1.35-.75-.62V13.6a1.1 1.1 0 01-1.1 1.1H9.35V9.9h-2.7v4.8H4.4a1.1 1.1 0 01-1.1-1.1V7.5l-.75.63L1.4 6.8 8 1.3z"/></svg>
           <span class="nav-label" data-i18n="nav.home">Обзор</span>
         </button>
+        <button class="nav-item" data-view="stats">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 1.4h1.4v13.2H2zM2 13.2h12v1.4H2zM4.4 9h2v4.6h-2zM7.6 6.2h2v7.4h-2zM10.8 3.4h2v10.2h-2z"/></svg>
+          <span class="nav-label" data-i18n="nav.stats">Статистика</span>
+        </button>
         <button class="nav-item" data-view="calendar">
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
           <span class="nav-label" data-i18n="nav.calendar">Календарь</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zM8 6.8a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4zM6.9 1h2.2l.3 1.7c.5.15.95.37 1.37.63l1.5-.9 1.55 1.55-.9 1.5c.26.42.48.87.63 1.37L15.3 6.9v2.2l-1.7.3c-.15.5-.37.95-.63 1.37l.9 1.5-1.55 1.55-1.5-.9c-.42.26-.87.48-1.37.63L9.1 15H6.9l-.3-1.7a5.2 5.2 0 01-1.37-.63l-1.5.9-1.55-1.55.9-1.5A5.2 5.2 0 012.4 9.1L.7 8.8V6.6l1.7-.3c.15-.5.37-.95.63-1.37l-.9-1.5L3.68 1.88l1.5.9c.42-.26.87-.48 1.37-.63L6.9 1z"/></svg>
+          <span class="nav-label" data-i18n="nav.settings">Настройки</span>
         </button>
       </div>
 
       <div class="nav-spacer"></div>
 
-      <button type="button" id="account-btn" class="nav-item">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
-        <span class="nav-label" id="account-label">Войти</span>
-      </button>
-
       <button type="button" id="lang-toggle" class="nav-item nav-lang" data-i18n-title="nav.language" title="Язык">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
         <span class="nav-label" id="lang-label">Русский</span>
       </button>
-
-      <div class="theme-tabs" id="theme-toggle">
-        <button type="button" class="theme-tab" data-theme="system" data-i18n-title="nav.theme_system" title="Системная">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
-        </button>
-        <button type="button" class="theme-tab" data-theme="light" data-i18n-title="nav.theme_light" title="Светлая">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
-        </button>
-        <button type="button" class="theme-tab" data-theme="dark" data-i18n-title="nav.theme_dark" title="Тёмная">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM2 2.6h1.2v1.2H2zM12.8 2.2h1v1h-1zM12.5 11.5h1.3v1.3h-1.3z"/></svg>
-        </button>
-      </div>
 
       <button id="update-btn" class="nav-item nav-update" hidden>
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
@@ -165,6 +194,9 @@
             <div class="ph-row">
               <span class="ph-dot" id="ph-dot"></span>
               <span class="ph-name" id="ph-name"></span>
+              <button id="export-project-btn" class="icon-btn" data-i18n-title="project.excel" title="Скачать Excel">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+              </button>
               <button id="project-menu-btn" class="icon-btn" aria-label="Опции проекта">
                 <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
               </button>
@@ -237,6 +269,25 @@
                 <span id="money-calc" class="money-calc"></span>
               </div>
 
+              <div class="due-bar">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+                <span class="due-label" data-i18n="due.label">Срок</span>
+                <button type="button" class="dp-btn" id="due-date-btn"></button>
+                <button type="button" class="dp-btn" id="due-time-btn" hidden></button>
+                <span class="due-state" id="due-state" hidden></span>
+                <span class="due-gap"></span>
+                <button type="button" class="dp-btn" id="due-remind" hidden></button>
+                <button type="button" class="icon-btn" id="due-clear-btn" hidden data-i18n-title="due.clear" title="Убрать срок">
+                  <svg class="icon" viewBox="0 0 16 16"><path d="M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z"/></svg>
+                </button>
+              </div>
+              <div class="due-bar due-custom" id="due-custom-row" hidden>
+                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+                <span class="due-label" data-i18n="due.remind_at">Напомнить</span>
+                <button type="button" class="dp-btn" id="remind-date-btn"></button>
+                <button type="button" class="dp-btn" id="remind-time-btn"></button>
+              </div>
+
               <div id="editor-wrap">
                 <div id="editor"></div>
                 <div id="table-tools" hidden>
@@ -299,7 +350,6 @@
               <button type="button" class="dp-btn" id="range-from-btn"></button>
               <span class="muted">—</span>
               <button type="button" class="dp-btn" id="range-to-btn"></button>
-              <div class="cal-period-tot" id="cal-period-tot"></div>
             </div>
             <div class="cal-weekdays" id="cal-weekdays">
               <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
@@ -313,13 +363,150 @@
             <div class="cal-day-tot" id="cal-day-tot"></div>
             <ul class="cal-day-list" id="cal-day-list"></ul>
             <p class="muted" id="cal-day-empty" data-i18n="calendar.day_empty" hidden>В этот день записей не было.</p>
+            <button id="export-calendar-btn" class="btn-accent cal-export">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+              <span data-i18n="export.excel">Экспорт</span>
+            </button>
           </aside>
+        </div>
+      </div>
+
+      <!-- НАСТРОЙКИ -->
+      <main id="stats-view" class="view" hidden>
+        <div class="stats-wrap">
+          <div class="stat-cards">
+            <div class="stat-card">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+              <div><b id="sp-time">—</b><span data-i18n="stats.worked">всего проработано</span></div>
+            </div>
+            <div class="stat-card">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+              <div><b id="sp-money">—</b><span data-i18n="stats.earned">всего заработано</span></div>
+            </div>
+            <div class="stat-card">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M13.6 3.3a1.05 1.05 0 010 1.5l-6.7 6.7a1.05 1.05 0 01-1.5 0L2 8.1a1.05 1.05 0 011.5-1.5l2.65 2.65 5.95-5.95a1.05 1.05 0 011.5 0z"/></svg>
+              <div><b id="sp-done">0</b><span data-i18n="stats.done">задач выполнено</span></div>
+            </div>
+          </div>
+          <div class="stats-actions">
+            <button id="export-all-btn" class="btn-accent">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+              <span data-i18n="export.all_excel">Скачать всё в Excel</span>
+            </button>
+      <button id="export-period-btn" class="ghost">
+        <span data-i18n="export.pick_period">Выбрать период</span>
+      </button>
+          </div>
+          <button id="sp-running" class="st-running" hidden></button>
+          <div class="row-label" id="sp-proj-label" data-i18n="stats.by_project">По проектам</div>
+          <ul class="stats-list" id="sp-projects"></ul>
+          <div class="row-label" id="sp-task-label" data-i18n="stats.by_task">По задачам</div>
+          <ul class="stats-list" id="sp-tasks"></ul>
+          <div class="stats-empty" id="sp-empty" hidden data-i18n="stats.empty">Пока нет данных</div>
+        </div>
+      </main>
+
+      <div id="settings-view" class="view" hidden>
+        <div class="settings-wrap">
+          <div class="settings-profile" id="settings-profile"></div>
+
+          <div class="settings-section-label" id="settings-account-label" data-i18n="settings.section_account" hidden>Аккаунт</div>
+          <div class="settings-card" id="settings-account-card" hidden>
+            <button type="button" class="settings-row settings-row-btn" id="settings-name-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
+              <span class="settings-row-label" data-i18n="profile.name_label">Имя</span>
+              <span class="settings-row-value" id="settings-name-value"></span>
+            </button>
+            <button type="button" class="settings-row settings-row-btn" id="settings-password-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.8 7V5.2a3.2 3.2 0 116.4 0V7h-1.6V5.2a1.6 1.6 0 10-3.2 0V7zM3.6 7.6h8.8a1 1 0 011 1v5a1 1 0 01-1 1H3.6a1 1 0 01-1-1v-5a1 1 0 011-1z"/></svg>
+              <span class="settings-row-label" data-i18n="profile.change_password">Изменить пароль</span>
+            </button>
+            <button type="button" class="settings-row settings-row-btn settings-row-last settings-row-danger" id="settings-signout-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 2.2h3.4v1.6H5v8.4h1.8v1.6H3.4a1 1 0 01-1-1V3.2a1 1 0 011-1zM6.6 7.4h4.1v1.2H6.6zM10.4 5.6l3.6 2.4-3.6 2.4z"/></svg>
+              <span class="settings-row-label" data-i18n="auth.sign_out">Выйти</span>
+            </button>
+          </div>
+
+          <div class="settings-section-label" data-i18n="settings.section_main">Основное</div>
+          <div class="settings-card">
+            <button type="button" class="settings-row settings-row-btn" id="settings-lang-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
+              <span class="settings-row-label" data-i18n="nav.language">Язык</span>
+              <span class="settings-row-value" id="settings-lang-value">Русский</span>
+            </button>
+            <div class="settings-row settings-row-last">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+              <span class="settings-row-label" data-i18n="settings.theme_label">Тема</span>
+              <div class="theme-tabs">
+                <button type="button" class="theme-tab" data-theme="system" data-i18n-title="nav.theme_system" title="Системная">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
+                </button>
+                <button type="button" class="theme-tab" data-theme="light" data-i18n-title="nav.theme_light" title="Светлая">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+                </button>
+                <button type="button" class="theme-tab" data-theme="dark" data-i18n-title="nav.theme_dark" title="Тёмная">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM2 2.6h1.2v1.2H2zM12.8 2.2h1v1h-1zM12.5 11.5h1.3v1.3h-1.3z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section-label" id="settings-data-label" data-i18n="settings.section_data" hidden>Данные</div>
+          <div class="settings-card" id="settings-data-card" hidden>
+            <button type="button" class="settings-row settings-row-last switch" id="settings-sync-toggle" aria-pressed="false">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 6.4a3.6 3.6 0 016.9-1.3A3 3 0 0114.8 8a3 3 0 01-3 3H4.9A2.9 2.9 0 012 8.1a2.9 2.9 0 012.6-2.88z"/></svg>
+              <span class="settings-row-label" data-i18n="sync.toggle_label">Синхронизировать с аккаунтом</span>
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </button>
+          </div>
+
+          <div class="settings-section-label" data-i18n="settings.section_notifications">Уведомления</div>
+          <div class="settings-card">
+            <button type="button" class="settings-row switch" id="settings-notif-toggle" aria-pressed="true">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+              <span class="settings-row-label" data-i18n="notif.enable">Напоминания о дедлайнах</span>
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </button>
+            <button type="button" class="settings-row settings-row-btn settings-row-last" id="settings-notif-system">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.55 1.4h2.9l.4 1.85a5.1 5.1 0 011.05.6l1.8-.6 1.45 2.5-1.4 1.25a5.1 5.1 0 010 1.2l1.4 1.25-1.45 2.5-1.8-.6a5.1 5.1 0 01-1.05.6l-.4 1.85h-2.9l-.4-1.85a5.1 5.1 0 01-1.05-.6l-1.8.6-1.45-2.5 1.4-1.25a5.1 5.1 0 010-1.2L1.5 5.95 2.95 3.45l1.8.6a5.1 5.1 0 011.05-.6zM8 5.6a2.4 2.4 0 100 4.8 2.4 2.4 0 000-4.8z"/></svg>
+              <span class="settings-row-label" data-i18n="notif.system">Уведомления в системе</span>
+              <span class="settings-row-value" id="settings-notif-state"></span>
+            </button>
+          </div>
+
+          <div class="settings-section-label" data-i18n="settings.section_work">Работа</div>
+          <div class="settings-card">
+            <div class="settings-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+              <span class="settings-row-label" data-i18n="rate.default_label">Ставка по умолчанию</span>
+              <div class="settings-row-input">
+                <input id="settings-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0" />
+                <span class="muted" data-i18n="rate.per_hour">/ч</span>
+              </div>
+            </div>
+            <div class="settings-row settings-row-last">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+              <span class="settings-row-label" data-i18n="settings.currency_label">Валюта</span>
+              <select id="settings-currency" class="settings-row-select" title="Валюта"></select>
+            </div>
+          </div>
+
+          <div class="settings-footer">Lancible</div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Результаты поиска -->
+  <div id="notif-panel" hidden>
+    <div class="notif-head">
+      <span data-i18n="notif.title">Уведомления</span>
+      <button type="button" id="notif-seen" class="linklike" data-i18n="notif.mark_seen">Прочитано</button>
+    </div>
+    <ul id="notif-list"></ul>
+    <p class="muted notif-empty" id="notif-empty" data-i18n="notif.empty" hidden>Сроков и напоминаний пока нет.</p>
+  </div>
+
   <div id="search-panel" hidden>
     <div id="search-results"></div>
   </div>
@@ -351,6 +538,9 @@
     <div class="modal">
       <label id="modal-label" for="modal-input"></label>
       <input id="modal-input" type="text" autocomplete="off" />
+      <label id="modal-label2" for="modal-input2" hidden></label>
+      <input id="modal-input2" type="text" autocomplete="off" hidden />
+      <div class="modal-error" id="modal-error" hidden></div>
       <div class="modal-buttons">
         <button id="modal-cancel" data-i18n="common.cancel">Отмена</button>
         <button id="modal-ok" class="primary" data-i18n="common.ok">ОК</button>
@@ -359,6 +549,23 @@
   </div>
 
   <!-- Диалог подтверждения удаления -->
+  <div id="expdlg-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-title" data-i18n="export.title">Экспорт в Excel</div>
+      <label data-i18n="export.period_label">Период</label>
+      <div class="exp-pills" id="exp-pills"></div>
+      <div class="exp-range" id="exp-range" hidden>
+        <button type="button" class="dp-btn" id="exp-from-btn"></button>
+        <span class="muted">—</span>
+        <button type="button" class="dp-btn" id="exp-to-btn"></button>
+      </div>
+      <div class="modal-buttons">
+        <button id="expdlg-cancel" data-i18n="common.cancel">Отмена</button>
+        <button id="expdlg-ok" class="primary" data-i18n="export.excel">Экспорт</button>
+      </div>
+    </div>
+  </div>
+
   <div id="confirm-backdrop" hidden>
     <div class="modal">
       <div class="modal-title" id="confirm-title" data-i18n="common.delete_q">Удалить?</div>

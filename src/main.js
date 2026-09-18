@@ -99,7 +99,7 @@ app.on('open-url', (event, url) => {
 // фон, только позиция (см. trafficLightPosition ниже); подгонка под тему
 // там — через nativeTheme.themeSource (applyNativeTheme), а не через overlay.
 const TITLEBAR_DARK = { color: '#2a2b2e', symbolColor: '#b9bbc1', height: 52 };
-const TITLEBAR_LIGHT = { color: '#f6f7f3', symbolColor: '#5c6152', height: 52 };
+const TITLEBAR_LIGHT = { color: '#e7ecf1', symbolColor: '#4a5560', height: 52 };
 const IS_MAC = process.platform === 'darwin';
 
 function resolveTitlebarOverlay(theme) {
@@ -262,6 +262,14 @@ app.whenReady().then(() => {
       const win = BrowserWindow.fromWebContents(event.sender);
       if (win) win.setTitleBarOverlay(resolveTitlebarOverlay(theme));
     }
+    return true;
+  });
+  // Отдельный канал, а не shell:open-external: тот намеренно пропускает
+  // только https, а системные настройки открываются своей схемой.
+  ipcMain.handle('shell:open-notification-settings', () => {
+    shell.openExternal(process.platform === 'darwin'
+      ? 'x-apple.systempreferences:com.apple.preference.notifications'
+      : 'ms-settings:notifications');
     return true;
   });
   ipcMain.handle('shell:open-external', (_event, url) => {
