@@ -3,7 +3,7 @@
     "name": "Lancible",
     "slug": "lancible",
     "scheme": "lancible",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -11,14 +11,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.lancible.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.lancible.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#2a2b2e",
         "foregroundImage": "./assets/android-icon-foreground.png",
