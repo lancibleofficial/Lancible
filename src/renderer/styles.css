@@ -42,40 +42,40 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]):not([data-theme="light"]) {
     color-scheme: light;
-    --bg: #f6f7f3;
+    --bg: #e7ecf1;
     --panel: #ffffff;
-    --panel-2: #eef1ea;
-    --border: #e1e6da;
-    --border-strong: #c7cdba;
-    --text: #14160f;
-    --text-dim: #5c6152;
-    --icon: #6b7060;
+    --panel-2: #dbe2e9;
+    --border: #c3ccd6;
+    --border-strong: #8a9bb0;
+    --text: #10141a;
+    --text-dim: #4a5560;
+    --icon: #6b7688;
     --accent: #7ae65b;
     --accent-hover: #68c44d;
     --accent-text: #16220e;
     --link: #1c72b0;
     --danger: #d13a2c;
     --running: #68c44d;
-    --shadow: 0 2px 12px rgba(20, 30, 15, 0.08);
+    --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
   }
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f6f7f3;
+  --bg: #e7ecf1;
   --panel: #ffffff;
-  --panel-2: #eef1ea;
-  --border: #e1e6da;
-  --border-strong: #c7cdba;
-  --text: #14160f;
-  --text-dim: #5c6152;
-  --icon: #6b7060;
+  --panel-2: #dbe2e9;
+  --border: #c3ccd6;
+  --border-strong: #8a9bb0;
+  --text: #10141a;
+  --text-dim: #4a5560;
+  --icon: #6b7688;
   --accent: #7ae65b;
   --accent-hover: #68c44d;
   --accent-text: #16220e;
   --link: #1c72b0;
   --danger: #d13a2c;
   --running: #68c44d;
-  --shadow: 0 2px 12px rgba(20, 30, 15, 0.08);
+  --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
 }
 
 * { box-sizing: border-box; }
@@ -913,12 +913,12 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 }
 .modal-lg { width: min(440px, 92vw); }
 .modal-title { font-size: 15px; font-weight: 400; margin-bottom: 12px; }
-#modal-label { display: block; font-size: 13px; font-weight: 400; margin-bottom: 8px; }
+#modal-label, #modal-label2 { display: block; font-size: 13px; font-weight: 400; margin-bottom: 8px; }
 .confirm-text { margin: 0; font-size: 13px; color: var(--text-dim); line-height: 1.5; }
 .modal label, .modal-lg label, #sdlg-backdrop label {
   display: block; font-size: 11px; color: var(--text-dim); margin: 10px 0 5px;
 }
-#modal-input, .modal-lg input[type='text'], .modal-lg textarea,
+#modal-input, #modal-input2, .modal-lg input[type='text'], .modal-lg textarea,
 #sdlg-backdrop input, #auth-backdrop input {
   width: 100%;
   background: var(--panel-2);
@@ -932,7 +932,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   resize: vertical;
   transition: border-color 0.12s var(--ease);
 }
-#modal-input:focus, .modal-lg input:focus, .modal-lg textarea:focus, #sdlg-backdrop input:focus, #auth-backdrop input:focus { border-color: var(--accent); }
+#modal-input:focus, #modal-input2:focus, .modal-lg input:focus, .modal-lg textarea:focus, #sdlg-backdrop input:focus, #auth-backdrop input:focus { border-color: var(--accent); }
 
 .auth-sub { margin: -4px 0 4px; font-size: 12px; line-height: 1.4; }
 .auth-google-btn {
@@ -974,6 +974,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .modal-buttons button.confirm-danger:hover { filter: brightness(1.08); background: var(--danger); border-color: var(--danger); }
 
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Палитра проекта — ровно 16 цветов, фиксируем 8 в ряд, чтобы вышло два
+   равных ряда, а не 12+4 по ширине диалога. Палитры редактора текста
+   (#tt-swatches) остаются на flex-wrap: у них другое число образцов. */
+#pdlg-swatches { display: grid; grid-template-columns: repeat(8, 26px); justify-content: start; }
 .swatch {
   width: 26px; height: 26px; border-radius: 7px; border: 2px solid transparent;
   cursor: pointer; padding: 0; background-clip: padding-box;
@@ -1627,6 +1631,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
   padding: 5px 8px; color: var(--text); font-family: inherit; font-size: 13px; cursor: pointer;
 }
+.settings-row-danger .settings-row-label { color: var(--danger); }
+.settings-row-danger .icon { color: var(--danger); }
+.modal-error { margin-top: 8px; color: var(--danger); font-size: 12.5px; }
+.modal input + label { margin-top: 12px; }
 .settings-row.switch { cursor: pointer; }
 .settings-row.switch .switch-track { margin-left: auto; }
 .settings-footer { text-align: center; color: var(--text-dim); font-size: 11.5px; margin-top: 22px; }

@@ -16,7 +16,10 @@ let quill = null;
 
 const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
 const HEARTBEAT_MS = 15000;
-const PALETTE = ['#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5'];
+const PALETTE = [
+  '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5',
+  '#e63950', '#2dd4bf', '#5468ff', '#ff9142', '#d946a8', '#6ee7b7', '#c8956d', '#6b7cad',
+];
 const TEXT_COLORS = ['', '#ecedef', '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#a4c2a8', '#767b86'];
 const FILL_COLORS = ['', '#3a4a34', '#2f4653', '#43385a', '#544a30', '#5a3a37', '#3e4a40'];
 
@@ -69,6 +72,11 @@ const T = {
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
     'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
+    'settings.section_account': 'Аккаунт', 'profile.name_label': 'Имя', 'profile.no_name': 'Не указано',
+    'profile.name_updated': 'Имя обновлено', 'profile.change_password': 'Изменить пароль',
+    'profile.new_password': 'Новый пароль', 'profile.confirm_password': 'Повторите пароль',
+    'profile.password_updated': 'Пароль обновлён', 'profile.password_mismatch': 'Пароли не совпадают',
+    'profile.password_too_short': 'Минимум 6 символов', 'profile.update_failed': 'Не удалось сохранить',
     'profile.guest': 'Гость', 'profile.guest_sub': 'Войдите, чтобы синхронизировать данные между устройствами',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
     'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
@@ -163,7 +171,7 @@ const T = {
     'xlsx.last_entry': 'Последняя запись', 'xlsx.description': 'Описание',
     'xlsx.sheet_tasks': 'Задачи', 'xlsx.sheet_sessions': 'Сессии', 'xlsx.default_task_sheet': 'Задача',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Без названия',
-    'export.project_fallback': 'Проект', 'export.task_fallback': 'задача', 'export.all_tasks': 'все задачи',
+    'export.project_fallback': 'Проект', 'export.task_fallback': 'задача', 'export.all_tasks': 'все задачи', 'export.period': 'период', 'export.excel': 'Экспорт',
   },
   en: {
     'app.default_project_name': 'My tasks',
@@ -180,6 +188,11 @@ const T = {
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
     'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work',
     'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
+    'settings.section_account': 'Account', 'profile.name_label': 'Name', 'profile.no_name': 'Not set',
+    'profile.name_updated': 'Name updated', 'profile.change_password': 'Change password',
+    'profile.new_password': 'New password', 'profile.confirm_password': 'Confirm password',
+    'profile.password_updated': 'Password updated', 'profile.password_mismatch': "Passwords don't match",
+    'profile.password_too_short': 'At least 6 characters', 'profile.update_failed': "Couldn't save",
     'profile.guest': 'Guest', 'profile.guest_sub': 'Sign in to sync your data across devices',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
     'stats.month': 'earned this month', 'stats.done': 'tasks done',
@@ -274,7 +287,7 @@ const T = {
     'xlsx.last_entry': 'Last entry', 'xlsx.description': 'Description',
     'xlsx.sheet_tasks': 'Tasks', 'xlsx.sheet_sessions': 'Sessions', 'xlsx.default_task_sheet': 'Task',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Untitled',
-    'export.project_fallback': 'Project', 'export.task_fallback': 'task', 'export.all_tasks': 'all tasks',
+    'export.project_fallback': 'Project', 'export.task_fallback': 'task', 'export.all_tasks': 'all tasks', 'export.period': 'period', 'export.excel': 'Export',
   },
   uk: {
     'app.default_project_name': 'Мої завдання',
@@ -291,6 +304,11 @@ const T = {
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
     'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
+    'settings.section_account': 'Акаунт', 'profile.name_label': "Ім'я", 'profile.no_name': 'Не вказано',
+    'profile.name_updated': "Ім'я оновлено", 'profile.change_password': 'Змінити пароль',
+    'profile.new_password': 'Новий пароль', 'profile.confirm_password': 'Повторіть пароль',
+    'profile.password_updated': 'Пароль оновлено', 'profile.password_mismatch': 'Паролі не збігаються',
+    'profile.password_too_short': 'Мінімум 6 символів', 'profile.update_failed': 'Не вдалося зберегти',
     'profile.guest': 'Гість', 'profile.guest_sub': 'Увійдіть, щоб синхронізувати дані між пристроями',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
     'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
@@ -385,7 +403,7 @@ const T = {
     'xlsx.last_entry': 'Останній запис', 'xlsx.description': 'Опис',
     'xlsx.sheet_tasks': 'Завдання', 'xlsx.sheet_sessions': 'Сесії', 'xlsx.default_task_sheet': 'Завдання',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Без назви',
-    'export.project_fallback': 'Проєкт', 'export.task_fallback': 'завдання', 'export.all_tasks': 'усі завдання',
+    'export.project_fallback': 'Проєкт', 'export.task_fallback': 'завдання', 'export.all_tasks': 'усі завдання', 'export.period': 'період', 'export.excel': 'Експорт',
   },
   kk: {
     'app.default_project_name': 'Менің тапсырмаларым',
@@ -402,6 +420,11 @@ const T = {
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
     'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс',
     'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
+    'settings.section_account': 'Аккаунт', 'profile.name_label': 'Аты', 'profile.no_name': 'Көрсетілмеген',
+    'profile.name_updated': 'Аты жаңартылды', 'profile.change_password': 'Құпиясөзді өзгерту',
+    'profile.new_password': 'Жаңа құпиясөз', 'profile.confirm_password': 'Құпиясөзді қайталаңыз',
+    'profile.password_updated': 'Құпиясөз жаңартылды', 'profile.password_mismatch': 'Құпиясөздер сәйкес емес',
+    'profile.password_too_short': 'Кемінде 6 таңба', 'profile.update_failed': 'Сақтау мүмкін болмады',
     'profile.guest': 'Қонақ', 'profile.guest_sub': 'Деректерді құрылғылар арасында синхрондау үшін кіріңіз',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
     'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
@@ -496,7 +519,7 @@ const T = {
     'xlsx.last_entry': 'Соңғы жазба', 'xlsx.description': 'Сипаттама',
     'xlsx.sheet_tasks': 'Тапсырмалар', 'xlsx.sheet_sessions': 'Сессиялар', 'xlsx.default_task_sheet': 'Тапсырма',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Атаусыз',
-    'export.project_fallback': 'Жоба', 'export.task_fallback': 'тапсырма', 'export.all_tasks': 'барлық тапсырмалар',
+    'export.project_fallback': 'Жоба', 'export.task_fallback': 'тапсырма', 'export.all_tasks': 'барлық тапсырмалар', 'export.period': 'кезең', 'export.excel': 'Экспорт',
   },
 };
 
@@ -586,6 +609,10 @@ const el = {
   settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
   settingsSyncToggle: $('settings-sync-toggle'),
   settingsRate: $('settings-rate'), settingsCurrency: $('settings-currency'),
+  settingsAccountLabel: $('settings-account-label'), settingsAccountCard: $('settings-account-card'),
+  settingsNameRow: $('settings-name-row'), settingsNameValue: $('settings-name-value'),
+  settingsPasswordRow: $('settings-password-row'), settingsSignoutRow: $('settings-signout-row'),
+  modalLabel2: $('modal-label2'), modalInput2: $('modal-input2'), modalError: $('modal-error'),
 
   homeCount: $('home-count'),
   pinnedSection: $('pinned-section'), pinnedTrack: $('pinned-track'),
@@ -610,6 +637,7 @@ const el = {
   timerDisplay: $('timer-display'), timerSub: $('timer-sub'), timerBtn: $('timer-btn'),
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
+  exportProjectBtn: $('export-project-btn'), exportCalendarBtn: $('export-calendar-btn'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   tableTools: $('table-tools'), ttSwatches: $('tt-swatches'),
   sessionList: $('session-list'), sessionCount: $('session-count'),
@@ -831,6 +859,53 @@ const anyDialogOpen = () =>
 // Диалог подтверждения (замена системного confirm())
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Диалог ввода (одно или два поля)
+// ---------------------------------------------------------------------------
+
+/** Единственный потребитель разметки #modal-backdrop — до появления
+ *  настроек аккаунта она лежала в index.html неиспользованной. Второе поле
+ *  и строка ошибки показываются по запросу: смене пароля нужны «новый» +
+ *  «повтор» и сообщение о несовпадении, смене имени — одно поле. */
+let promptResolve = null;
+let promptSubmit = null;
+function promptDialog({ label, value = '', type = 'text', label2 = null, okLabel = null, validate = null }) {
+  el.modalLabel.textContent = label;
+  el.modalInput.type = type;
+  el.modalInput.value = value;
+  el.modalLabel2.textContent = label2 || '';
+  el.modalLabel2.hidden = !label2;
+  el.modalInput2.type = type;
+  el.modalInput2.value = '';
+  el.modalInput2.hidden = !label2;
+  el.modalError.hidden = true;
+  el.modalOk.textContent = okLabel || t('common.ok');
+  el.modalBackdrop.hidden = false;
+  setTimeout(() => el.modalInput.focus(), 30);
+  const submit = () => {
+    const v1 = el.modalInput.value;
+    const v2 = el.modalInput2.value;
+    const err = validate ? validate(v1, v2) : null;
+    if (err) { el.modalError.textContent = err; el.modalError.hidden = false; return; }
+    closePrompt({ value: v1, value2: v2 });
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closePrompt(null); }
+    else if (e.key === 'Enter') { e.preventDefault(); submit(); }
+  };
+  document.addEventListener('keydown', onKey, true);
+  promptSubmit = submit;
+  return new Promise((resolve) => {
+    promptResolve = (v) => { document.removeEventListener('keydown', onKey, true); promptSubmit = null; resolve(v); };
+  });
+}
+function closePrompt(result) {
+  el.modalBackdrop.hidden = true;
+  if (promptResolve) { const r = promptResolve; promptResolve = null; r(result); }
+}
+el.modalOk.addEventListener('click', () => { if (promptSubmit) promptSubmit(); });
+el.modalCancel.addEventListener('click', () => closePrompt(null));
+
 let confirmResolve = null;
 function confirmDialog(message, { okLabel, cancelLabel, title, danger = true } = {}) {
   el.confirmTitle.textContent = title || t('common.delete_q');
@@ -916,6 +991,25 @@ el.settingsRate.addEventListener('input', () => {
   renderStats();
   scheduleSave();
 });
+el.settingsNameRow.addEventListener('click', async () => {
+  if (!currentUser) return;
+  const res = await promptDialog({ label: t('profile.name_label'), value: currentUser.name || '', okLabel: t('common.save') });
+  if (!res) return;
+  const ok = await updateProfileName(res.value);
+  toast(t(ok ? 'profile.name_updated' : 'profile.update_failed'));
+  renderAccountBtn();
+  renderSettings();
+});
+el.settingsPasswordRow.addEventListener('click', async () => {
+  const res = await promptDialog({
+    label: t('profile.new_password'), type: 'password', label2: t('profile.confirm_password'), okLabel: t('common.save'),
+    validate: (a, b) => (a.length < 6 ? t('profile.password_too_short') : a !== b ? t('profile.password_mismatch') : null),
+  });
+  if (!res) return;
+  const ok = await changePassword(res.value);
+  toast(t(ok ? 'profile.password_updated' : 'profile.update_failed'));
+});
+el.settingsSignoutRow.addEventListener('click', signOut);
 el.settingsCurrency.addEventListener('change', () => {
   state.settings.currency = el.settingsCurrency.value;
   render();
@@ -1012,6 +1106,10 @@ function renderSettings() {
     $('settings-signin-btn').addEventListener('click', openAuthModal);
     $('settings-signup-btn').addEventListener('click', openAuthModal);
   }
+
+  el.settingsAccountLabel.hidden = !currentUser;
+  el.settingsAccountCard.hidden = !currentUser;
+  if (currentUser) el.settingsNameValue.textContent = currentUser.name || t('profile.no_name');
 
   el.settingsLangValue.textContent = LANG_NAMES[(state.settings && state.settings.lang) || 'ru'];
 
@@ -1157,6 +1255,28 @@ async function saveOnboarding() {
   } catch (err) { console.error('Не удалось сохранить профиль:', err); }
   closeAuthModal();
   toast(t('auth.signed_in_toast'));
+}
+
+/** Имя живёт в таблице profiles (не в auth-метаданных) — так же, как в
+ *  мобильном приложении, иначе две платформы читали бы разные источники. */
+async function updateProfileName(name) {
+  const clean = (name || '').trim() || null;
+  try {
+    const { data } = await sb.auth.getUser();
+    const user = data && data.user;
+    if (!user) return false;
+    const { error } = await sb.from('profiles').update({ name: clean }).eq('id', user.id);
+    if (error) throw error;
+    currentUser = { ...currentUser, name: clean };
+    return true;
+  } catch (err) { console.error('Не удалось обновить имя профиля:', err); return false; }
+}
+async function changePassword(newPassword) {
+  try {
+    const { error } = await sb.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    return true;
+  } catch (err) { console.error('Не удалось изменить пароль:', err); return false; }
 }
 
 async function signOut() {
@@ -2901,6 +3021,38 @@ function buildProjectSheets(project) {
   ];
 }
 
+/** Один лист «Сессии» за произвольный промежуток — для выгрузки из
+ *  календаря. Порт buildPeriodSheets() из mobile/src/lib/xlsxReports.js;
+ *  в отличие от buildProjectSheets он не привязан к проекту и собирает
+ *  сессии всех задач, добавляя колонку с названием проекта. */
+function buildPeriodSheets(from, to) {
+  const cur = currencySym();
+  const all = allSessionPairs()
+    .filter(({ s }) => { const d = new Date(s.start); return d >= from && d <= to; })
+    .sort((a, b) => new Date(a.s.start) - new Date(b.s.start));
+  const rows = [
+    [t('xlsx.num'), t('xlsx.task'), t('xlsx.project'), t('xlsx.date'), t('xlsx.start'), t('xlsx.end'),
+      t('xlsx.duration'), t('xlsx.hours'), t('xlsx.rate', { cur }), t('xlsx.sum', { cur }), t('xlsx.note')].map(cellBold),
+  ];
+  all.forEach(({ t: t2, s }, i) => {
+    const p = getProject(t2.projectId);
+    rows.push([
+      i + 1, t2.title || t('xlsx.no_title'), p ? p.name : t('xlsx.no_project'),
+      fmtDate(s.start), fmtTime(s.start), s.end ? fmtTime(s.end) : '',
+      fmtClock(s.ms), cellHours(hoursOf(s.ms)), cellHours(sessionRate(s, t2)),
+      cellHours(sessionMoney(s, t2)), s.recovered ? t('xlsx.recovered') : s.manual ? t('xlsx.manual') : '',
+    ]);
+  });
+  const totalMs = all.reduce((a, x) => a + x.s.ms, 0);
+  const totalMoney = all.reduce((a, x) => a + sessionMoney(x.s, x.t), 0);
+  rows.push([
+    cellBold(t('xlsx.total')), '', '', '', '', '', fmtClock(totalMs),
+    all.length ? { f: `SUM(H2:H${all.length + 1})`, n: hoursOf(totalMs), s: 2 } : cellHours(0), '',
+    all.length ? { f: `SUM(J2:J${all.length + 1})`, n: totalMoney, s: 2 } : cellHours(0),
+  ]);
+  return [{ name: t('xlsx.sheet_sessions').slice(0, 31), cols: [6, 30, 24, 12, 10, 10, 14, 9, 12, 12, 16].map((width) => ({ width })), rows }];
+}
+
 async function runExport(defaultName, sheets) {
   try {
     const res = await window.api.exportXlsx({ defaultName, sheets });
@@ -2918,6 +3070,22 @@ function exportProjectById(id) {
   const p = getProject(id);
   if (!p) return;
   runExport(`${p.name} — ${t('export.all_tasks')} — ${fmtDate(Date.now())}`, buildProjectSheets(p));
+}
+/** Экспорт открытого проекта — та же выгрузка, что в контекстном меню
+ *  плитки на главной, но доступная изнутри проекта (как в мобильном). */
+function exportProject() {
+  if (state.ui.projectId) exportProjectById(state.ui.projectId);
+}
+/** Выгружает то, что сейчас показано в календаре: выбранный период, если
+ *  он включён, иначе границы текущего вида (месяц/неделя/день). */
+function exportCalendar() {
+  const picked = calState.periodOn ? rangeBounds() : null;
+  let [from, to] = picked || currentViewBounds();
+  if (!picked) {
+    from = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    to = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59);
+  }
+  runExport(`Lancible — ${t('export.period')} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
 }
 
 // ---------------------------------------------------------------------------
@@ -3239,6 +3407,8 @@ el.newTaskBtn.addEventListener('click', newTask);
 el.timerBtn.addEventListener('click', toggleTimer);
 el.deleteBtn.addEventListener('click', () => deleteTask(selectedId));
 el.exportTaskBtn.addEventListener('click', exportTask);
+el.exportProjectBtn.addEventListener('click', exportProject);
+el.exportCalendarBtn.addEventListener('click', exportCalendar);
 el.pinTaskBtn.addEventListener('click', () => selectedId && togglePinTask(selectedId));
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });
 
