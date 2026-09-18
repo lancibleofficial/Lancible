@@ -191,6 +191,44 @@
   .footer-links{display:flex; gap:22px; font-size:.86rem; color:var(--text-dim);}
   .footer-links a:hover{color:var(--accent);}
 
+  /* ---------- blog / лента обновлений ---------- */
+  .blog-section{background:var(--bg-deep); border-top:1px solid var(--border-soft); scroll-margin-top:68px;}
+  .blog-head{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap; margin-bottom:44px;}
+  .blog-head .section-head{margin-bottom:0;}
+  .lang-switch{display:inline-flex; gap:2px; padding:3px; flex:none; background:var(--panel); border:1px solid var(--border); border-radius:999px;}
+  .lang-switch button{
+    font-family:'Sora', system-ui, sans-serif; font-size:.76rem; font-weight:600; letter-spacing:.04em;
+    padding:6px 14px; border:none; border-radius:999px; cursor:pointer;
+    background:transparent; color:var(--text-dim); transition:background .2s, color .2s;
+  }
+  .lang-switch button:hover{color:var(--text);}
+  .lang-switch button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text);}
+
+  .blog-list{display:flex; flex-direction:column;}
+  .blog-entry{display:grid; grid-template-columns:130px 1fr; gap:28px; padding-block:30px; border-top:1px solid var(--border-soft);}
+  .blog-entry:first-child{border-top:none; padding-top:0;}
+  .blog-when{display:flex; flex-direction:column; gap:6px; padding-top:2px;}
+  .blog-date{font-size:.82rem; color:var(--text-dim); white-space:nowrap;}
+  .blog-version{font-size:.76rem; color:var(--text-faint);}
+  .blog-main{position:relative; padding-left:26px; border-left:1px solid var(--border-soft);}
+  .blog-main::before{
+    content:''; position:absolute; left:-4.5px; top:7px; width:8px; height:8px; border-radius:50%;
+    background:var(--border);
+  }
+  .blog-entry.latest .blog-main::before{background:var(--accent); animation:pulse-dot 2.2s ease-out infinite;}
+  .blog-tag{
+    display:inline-block; font-size:.66rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    padding:4px 9px; border-radius:999px; border:1px solid transparent; margin-bottom:12px;
+  }
+  .blog-tag.release{background:var(--accent); color:var(--accent-text);}
+  .blog-tag.feature{background:rgba(135,255,101,.1); color:var(--accent-deep); border-color:rgba(135,255,101,.32);}
+  .blog-tag.improvement{background:var(--panel-2); color:var(--text-dim); border-color:var(--border);}
+  .blog-title{font-family:'Unbounded', system-ui, sans-serif; font-weight:700; font-size:1.08rem; line-height:1.35; color:var(--text);}
+  .blog-text{margin-top:10px; display:flex; flex-direction:column; gap:10px;}
+  .blog-text p{font-size:.9rem; line-height:1.65; color:var(--text-dim); max-width:66ch;}
+  .blog-more{display:flex; justify-content:center; margin-top:36px;}
+  .blog-empty{font-size:.9rem; color:var(--text-dim);}
+
   @media (max-width: 860px){
     .hero-inner{grid-template-columns:1fr; gap:64px;}
     .hero-visual{order:-1; min-height:260px;}
@@ -198,6 +236,7 @@
     .platform-card.wide{grid-column:span 2;}
     .status-layout{grid-template-columns:1fr;}
     .feature-grid{grid-template-columns:1fr 1fr;}
+    .blog-head{align-items:flex-start; flex-direction:column; gap:20px;}
   }
   @media (max-width: 560px){
     .platform-grid{grid-template-columns:1fr;}
@@ -208,6 +247,11 @@
     .header-row{height:60px;}
     .gh-link span{display:none;}
     .status-pill span.long{display:none;}
+    .blog-entry{grid-template-columns:1fr; gap:14px; padding-block:26px;}
+    .blog-when{flex-direction:row; align-items:baseline; gap:10px; padding-top:0;}
+    .blog-main{padding-left:0; border-left:none;}
+    .blog-main::before{display:none;}
+    .nav-link{display:none;}
   }
 </style>
 </head>
@@ -225,6 +269,7 @@
     </div>
     <div class="header-actions">
       <div class="status-pill"><span class="status-dot"></span><span class="long">В активной разработке</span><span>· v1.0</span></div>
+      <a class="gh-link nav-link" href="#blog">Блог</a>
       <a class="gh-link" href="https://github.com/lancibleofficial/Lancible" target="_blank" rel="noopener">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.49c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.17-.89-1.17-.72-.5.06-.49.06-.49.8.06 1.22.82 1.22.82.71 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
         <span>GitHub</span>
@@ -422,6 +467,28 @@
   </div>
 </section>
 
+<section id="blog" class="blog-section">
+  <div class="wrap">
+    <div class="blog-head reveal pending">
+      <div class="section-head">
+        <div class="eyebrow" data-blog="eyebrow">Блог</div>
+        <h2 data-blog="title">Что нового в Lancible</h2>
+        <p data-blog="lede">Сюда попадает всё заметное: новые платформы, релизы и крупные возможности. Мелкие правки остаются в истории коммитов.</p>
+      </div>
+      <div class="lang-switch" role="group" aria-label="Язык записей">
+        <button type="button" data-lang="ru" aria-pressed="true">RU</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+
+    <div class="blog-list reveal pending" id="blogList"></div>
+
+    <div class="blog-more" id="blogMore" hidden>
+      <button type="button" class="btn btn-ghost" id="blogMoreBtn">Показать все записи</button>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap footer-row">
     <div class="footer-brand">
@@ -436,6 +503,7 @@
   </div>
 </footer>
 
+<script src="blog-posts.js"></script>
 <script>
   // Hero entrance
   document.addEventListener('DOMContentLoaded', () => {
@@ -451,6 +519,140 @@
       visual.style.opacity = '0'; visual.style.transform = 'scale(.92)';
       visual.style.transition = 'opacity .9s cubic-bezier(.16,1,.3,1), transform .9s cubic-bezier(.16,1,.3,1)';
       setTimeout(() => { visual.style.opacity = '1'; visual.style.transform = 'scale(1)'; }, 160);
+    }
+
+    // ---- Блог: лента обновлений (записи — в blog-posts.js) ----
+    const BLOG_TAGS = {
+      release:     { ru: 'Релиз',     en: 'Release' },
+      feature:     { ru: 'Новое',     en: 'New' },
+      improvement: { ru: 'Улучшение', en: 'Improved' },
+    };
+    const BLOG_UI = {
+      ru: {
+        eyebrow: 'Блог',
+        title: 'Что нового в Lancible',
+        lede: 'Сюда попадает всё заметное: новые платформы, релизы и крупные возможности. Мелкие правки остаются в истории коммитов.',
+        more: 'Показать все записи',
+        less: 'Свернуть',
+        empty: 'Записей пока нет — скоро здесь появится первое обновление.',
+      },
+      en: {
+        eyebrow: 'Blog',
+        title: 'What’s new in Lancible',
+        lede: 'Everything worth noticing lands here: new platforms, releases and major features. Small fixes stay in the commit history.',
+        more: 'Show all posts',
+        less: 'Collapse',
+        empty: 'No posts yet — the first update will show up here soon.',
+      },
+    };
+    const BLOG_VISIBLE = 3;
+    const BLOG_LANG_KEY = 'lancible:blog-lang';
+
+    const blogSection = document.getElementById('blog');
+    const blogList = document.getElementById('blogList');
+    if (blogSection && blogList) {
+      const posts = Array.isArray(window.LANCIBLE_POSTS) ? window.LANCIBLE_POSTS : [];
+      const moreWrap = document.getElementById('blogMore');
+      const moreBtn = document.getElementById('blogMoreBtn');
+      const langBtns = [...blogSection.querySelectorAll('.lang-switch button')];
+      let expanded = false;
+      let lang = 'ru';
+      try {
+        const saved = localStorage.getItem(BLOG_LANG_KEY);
+        if (saved === 'ru' || saved === 'en') lang = saved;
+      } catch (e) { /* приватный режим — просто остаёмся на русском */ }
+
+      // Запись может не иметь перевода — тогда показываем любой доступный язык.
+      const pick = (field) => (field && (field[lang] || field.ru || field.en)) || '';
+      const paragraphs = (field) => {
+        const value = pick(field);
+        return Array.isArray(value) ? value : (value ? [value] : []);
+      };
+      const formatDate = (iso) => {
+        const d = new Date(`${iso}T00:00:00`);
+        if (Number.isNaN(d.getTime())) return iso;
+        const text = d.toLocaleDateString(lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        return text.replace(/\s*г\.$/, ''); // ru-RU добавляет « г.» — в ленте он лишний
+      };
+
+      const buildEntry = (post, isLatest) => {
+        const entry = document.createElement('article');
+        entry.className = isLatest ? 'blog-entry latest' : 'blog-entry';
+
+        const when = document.createElement('div');
+        when.className = 'blog-when';
+        const date = document.createElement('time');
+        date.className = 'blog-date';
+        date.dateTime = post.date || '';
+        date.textContent = formatDate(post.date);
+        when.append(date);
+        if (post.version) {
+          const version = document.createElement('span');
+          version.className = 'blog-version mono';
+          version.textContent = post.version;
+          when.append(version);
+        }
+
+        const main = document.createElement('div');
+        main.className = 'blog-main';
+        const tagKey = BLOG_TAGS[post.tag] ? post.tag : 'improvement';
+        const tag = document.createElement('span');
+        tag.className = `blog-tag ${tagKey}`;
+        tag.textContent = BLOG_TAGS[tagKey][lang];
+        const title = document.createElement('h3');
+        title.className = 'blog-title';
+        title.textContent = pick(post.title);
+        const text = document.createElement('div');
+        text.className = 'blog-text';
+        paragraphs(post.body).forEach((par) => {
+          const p = document.createElement('p');
+          p.textContent = par;
+          text.append(p);
+        });
+        main.append(tag, title, text);
+
+        entry.append(when, main);
+        return entry;
+      };
+
+      const renderBlog = () => {
+        const ui = BLOG_UI[lang];
+        blogSection.setAttribute('lang', lang);
+        blogSection.querySelectorAll('[data-blog]').forEach((el) => { el.textContent = ui[el.dataset.blog]; });
+        langBtns.forEach((btn) => btn.setAttribute('aria-pressed', String(btn.dataset.lang === lang)));
+
+        blogList.replaceChildren();
+        if (!posts.length) {
+          const empty = document.createElement('p');
+          empty.className = 'blog-empty';
+          empty.textContent = ui.empty;
+          blogList.append(empty);
+          moreWrap.hidden = true;
+          return;
+        }
+
+        const shown = expanded ? posts : posts.slice(0, BLOG_VISIBLE);
+        shown.forEach((post, i) => blogList.append(buildEntry(post, i === 0)));
+
+        moreWrap.hidden = posts.length <= BLOG_VISIBLE;
+        moreBtn.textContent = expanded ? ui.less : ui.more;
+      };
+
+      langBtns.forEach((btn) => btn.addEventListener('click', () => {
+        if (btn.dataset.lang === lang) return;
+        lang = btn.dataset.lang;
+        try { localStorage.setItem(BLOG_LANG_KEY, lang); } catch (e) { /* не критично */ }
+        renderBlog();
+      }));
+
+      moreBtn.addEventListener('click', () => {
+        expanded = !expanded;
+        renderBlog();
+        // Свернули длинный список — возвращаем пользователя к началу раздела.
+        if (!expanded) blogSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      renderBlog();
     }
 
     // Scroll reveal
