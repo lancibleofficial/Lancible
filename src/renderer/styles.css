@@ -36,6 +36,9 @@
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --nav-w: 208px;
   --nav-w-collapsed: 56px;
+  /* Ширина зоны под нативные кнопки окна macOS в шапке. Не связана с рейлом:
+     шапка едина и не переламывается при его сворачивании. */
+  --traffic-w: 92px;
 }
 
 /* ---------- Светлая тема ----------
@@ -170,34 +173,38 @@ b, strong { font-weight: 400; }
      шапки без них; в вебе переменной нет и фолбэк 100% даёт ноль. */
   padding-right: calc(100% - env(titlebar-area-width, 100%));
 }
-/* Полоса под нативными кнопками окна — ширина ВСЕГДА var(--nav-w), не
-   зависит от сворачивания рейла (в отличие от #navrail/#main ниже, которые
-   по-прежнему сжимаются): это то, что держит поиск и лого на месте, когда
-   рейл схлопывается — раньше .tb-rest уезжал вместе с рейлом через
-   margin-left, теперь у него фиксированный отступ. На маке под этой
-   полосой — нативные трафик-лайты (см. trafficLightPosition в
-   src/main.js), на Windows — просто пустая зона слева от поиска. Только
-   нижняя граница (не правая, как раньше у .tb-logo, когда лого жило тут) —
-   отделяет её от рейла под ней; фон совпадает с общим фоном тайтлбара (не
-   отдельный --panel — зона больше не бокс с собственным содержимым). */
-.tb-nav-strip {
+/* Зона под нативные трафик-лайты macOS (см. trafficLightPosition в
+   src/main.js:x=14, три кнопки заканчиваются примерно на 80px). Только там
+   она и нужна: на Windows кнопки окна рисуются справа, а в браузере их нет
+   вовсе, и лого начинается от самого края.
+
+   Ширина фиксированная и НЕ связана с рейлом: шапка — единая полоса во всю
+   ширину окна, она не должна ездить и переламываться, когда рейл под ней
+   сворачивается. */
+.tb-nav-strip { display: none; }
+body.platform-mac .tb-nav-strip {
+  display: block;
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: var(--nav-w);
+  width: var(--traffic-w);
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
 }
 
 .tb-rest {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   height: 100%;
-  margin-left: var(--nav-w);
+  margin-left: 0;
   padding-right: 16px;
 }
+body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
+
+/* Распорка после колокольчика: она и отодвигает кнопку аккаунта к правому
+   краю, оставляя лого, поиск и колокольчик одной группой слева. */
+.tb-gap { flex: 1; min-width: 12px; }
 
 .tb-search {
   flex: 1;
@@ -216,26 +223,20 @@ b, strong { font-weight: 400; }
 }
 .tb-search:focus-within { border-color: var(--accent); }
 
-/* Лого — теперь в одном ряду с поиском, у правого края (margin-left:auto
-   вместе с .tb-search's flex:1+max-width съедает всё, что search не занял).
-   На Windows там же рисуются нативные кнопки окна (titleBarOverlay) —
-   зарезервирован отступ под них; на маке они слева (.tb-nav-strip), справа
-   свободно, так что лого может стоять у самого края. */
+/* Лого открывает шапку. Порядок один на всех платформах:
+   [трафик-лайты только на маке] лого · поиск · колокольчик … аккаунт.
+   Аккаунт остаётся только в вебе — на десктопе вход живёт на странице
+   настроек, и в шапке кнопка лишь занимала место. */
 .tb-logo {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-left: auto;
   flex: none;
+  padding-left: 16px;
+  padding-right: 4px;
   user-select: none;
   -webkit-app-region: drag;
 }
-body.platform-mac .tb-logo { padding-right: 16px; }
-body.platform-web .tb-logo { padding-right: 16px; }
-/* Только Windows: там titleBarOverlay рисует кнопки окна поверх правого края
-   шапки. Ни маку, ни браузеру этот отступ не нужен — отсюда два исключения,
-   а не одно «не мак». */
-body:not(.platform-mac):not(.platform-web) .tb-logo { padding-right: 150px; }
 .tb-logo-mark { width: 22px; height: 22px; flex: none; color: var(--accent); }
 .tb-logo-text {
   font-weight: 700;
@@ -257,7 +258,19 @@ body:not(.platform-mac):not(.platform-web) .tb-logo { padding-right: 150px; }
 
 /* ---------- Каркас: нав-рейл + основное ---------- */
 
-#shell { flex: 1; min-height: 0; display: flex; position: relative; }
+/* Линия под шапкой живёт здесь, а не на #titlebar и не на #main.
+   Не на #titlebar: на Windows кнопки окна (titleBarOverlay) закрывают
+   последнюю строку титлбара сплошным прямоугольником, и граница пропадала бы
+   под ними. Не на #main: он начинается за левой панелью, и линия обрывалась
+   на её границе — шапка выглядела разрезанной надвое. На #shell она идёт во
+   всю ширину окна и строкой ниже полосы оверлея, то есть видна везде. */
+#shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  position: relative;
+  border-top: 1px solid var(--border);
+}
 
 /* Тоже вынесен из flex-потока — см. комментарий у .tb-logo про баг Chromium. */
 #navrail {
@@ -394,19 +407,13 @@ body.nav-collapsed .nav-item .nav-label { opacity: 0; }
 
 /* ---------- Основная область ---------- */
 
-/* border-top (не border-bottom у #titlebar) — линия обязана лежать строго ниже
-   52px высоты титлбара: там, где Windows рисует свои кнопки окна (titleBarOverlay),
-   она сплошным непрозрачным прямоугольником перекрывает ЛЮБУЮ отрисовку страницы
-   внутри своей полосы, так что граница на самой последней строке титлбара
-   пропадает именно под этими кнопками. Строкой ниже (уже вне полосы оверлея)
-   она гарантированно видна по всей ширине окна, включая под кнопками. */
+/* Линия под шапкой — на #shell, см. комментарий там. */
 #main {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   margin-left: var(--nav-w);
-  border-top: 1px solid var(--border);
   transition: margin-left 0.24s var(--ease);
 }
 body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
@@ -1591,14 +1598,17 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 /* ---------- Аккаунт в шапке (рядом с поиском) ---------- */
 
-.tb-account {
+/* Только веб: на десктопе вход и данные аккаунта живут на странице настроек,
+   и кнопка в шапке лишь занимала место рядом с кнопками окна. */
+.tb-account { display: none; }
+body.platform-web .tb-account {
   -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
   gap: 7px;
   flex: none;
   height: 32px;
-  margin: auto 12px auto auto;
+  margin: auto 0 auto 0;
   padding: 0 12px 0 10px;
   background: var(--panel-2);
   border: 1px solid var(--border);
