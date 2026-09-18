@@ -3,17 +3,22 @@
     "name": "Lancible",
     "slug": "lancible",
     "scheme": "lancible",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#2a2b2e",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lancible.app"
+      "bundleIdentifier": "com.lancible.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.lancible.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#2a2b2e",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -33,7 +38,14 @@
         }
       ],
       "expo-font",
-      "expo-sharing"
-    ]
+      "expo-sharing",
+      "expo-web-browser",
+      "expo-notifications"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1bae6ecb-382f-463a-9466-eb134c7fcaaf"
+      }
+    }
   }
 }

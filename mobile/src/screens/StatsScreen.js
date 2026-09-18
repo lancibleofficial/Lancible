@@ -46,23 +46,8 @@ export default function StatsScreen({ navigation }) {
     openSheet(<ExportPeriodSheet lang={lang} onConfirm={onExportRange} onCancel={closeSheet} />);
   }
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <Pressable
-          hitSlop={10}
-          style={styles.headerIconBtnLast}
-          onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openSearch: true } })}
-        >
-          <Icon name="search" size={20} color={colors.text} />
-        </Pressable>
-      ),
-    });
-  }, [navigation, colors]);
-
   const totalMs = tasks.reduce((a, task) => a + taskElapsedMs(task, activeTimer), 0);
   const totalMoney = tasks.reduce((a, task) => a + earnedOf(task, hourlyRate, activeTimer), 0);
-  const done = tasks.filter((task) => task.done).length;
   const runningTask = activeTimer && tasks.find((task) => task.id === activeTimer.taskId);
 
   const byProject = useMemo(
@@ -105,11 +90,10 @@ export default function StatsScreen({ navigation }) {
           <View style={styles.grid}>
             <StatCard icon="clock" label={t(lang, 'stats.worked')} value={fmtDur(totalMs, lang)} />
             <StatCard icon="wallet" label={t(lang, 'stats.earned')} value={fmtMoney(totalMoney, lang, currency)} />
-            <StatCard icon="check" label={t(lang, 'stats.done')} value={`${done}/${tasks.length}`} />
           </View>
 
           <View style={styles.exportRow}>
-            <PrimaryButton icon="download" title={t(lang, 'export.all_excel')} onPress={() => onExportRange(null)} loading={exporting} style={styles.exportRowBtn} shrinkText />
+            <PrimaryButton icon="download" title={t(lang, 'export.short')} onPress={() => onExportRange(null)} loading={exporting} style={styles.exportRowBtn} shrinkText />
             <PrimaryButton title={t(lang, 'export.pick_period')} variant="ghost" onPress={onOpenPeriodExport} style={styles.exportRowBtn} shrinkText />
           </View>
 
@@ -151,7 +135,6 @@ export default function StatsScreen({ navigation }) {
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
-  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: spacing.lg },
   grid: { flexDirection: 'row', gap: spacing.sm },
   exportRow: { flexDirection: 'row', gap: spacing.sm },
   exportRowBtn: { flex: 1, width: undefined },

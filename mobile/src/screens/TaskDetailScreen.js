@@ -1,13 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
-import RichTextEditor from '../components/RichTextEditor';
+import RichTextEditor, { LinkPromptSheet } from '../components/RichTextEditor';
+import EditorToolbar from '../components/EditorToolbar';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
 import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney } from '../lib/format';
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
+import { openSheet, closeSheet } from '../store/useSheetStore';
+import DueSheet from '../components/DueSheet';
+import { dueShort, remindKey, REMIND_LABEL } from '../lib/due';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
 import { useColors, spacing, radius, fontSize } from '../theme';
@@ -24,6 +28,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   const LANG = useAppStore((s) => s.settings.lang);
   const currency = useAppStore((s) => s.settings.currency);
   const updateTask = useAppStore((s) => s.updateTask);
+  const setTaskDue = useAppStore((s) => s.setTaskDue);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const togglePinTask = useAppStore((s) => s.togglePinTask);
   const startTimer = useAppStore((s) => s.startTimer);
@@ -37,8 +42,46 @@ export default function TaskDetailScreen({ route, navigation }) {
   const [tab, setTab] = useState('notes');
   const [title, setTitle] = useState(task ? task.title : '');
   const [rateText, setRateText] = useState(task && task.rate != null ? String(task.rate) : '');
+  const [format, setFormat] = useState({});
   const titleTimer = useRef(null);
   const notesTimer = useRef(null);
+  const editorRef = useRef(null);
+
+  // Автопрокрутка страницы, чтобы курсор в заметках не уезжал под клавиатуру
+  // (сам WebView этого не умеет — RN не видит, что происходит внутри него).
+  // scrollY/editorY/scrollViewH — три числа, из которых считаем, перекрывает
+  // ли клавиатура текущую позицию каретки, и на сколько доскроллить.
+  const scrollRef = useRef(null);
+  const scrollYRef = useRef(0);
+  const editorYRef = useRef(0);
+  const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
+  function onCaret({ bottom }) {
+    if (!keyboardHeight || !scrollViewHeight) return;
+    const visibleBottom = scrollViewHeight - keyboardHeight;
+    const caretBottomInScroll = editorYRef.current + bottom - scrollYRef.current;
+    const overflow = caretBottomInScroll - visibleBottom;
+    if (overflow > 0) {
+      scrollRef.current?.scrollTo({ y: scrollYRef.current + overflow + spacing.md, animated: true });
+    }
+  }
+
+  function onToolbarCommand(item) {
+    if (item.type === 'link') {
+      openSheet(
+        <LinkPromptSheet lang={LANG} initialValue={format.link} onConfirm={(url) => editorRef.current?.send({ type: 'link', value: url })} />,
+      );
+      return;
+    }
+    editorRef.current?.send(item);
+  }
 
   function onExport() {
     if (!task) return;
@@ -74,6 +117,7 @@ export default function TaskDetailScreen({ route, navigation }) {
       ? t(LANG, 'confirm.delete_task_named', { name: task.title })
       : t(LANG, 'confirm.delete_task');
     confirmSheet({
+      title: t(LANG, 'confirm.are_you_sure'),
       message: msg,
       actions: [
         { label: t(LANG, 'task.delete_title'), destructive: true, onPress: () => { deleteTask(taskId); navigation.goBack(); } },
@@ -99,6 +143,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   function onDeleteSession(index) {
     if (!task) return;
     confirmSheet({
+      title: t(LANG, 'confirm.are_you_sure'),
       message: t(LANG, 'session.delete_title'),
       actions: [
         {
@@ -114,6 +159,22 @@ export default function TaskDetailScreen({ route, navigation }) {
     });
   }
 
+  const fmtHm = (iso) => {
+    const d = new Date(iso);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  function onOpenDue() {
+    openSheet(
+      <DueSheet
+        task={task}
+        lang={LANG}
+        onApply={(patch) => { setTaskDue(taskId, patch); closeSheet(); }}
+        onClear={() => { setTaskDue(taskId, { dueAt: null, remindAt: null, remindOffsetMin: null }); closeSheet(); }}
+      />,
+    );
+  }
+
   useEffect(() => () => { clearTimeout(titleTimer.current); clearTimeout(notesTimer.current); }, []);
 
   if (!task) return null;
@@ -122,65 +183,110 @@ export default function TaskDetailScreen({ route, navigation }) {
   const earned = earnedOf(task, hourlyRate, activeTimer);
   const sessions = [...(task.sessions || [])].map((s, i) => ({ s, i })).sort((a, b) => new Date(b.s.start) - new Date(a.s.start));
 
-  return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.header}>
-        <TextInput
-          style={styles.titleInput}
-          value={title}
-          onChangeText={onTitleChange}
-          placeholder={t(LANG, 'task.title_ph')}
-          placeholderTextColor={colors.textDim}
-        />
+  // На Android и KeyboardAvoidingView behavior="height", и "padding" зависят
+  // от того, как ОС резайзит окно (windowSoftInputMode) — а под Expo Go этот
+  // манифест не наш, приложение грузится в чужой контейнер (см. историю
+  // правок этого файла: два предыдущих захода на "height" не сработали на
+  // реальном устройстве, хотя выглядели корректно и даже проверялись на
+  // эмуляторе). Вместо попытки угадать поведение автоматического режима —
+  // считаем сами: keyboardHeight уже отслеживается ниже (Keyboard.addListener)
+  // для автопрокрутки каретки, используем то же число напрямую как
+  // marginBottom тулбара и paddingBottom скролла на Android. Это не зависит
+  // ни от какого manifest/resize-режима — просто сдвигает контент на
+  // измеренную высоту клавиатуры, минуя автоматику совсем.
+  const isIOS = Platform.OS === 'ios';
+  const androidKeyboardOffset = !isIOS && tab === 'notes' ? keyboardHeight : 0;
 
-        <View style={styles.timerCard}>
-          <Text style={styles.clock}>{fmtClock(elapsedMs)}</Text>
-          <Pressable
-            style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
-            onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
-          >
-            <Icon name={isRunning ? 'pause' : 'play'} size={20} color={isRunning ? colors.accentText : colors.text} />
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={isIOS ? 'padding' : undefined}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, androidKeyboardOffset ? { paddingBottom: androidKeyboardOffset } : null]}
+        keyboardShouldPersistTaps="handled"
+        onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
+        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.header}>
+          <TextInput
+            style={styles.titleInput}
+            value={title}
+            onChangeText={onTitleChange}
+            placeholder={t(LANG, 'task.title_ph')}
+            placeholderTextColor={colors.textDim}
+          />
+
+          <View style={styles.timerCard}>
+            <Text style={styles.clock}>{fmtClock(elapsedMs)}</Text>
+            <Pressable
+              style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
+              onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
+            >
+              <Icon name={isRunning ? 'pause' : 'play'} size={20} color={isRunning ? colors.accentText : colors.text} />
+            </Pressable>
+          </View>
+
+          <View style={styles.splitRow}>
+            <View style={styles.splitHalf}>
+              <Text style={styles.label}>{t(LANG, 'task.rate_label')}</Text>
+              <TextInput
+                style={styles.input}
+                value={rateText}
+                onChangeText={onRateChange}
+                keyboardType="decimal-pad"
+                placeholder={String(hourlyRate || 0)}
+                placeholderTextColor={colors.textDim}
+              />
+            </View>
+            <View style={styles.splitHalf}>
+              <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
+              <View style={styles.earnedBox}>
+                <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
+              </View>
+            </View>
+          </View>
+
+          <Pressable style={styles.dueRow} onPress={onOpenDue}>
+            <Icon name="clock" size={15} color={colors.textDim} />
+            <View style={styles.dueMain}>
+              <Text style={styles.dueLabel}>{t(LANG, 'due.label')}</Text>
+              {task.dueAt ? (
+                <Text style={styles.dueRemind}>{t(LANG, REMIND_LABEL[remindKey(task)])}</Text>
+              ) : null}
+            </View>
+            {task.dueAt ? (
+              <Text style={styles.dueValue}>{`${dueShort(task, LANG)}, ${fmtHm(task.dueAt)}`}</Text>
+            ) : (
+              <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
+            )}
+            <Icon name="chevron-right" size={14} color={colors.textDim} />
           </Pressable>
+
+          <View style={styles.tabRow}>
+            <Pressable style={[styles.tab, tab === 'notes' && styles.tabActive]} onPress={() => setTab('notes')}>
+              <Text style={[styles.tabText, tab === 'notes' && styles.tabTextActive]}>{t(LANG, 'tabs.notes')}</Text>
+            </Pressable>
+            <Pressable style={[styles.tab, tab === 'history' && styles.tabActive]} onPress={() => setTab('history')}>
+              <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>{t(LANG, 'tabs.history')}</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <View style={styles.splitRow}>
-          <View style={styles.splitHalf}>
-            <Text style={styles.label}>{t(LANG, 'task.rate_label')}</Text>
-            <TextInput
-              style={styles.input}
-              value={rateText}
-              onChangeText={onRateChange}
-              keyboardType="decimal-pad"
-              placeholder={String(hourlyRate || 0)}
-              placeholderTextColor={colors.textDim}
+        {tab === 'notes' ? (
+          <View onLayout={(e) => { editorYRef.current = e.nativeEvent.layout.y; }}>
+            <RichTextEditor
+              ref={editorRef}
+              value={task.notes}
+              onChange={onNotesChange}
+              onFormatChange={setFormat}
+              onCaret={onCaret}
+              placeholder={t(LANG, 'editor.placeholder')}
+              lang={LANG}
             />
           </View>
-          <View style={styles.splitHalf}>
-            <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
-            <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.tabRow}>
-          <Pressable style={[styles.tab, tab === 'notes' && styles.tabActive]} onPress={() => setTab('notes')}>
-            <Text style={[styles.tabText, tab === 'notes' && styles.tabTextActive]}>{t(LANG, 'tabs.notes')}</Text>
-          </Pressable>
-          <Pressable style={[styles.tab, tab === 'history' && styles.tabActive]} onPress={() => setTab('history')}>
-            <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>{t(LANG, 'tabs.history')}</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={styles.body}>
-        {tab === 'notes' ? (
-          <RichTextEditor
-            value={task.notes}
-            onChange={onNotesChange}
-            placeholder={t(LANG, 'editor.placeholder')}
-            lang={LANG}
-          />
         ) : (
-          <ScrollView contentContainerStyle={styles.historyScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.historyScroll}>
             {sessions.length === 0 ? <Text style={styles.historyEmpty}>{t(LANG, 'history.empty')}</Text> : null}
             {sessions.map(({ s, i }) => (
               <View key={i} style={styles.sessionRow}>
@@ -194,48 +300,74 @@ export default function TaskDetailScreen({ route, navigation }) {
                 </Pressable>
               </View>
             ))}
-          </ScrollView>
+          </View>
         )}
-      </View>
+      </ScrollView>
+
+      {tab === 'notes' ? (
+        <View style={androidKeyboardOffset ? { marginBottom: androidKeyboardOffset } : null}>
+          <EditorToolbar format={format} onCommand={onToolbarCommand} colors={colors} />
+        </View>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm, gap: spacing.lg },
-  body: { flex: 1 },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+  header: { padding: spacing.lg, paddingBottom: spacing.sm },
   headerActions: { flexDirection: 'row' },
   headerIconBtn: { paddingHorizontal: spacing.sm },
-  headerIconBtnLast: { paddingLeft: spacing.sm, paddingRight: spacing.lg },
-  titleInput: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700', paddingVertical: spacing.sm },
+  headerIconBtnLast: { paddingLeft: spacing.sm },
+  // marginBottom меньше, чем зазор между остальными блоками ниже (timerCard/
+  // splitRow/tabRow держат spacing.lg сами) — раньше был общий gap на .header,
+  // одинаковый везде; тут именно название-таймер должен быть теснее.
+  titleInput: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', paddingVertical: spacing.sm, marginBottom: spacing.xs },
   timerCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg,
+    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg,
   },
-  clock: { color: colors.text, fontSize: 32, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  clock: { color: colors.text, fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
   timerBtn: {
-    width: 56, height: 56, borderRadius: radius.lg, backgroundColor: colors.panel2,
+    width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.panel2,
     alignItems: 'center', justifyContent: 'center',
   },
   timerBtnOn: { backgroundColor: colors.accent },
   label: { color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   input: {
-    backgroundColor: colors.panel, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
-  },
-  splitRow: { flexDirection: 'row', gap: spacing.md },
-  splitHalf: { flex: 1, gap: spacing.xs },
-  earnedValue: {
     backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    color: colors.accent, fontSize: fontSize.md, fontWeight: '700',
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
+    textAlignVertical: 'center',
   },
+  splitRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
+  splitHalf: { flex: 1, gap: spacing.xs },
+  // Та же геометрия, что у поля ставки слева (minHeight 48, тот же
+  // горизонтальный паддинг), сумма прижата к левому краю и отцентрована по
+  // вертикали контейнером, а не текстовыми свойствами — textAlignVertical
+  // работает только на Android.
+  earnedBox: {
+    backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
+    paddingHorizontal: spacing.md, justifyContent: 'center',
+  },
+  earnedValue: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
+  dueRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.panel, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginBottom: spacing.lg,
+  },
+  dueMain: { flex: 1 },
+  dueLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
+  dueRemind: { color: colors.textDim, fontSize: fontSize.xs, marginTop: 1 },
+  dueValue: { color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
+  dueNone: { color: colors.textDim, fontSize: fontSize.sm },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
-  tabActive: { backgroundColor: colors.accentMuted },
+  tabActive: { backgroundColor: colors.tabActiveBg },
   tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  tabTextActive: { color: colors.accent },
+  // См. комментарий у modeTextActive в CalendarScreen.js — тот же принцип.
+  tabTextActive: { color: colors.text },
   historyScroll: { padding: spacing.lg, paddingTop: 0, gap: spacing.sm },
   historyEmpty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.lg },
   sessionRow: {

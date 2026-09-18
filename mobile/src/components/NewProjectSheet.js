@@ -71,11 +71,11 @@ const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.sm },
   input: {
-    backgroundColor: colors.panel2, borderRadius: radius.md,
+    backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  swatchRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.md },
+  swatchRow: { flexDirection: 'row', gap: spacing.xs / 2, paddingVertical: spacing.xs, paddingRight: spacing.md },
   swatchRing: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   swatchRingSel: { backgroundColor: colors.bg },
   swatch: { width: 34, height: 34, borderRadius: radius.sm },

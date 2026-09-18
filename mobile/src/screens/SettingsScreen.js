@@ -1,8 +1,9 @@
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Pressable, ScrollView, StyleSheet, Linking, Switch } from 'react-native';
+import Constants from 'expo-constants';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
 import ThemeSwitch from '../components/ThemeSwitch';
-import Toggle from '../components/Toggle';
 import SettingsRow, { SettingsCard } from '../components/SettingsRow';
 import PickerSheet from '../components/PickerSheet';
 import RateSheet from '../components/RateSheet';
@@ -16,6 +17,8 @@ import { CURRENCIES } from '../lib/migrate';
 import { CURRENCY_SYMBOLS, fmtMoney } from '../lib/format';
 import { openSheet } from '../store/useSheetStore';
 import { setSyncEnabled } from '../lib/sync';
+import { permissionStatus, ensurePermission } from '../lib/notifications';
+import { checkForUpdate } from '../lib/updateCheck';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, useThemeMode, spacing, radius, fontSize, tabBarClearance } from '../theme';
 import { t, LANG_NAMES } from '../lib/i18n';
@@ -23,14 +26,49 @@ import { t, LANG_NAMES } from '../lib/i18n';
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const [notifPerm, setNotifPerm] = useState('ask');
   const styles = makeStyles(colors, insets);
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const settings = useAppStore((s) => s.settings);
+  const setNotifyEnabled = useAppStore((s) => s.setNotifyEnabled);
   const setSettings = useAppStore((s) => s.setSettings);
   const resolvedMode = useThemeMode();
+  const appVersion = (Constants.expoConfig && Constants.expoConfig.version) || '1.0.0';
+  const [update, setUpdate] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    checkForUpdate().then((result) => {
+      if (!cancelled && result.available) setUpdate(result);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Разрешение могли поменять в системных настройках, пока приложение было
+  // в фоне, — перечитываем его при заходе на экран.
+  useEffect(() => { permissionStatus().then(setNotifPerm); }, []);
 
   if (authStatus === 'needsOnboarding') return <OnboardingScreen />;
+
+  async function onToggleNotify(value) {
+    // Включение имеет смысл только вместе с разрешением: без него мы бы
+    // молча ничего не планировали, а тумблер показывал бы «включено».
+    if (value) {
+      await ensurePermission();
+      setNotifPerm(await permissionStatus());
+    }
+    setNotifyEnabled(value);
+  }
+
+  async function onOpenSystemNotifications() {
+    if (notifPerm === 'ask') {
+      await ensurePermission();
+      setNotifPerm(await permissionStatus());
+      return;
+    }
+    Linking.openSettings();
+  }
 
   function onOpenLanguage() {
     openSheet(
@@ -74,6 +112,16 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {update ? (
+        <Pressable style={styles.updateBanner} onPress={() => Linking.openURL(update.url)}>
+          <Icon name="download" size={18} color={colors.accentText} />
+          <Text style={styles.updateBannerText} numberOfLines={1}>
+            {t(settings.lang, 'settings.update_available', { version: update.version })}
+          </Text>
+          <Text style={styles.updateBannerAction}>{t(settings.lang, 'settings.update_download')}</Text>
+        </Pressable>
+      ) : null}
+
       {authStatus === 'signedIn' ? (
         <Pressable style={styles.profileCard} onPress={onOpenProfile}>
           <View style={styles.profileCardTop}>
@@ -95,8 +143,8 @@ export default function SettingsScreen() {
             </View>
           </View>
           <View style={styles.guestActions}>
-            <View style={{ flex: 1 }}><PrimaryButton compact title={t(settings.lang, 'auth.sign_in')} variant="ghost" onPress={() => onOpenAuth('signin')} /></View>
-            <View style={{ flex: 1 }}><PrimaryButton compact title={t(settings.lang, 'auth.create_account')} onPress={() => onOpenAuth('signup')} /></View>
+            <View style={{ flex: 0.8 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.sign_in')} variant="ghost" onPress={() => onOpenAuth('signin')} /></View>
+            <View style={{ flex: 1.2 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.create_account')} onPress={() => onOpenAuth('signup')} /></View>
           </View>
         </View>
       )}
@@ -119,12 +167,44 @@ export default function SettingsScreen() {
             <SettingsRow
               icon="cloud"
               label={t(settings.lang, 'sync.toggle_label')}
-              right={<Toggle value={settings.syncEnabled !== false} onValueChange={setSyncEnabled} />}
+              right={(
+                <Switch
+                  value={settings.syncEnabled !== false}
+                  onValueChange={setSyncEnabled}
+                  trackColor={{ false: colors.panel2, true: colors.accent }}
+                  ios_backgroundColor={colors.panel2}
+                  thumbColor="#fff"
+                />
+              )}
               last
             />
           </SettingsCard>
         </>
       ) : null}
+
+      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_notifications')}</Text>
+      <SettingsCard>
+        <SettingsRow
+          icon="bell"
+          label={t(settings.lang, 'notif.enable')}
+          right={(
+            <Switch
+              value={settings.notifyEnabled !== false}
+              onValueChange={onToggleNotify}
+              trackColor={{ false: colors.panel2, true: colors.accent }}
+              ios_backgroundColor={colors.panel2}
+              thumbColor="#fff"
+            />
+          )}
+        />
+        <SettingsRow
+          icon="settings"
+          label={t(settings.lang, 'notif.system')}
+          value={t(settings.lang, `notif.perm_${notifPerm === 'granted' ? 'granted' : notifPerm === 'denied' ? 'denied' : 'ask'}`)}
+          onPress={onOpenSystemNotifications}
+          last
+        />
+      </SettingsCard>
 
       <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_work')}</Text>
       <SettingsCard>
@@ -132,7 +212,7 @@ export default function SettingsScreen() {
         <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
       </SettingsCard>
 
-      <Text style={styles.footer}>Lancible · 1.0.0</Text>
+      <Text style={styles.footer}>Lancible · {appVersion}</Text>
     </ScrollView>
   );
 }
@@ -144,6 +224,12 @@ const makeStyles = (colors, insets) => StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg,
   },
+  updateBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.accent, borderRadius: radius.lg, padding: spacing.md,
+  },
+  updateBannerText: { flex: 1, color: colors.accentText, fontSize: fontSize.sm, fontWeight: '700' },
+  updateBannerAction: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: '800', textDecorationLine: 'underline' },
   profileCardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.accentText, fontSize: fontSize.lg, fontWeight: '800' },

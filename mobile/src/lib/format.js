@@ -43,6 +43,12 @@ export function fmtWhen(iso, langCode) {
   return `${d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' })} ${time}`;
 }
 
+/** «18 сент.» — короткая дата для меток дедлайна (порт fmtDateShort
+ *  из десктопной версии). */
+export function fmtDateShort(iso, langCode) {
+  return new Date(iso).toLocaleDateString(LOCALE_MAP[langCode] || 'ru-RU', { day: 'numeric', month: 'short' });
+}
+
 export const capFirst = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const pad2xlsx = (n) => String(n).padStart(2, '0');

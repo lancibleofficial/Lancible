@@ -5,7 +5,10 @@ import { T, t } from './i18n';
 
 export const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
 
-export const PALETTE = ['#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5'];
+export const PALETTE = [
+  '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5',
+  '#e63950', '#2dd4bf', '#5468ff', '#ff9142', '#d946a8', '#6ee7b7', '#c8956d', '#6b7cad',
+];
 
 export const CURRENCIES = {
   USD: '$', EUR: '€', GBP: '£', RUB: '₽', KZT: '₸',
@@ -25,7 +28,7 @@ export function emptyState() {
     tasks: [],
     activeTimer: null,
     ui: { view: 'home', projectId: null },
-    settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, syncResolvedFor: null },
+    settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, notifyEnabled: true, syncResolvedFor: null },
   };
 }
 
@@ -40,6 +43,7 @@ export function migrate(state) {
   if (!['system', 'light', 'dark'].includes(state.settings.theme)) state.settings.theme = 'system';
   if (!T[state.settings.lang]) state.settings.lang = 'ru';
   if (typeof state.settings.syncEnabled !== 'boolean') state.settings.syncEnabled = true;
+  if (typeof state.settings.notifyEnabled !== 'boolean') state.settings.notifyEnabled = true;
   if (!state.settings.syncResolvedFor || typeof state.settings.syncResolvedFor !== 'object') state.settings.syncResolvedFor = null;
 
   let cur = state.settings.currency || 'RUB';
@@ -57,6 +61,12 @@ export function migrate(state) {
     if (task.rate === undefined) task.rate = null;
     if (!Array.isArray(task.sessions)) task.sessions = [];
     if (!Number.isFinite(task.totalMs)) task.totalMs = 0;
+    // Дедлайн и напоминание — те же поля и та же трактовка, что на
+    // десктопе: они едут в одном блоке синхронизации (см. lib/due.js).
+    if (task.dueAt === undefined) task.dueAt = null;
+    if (task.remindOffsetMin === undefined) task.remindOffsetMin = null;
+    if (task.remindAt === undefined) task.remindAt = null;
+    if (task.notifiedAt === undefined) task.notifiedAt = null;
   });
 
   if (state.projects.length === 0 && state.tasks.length > 0) {

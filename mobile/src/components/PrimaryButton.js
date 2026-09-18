@@ -40,14 +40,16 @@ export default function PrimaryButton({ title, onPress, disabled, loading, varia
       ) : (
         <View style={styles.row}>
           {icon ? <Icon name={icon} size={16} color={iconColor} /> : null}
-          <Text
-            style={textStyle}
-            numberOfLines={shrinkText ? 1 : undefined}
-            adjustsFontSizeToFit={shrinkText}
-            minimumFontScale={shrinkText ? 0.75 : undefined}
-          >
-            {title}
-          </Text>
+          {title ? (
+            <Text
+              style={textStyle}
+              numberOfLines={shrinkText ? 1 : undefined}
+              adjustsFontSizeToFit={shrinkText}
+              minimumFontScale={shrinkText ? 0.75 : undefined}
+            >
+              {title}
+            </Text>
+          ) : null}
         </View>
       )}
     </Pressable>

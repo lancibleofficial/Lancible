@@ -6,17 +6,26 @@ import MiniDatePicker from './MiniDatePicker';
 import { dayKey, keyToDate, mondayOf } from '../lib/calendarMath';
 import { setSheetFooter } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize } from '../theme';
-import { t } from '../lib/i18n';
+import { t, LOCALE_MAP } from '../lib/i18n';
 
-const PRESETS = [
-  { value: 'all', key: 'export.period_all' },
-  { value: 'month', key: 'export.period_month' },
-  { value: 'week', key: 'export.period_week' },
-  { value: 'day', key: 'export.period_day' },
-  { value: 'custom', key: 'export.period_custom' },
+// Два ряда на одной подложке: 3 сверху, 4 снизу. В один ряд семь вариантов
+// не помещаются читаемо, а списком они занимали пол-листа.
+const PRESET_ROWS = [
+  [
+    { value: 'all', key: 'export.period_all' },
+    { value: 'day', key: 'export.period_day' },
+    { value: 'week', key: 'export.period_week' },
+  ],
+  [
+    { value: 'month', key: 'export.period_month' },
+    { value: 'half_year', key: 'export.period_half_year' },
+    { value: 'year', key: 'export.period_year' },
+    { value: 'custom', key: 'export.period_custom' },
+  ],
 ];
 
 function endOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999); }
+function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 
 export default function ExportPeriodSheet({ lang, onConfirm, onCancel }) {
   const colors = useColors();
@@ -25,67 +34,94 @@ export default function ExportPeriodSheet({ lang, onConfirm, onCancel }) {
   const now = new Date();
   const [fromKey, setFromKey] = useState(dayKey(now));
   const [toKey, setToKey] = useState(dayKey(now));
-  const [editing, setEditing] = useState(null);
 
-  function confirm() {
-    let range = null;
-    if (preset === 'month') {
-      range = { from: new Date(now.getFullYear(), now.getMonth(), 1), to: endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
-    } else if (preset === 'week') {
+  // Нажатие по дню: первое задаёт начало и сбрасывает конец, второе — конец.
+  // Календарь при этом не закрывается, поэтому диапазон набирается двумя
+  // касаниями подряд. Если второе нажатие раньше первого — границы
+  // меняются местами, а не игнорируются.
+  function onPickDay(key) {
+    if (!fromKey || toKey) { setFromKey(key); setToKey(null); return; }
+    if (key < fromKey) { setToKey(fromKey); setFromKey(key); return; }
+    setToKey(key);
+  }
+
+  function rangeFor(value) {
+    if (value === 'all') return null;
+    if (value === 'day') return { from: startOfDay(now), to: endOfDay(now) };
+    if (value === 'week') {
       const ws = mondayOf(now);
-      range = { from: ws, to: endOfDay(new Date(ws.getTime() + 6 * 86400000)) };
-    } else if (preset === 'day') {
-      range = { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()), to: endOfDay(now) };
-    } else if (preset === 'custom') {
-      let a = keyToDate(fromKey);
-      let b = keyToDate(toKey);
-      if (a > b) [a, b] = [b, a];
-      range = { from: a, to: endOfDay(b) };
+      return { from: ws, to: endOfDay(new Date(ws.getTime() + 6 * 86400000)) };
     }
-    onConfirm(range);
+    if (value === 'month') {
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+    }
+    if (value === 'half_year') {
+      return { from: startOfDay(new Date(now.getFullYear(), now.getMonth() - 5, 1)), to: endOfDay(now) };
+    }
+    if (value === 'year') {
+      return { from: startOfDay(new Date(now.getFullYear(), now.getMonth() - 11, 1)), to: endOfDay(now) };
+    }
+    let a = keyToDate(fromKey);
+    let b = keyToDate(toKey || fromKey);
+    if (a > b) [a, b] = [b, a];
+    return { from: a, to: endOfDay(b) };
   }
 
   useEffect(() => {
     setSheetFooter(
       <>
-        <PrimaryButton title={t(lang, 'export.title')} onPress={confirm} />
+        <PrimaryButton title={t(lang, 'export.short')} onPress={() => onConfirm(rangeFor(preset))} />
         <PrimaryButton title={t(lang, 'common.cancel')} variant="ghost" onPress={onCancel} />
       </>,
     );
     return () => setSheetFooter(null);
   }, [preset, fromKey, toKey, lang]);
 
+  const fmt = (key) => (key ? keyToDate(key).toLocaleDateString(LOCALE_MAP[lang] || 'ru-RU', { day: 'numeric', month: 'short' }) : '—');
+
   return (
-    <View style={{ gap: spacing.md }}>
+    <View style={{ gap: spacing.sm }}>
       <Text style={styles.title}>{t(lang, 'export.title')}</Text>
-      <Text style={styles.label}>{t(lang, 'export.period')}</Text>
-      <View style={styles.pillRow}>
-        {PRESETS.map((p) => (
-          <Pressable key={p.value} onPress={() => setPreset(p.value)} style={[styles.pill, preset === p.value && styles.pillActive]}>
-            <Text style={[styles.pillText, preset === p.value && styles.pillTextActive]}>{t(lang, p.key)}</Text>
-          </Pressable>
+
+      <View style={styles.tabCard}>
+        {PRESET_ROWS.map((row, ri) => (
+          <View key={ri} style={styles.tabRow}>
+            {row.map((p) => {
+              const active = p.value === preset;
+              return (
+                <Pressable
+                  key={p.value}
+                  onPress={() => setPreset(p.value)}
+                  style={[styles.tab, active && styles.tabActive]}
+                >
+                  <Text
+                    style={[styles.tabText, active && styles.tabTextActive]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.8}
+                  >
+                    {t(lang, p.key)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         ))}
       </View>
 
       {preset === 'custom' ? (
         <View style={{ gap: spacing.sm }}>
           <View style={styles.rangeRow}>
-            <Pressable style={styles.rangeBtn} onPress={() => setEditing(editing === 'from' ? null : 'from')}>
+            <View style={[styles.rangeBox, !toKey && styles.rangeBoxActive]}>
               <Text style={styles.rangeLabel}>{t(lang, 'export.from')}</Text>
-              <Text style={styles.rangeValue}>{fromKey}</Text>
-            </Pressable>
-            <Pressable style={styles.rangeBtn} onPress={() => setEditing(editing === 'to' ? null : 'to')}>
+              <Text style={styles.rangeValue}>{fmt(fromKey)}</Text>
+            </View>
+            <View style={[styles.rangeBox, !!toKey && styles.rangeBoxActive]}>
               <Text style={styles.rangeLabel}>{t(lang, 'export.to')}</Text>
-              <Text style={styles.rangeValue}>{toKey}</Text>
-            </Pressable>
+              <Text style={styles.rangeValue}>{fmt(toKey)}</Text>
+            </View>
           </View>
-          {editing ? (
-            <MiniDatePicker
-              lang={lang}
-              valueKey={editing === 'from' ? fromKey : toKey}
-              onPick={(key) => { if (editing === 'from') setFromKey(key); else setToKey(key); setEditing(null); }}
-            />
-          ) : null}
+          <MiniDatePicker lang={lang} fromKey={fromKey} toKey={toKey} onPick={onPickDay} />
         </View>
       ) : null}
     </View>
@@ -93,15 +129,22 @@ export default function ExportPeriodSheet({ lang, onConfirm, onCancel }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
-  label: { color: colors.textDim, fontSize: fontSize.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  pill: { backgroundColor: colors.panel2, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  pillActive: { backgroundColor: colors.accent },
-  pillText: { color: colors.text, fontSize: fontSize.sm },
-  pillTextActive: { color: colors.accentText, fontWeight: '700' },
+  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.xs },
+  // Одна подложка на оба ряда — как у переключателя «Заметки/История»,
+  // только в две строки.
+  tabCard: { backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4, gap: 4 },
+  tabRow: { flexDirection: 'row', gap: 4 },
+  tab: { flex: 1, paddingVertical: spacing.sm, paddingHorizontal: 4, alignItems: 'center', borderRadius: radius.sm },
+  tabActive: { backgroundColor: colors.tabActiveBg },
+  tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
+  tabTextActive: { color: colors.text },
   rangeRow: { flexDirection: 'row', gap: spacing.sm },
-  rangeBtn: { flex: 1, backgroundColor: colors.panel2, borderRadius: radius.md, padding: spacing.md },
+  rangeBox: {
+    flex: 1, backgroundColor: colors.panel2, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 2, borderColor: 'transparent',
+  },
+  // Подсвечена та граница, которую задаст следующее нажатие по календарю.
+  rangeBoxActive: { borderColor: colors.accent },
   rangeLabel: { color: colors.textDim, fontSize: 10, textTransform: 'uppercase' },
   rangeValue: { color: colors.text, fontSize: fontSize.md, fontWeight: '700', marginTop: 2 },
 });

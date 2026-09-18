@@ -2,7 +2,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import ProjectScreen from '../screens/ProjectScreen';
 import TaskDetailScreen from '../screens/TaskDetailScreen';
-import { useColors, fontSize } from '../theme';
+import AppHeader from '../components/AppHeader';
+import { useColors } from '../theme';
 
 const Stack = createNativeStackNavigator();
 
@@ -18,10 +19,7 @@ export default function HomeStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bg },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontFamily: 'BasiquePro-Regular', fontWeight: 'normal', fontSize: fontSize.lg },
-        headerShadowVisible: false,
+        header: (props) => <AppHeader {...props} />,
         contentStyle: { backgroundColor: colors.bg },
       }}
     >

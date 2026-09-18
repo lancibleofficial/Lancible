@@ -11,6 +11,7 @@ import RecentTaskCard from '../components/RecentTaskCard';
 import NewProjectSheet from '../components/NewProjectSheet';
 import StatCard from '../components/StatCard';
 import Icon from '../components/Icon';
+import NotifButton from '../components/NotifButton';
 import Logo from '../components/Logo';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useTicker } from '../hooks/useTicker';
@@ -45,6 +46,7 @@ export default function HomeScreen({ navigation, route }) {
     () => computeTodayStats(tasks, activeTimer, hourlyRate),
     [tasks, activeTimer, hourlyRate],
   );
+  const doneCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks]);
 
   // Иконка поиска в хедере есть на всех вкладках (см. MainTabs.js) — с
   // других вкладок она переключает на Home и просит открыть поиск здесь же.
@@ -84,16 +86,16 @@ export default function HomeScreen({ navigation, route }) {
             <Text style={styles.brandText}>Lancible</Text>
           </View>
         ),
-      headerTitleContainerStyle: searchOpen ? { flex: 1 } : undefined,
-      headerLeft: searchOpen ? () => null : undefined,
       headerRight: () => (
-        <Pressable
-          hitSlop={10}
-          style={{ paddingLeft: spacing.sm, paddingRight: spacing.lg }}
-          onPress={() => { setSearchOpen((v) => !v); setQuery(''); }}
-        >
-          <Icon name={searchOpen ? 'x' : 'search'} size={20} color={colors.text} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            hitSlop={10}
+            onPress={() => { setSearchOpen((v) => !v); setQuery(''); }}
+          >
+            <Icon name={searchOpen ? 'x' : 'search'} size={20} color={colors.text} />
+          </Pressable>
+          <NotifButton />
+        </View>
       ),
     });
   }, [navigation, searchOpen, query, colors, lang]);
@@ -138,6 +140,7 @@ export default function HomeScreen({ navigation, route }) {
           label: t(lang, 'project.delete'),
           destructive: true,
           onPress: () => confirmSheet({
+            title: t(lang, 'confirm.are_you_sure'),
             message: t(lang, 'confirm.delete_project', { name: p.name }),
             actions: [
               { label: t(lang, 'project.delete'), destructive: true, onPress: () => deleteProject(p.id) },
@@ -175,6 +178,7 @@ export default function HomeScreen({ navigation, route }) {
               <View style={styles.todayGrid}>
                 <StatCard icon="wallet" label={t(lang, 'stats.today_earned')} value={fmtMoney(todayMoney, lang, currency)} />
                 <StatCard icon="clock" label={t(lang, 'stats.today_worked')} value={fmtDur(todayMs, lang)} />
+                <StatCard icon="check" label={t(lang, 'stats.done')} value={`${doneCount}/${tasks.length}`} />
               </View>
             )}
             {isSearching ? (
@@ -244,6 +248,8 @@ function SearchTaskRow({ task, projects, activeTimer, lang, styles, colors, onPr
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   listContent: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
+  headerIconBtnLast: { paddingLeft: spacing.sm },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
   todayGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   recentSection: { marginBottom: spacing.lg, gap: spacing.sm },
   sectionTitle: {
@@ -253,8 +259,10 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   empty: { color: colors.textDim, textAlign: 'center', marginTop: spacing.xxl, fontSize: fontSize.sm },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   brandText: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'BasiquePro-Regular' },
+  // Белый, а не inputBg: это поле сидит прямо на colors.bg экрана (не на
+  // белом шите), так что для контраста ему нужен тот же цвет, что у карточек.
   searchInput: {
-    backgroundColor: colors.panel2, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 8,
+    backgroundColor: colors.panel, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 8,
     color: colors.text, fontSize: fontSize.md, width: '100%',
   },
   addTile: {

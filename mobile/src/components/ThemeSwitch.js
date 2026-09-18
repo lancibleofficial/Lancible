@@ -17,7 +17,11 @@ export default function ThemeSwitch({ value, onValueChange }) {
   const anim = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(anim, { toValue: value ? 1 : 0, duration: 180, useNativeDriver: false }).start();
+    // Тут анимируется только translateX (transform) — в отличие от Toggle.js
+    // цвет самого трека не интерполируется из этого value, так что нативный
+    // драйвер безопасен и даёт более плавный, не зависящий от загрузки
+    // JS-потока бегунок.
+    Animated.timing(anim, { toValue: value ? 1 : 0, duration: 180, useNativeDriver: true }).start();
   }, [value, anim]);
 
   const translateX = anim.interpolate({ inputRange: [0, 1], outputRange: [PAD, TRACK_W - THUMB - PAD] });
@@ -34,7 +38,7 @@ export default function ThemeSwitch({ value, onValueChange }) {
 const makeStyles = (colors) => StyleSheet.create({
   track: {
     width: TRACK_W, height: TRACK_H, borderRadius: 10,
-    backgroundColor: colors.panel2, justifyContent: 'center',
+    backgroundColor: colors.inputBg, justifyContent: 'center',
   },
   thumb: {
     position: 'absolute', width: THUMB, height: THUMB, borderRadius: 7,
