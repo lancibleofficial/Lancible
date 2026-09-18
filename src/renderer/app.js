@@ -87,7 +87,7 @@ const T = {
     'nav.language': 'Язык', 'nav.account': 'Аккаунт',
     'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
-    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа',
+    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'about.us': 'О нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Аккаунт', 'profile.name_label': 'Имя', 'profile.no_name': 'Не указано',
     'profile.name_updated': 'Имя обновлено', 'profile.change_password': 'Изменить пароль',
@@ -221,7 +221,7 @@ const T = {
     'nav.language': 'Language', 'nav.account': 'Account',
     'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Restart to update',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
-    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work',
+    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'about.us': 'About us', 'about.blog': 'Blog',
     'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
     'settings.section_account': 'Account', 'profile.name_label': 'Name', 'profile.no_name': 'Not set',
     'profile.name_updated': 'Name updated', 'profile.change_password': 'Change password',
@@ -355,7 +355,7 @@ const T = {
     'nav.language': 'Мова', 'nav.account': 'Акаунт',
     'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
-    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота',
+    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'about.us': 'Про нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Акаунт', 'profile.name_label': "Ім'я", 'profile.no_name': 'Не вказано',
     'profile.name_updated': "Ім'я оновлено", 'profile.change_password': 'Змінити пароль',
@@ -489,7 +489,7 @@ const T = {
     'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
     'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
-    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс',
+    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
     'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Аккаунт', 'profile.name_label': 'Аты', 'profile.no_name': 'Көрсетілмеген',
     'profile.name_updated': 'Аты жаңартылды', 'profile.change_password': 'Құпиясөзді өзгерту',
@@ -738,6 +738,7 @@ const el = {
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
   settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
+  settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
   settingsNotifState: $('settings-notif-state'),
   notifList: $('notif-list'), notifEmpty: $('notif-empty'), notifSeen: $('notif-seen'),
   dueDateBtn: $('due-date-btn'), dueTimeBtn: $('due-time-btn'), dueState: $('due-state'),
@@ -1131,6 +1132,20 @@ el.settingsNotifSystem.addEventListener('click', () => {
   }
   toast(t('notif.system_hint'));
 });
+// Лендинг: главная и блог. Один адрес в одном месте, чтобы не искать его по
+// коду, когда сайт переедет.
+const LANDING_URL = 'https://lancible.vercel.app';
+
+/** Открывает ссылку снаружи приложения. На десктопе — системным браузером
+ *  через main-процесс (внутри окна Electron чужой сайт открывать нельзя),
+ *  в вебе — обычной новой вкладкой. */
+function openExternalLink(url) {
+  if (window.api && window.api.openExternal) { window.api.openExternal(url); return; }
+  window.open(url, '_blank', 'noopener');
+}
+
+el.settingsAboutUs.addEventListener('click', () => openExternalLink(LANDING_URL));
+el.settingsAboutBlog.addEventListener('click', () => openExternalLink(LANDING_URL + '/blog.html'));
 el.settingsSyncToggle.addEventListener('click', () => {
   toggleSyncEnabled();
   renderSettings();

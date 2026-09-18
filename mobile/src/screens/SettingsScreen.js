@@ -23,6 +23,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, useThemeMode, spacing, radius, fontSize, tabBarClearance } from '../theme';
 import { t, LANG_NAMES } from '../lib/i18n';
 
+// Лендинг: главная и страница блога. Тот же адрес, что и в десктопной версии.
+const LANDING_URL = 'https://lancible.vercel.app';
+
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -210,6 +213,12 @@ export default function SettingsScreen() {
       <SettingsCard>
         <SettingsRow icon="wallet" label={t(settings.lang, 'settings.rate_label')} value={fmtMoney(settings.hourlyRate || 0, settings.lang, settings.currency)} onPress={onOpenRate} />
         <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
+      </SettingsCard>
+
+      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_about')}</Text>
+      <SettingsCard>
+        <SettingsRow icon="link" label={t(settings.lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
+        <SettingsRow icon="list-bullet" label={t(settings.lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} last />
       </SettingsCard>
 
       <Text style={styles.footer}>Lancible · {appVersion}</Text>
