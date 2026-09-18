@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSheetStore, closeSheet } from '../store/useSheetStore';
+import { HEADER_CONTENT_HEIGHT } from './AppHeader';
 import { useColors, radius, spacing } from '../theme';
 
 const OPEN_MS = 260;
@@ -51,10 +52,14 @@ export default function BottomSheet() {
       setVisible(true);
       translateY.setValue(windowHeight);
       requestAnimationFrame(() => {
-        Animated.timing(translateY, { toValue: 0, duration: OPEN_MS, useNativeDriver: true }).start();
+        Animated.timing(translateY, {
+          toValue: 0, duration: OPEN_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+        }).start();
       });
     } else if (visible) {
-      Animated.timing(translateY, { toValue: windowHeight, duration: CLOSE_MS, useNativeDriver: true }).start(({ finished }) => {
+      Animated.timing(translateY, {
+        toValue: windowHeight, duration: CLOSE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true,
+      }).start(({ finished }) => {
         if (finished) setVisible(false);
       });
     }
@@ -74,7 +79,9 @@ export default function BottomSheet() {
       },
       onPanResponderRelease: (_e, g) => {
         if (g.dy > DRAG_CLOSE_DISTANCE || g.vy > DRAG_CLOSE_VELOCITY) {
-          Animated.timing(translateY, { toValue: windowHeight, duration: CLOSE_MS, useNativeDriver: true }).start(({ finished }) => {
+          Animated.timing(translateY, {
+            toValue: windowHeight, duration: CLOSE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true,
+          }).start(({ finished }) => {
             if (finished) setVisible(false);
           });
           closeSheet();
@@ -87,7 +94,10 @@ export default function BottomSheet() {
 
   if (!visible) return null;
 
-  const maxHeight = windowHeight * 0.9;
+  // Раскрывается ровно до нижней границы шапки, а не на условные 90%
+  // высоты экрана: прежняя доля не была ни к чему привязана и оставляла
+  // произвольный зазор, который на разных экранах выглядел по-разному.
+  const maxHeight = windowHeight - insets.top - HEADER_CONTENT_HEIGHT;
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={closeSheet}>
@@ -121,10 +131,9 @@ const makeStyles = (colors) => StyleSheet.create({
   grabberZone: { alignItems: 'center', paddingVertical: spacing.sm },
   grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong },
   scroll: { flexShrink: 1 },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
   contentWithFooter: { paddingBottom: spacing.md },
   footer: {
     backgroundColor: colors.panel, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
 });

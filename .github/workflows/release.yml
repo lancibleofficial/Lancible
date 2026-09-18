@@ -1,0 +1,86 @@
+name: Build desktop installers
+
+# Собирает установщики десктоп-приложения на реальных Windows- и
+# macOS-раннерах GitHub (macOS-инсталлятор нельзя собрать локально на
+# Windows-машине — electron-builder явно отказывается: "Build for macOS is
+# supported only on macOS") и публикует их как ассеты GitHub Release. Это
+# ОТДЕЛЬНЫЙ канал от автообновления (electron-updater смотрит в Supabase
+# Storage, см. scripts/publish-release.js и build.publish в package.json) —
+# тут только страница релиза со ссылками на скачивание для новых
+# пользователей, embed-конфиг фида автообновления не трогаем.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег релиза (например v0.1.0) — обязателен для ручного запуска'
+        required: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build:exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            dist/*.exe
+            dist/*.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build:dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-installer
+          path: |
+            dist/*.dmg
+            dist/*.dmg.blockmap
+            dist/*.zip
+            dist/*.zip.blockmap
+            dist/latest-mac.yml
+          if-no-files-found: error
+
+  release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Определить тег релиза
+        id: tag
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Опубликовать GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: Lancible ${{ steps.tag.outputs.tag }}
+          draft: false
+          generate_release_notes: true
+          files: |
+            artifacts/windows-installer/*
+            artifacts/mac-installer/*

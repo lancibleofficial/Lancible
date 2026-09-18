@@ -2,12 +2,14 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Единственный мост между рендерером и файловой системой.
 contextBridge.exposeInMainWorld('api', {
+  platform: process.platform,
   load: () => ipcRenderer.invoke('data:load'),
   save: (data) => ipcRenderer.invoke('data:save', data),
   exportXlsx: (payload) => ipcRenderer.invoke('export:xlsx', payload),
   copy: (text) => ipcRenderer.invoke('clipboard:write', text),
   setTitlebarOverlay: (theme) => ipcRenderer.invoke('theme:set-overlay', theme),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  openNotificationSettings: () => ipcRenderer.invoke('shell:open-notification-settings'),
   onOAuthCallback: (cb) => ipcRenderer.on('auth:oauth-callback', (_e, data) => cb(data)),
 
   checkForUpdate: () => ipcRenderer.invoke('update:check'),

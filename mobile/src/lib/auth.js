@@ -2,8 +2,9 @@
 // DOM-элементов (`el.authEmail.value`, `el.authError.hidden = ...`) каждая
 // функция принимает обычные параметры и возвращает простой объект-результат
 // ({ok, errorKey, needsOnboarding, ...}), который экран сам превращает в
-// useState/Alert. Google-вход и OAuth-колбэк сознательно не портируются в
-// раунде 1 — не работают в чистом Expo Go (см. план).
+// useState/Alert.
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { sb } from './supabaseClient';
 
 export async function afterSignedIn() {
@@ -46,6 +47,38 @@ export async function signUp(email, password) {
     if (error) return { ok: false, errorKey: 'auth.error_generic' };
     if (data.session) return afterSignedIn(); // подтверждение email отключено в проекте
     return { ok: true, needsConfirmation: true, email };
+  } catch {
+    return { ok: false, errorKey: 'auth.error_generic' };
+  }
+}
+
+// Мобильный аналог handleGoogleSignIn из src/renderer/app.js:1115-1139 — тот
+// же PKCE-обмен, но вместо системного браузера + кастомного протокола,
+// которые ловит main.js на десктопе, тут открывается Chrome Custom Tab
+// (openAuthSessionAsync) и он же возвращает redirect-URL с ?code=... прямо
+// сюда, без отдельного deep-link-колбэка. Работает только в dev-client/EAS-
+// сборке — Expo Go занимает схему exp:// и не даёт зарегистрировать
+// кастомную lancible://, поэтому это не работает при обычном запуске из
+// Expo Go (кнопка есть, но нажатие в Expo Go просто ничего не откроет).
+export async function signInWithGoogle() {
+  try {
+    const redirectTo = Linking.createURL('auth-callback');
+    const { data, error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true },
+    });
+    if (error || !data || !data.url) return { ok: false, errorKey: 'auth.error_generic' };
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type !== 'success' || !result.url) {
+      return result.type === 'cancel' || result.type === 'dismiss' ? { ok: false, cancelled: true } : { ok: false, errorKey: 'auth.error_generic' };
+    }
+
+    const code = new URL(result.url).searchParams.get('code');
+    if (!code) return { ok: false, errorKey: 'auth.error_generic' };
+    const { error: exchangeError } = await sb.auth.exchangeCodeForSession(code);
+    if (exchangeError) return { ok: false, errorKey: 'auth.error_generic' };
+    return afterSignedIn();
   } catch {
     return { ok: false, errorKey: 'auth.error_generic' };
   }

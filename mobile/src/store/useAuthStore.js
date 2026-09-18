@@ -69,6 +69,19 @@ export const useAuthStore = create((set, get) => ({
     return result;
   },
 
+  async signInWithGoogle() {
+    set({ authError: null });
+    const result = await auth.signInWithGoogle();
+    if (!result.ok) {
+      // cancelled — пользователь сам закрыл вкладку браузера, не показываем
+      // это как ошибку.
+      if (!result.cancelled) set({ authError: result.errorKey });
+      return result;
+    }
+    applyAuthResult(set, result);
+    return result;
+  },
+
   async completeOnboarding(name, useCase) {
     const result = await auth.saveOnboarding(name, useCase);
     if (result.ok) {

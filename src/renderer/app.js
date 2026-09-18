@@ -1,5 +1,14 @@
 'use strict';
 
+// На маке нативные светофор-кнопки (трафик-лайты) окна рисуются самой ОС
+// поверх страницы в левом верхнем углу (см. trafficLightPosition в
+// src/main.js) — без этого класса лого в шапке (.tb-logo, см. styles.css)
+// оказалось бы под ними. На Windows и в вебе window.api.platform не 'darwin'
+// (в вебе вообще undefined), класс не добавляется — там правки не нужны.
+if (window.api && window.api.platform === 'darwin') {
+  document.body.classList.add('platform-mac');
+}
+
 // ---------------------------------------------------------------------------
 // Состояние
 // ---------------------------------------------------------------------------
@@ -16,7 +25,10 @@ let quill = null;
 
 const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
 const HEARTBEAT_MS = 15000;
-const PALETTE = ['#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5'];
+const PALETTE = [
+  '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5',
+  '#e63950', '#2dd4bf', '#5468ff', '#ff9142', '#d946a8', '#6ee7b7', '#c8956d', '#6b7cad',
+];
 const TEXT_COLORS = ['', '#ecedef', '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#a4c2a8', '#767b86'];
 const FILL_COLORS = ['', '#3a4a34', '#2f4653', '#43385a', '#544a30', '#5a3a37', '#3e4a40'];
 
@@ -56,19 +68,33 @@ const LANG_NAMES = { ru: 'Русский', en: 'English', uk: 'Українсь�
 const T = {
   ru: {
     'app.default_project_name': 'Мои задачи',
-    'search.placeholder': 'Поиск (Ctrl+F)',
+    'search.placeholder': 'Поиск',
     'search.start_typing': 'Начни вводить название проекта или задачи',
     'search.nothing_found': 'Ничего не найдено',
     'search.projects_group': 'Проекты',
     'search.tasks_group': 'Задачи',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проект: {name}',
-    'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.collapse': 'Свернуть',
+    'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.settings': 'Настройки', 'nav.collapse': 'Свернуть',
     'nav.language': 'Язык', 'nav.account': 'Аккаунт',
     'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
+    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа',
+    'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
+    'settings.section_account': 'Аккаунт', 'profile.name_label': 'Имя', 'profile.no_name': 'Не указано',
+    'profile.name_updated': 'Имя обновлено', 'profile.change_password': 'Изменить пароль',
+    'profile.new_password': 'Новый пароль', 'profile.confirm_password': 'Повторите пароль',
+    'profile.password_updated': 'Пароль обновлён', 'profile.password_mismatch': 'Пароли не совпадают',
+    'profile.password_too_short': 'Минимум 6 символов', 'profile.update_failed': 'Не удалось сохранить',
+    'profile.guest': 'Гость', 'profile.guest_sub': 'Войдите, чтобы синхронизировать данные между устройствами',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
     'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
+    'nav.stats': 'Статистика', 'stats.by_project': 'По проектам', 'stats.by_task': 'По задачам',
+    'stats.empty': 'Пока нет данных — запусти таймер на любой задаче',
+    'export.all_excel': 'Скачать всё в Excel', 'export.all_projects': 'все проекты',
+    'export.title': 'Экспорт в Excel', 'export.pick_period': 'Выбрать период', 'export.period_label': 'Период',
+    'export.period_all': 'Всё время', 'export.period_month': 'Месяц', 'export.period_week': 'Неделя',
+    'export.period_day': 'День', 'export.period_custom': 'Свой',
     'home.title': 'Проекты', 'home.create': 'Создать проект', 'home.pinned': 'Закреплённые',
     'home.other': 'Остальные', 'home.recent': 'Недавние задачи',
     'home.empty': 'Пока нет ни одного проекта. Создай первый.', 'home.calendar_link': 'Календарь',
@@ -93,6 +119,16 @@ const T = {
     'task.unpin_title': 'Открепить задачу', 'task.delete_title': 'Удалить задачу',
     'task.pin_short': 'Закрепить наверх', 'task.unpin_short': 'Открепить',
     'task.no_name': 'Без названия',
+    'due.label': 'Дедлайн',
+    'notif.title': 'Уведомления',
+    'settings.section_notifications': 'Уведомления',
+    'notif.system_hint': 'Разрешение на уведомления меняется в настройках браузера для этого сайта.', 'notif.enable': 'Напоминания о дедлайнах',
+    'notif.system': 'Уведомления в системе', 'notif.perm_granted': 'разрешены',
+    'notif.perm_denied': 'запрещены', 'notif.perm_ask': 'разрешить', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
+    'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
+    'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
+    'remind.none': 'Без напоминания', 'remind.at': 'В момент срока', 'remind.15m': 'За 15 минут',
+    'remind.1h': 'За час', 'remind.3h': 'За 3 часа', 'remind.1d': 'За день', 'remind.custom': 'Своё время',
     'tabs.notes': 'Заметки', 'tabs.history': 'История',
     'timer.sub_default': 'общее время по задаче', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
     'timer.recording': 'идёт запись · сессия {time}', 'timer.other_task': 'таймер идёт по другой задаче',
@@ -112,6 +148,7 @@ const T = {
     'calendar.choose_period': 'Выбрать период', 'calendar.pick_day': 'Выбери день',
     'calendar.day_empty': 'В этот день записей не было.', 'calendar.pick_date': 'Выбрать дату',
     'calendar.for_month': 'За месяц', 'calendar.for_week': 'За неделю',
+    'calendar.period_label': 'За период',
     'calendar.for_period': 'За период: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперёд', 'common.cancel': 'Отмена', 'common.ok': 'ОК',
     'common.skip': 'Пропустить', 'common.continue': 'Продолжить',
@@ -119,6 +156,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
     'auth.no_account': 'Нет аккаунта с таким email.', 'auth.create_account': 'Создать аккаунт',
     'auth.sign_in': 'Войти', 'auth.sign_in_nav': 'Войти', 'auth.sign_out': 'Выйти',
+    'auth.sign_out_confirm': 'Выйти из аккаунта? Локальные данные останутся на этом устройстве.',
     'auth.onboarding_title': 'Расскажите о себе', 'auth.name_label': 'Как вас зовут?',
     'auth.usecase_label': 'Для чего будете использовать Lancible?',
     'auth.usecase_personal': 'Личные задачи', 'auth.usecase_freelance': 'Фриланс / клиенты',
@@ -160,23 +198,37 @@ const T = {
     'xlsx.last_entry': 'Последняя запись', 'xlsx.description': 'Описание',
     'xlsx.sheet_tasks': 'Задачи', 'xlsx.sheet_sessions': 'Сессии', 'xlsx.default_task_sheet': 'Задача',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Без названия',
-    'export.project_fallback': 'Проект', 'export.task_fallback': 'задача', 'export.all_tasks': 'все задачи',
+    'export.project_fallback': 'Проект', 'export.task_fallback': 'задача', 'export.all_tasks': 'все задачи', 'export.period': 'период', 'export.excel': 'Экспорт',
   },
   en: {
     'app.default_project_name': 'My tasks',
-    'search.placeholder': 'Search (Ctrl+F)',
+    'search.placeholder': 'Search',
     'search.start_typing': 'Start typing a project or task name',
     'search.nothing_found': 'Nothing found',
     'search.projects_group': 'Projects',
     'search.tasks_group': 'Tasks',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'project: {name}',
-    'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.collapse': 'Collapse',
+    'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.settings': 'Settings', 'nav.collapse': 'Collapse',
     'nav.language': 'Language', 'nav.account': 'Account',
     'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Restart to update',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
+    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work',
+    'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
+    'settings.section_account': 'Account', 'profile.name_label': 'Name', 'profile.no_name': 'Not set',
+    'profile.name_updated': 'Name updated', 'profile.change_password': 'Change password',
+    'profile.new_password': 'New password', 'profile.confirm_password': 'Confirm password',
+    'profile.password_updated': 'Password updated', 'profile.password_mismatch': "Passwords don't match",
+    'profile.password_too_short': 'At least 6 characters', 'profile.update_failed': "Couldn't save",
+    'profile.guest': 'Guest', 'profile.guest_sub': 'Sign in to sync your data across devices',
     'stats.worked': 'total worked', 'stats.earned': 'total earned',
     'stats.month': 'earned this month', 'stats.done': 'tasks done',
+    'nav.stats': 'Stats', 'stats.by_project': 'By project', 'stats.by_task': 'By task',
+    'stats.empty': 'No data yet — start a timer on any task',
+    'export.all_excel': 'Export everything', 'export.all_projects': 'all projects',
+    'export.title': 'Export to Excel', 'export.pick_period': 'Choose period', 'export.period_label': 'Period',
+    'export.period_all': 'All time', 'export.period_month': 'Month', 'export.period_week': 'Week',
+    'export.period_day': 'Day', 'export.period_custom': 'Custom',
     'home.title': 'Projects', 'home.create': 'Create project', 'home.pinned': 'Pinned',
     'home.other': 'Other', 'home.recent': 'Recent tasks',
     'home.empty': 'No projects yet. Create the first one.', 'home.calendar_link': 'Calendar',
@@ -201,6 +253,16 @@ const T = {
     'task.unpin_title': 'Unpin task', 'task.delete_title': 'Delete task',
     'task.pin_short': 'Pin to top', 'task.unpin_short': 'Unpin',
     'task.no_name': 'Untitled',
+    'due.label': 'Deadline',
+    'notif.title': 'Notifications',
+    'settings.section_notifications': 'Notifications',
+    'notif.system_hint': 'Notification permission is changed in your browser settings for this site.', 'notif.enable': 'Deadline reminders',
+    'notif.system': 'System notifications', 'notif.perm_granted': 'allowed',
+    'notif.perm_denied': 'blocked', 'notif.perm_ask': 'allow', 'notif.empty': 'No due dates or reminders yet.', 'notif.mark_seen': 'Mark read',
+    'notif.overdue': 'Overdue', 'notif.soon': 'Due soon', 'notif.reminder': 'Reminder', 'due.none': 'not set', 'due.clear': 'Clear due date', 'due.remind_at': 'Remind',
+    'due.overdue': 'overdue', 'due.today': 'today', 'due.tomorrow': 'tomorrow', 'due.in_days': 'in {n} d',
+    'remind.none': 'No reminder', 'remind.at': 'At due time', 'remind.15m': '15 minutes before',
+    'remind.1h': 'An hour before', 'remind.3h': '3 hours before', 'remind.1d': 'A day before', 'remind.custom': 'Custom time',
     'tabs.notes': 'Notes', 'tabs.history': 'History',
     'timer.sub_default': 'total time on task', 'timer.start': 'Start', 'timer.stop': 'Stop',
     'timer.recording': 'recording · session {time}', 'timer.other_task': 'timer is running on another task',
@@ -220,6 +282,7 @@ const T = {
     'calendar.choose_period': 'Pick a period', 'calendar.pick_day': 'Pick a day',
     'calendar.day_empty': 'No entries on this day.', 'calendar.pick_date': 'Pick a date',
     'calendar.for_month': 'This month', 'calendar.for_week': 'This week',
+    'calendar.period_label': 'Period',
     'calendar.for_period': 'Period: {time} · {money}',
     'common.back': 'Back', 'common.forward': 'Forward', 'common.cancel': 'Cancel', 'common.ok': 'OK',
     'common.skip': 'Skip', 'common.continue': 'Continue',
@@ -227,6 +290,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Password',
     'auth.no_account': 'No account with this email yet.', 'auth.create_account': 'Create account',
     'auth.sign_in': 'Sign in', 'auth.sign_in_nav': 'Sign in', 'auth.sign_out': 'Sign out',
+    'auth.sign_out_confirm': 'Sign out? Local data stays on this device.',
     'auth.onboarding_title': 'Tell us about yourself', 'auth.name_label': "What's your name?",
     'auth.usecase_label': 'What will you use Lancible for?',
     'auth.usecase_personal': 'Personal tasks', 'auth.usecase_freelance': 'Freelance / clients',
@@ -268,23 +332,37 @@ const T = {
     'xlsx.last_entry': 'Last entry', 'xlsx.description': 'Description',
     'xlsx.sheet_tasks': 'Tasks', 'xlsx.sheet_sessions': 'Sessions', 'xlsx.default_task_sheet': 'Task',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Untitled',
-    'export.project_fallback': 'Project', 'export.task_fallback': 'task', 'export.all_tasks': 'all tasks',
+    'export.project_fallback': 'Project', 'export.task_fallback': 'task', 'export.all_tasks': 'all tasks', 'export.period': 'period', 'export.excel': 'Export',
   },
   uk: {
     'app.default_project_name': 'Мої завдання',
-    'search.placeholder': 'Пошук (Ctrl+F)',
+    'search.placeholder': 'Пошук',
     'search.start_typing': 'Почни вводити назву проєкту або завдання',
     'search.nothing_found': 'Нічого не знайдено',
     'search.projects_group': 'Проєкти',
     'search.tasks_group': 'Завдання',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'проєкт: {name}',
-    'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.collapse': 'Згорнути',
+    'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.settings': 'Налаштування', 'nav.collapse': 'Згорнути',
     'nav.language': 'Мова', 'nav.account': 'Акаунт',
     'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
+    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота',
+    'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
+    'settings.section_account': 'Акаунт', 'profile.name_label': "Ім'я", 'profile.no_name': 'Не вказано',
+    'profile.name_updated': "Ім'я оновлено", 'profile.change_password': 'Змінити пароль',
+    'profile.new_password': 'Новий пароль', 'profile.confirm_password': 'Повторіть пароль',
+    'profile.password_updated': 'Пароль оновлено', 'profile.password_mismatch': 'Паролі не збігаються',
+    'profile.password_too_short': 'Мінімум 6 символів', 'profile.update_failed': 'Не вдалося зберегти',
+    'profile.guest': 'Гість', 'profile.guest_sub': 'Увійдіть, щоб синхронізувати дані між пристроями',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
     'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
+    'nav.stats': 'Статистика', 'stats.by_project': 'За проєктами', 'stats.by_task': 'За завданнями',
+    'stats.empty': 'Поки немає даних — запусти таймер на будь-якому завданні',
+    'export.all_excel': 'Завантажити все в Excel', 'export.all_projects': 'усі проєкти',
+    'export.title': 'Експорт в Excel', 'export.pick_period': 'Обрати період', 'export.period_label': 'Період',
+    'export.period_all': 'Весь час', 'export.period_month': 'Місяць', 'export.period_week': 'Тиждень',
+    'export.period_day': 'День', 'export.period_custom': 'Свій',
     'home.title': 'Проєкти', 'home.create': 'Створити проєкт', 'home.pinned': 'Закріплені',
     'home.other': 'Інші', 'home.recent': 'Недавні завдання',
     'home.empty': 'Ще немає жодного проєкту. Створи перший.', 'home.calendar_link': 'Календар',
@@ -309,6 +387,16 @@ const T = {
     'task.unpin_title': 'Відкріпити завдання', 'task.delete_title': 'Видалити завдання',
     'task.pin_short': 'Закріпити вгорі', 'task.unpin_short': 'Відкріпити',
     'task.no_name': 'Без назви',
+    'due.label': 'Термін',
+    'notif.title': 'Сповіщення',
+    'settings.section_notifications': 'Сповіщення',
+    'notif.system_hint': 'Дозвіл на сповіщення змінюється в налаштуваннях браузера для цього сайту.', 'notif.enable': 'Нагадування про дедлайни',
+    'notif.system': 'Сповіщення в системі', 'notif.perm_granted': 'дозволено',
+    'notif.perm_denied': 'заборонено', 'notif.perm_ask': 'дозволити', 'notif.empty': 'Термінів і нагадувань поки немає.', 'notif.mark_seen': 'Прочитано',
+    'notif.overdue': 'Протерміновано', 'notif.soon': 'Скоро термін', 'notif.reminder': 'Нагадування', 'due.none': 'не задано', 'due.clear': 'Прибрати термін', 'due.remind_at': 'Нагадати',
+    'due.overdue': 'протерміновано', 'due.today': 'сьогодні', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
+    'remind.none': 'Без нагадування', 'remind.at': 'У момент терміну', 'remind.15m': 'За 15 хвилин',
+    'remind.1h': 'За годину', 'remind.3h': 'За 3 години', 'remind.1d': 'За день', 'remind.custom': 'Свій час',
     'tabs.notes': 'Нотатки', 'tabs.history': 'Історія',
     'timer.sub_default': 'загальний час по завданню', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
     'timer.recording': 'триває запис · сесія {time}', 'timer.other_task': 'таймер працює на іншому завданні',
@@ -328,6 +416,7 @@ const T = {
     'calendar.choose_period': 'Обрати період', 'calendar.pick_day': 'Обери день',
     'calendar.day_empty': 'Цього дня записів не було.', 'calendar.pick_date': 'Обрати дату',
     'calendar.for_month': 'За місяць', 'calendar.for_week': 'За тиждень',
+    'calendar.period_label': 'За період',
     'calendar.for_period': 'За період: {time} · {money}',
     'common.back': 'Назад', 'common.forward': 'Вперед', 'common.cancel': 'Скасувати', 'common.ok': 'ОК',
     'common.skip': 'Пропустити', 'common.continue': 'Продовжити',
@@ -335,6 +424,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
     'auth.no_account': 'Немає акаунта з таким email.', 'auth.create_account': 'Створити акаунт',
     'auth.sign_in': 'Увійти', 'auth.sign_in_nav': 'Увійти', 'auth.sign_out': 'Вийти',
+    'auth.sign_out_confirm': 'Вийти з акаунта? Локальні дані залишаться на цьому пристрої.',
     'auth.onboarding_title': 'Розкажіть про себе', 'auth.name_label': 'Як вас звати?',
     'auth.usecase_label': 'Для чого будете використовувати Lancible?',
     'auth.usecase_personal': 'Особисті завдання', 'auth.usecase_freelance': 'Фриланс / клієнти',
@@ -376,23 +466,37 @@ const T = {
     'xlsx.last_entry': 'Останній запис', 'xlsx.description': 'Опис',
     'xlsx.sheet_tasks': 'Завдання', 'xlsx.sheet_sessions': 'Сесії', 'xlsx.default_task_sheet': 'Завдання',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Без назви',
-    'export.project_fallback': 'Проєкт', 'export.task_fallback': 'завдання', 'export.all_tasks': 'усі завдання',
+    'export.project_fallback': 'Проєкт', 'export.task_fallback': 'завдання', 'export.all_tasks': 'усі завдання', 'export.period': 'період', 'export.excel': 'Експорт',
   },
   kk: {
     'app.default_project_name': 'Менің тапсырмаларым',
-    'search.placeholder': 'Іздеу (Ctrl+F)',
+    'search.placeholder': 'Іздеу',
     'search.start_typing': 'Жоба немесе тапсырма атауын тере баста',
     'search.nothing_found': 'Ештеңе табылмады',
     'search.projects_group': 'Жобалар',
     'search.tasks_group': 'Тапсырмалар',
     'search.project_sub': '{n} {plural}',
     'search.task_sub': 'жоба: {name}',
-    'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.collapse': 'Жию',
+    'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.settings': 'Параметрлер', 'nav.collapse': 'Жию',
     'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
     'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
+    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс',
+    'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
+    'settings.section_account': 'Аккаунт', 'profile.name_label': 'Аты', 'profile.no_name': 'Көрсетілмеген',
+    'profile.name_updated': 'Аты жаңартылды', 'profile.change_password': 'Құпиясөзді өзгерту',
+    'profile.new_password': 'Жаңа құпиясөз', 'profile.confirm_password': 'Құпиясөзді қайталаңыз',
+    'profile.password_updated': 'Құпиясөз жаңартылды', 'profile.password_mismatch': 'Құпиясөздер сәйкес емес',
+    'profile.password_too_short': 'Кемінде 6 таңба', 'profile.update_failed': 'Сақтау мүмкін болмады',
+    'profile.guest': 'Қонақ', 'profile.guest_sub': 'Деректерді құрылғылар арасында синхрондау үшін кіріңіз',
     'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
     'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
+    'nav.stats': 'Статистика', 'stats.by_project': 'Жобалар бойынша', 'stats.by_task': 'Тапсырмалар бойынша',
+    'stats.empty': 'Әзірге дерек жоқ — кез келген тапсырмада таймерді қос',
+    'export.all_excel': 'Барлығын Excel-ге', 'export.all_projects': 'барлық жобалар',
+    'export.title': 'Excel-ге экспорт', 'export.pick_period': 'Кезеңді таңдау', 'export.period_label': 'Кезең',
+    'export.period_all': 'Барлық уақыт', 'export.period_month': 'Ай', 'export.period_week': 'Апта',
+    'export.period_day': 'Күн', 'export.period_custom': 'Өз',
     'home.title': 'Жобалар', 'home.create': 'Жоба құру', 'home.pinned': 'Бекітілген',
     'home.other': 'Басқалары', 'home.recent': 'Соңғы тапсырмалар',
     'home.empty': 'Әзірге жоба жоқ. Біріншісін құр.', 'home.calendar_link': 'Күнтізбе',
@@ -417,6 +521,16 @@ const T = {
     'task.unpin_title': 'Бекітуден алу', 'task.delete_title': 'Тапсырманы жою',
     'task.pin_short': 'Жоғарыға бекіту', 'task.unpin_short': 'Бекітуден алу',
     'task.no_name': 'Атаусыз',
+    'due.label': 'Мерзім',
+    'notif.title': 'Хабарламалар',
+    'settings.section_notifications': 'Хабарламалар',
+    'notif.system_hint': 'Хабарлама рұқсаты осы сайт үшін браузер параметрлерінде өзгереді.', 'notif.enable': 'Дедлайн еске салулары',
+    'notif.system': 'Жүйедегі хабарламалар', 'notif.perm_granted': 'рұқсат етілген',
+    'notif.perm_denied': 'тыйым салынған', 'notif.perm_ask': 'рұқсат беру', 'notif.empty': 'Мерзімдер мен еске салулар жоқ.', 'notif.mark_seen': 'Оқылды',
+    'notif.overdue': 'Мерзімі өтті', 'notif.soon': 'Мерзімі жақын', 'notif.reminder': 'Еске салу', 'due.none': 'қойылмаған', 'due.clear': 'Мерзімді алып тастау', 'due.remind_at': 'Еске салу',
+    'due.overdue': 'мерзімі өтті', 'due.today': 'бүгін', 'due.tomorrow': 'ертең', 'due.in_days': '{n} күнде',
+    'remind.none': 'Еске салусыз', 'remind.at': 'Мерзім сәтінде', 'remind.15m': '15 минут бұрын',
+    'remind.1h': 'Бір сағат бұрын', 'remind.3h': '3 сағат бұрын', 'remind.1d': 'Бір күн бұрын', 'remind.custom': 'Өз уақыты',
     'tabs.notes': 'Жазбалар', 'tabs.history': 'Тарих',
     'timer.sub_default': 'тапсырма бойынша жалпы уақыт', 'timer.start': 'Старт', 'timer.stop': 'Тоқтату',
     'timer.recording': 'жазылуда · сессия {time}', 'timer.other_task': 'таймер басқа тапсырмада жүріп жатыр',
@@ -436,6 +550,7 @@ const T = {
     'calendar.choose_period': 'Кезеңді таңдау', 'calendar.pick_day': 'Күнді таңда',
     'calendar.day_empty': 'Бұл күні жазба болған жоқ.', 'calendar.pick_date': 'Күнді таңдау',
     'calendar.for_month': 'Ай бойынша', 'calendar.for_week': 'Апта бойынша',
+    'calendar.period_label': 'Кезең бойынша',
     'calendar.for_period': 'Кезең бойынша: {time} · {money}',
     'common.back': 'Артқа', 'common.forward': 'Алға', 'common.cancel': 'Бас тарту', 'common.ok': 'ОК',
     'common.skip': 'Өткізіп жіберу', 'common.continue': 'Жалғастыру',
@@ -443,6 +558,7 @@ const T = {
     'auth.email_label': 'Email', 'auth.password_label': 'Құпия сөз',
     'auth.no_account': 'Бұл email-мен аккаунт жоқ.', 'auth.create_account': 'Аккаунт құру',
     'auth.sign_in': 'Кіру', 'auth.sign_in_nav': 'Кіру', 'auth.sign_out': 'Шығу',
+    'auth.sign_out_confirm': 'Аккаунттан шығу керек пе? Жергілікті деректер осы құрылғыда қалады.',
     'auth.onboarding_title': 'Өзіңіз туралы айтыңыз', 'auth.name_label': 'Атыңыз кім?',
     'auth.usecase_label': 'Lancible-ды не үшін пайдаланасыз?',
     'auth.usecase_personal': 'Жеке тапсырмалар', 'auth.usecase_freelance': 'Фриланс / клиенттер',
@@ -484,7 +600,7 @@ const T = {
     'xlsx.last_entry': 'Соңғы жазба', 'xlsx.description': 'Сипаттама',
     'xlsx.sheet_tasks': 'Тапсырмалар', 'xlsx.sheet_sessions': 'Сессиялар', 'xlsx.default_task_sheet': 'Тапсырма',
     'xlsx.no_project': '—', 'xlsx.no_title': 'Атаусыз',
-    'export.project_fallback': 'Жоба', 'export.task_fallback': 'тапсырма', 'export.all_tasks': 'барлық тапсырмалар',
+    'export.project_fallback': 'Жоба', 'export.task_fallback': 'тапсырма', 'export.all_tasks': 'барлық тапсырмалар', 'export.period': 'кезең', 'export.excel': 'Экспорт',
   },
 };
 
@@ -553,7 +669,7 @@ const el = {
   updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
 
   accountBtn: $('account-btn'), accountLabel: $('account-label'),
-  mobileTabbar: $('mobile-tabbar'), mobileAccountBtn: $('mobile-account-btn'),
+  mobileTabbar: $('mobile-tabbar'),
   mobileBackToList: $('mobile-back-to-list'),
   authBackdrop: $('auth-backdrop'),
   authStepCredentials: $('auth-step-credentials'), authStepOnboarding: $('auth-step-onboarding'),
@@ -569,6 +685,15 @@ const el = {
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
 
   homeView: $('home-view'), projectView: $('project-view'), calendarView: $('calendar-view'),
+  settingsView: $('settings-view'), settingsProfile: $('settings-profile'),
+  settingsLangRow: $('settings-lang-row'), settingsLangValue: $('settings-lang-value'),
+  settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
+  settingsSyncToggle: $('settings-sync-toggle'),
+  settingsRate: $('settings-rate'), settingsCurrency: $('settings-currency'),
+  settingsAccountLabel: $('settings-account-label'), settingsAccountCard: $('settings-account-card'),
+  settingsNameRow: $('settings-name-row'), settingsNameValue: $('settings-name-value'),
+  settingsPasswordRow: $('settings-password-row'), settingsSignoutRow: $('settings-signout-row'),
+  modalLabel2: $('modal-label2'), modalInput2: $('modal-input2'), modalError: $('modal-error'),
 
   homeCount: $('home-count'),
   pinnedSection: $('pinned-section'), pinnedTrack: $('pinned-track'),
@@ -593,14 +718,30 @@ const el = {
   timerDisplay: $('timer-display'), timerSub: $('timer-sub'), timerBtn: $('timer-btn'),
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
+  exportProjectBtn: $('export-project-btn'), exportCalendarBtn: $('export-calendar-btn'),
+  statsView: $('stats-view'), spTime: $('sp-time'), spMoney: $('sp-money'), spDone: $('sp-done'),
+  spRunning: $('sp-running'), spProjLabel: $('sp-proj-label'), spProjects: $('sp-projects'),
+  spTaskLabel: $('sp-task-label'), spTasks: $('sp-tasks'), spEmpty: $('sp-empty'),
+  exportAllBtn: $('export-all-btn'),
+  exportPeriodBtn: $('export-period-btn'),
+  expdlgBackdrop: $('expdlg-backdrop'), expPills: $('exp-pills'), expRange: $('exp-range'),
+  expFromBtn: $('exp-from-btn'), expToBtn: $('exp-to-btn'),
+  expdlgOk: $('expdlg-ok'), expdlgCancel: $('expdlg-cancel'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
+  notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
+  settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
+  settingsNotifState: $('settings-notif-state'),
+  notifList: $('notif-list'), notifEmpty: $('notif-empty'), notifSeen: $('notif-seen'),
+  dueDateBtn: $('due-date-btn'), dueTimeBtn: $('due-time-btn'), dueState: $('due-state'),
+  dueRemind: $('due-remind'), dueClearBtn: $('due-clear-btn'), dueCustomRow: $('due-custom-row'),
+  remindDateBtn: $('remind-date-btn'), remindTimeBtn: $('remind-time-btn'),
   tableTools: $('table-tools'), ttSwatches: $('tt-swatches'),
   sessionList: $('session-list'), sessionCount: $('session-count'),
   sessionEmpty: $('session-empty'), addSessionBtn: $('add-session-btn'),
 
   calModes: [...document.querySelectorAll('.cal-modes button')],
   calPrev: $('cal-prev'), calNext: $('cal-next'), calToday: $('cal-today'),
-  calTitle: $('cal-title'), calPeriodTot: $('cal-period-tot'), calDays: $('cal-days'),
+  calTitle: $('cal-title'), calDays: $('cal-days'),
   calWeekdays: $('cal-weekdays'),
   calPeriodToggle: $('cal-period-toggle'), calRange: $('cal-range'),
   rangeFromBtn: $('range-from-btn'), rangeToBtn: $('range-to-btn'),
@@ -773,6 +914,46 @@ function aggregateDays() {
   }
   return map;
 }
+/** Задачи, отмеченные выполненными в конкретный день (по task.doneAt) — для
+ * карточек дня в календаре. У задач, отмеченных выполненными до появления
+ * этого поля, doneAt нет, так что старые завершения просто не попадают ни в
+ * один день — это ожидаемо, а не баг. */
+function tasksDoneOnDay(key) {
+  return state.tasks.filter((t2) => t2.doneAt && dayKey(t2.doneAt) === key);
+}
+const REMIND_PRESETS = [null, 0, 15, 60, 180, 1440, 'custom'];
+const REMIND_LABEL = { null: 'remind.none', 0: 'remind.at', 15: 'remind.15m', 60: 'remind.1h', 180: 'remind.3h', 1440: 'remind.1d', custom: 'remind.custom' };
+
+/** Момент напоминания: либо смещение от срока, либо своё время. */
+function reminderTime(task) {
+  if (task.remindOffsetMin !== null && task.remindOffsetMin !== undefined && task.dueAt) {
+    return new Date(new Date(task.dueAt).getTime() - task.remindOffsetMin * 60000);
+  }
+  return task.remindAt ? new Date(task.remindAt) : null;
+}
+
+/** 'overdue' | 'soon' (в пределах суток) | 'later' | null. Выполненная
+ *  задача срока не имеет — она уже не горит. */
+function dueState(task) {
+  if (!task.dueAt || task.done) return null;
+  const diff = new Date(task.dueAt).getTime() - Date.now();
+  if (diff < 0) return 'overdue';
+  return diff <= 86400000 ? 'soon' : 'later';
+}
+
+/** Короткая подпись срока для списка: «просрочено» / «сегодня» / дата. */
+function dueShort(task) {
+  if (!task.dueAt) return '';
+  const due = new Date(task.dueAt);
+  const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOf(due) - startOf(new Date())) / 86400000);
+  if (dueState(task) === 'overdue') return t('due.overdue');
+  if (days === 0) return t('due.today');
+  if (days === 1) return t('due.tomorrow');
+  if (days > 1 && days < 7) return t('due.in_days', { n: days });
+  return fmtDateShort(due);
+}
+
 /** Сумма за диапазон дат [from, to] включительно (Date). */
 function rangeAgg(from, to) {
   let ms = 0;
@@ -801,11 +982,58 @@ function toast(message) {
 
 const anyDialogOpen = () =>
   !el.modalBackdrop.hidden || !el.pdlgBackdrop.hidden || !el.sdlgBackdrop.hidden ||
-  !el.confirmBackdrop.hidden || !el.searchPanel.hidden;
+  !el.confirmBackdrop.hidden || !el.searchPanel.hidden || !el.expdlgBackdrop.hidden;
 
 // ---------------------------------------------------------------------------
 // Диалог подтверждения (замена системного confirm())
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Диалог ввода (одно или два поля)
+// ---------------------------------------------------------------------------
+
+/** Единственный потребитель разметки #modal-backdrop — до появления
+ *  настроек аккаунта она лежала в index.html неиспользованной. Второе поле
+ *  и строка ошибки показываются по запросу: смене пароля нужны «новый» +
+ *  «повтор» и сообщение о несовпадении, смене имени — одно поле. */
+let promptResolve = null;
+let promptSubmit = null;
+function promptDialog({ label, value = '', type = 'text', label2 = null, okLabel = null, validate = null }) {
+  el.modalLabel.textContent = label;
+  el.modalInput.type = type;
+  el.modalInput.value = value;
+  el.modalLabel2.textContent = label2 || '';
+  el.modalLabel2.hidden = !label2;
+  el.modalInput2.type = type;
+  el.modalInput2.value = '';
+  el.modalInput2.hidden = !label2;
+  el.modalError.hidden = true;
+  el.modalOk.textContent = okLabel || t('common.ok');
+  el.modalBackdrop.hidden = false;
+  setTimeout(() => el.modalInput.focus(), 30);
+  const submit = () => {
+    const v1 = el.modalInput.value;
+    const v2 = el.modalInput2.value;
+    const err = validate ? validate(v1, v2) : null;
+    if (err) { el.modalError.textContent = err; el.modalError.hidden = false; return; }
+    closePrompt({ value: v1, value2: v2 });
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closePrompt(null); }
+    else if (e.key === 'Enter') { e.preventDefault(); submit(); }
+  };
+  document.addEventListener('keydown', onKey, true);
+  promptSubmit = submit;
+  return new Promise((resolve) => {
+    promptResolve = (v) => { document.removeEventListener('keydown', onKey, true); promptSubmit = null; resolve(v); };
+  });
+}
+function closePrompt(result) {
+  el.modalBackdrop.hidden = true;
+  if (promptResolve) { const r = promptResolve; promptResolve = null; r(result); }
+}
+el.modalOk.addEventListener('click', () => { if (promptSubmit) promptSubmit(); });
+el.modalCancel.addEventListener('click', () => closePrompt(null));
 
 let confirmResolve = null;
 function confirmDialog(message, { okLabel, cancelLabel, title, danger = true } = {}) {
@@ -870,46 +1098,67 @@ function setLang(code) {
   render();
   scheduleSave();
 }
-function openLangMenu() {
+function openLangMenu(anchor) {
   const items = Object.keys(LANG_NAMES).map((code) => ({
     label: LANG_NAMES[code],
     selected: code === ((state.settings && state.settings.lang) || 'ru'),
     onClick: () => setLang(code),
   }));
-  openMenu(el.langToggle, items);
+  openMenu(anchor || el.langToggle, items);
 }
-el.langToggle.addEventListener('click', openLangMenu);
+el.langToggle.addEventListener('click', () => openLangMenu(el.langToggle));
+el.settingsLangRow.addEventListener('click', () => openLangMenu(el.settingsLangRow));
 
-/** Мобильная нижняя плашка (см. web/responsive.css) складывает тему,
- * язык и вход/выход в один пункт "Аккаунт" — на десктопе для них есть
- * отдельные элементы рейла, здесь их не показывают вовсе. */
-function openMobileAccountMenu(anchor) {
-  const currentTheme = (state.settings && state.settings.theme) || 'system';
-  const items = [
-    { key: 'system', i18n: 'nav.theme_system' },
-    { key: 'light', i18n: 'nav.theme_light' },
-    { key: 'dark', i18n: 'nav.theme_dark' },
-  ].map(({ key, i18n }) => ({
-    label: t(i18n),
-    selected: key === currentTheme,
-    onClick: () => { state.settings.theme = key; applyTheme(); scheduleSave(); },
-  }));
-  items.push({ sep: true });
-  for (const code of Object.keys(LANG_NAMES)) {
-    items.push({
-      label: LANG_NAMES[code],
-      selected: code === ((state.settings && state.settings.lang) || 'ru'),
-      onClick: () => setLang(code),
-    });
+el.settingsNotifToggle.addEventListener('click', () => {
+  state.settings.notifyEnabled = state.settings.notifyEnabled === false;
+  if (state.settings.notifyEnabled) ensureNotifPermission();
+  renderSettings();
+  scheduleSave();
+});
+el.settingsNotifSystem.addEventListener('click', () => {
+  if (window.api && window.api.openNotificationSettings) { window.api.openNotificationSettings(); return; }
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission().then(renderSettings).catch(() => {});
+    return;
   }
-  items.push({ sep: true });
-  if (currentUser) items.push({ label: t('auth.sign_out'), danger: true, onClick: signOut });
-  else items.push({ label: t('auth.sign_in_nav'), onClick: openAuthModal });
-  openMenu(anchor, items);
-}
-if (el.mobileAccountBtn) {
-  el.mobileAccountBtn.addEventListener('click', () => openMobileAccountMenu(el.mobileAccountBtn));
-}
+  toast(t('notif.system_hint'));
+});
+el.settingsSyncToggle.addEventListener('click', () => {
+  toggleSyncEnabled();
+  renderSettings();
+});
+el.settingsRate.addEventListener('input', () => {
+  state.settings.hourlyRate = parseNum(el.settingsRate.value);
+  const task = getTask(selectedId);
+  if (task) renderMoney(task);
+  renderStats();
+  scheduleSave();
+});
+el.settingsNameRow.addEventListener('click', async () => {
+  if (!currentUser) return;
+  const res = await promptDialog({ label: t('profile.name_label'), value: currentUser.name || '', okLabel: t('common.save') });
+  if (!res) return;
+  const ok = await updateProfileName(res.value);
+  toast(t(ok ? 'profile.name_updated' : 'profile.update_failed'));
+  renderAccountBtn();
+  renderSettings();
+});
+el.settingsPasswordRow.addEventListener('click', async () => {
+  const res = await promptDialog({
+    label: t('profile.new_password'), type: 'password', label2: t('profile.confirm_password'), okLabel: t('common.save'),
+    validate: (a, b) => (a.length < 6 ? t('profile.password_too_short') : a !== b ? t('profile.password_mismatch') : null),
+  });
+  if (!res) return;
+  const ok = await changePassword(res.value);
+  toast(t(ok ? 'profile.password_updated' : 'profile.update_failed'));
+});
+el.settingsSignoutRow.addEventListener('click', signOut);
+el.settingsCurrency.addEventListener('change', () => {
+  state.settings.currency = el.settingsCurrency.value;
+  render();
+  scheduleSave();
+});
+
 if (el.mobileBackToList) {
   el.mobileBackToList.addEventListener('click', () => {
     flushEditor();
@@ -969,6 +1218,112 @@ let selectedUseCase = null;
 
 function renderAccountBtn() {
   el.accountLabel.textContent = currentUser ? (currentUser.name || currentUser.email) : t('auth.sign_in_nav');
+}
+
+/** Страница настроек — зеркалит то, что есть в настройках мобильного
+ * приложения: профиль/вход, язык, тема, синхронизация (только для вошедших),
+ * ставка и валюта по умолчанию. Языковой ряд/тема переиспользуют те же
+ * функции, что и раньше делал навигационный рейл: .theme-tab кнопки живут
+ * теперь только здесь и попадают в el.themeTabs тем же querySelectorAll на
+ * старте, так что обработчики к ним цепляются без изменений. */
+/** Отдельная страница статистики — зеркалит экран «Статистика» мобильного
+ *  приложения. Карточки сверху дублируют топбар главной намеренно: там
+ *  они идут довеском к списку проектов, здесь — заголовок собственной
+ *  страницы, на которой ниже лежат разбивки по проектам и по задачам. */
+function renderStatsPage() {
+  const totalMs = state.tasks.reduce((a, t2) => a + taskElapsedMs(t2), 0);
+  const totalMoney = state.tasks.reduce((a, t2) => a + earnedOf(t2), 0);
+  el.spTime.textContent = fmtDur(totalMs);
+  el.spMoney.textContent = fmtMoney(totalMoney);
+  const done = state.tasks.filter((t2) => t2.done).length;
+  el.spDone.textContent = state.tasks.length ? `${done} / ${state.tasks.length}` : '0';
+
+  const running = state.activeTimer && getTask(state.activeTimer.taskId);
+  el.spRunning.hidden = !running;
+  if (running) {
+    const sec = fmtClock(Date.now() - new Date(state.activeTimer.startedAt).getTime());
+    el.spRunning.innerHTML = `<span class="r-name">${icon('clock')} ${escapeHtml(running.title || t('task.no_name'))}</span><span class="r-time">${sec}</span>`;
+    el.spRunning.onclick = () => { openProject(running.projectId); selectTask(running.id); };
+  }
+
+  const byProject = state.projects
+    .map((p) => ({ p, ms: tasksOf(p.id).reduce((a, t2) => a + taskElapsedMs(t2), 0), money: tasksOf(p.id).reduce((a, t2) => a + earnedOf(t2), 0) }))
+    .filter((r) => r.ms > 0)
+    .sort((a, b) => b.ms - a.ms);
+  const byTask = state.tasks
+    .map((t2) => ({ t2, ms: taskElapsedMs(t2), money: earnedOf(t2) }))
+    .filter((r) => r.ms > 0)
+    .sort((a, b) => b.ms - a.ms);
+
+  const row = (color, name, ms, money, onClick) => {
+    const li = document.createElement('li');
+    li.style.setProperty('--pc', color);
+    li.innerHTML = `<span class="stats-dot"></span><span class="stats-name">${escapeHtml(name)}</span>`
+      + `<span class="stats-val">${fmtDur(ms)}</span><span class="stats-val">${fmtMoney(money)}</span>`;
+    if (onClick) { li.classList.add('clickable'); li.addEventListener('click', onClick); }
+    return li;
+  };
+
+  el.spProjects.innerHTML = '';
+  for (const { p, ms, money } of byProject) {
+    el.spProjects.appendChild(row(p.color || PALETTE[0], p.name, ms, money, () => openProject(p.id)));
+  }
+  el.spTasks.innerHTML = '';
+  for (const { t2, ms, money } of byTask) {
+    const p = getProject(t2.projectId);
+    el.spTasks.appendChild(row(p ? p.color : PALETTE[0], t2.title || t('task.no_name'), ms, money, () => { openProject(t2.projectId); selectTask(t2.id); }));
+  }
+  el.spProjLabel.hidden = !byProject.length;
+  el.spTaskLabel.hidden = !byTask.length;
+  el.spEmpty.hidden = byProject.length > 0 || byTask.length > 0;
+}
+
+function renderSettings() {
+  if (currentUser) {
+    const initial = (currentUser.name || currentUser.email || '?')[0].toUpperCase();
+    el.settingsProfile.innerHTML = `
+      <div class="settings-avatar">${escapeHtml(initial)}</div>
+      <div class="settings-profile-main">
+        <div class="settings-profile-name">${escapeHtml(currentUser.name || currentUser.email)}</div>
+        ${currentUser.name ? `<div class="settings-profile-sub">${escapeHtml(currentUser.email)}</div>` : ''}
+      </div>`;
+  } else {
+    el.settingsProfile.innerHTML = `
+      <div class="settings-avatar guest">?</div>
+      <div class="settings-profile-main">
+        <div class="settings-profile-name">${escapeHtml(t('profile.guest'))}</div>
+        <div class="settings-profile-sub">${escapeHtml(t('profile.guest_sub'))}</div>
+      </div>
+      <div class="settings-guest-actions">
+        <button type="button" class="ghost" id="settings-signin-btn">${escapeHtml(t('auth.sign_in'))}</button>
+        <button type="button" class="btn-accent" id="settings-signup-btn">${escapeHtml(t('auth.create_account'))}</button>
+      </div>`;
+    $('settings-signin-btn').addEventListener('click', openAuthModal);
+    $('settings-signup-btn').addEventListener('click', openAuthModal);
+  }
+
+  el.settingsAccountLabel.hidden = !currentUser;
+  el.settingsAccountCard.hidden = !currentUser;
+  if (currentUser) el.settingsNameValue.textContent = currentUser.name || t('profile.no_name');
+
+  el.settingsLangValue.textContent = LANG_NAMES[(state.settings && state.settings.lang) || 'ru'];
+
+  const notifyOn = state.settings.notifyEnabled !== false;
+  el.settingsNotifToggle.setAttribute('aria-pressed', String(notifyOn));
+  // На десктопе ведём в системные настройки, в браузере — показываем
+  // состояние разрешения и предлагаем выдать его, если ещё не спрашивали.
+  const perm = typeof Notification === 'undefined' ? 'denied' : Notification.permission;
+  el.settingsNotifState.textContent = t(perm === 'granted' ? 'notif.perm_granted' : perm === 'denied' ? 'notif.perm_denied' : 'notif.perm_ask');
+
+  const syncOn = state.settings.syncEnabled !== false;
+  el.settingsDataLabel.hidden = !currentUser;
+  el.settingsDataCard.hidden = !currentUser;
+  el.settingsSyncToggle.setAttribute('aria-pressed', String(syncOn));
+
+  if (document.activeElement !== el.settingsRate) {
+    el.settingsRate.value = state.settings.hourlyRate ? String(state.settings.hourlyRate) : '';
+  }
+  el.settingsCurrency.value = state.settings.currency;
 }
 
 function buildUsecaseButtons() {
@@ -1104,11 +1459,40 @@ async function saveOnboarding() {
   toast(t('auth.signed_in_toast'));
 }
 
+/** Имя живёт в таблице profiles (не в auth-метаданных) — так же, как в
+ *  мобильном приложении, иначе две платформы читали бы разные источники. */
+async function updateProfileName(name) {
+  const clean = (name || '').trim() || null;
+  try {
+    const { data } = await sb.auth.getUser();
+    const user = data && data.user;
+    if (!user) return false;
+    const { error } = await sb.from('profiles').update({ name: clean }).eq('id', user.id);
+    if (error) throw error;
+    currentUser = { ...currentUser, name: clean };
+    return true;
+  } catch (err) { console.error('Не удалось обновить имя профиля:', err); return false; }
+}
+async function changePassword(newPassword) {
+  try {
+    const { error } = await sb.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    return true;
+  } catch (err) { console.error('Не удалось изменить пароль:', err); return false; }
+}
+
 async function signOut() {
+  const ok = await confirmDialog(t('auth.sign_out_confirm'), {
+    title: t('auth.sign_out'), okLabel: t('auth.sign_out'), danger: true,
+  });
+  if (!ok) return;
   await sb.auth.signOut();
   unsubscribeSyncRealtime();
   currentUser = null;
   renderAccountBtn();
+  // Страница настроек показывает карточку профиля и раздел «Аккаунт» —
+  // без этого после выхода она продолжала показывать вошедшего.
+  if (state.ui.view === 'settings') renderSettings();
   toast(t('auth.signed_out_toast'));
 }
 
@@ -1403,6 +1787,7 @@ function render() {
   document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
   document.body.classList.toggle('has-selected-task', v === 'project' && !!selectedId);
   renderStats();
+  renderNotifBadge();
   el.topbar.hidden = v !== 'home';
 
   el.navItems.forEach((tab) => {
@@ -1410,7 +1795,7 @@ function render() {
     tab.classList.toggle('active', active);
   });
 
-  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView };
+  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView, stats: el.statsView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1419,6 +1804,8 @@ function render() {
 
   if (v === 'home') renderHome();
   else if (v === 'project') { renderProjectHeader(); renderSidebar(); renderDetail(); renderFooter(); }
+  else if (v === 'stats') renderStatsPage();
+  else if (v === 'settings') renderSettings();
   else renderCalendar();
 }
 
@@ -1589,6 +1976,7 @@ function recentTile(task) {
   cb.addEventListener('click', (e) => e.stopPropagation());
   cb.addEventListener('change', () => {
     task.done = cb.checked;
+    task.doneAt = cb.checked ? new Date().toISOString() : null;
     task.updatedAt = new Date().toISOString();
     tile.classList.toggle('done', task.done);
     renderStats();
@@ -2014,6 +2402,7 @@ function renderViewTotal() {
   const { ms, money } = rangeAgg(from, toEnd);
   const label = calState.mode === 'month' ? t('calendar.for_month') : t('calendar.for_week');
   el.calViewTot.hidden = false;
+  el.calViewTot.classList.remove('period');
   el.calViewTot.innerHTML = `<span>${escapeHtml(label)}</span><b>${fmtDur(ms)} · ${fmtMoney(money)}</b>`;
 }
 
@@ -2060,6 +2449,16 @@ function renderCalendar() {
     }
     let html = `<span class="cc-num">${c.day}</span>`;
     if (agg) html += `<span class="cc-time">${fmtDur(agg.ms)}</span><span class="cc-money">${fmtMoney(agg.money)}</span>`;
+    const doneTasks = tasksDoneOnDay(c.key);
+    if (doneTasks.length) {
+      if (calState.mode === 'week') {
+        html += `<div class="cc-done-list">${doneTasks.map((t2) =>
+          `<span class="cc-done-item">${icon('check')}${escapeHtml(t2.title || t('task.no_name'))}</span>`,
+        ).join('')}</div>`;
+      } else {
+        html += `<span class="cc-done-badge">${icon('check')}${doneTasks.length}</span>`;
+      }
+    }
     cell.innerHTML = html;
     if (agg) {
       const bar = document.createElement('i');
@@ -2173,7 +2572,10 @@ function renderPeriodSummary() {
   const totalMoney = tasks.reduce((a, x) => a + x.money, 0);
 
   el.calDayTot.textContent = tasks.length ? `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}` : '';
-  el.calPeriodTot.textContent = t('calendar.for_period', { time: fmtDur(totalMs), money: fmtMoney(totalMoney) });
+  el.calViewTot.hidden = false;
+  el.calViewTot.classList.add('period');
+  el.calViewTot.innerHTML = `<span>${escapeHtml(t('calendar.period_label'))}</span>`
+    + `<b>${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}</b>`;
   el.calDayEmpty.hidden = tasks.length > 0;
 
   el.calDayList.innerHTML = '';
@@ -2276,6 +2678,7 @@ function taskItem(task, i) {
   cb.addEventListener('click', (e) => e.stopPropagation());
   cb.addEventListener('change', () => {
     task.done = cb.checked;
+    task.doneAt = cb.checked ? new Date().toISOString() : null;
     task.updatedAt = new Date().toISOString();
     li.classList.toggle('done', task.done);
     renderStats();
@@ -2286,28 +2689,37 @@ function taskItem(task, i) {
   name.className = 'task-name';
   name.textContent = task.title || t('task.no_name');
 
-  const meta = document.createElement('span');
-  meta.className = 'task-meta';
-
   const pin = document.createElement('button');
   pin.className = 'task-pin';
   pin.innerHTML = icon('pin');
   pin.title = task.pinnedAt ? t('task.unpin_short') : t('task.pin_short');
   pin.addEventListener('click', (e) => { e.stopPropagation(); togglePinTask(task.id); });
-  meta.appendChild(pin);
 
+  const top = document.createElement('div');
+  top.className = 'ti-top';
+  top.append(cb, name, pin);
+
+  const bottom = document.createElement('div');
+  bottom.className = 'ti-bottom';
+  const ds = dueState(task);
+  if (ds) {
+    const badge = document.createElement('span');
+    badge.className = `task-due ${ds}`;
+    badge.textContent = dueShort(task);
+    bottom.appendChild(badge);
+  }
   if (state.activeTimer && state.activeTimer.taskId === task.id) {
     const dot = document.createElement('span');
     dot.className = 'running-dot';
     dot.textContent = '●';
-    meta.appendChild(dot);
+    bottom.appendChild(dot);
   }
   const time = document.createElement('span');
   time.className = 'task-time';
   time.textContent = fmtShort(taskElapsedMs(task));
-  meta.appendChild(time);
+  bottom.appendChild(time);
 
-  li.append(cb, name, meta);
+  li.append(top, bottom);
   li.addEventListener('click', () => selectTask(task.id));
   return li;
 }
@@ -2315,6 +2727,140 @@ function taskItem(task, i) {
 // ---------------------------------------------------------------------------
 // Деталь задачи
 // ---------------------------------------------------------------------------
+
+/** Строки «Срок» и «Напомнить» под ставкой. Время срока показывается
+ *  только когда сама дата задана — до этого показывать «00:00» не о чем. */
+/** Лента уведомлений собирается из задач на лету, отдельного хранилища у
+ *  неё нет: просроченные, те, чей срок в пределах суток, и те, у кого уже
+ *  сработало напоминание. Непрочитанным считается то, чей момент
+ *  наступил позже последнего открытия панели (ui.notifSeenAt). */
+function notificationFeed() {
+  const now = Date.now();
+  const seen = state.ui.notifSeenAt ? new Date(state.ui.notifSeenAt).getTime() : 0;
+  const out = [];
+  for (const task of state.tasks) {
+    if (task.done || !task.dueAt) continue;
+    const due = new Date(task.dueAt).getTime();
+    const rt = reminderTime(task);
+    const fired = !!rt && rt.getTime() <= now;
+    let kind = null;
+    let at = due;
+    if (due < now) kind = 'overdue';
+    else if (due - now <= 86400000) { kind = 'soon'; at = due - 86400000; }
+    else if (fired) { kind = 'reminder'; at = rt.getTime(); }
+    if (!kind) continue;
+    out.push({ task, kind, at, due, unread: at > seen });
+  }
+  return out.sort((a, b) => a.due - b.due);
+}
+
+function renderNotifBadge() {
+  const unread = notificationFeed().filter((n) => n.unread).length;
+  el.notifBadge.hidden = unread === 0;
+  el.notifBadge.textContent = unread > 99 ? '99+' : String(unread);
+}
+
+function renderNotifPanel() {
+  const feed = notificationFeed();
+  el.notifList.innerHTML = '';
+  el.notifEmpty.hidden = feed.length > 0;
+  for (const n of feed) {
+    const p = getProject(n.task.projectId);
+    const li = document.createElement('li');
+    if (n.unread) li.classList.add('unread');
+    li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
+    const when = n.kind === 'overdue' ? 'overdue' : n.kind === 'soon' ? 'soon' : '';
+    li.innerHTML = `<span class="notif-dot"></span>`
+      + `<span class="notif-main"><span class="notif-name">${escapeHtml(n.task.title || t('task.no_name'))}</span>`
+      + `<span class="notif-sub">${escapeHtml(t(`notif.${n.kind}`))} · ${escapeHtml(p ? p.name : '')}</span></span>`
+      + `<span class="notif-when ${when}">${escapeHtml(dueShort(n.task))}</span>`;
+    li.addEventListener('click', () => { closeNotifPanel(); openProject(n.task.projectId); selectTask(n.task.id); });
+    el.notifList.appendChild(li);
+  }
+}
+
+function markNotifSeen() {
+  state.ui.notifSeenAt = new Date().toISOString();
+  renderNotifBadge();
+  renderNotifPanel();
+  scheduleSave();
+}
+function closeNotifPanel() {
+  el.notifPanel.hidden = true;
+  el.notifBtn.classList.remove('on');
+}
+function toggleNotifPanel() {
+  if (!el.notifPanel.hidden) { closeNotifPanel(); return; }
+  renderNotifPanel();
+  el.notifPanel.hidden = false;
+  el.notifBtn.classList.add('on');
+  // Колокольчик стоит у поиска, а не у края экрана, поэтому панель
+  // выравнивается по нему, а не по правому краю окна.
+  const r = el.notifBtn.getBoundingClientRect();
+  const w = el.notifPanel.offsetWidth;
+  const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+  el.notifPanel.style.left = `${Math.round(left)}px`;
+  el.notifPanel.style.top = `${Math.round(r.bottom + 6)}px`;
+  markNotifSeen();
+}
+
+/** Системное уведомление. В Electron разрешение выдано по умолчанию, в
+ *  браузере его спрашивают один раз; отказ просто гасит эту ветку —
+ *  внутренняя лента работает в любом случае. */
+function ensureNotifPermission() {
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+}
+function notifyOS(title, body) {
+  try {
+    if (state.settings.notifyEnabled === false) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    new Notification(title, { body });
+  } catch (err) { console.warn('Не удалось показать системное уведомление:', err); }
+}
+
+/** Раз в полминуты проверяем, не пора ли напомнить. notifiedAt пишется в
+ *  саму задачу и синхронизируется, поэтому второе устройство про эту же
+ *  задачу молчит. */
+function checkReminders() {
+  const now = Date.now();
+  let fired = false;
+  for (const task of state.tasks) {
+    if (task.done || task.notifiedAt) continue;
+    const rt = reminderTime(task);
+    if (!rt || rt.getTime() > now) continue;
+    task.notifiedAt = new Date().toISOString();
+    fired = true;
+    notifyOS(t('notif.reminder'), task.title || t('task.no_name'));
+  }
+  if (fired) scheduleSave();
+  renderNotifBadge();
+}
+
+function renderDue(task) {
+  const has = !!task.dueAt;
+  const due = has ? new Date(task.dueAt) : null;
+  el.dueDateBtn.textContent = has ? fmtDpBtn(dayKey(due)) : t('due.none');
+  el.dueDateBtn.classList.toggle('muted-btn', !has);
+  el.dueTimeBtn.hidden = !has;
+  if (has) el.dueTimeBtn.textContent = `${pad2(due.getHours())}:${pad2(due.getMinutes())}`;
+  el.dueClearBtn.hidden = !has;
+  el.dueRemind.hidden = !has;
+
+  const state2 = dueState(task);
+  el.dueState.hidden = !state2 || state2 === 'later';
+  el.dueState.className = `due-state ${state2 || ''}`;
+  if (!el.dueState.hidden) el.dueState.textContent = dueShort(task);
+
+  const isCustom = (task.remindOffsetMin === null || task.remindOffsetMin === undefined) && !!task.remindAt;
+  el.dueRemind.textContent = t(REMIND_LABEL[remindKey(task)]);
+  el.dueCustomRow.hidden = !has || !isCustom;
+  if (isCustom) {
+    const r = new Date(task.remindAt);
+    el.remindDateBtn.textContent = fmtDpBtn(dayKey(r));
+    el.remindTimeBtn.textContent = `${pad2(r.getHours())}:${pad2(r.getMinutes())}`;
+  }
+}
 
 function renderDetail() {
   const task = getTask(selectedId);
@@ -2330,6 +2876,7 @@ function renderDetail() {
 
   renderTimer(task);
   renderMoney(task);
+  renderDue(task);
   renderSessions(task);
 }
 
@@ -2833,6 +3380,87 @@ function buildProjectSheets(project) {
   ];
 }
 
+/** Сводка по всем проектам: первый лист — итоги по каждому проекту,
+ *  дальше по листу на проект. Порт buildAllProjectsSheets() из
+ *  mobile/src/lib/xlsxReports.js. Имена листов Excel ограничены 31
+ *  символом и не терпят []:*?/\\, плюс не могут повторяться — отсюда
+ *  uniqueName(). */
+function buildAllProjectsSheets() {
+  const cur = currencySym();
+  const stamp = `${fmtDate(Date.now())} ${fmtTime(Date.now())}`;
+  const rows = [
+    [cellBold(t('xlsx.exported')), stamp],
+    [],
+    [t('xlsx.num'), t('xlsx.project'), t('xlsx.total_time'), t('xlsx.hours'), t('xlsx.sum', { cur }), t('xlsx.sessions')].map(cellBold),
+  ];
+  const first = rows.length + 1;
+  let grandMs = 0;
+  let grandMoney = 0;
+  let grandSessions = 0;
+  state.projects.forEach((project, i) => {
+    const tasks = tasksOf(project.id);
+    const ms = tasks.reduce((a, t2) => a + (t2.totalMs || 0), 0);
+    const money = tasks.reduce((a, t2) => a + (t2.sessions || []).reduce((b, ses) => b + sessionMoney(ses, t2), 0), 0);
+    const count = tasks.reduce((a, t2) => a + (t2.sessions ? t2.sessions.length : 0), 0);
+    grandMs += ms; grandMoney += money; grandSessions += count;
+    rows.push([i + 1, project.name, fmtClock(ms), cellHours(hoursOf(ms)), cellHours(money), count]);
+  });
+  const last = first + state.projects.length - 1;
+  rows.push([
+    cellBold(t('xlsx.total')), '', fmtClock(grandMs),
+    state.projects.length ? { f: `SUM(D${first}:D${last})`, n: hoursOf(grandMs), s: 2 } : cellHours(0),
+    state.projects.length ? { f: `SUM(E${first}:E${last})`, n: grandMoney, s: 2 } : cellHours(0),
+    grandSessions,
+  ]);
+  const used = new Set();
+  const uniqueName = (raw) => {
+    const base = (raw || '').replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, 28) || t('xlsx.default_task_sheet');
+    let name = base;
+    let n = 2;
+    while (used.has(name)) name = `${base} ${n++}`;
+    used.add(name);
+    return name;
+  };
+  const sheets = [{ name: uniqueName(t('xlsx.sheet_tasks')), cols: [6, 34, 14, 9, 12, 10].map((width) => ({ width })), rows }];
+  for (const project of state.projects) {
+    const [tasksSheet] = buildProjectSheets(project);
+    sheets.push({ ...tasksSheet, name: uniqueName(project.name) });
+  }
+  return sheets;
+}
+
+/** Один лист «Сессии» за произвольный промежуток — для выгрузки из
+ *  календаря. Порт buildPeriodSheets() из mobile/src/lib/xlsxReports.js;
+ *  в отличие от buildProjectSheets он не привязан к проекту и собирает
+ *  сессии всех задач, добавляя колонку с названием проекта. */
+function buildPeriodSheets(from, to) {
+  const cur = currencySym();
+  const all = allSessionPairs()
+    .filter(({ s }) => { const d = new Date(s.start); return d >= from && d <= to; })
+    .sort((a, b) => new Date(a.s.start) - new Date(b.s.start));
+  const rows = [
+    [t('xlsx.num'), t('xlsx.task'), t('xlsx.project'), t('xlsx.date'), t('xlsx.start'), t('xlsx.end'),
+      t('xlsx.duration'), t('xlsx.hours'), t('xlsx.rate', { cur }), t('xlsx.sum', { cur }), t('xlsx.note')].map(cellBold),
+  ];
+  all.forEach(({ t: t2, s }, i) => {
+    const p = getProject(t2.projectId);
+    rows.push([
+      i + 1, t2.title || t('xlsx.no_title'), p ? p.name : t('xlsx.no_project'),
+      fmtDate(s.start), fmtTime(s.start), s.end ? fmtTime(s.end) : '',
+      fmtClock(s.ms), cellHours(hoursOf(s.ms)), cellHours(sessionRate(s, t2)),
+      cellHours(sessionMoney(s, t2)), s.recovered ? t('xlsx.recovered') : s.manual ? t('xlsx.manual') : '',
+    ]);
+  });
+  const totalMs = all.reduce((a, x) => a + x.s.ms, 0);
+  const totalMoney = all.reduce((a, x) => a + sessionMoney(x.s, x.t), 0);
+  rows.push([
+    cellBold(t('xlsx.total')), '', '', '', '', '', fmtClock(totalMs),
+    all.length ? { f: `SUM(H2:H${all.length + 1})`, n: hoursOf(totalMs), s: 2 } : cellHours(0), '',
+    all.length ? { f: `SUM(J2:J${all.length + 1})`, n: totalMoney, s: 2 } : cellHours(0),
+  ]);
+  return [{ name: t('xlsx.sheet_sessions').slice(0, 31), cols: [6, 30, 24, 12, 10, 10, 14, 9, 12, 12, 16].map((width) => ({ width })), rows }];
+}
+
 async function runExport(defaultName, sheets) {
   try {
     const res = await window.api.exportXlsx({ defaultName, sheets });
@@ -2850,6 +3478,80 @@ function exportProjectById(id) {
   const p = getProject(id);
   if (!p) return;
   runExport(`${p.name} — ${t('export.all_tasks')} — ${fmtDate(Date.now())}`, buildProjectSheets(p));
+}
+/** Выбор периода выгрузки — то же, что лист ExportPeriodSheet в мобильном:
+ *  пресеты плюс «Свой» с двумя датами. «Всё время» уходит в сводку по всем
+ *  проектам (buildAllProjectsSheets), остальные — в лист сессий за диапазон
+ *  (buildPeriodSheets), ровно как решает onExportRange на мобилке. */
+const EXPORT_PRESETS = ['all', 'month', 'week', 'day', 'custom'];
+const expdlg = { preset: 'all', from: null, to: null };
+
+function expdlgRange() {
+  const now = new Date();
+  const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+  if (expdlg.preset === 'all') return null;
+  if (expdlg.preset === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1), endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
+  if (expdlg.preset === 'week') { const ws = mondayOf(now); return [ws, endOfDay(new Date(ws.getTime() + 6 * 86400000))]; }
+  if (expdlg.preset === 'day') return [new Date(now.getFullYear(), now.getMonth(), now.getDate()), endOfDay(now)];
+  let a = keyToDate(expdlg.from);
+  let b = keyToDate(expdlg.to);
+  if (a > b) [a, b] = [b, a];
+  return [a, endOfDay(b)];
+}
+
+function renderExpdlg() {
+  el.expPills.innerHTML = '';
+  for (const p of EXPORT_PRESETS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'exp-pill' + (p === expdlg.preset ? ' on' : '');
+    b.textContent = t(`export.period_${p}`);
+    b.addEventListener('click', () => { expdlg.preset = p; renderExpdlg(); });
+    el.expPills.appendChild(b);
+  }
+  el.expRange.hidden = expdlg.preset !== 'custom';
+  el.expFromBtn.textContent = fmtDpBtn(expdlg.from);
+  el.expToBtn.textContent = fmtDpBtn(expdlg.to);
+}
+
+function openExportPeriodDialog() {
+  const today = dayKey(new Date());
+  if (!expdlg.from) expdlg.from = today;
+  if (!expdlg.to) expdlg.to = today;
+  renderExpdlg();
+  el.expdlgBackdrop.hidden = false;
+}
+function closeExpdlg() { el.expdlgBackdrop.hidden = true; }
+
+el.expFromBtn.addEventListener('click', () => openDatePicker(el.expFromBtn, expdlg.from, (key) => { expdlg.from = key; renderExpdlg(); }));
+el.expToBtn.addEventListener('click', () => openDatePicker(el.expToBtn, expdlg.to, (key) => { expdlg.to = key; renderExpdlg(); }));
+el.expdlgCancel.addEventListener('click', closeExpdlg);
+el.expdlgOk.addEventListener('click', () => {
+  const range = expdlgRange();
+  closeExpdlg();
+  if (!range) { exportAllProjects(); return; }
+  const [from, to] = range;
+  runExport(`Lancible — ${t('export.period')} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
+});
+
+function exportAllProjects() {
+  runExport(`Lancible — ${t('export.all_projects')} — ${fmtDate(Date.now())}`, buildAllProjectsSheets());
+}
+/** Экспорт открытого проекта — та же выгрузка, что в контекстном меню
+ *  плитки на главной, но доступная изнутри проекта (как в мобильном). */
+function exportProject() {
+  if (state.ui.projectId) exportProjectById(state.ui.projectId);
+}
+/** Выгружает то, что сейчас показано в календаре: выбранный период, если
+ *  он включён, иначе границы текущего вида (месяц/неделя/день). */
+function exportCalendar() {
+  const picked = calState.periodOn ? rangeBounds() : null;
+  let [from, to] = picked || currentViewBounds();
+  if (!picked) {
+    from = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    to = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59);
+  }
+  runExport(`Lancible — ${t('export.period')} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
 }
 
 // ---------------------------------------------------------------------------
@@ -3171,6 +3873,107 @@ el.newTaskBtn.addEventListener('click', newTask);
 el.timerBtn.addEventListener('click', toggleTimer);
 el.deleteBtn.addEventListener('click', () => deleteTask(selectedId));
 el.exportTaskBtn.addEventListener('click', exportTask);
+
+/** Правки срока пишутся прямо в задачу: отдельного «сохранить» в этом
+ *  интерфейсе нет нигде, всё уходит через scheduleSave, как и остальное. */
+function touchTask(task) {
+  task.updatedAt = new Date().toISOString();
+  task.notifiedAt = null;
+  renderDue(task);
+  renderSidebar();
+  scheduleSave();
+}
+el.notifBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleNotifPanel(); });
+el.notifSeen.addEventListener('click', (e) => { e.stopPropagation(); markNotifSeen(); });
+el.notifPanel.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('click', () => { if (!el.notifPanel.hidden) closeNotifPanel(); });
+setInterval(checkReminders, 30000);
+
+el.dueDateBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  openDatePicker(el.dueDateBtn, task.dueAt ? dayKey(new Date(task.dueAt)) : dayKey(new Date()), (key) => {
+    const prev = task.dueAt ? new Date(task.dueAt) : null;
+    const d = keyToDate(key);
+    d.setHours(prev ? prev.getHours() : 18, prev ? prev.getMinutes() : 0, 0, 0);
+    task.dueAt = d.toISOString();
+    touchTask(task);
+  });
+});
+el.dueTimeBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.dueAt) return;
+  const d = new Date(task.dueAt);
+  openTimePicker(el.dueTimeBtn, `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, (val) => {
+    const [h, m] = val.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    task.dueAt = d.toISOString();
+    touchTask(task);
+  });
+});
+el.dueClearBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  task.dueAt = null;
+  task.remindAt = null;
+  task.remindOffsetMin = null;
+  touchTask(task);
+});
+/** Ключ текущего варианта напоминания: 'null' | 'custom' | число минут. */
+function remindKey(task) {
+  if ((task.remindOffsetMin === null || task.remindOffsetMin === undefined) && task.remindAt) return 'custom';
+  return String(task.remindOffsetMin === undefined ? null : task.remindOffsetMin);
+}
+function applyRemind(task, v) {
+  if (v !== 'null') ensureNotifPermission();
+  if (v === 'custom') {
+    task.remindOffsetMin = null;
+    task.remindAt = task.remindAt || new Date(new Date(task.dueAt).getTime() - 3600000).toISOString();
+  } else if (v === 'null') {
+    task.remindOffsetMin = null;
+    task.remindAt = null;
+  } else {
+    task.remindOffsetMin = Number(v);
+    task.remindAt = null;
+  }
+  touchTask(task);
+}
+el.dueRemind.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.dueAt) return;
+  const current = remindKey(task);
+  openMenu(el.dueRemind, REMIND_PRESETS.map((p) => ({
+    label: t(REMIND_LABEL[String(p)]),
+    selected: String(p) === current,
+    onClick: () => applyRemind(task, String(p)),
+  })));
+});
+el.remindDateBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.remindAt) return;
+  openDatePicker(el.remindDateBtn, dayKey(new Date(task.remindAt)), (key) => {
+    const prev = new Date(task.remindAt);
+    const d = keyToDate(key);
+    d.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
+    task.remindAt = d.toISOString();
+    touchTask(task);
+  });
+});
+el.remindTimeBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task || !task.remindAt) return;
+  const d = new Date(task.remindAt);
+  openTimePicker(el.remindTimeBtn, `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, (val) => {
+    const [h, m] = val.split(':').map(Number);
+    d.setHours(h, m, 0, 0);
+    task.remindAt = d.toISOString();
+    touchTask(task);
+  });
+});
+el.exportProjectBtn.addEventListener('click', exportProject);
+el.exportCalendarBtn.addEventListener('click', exportCalendar);
+el.exportAllBtn.addEventListener('click', exportAllProjects);
+el.exportPeriodBtn.addEventListener('click', openExportPeriodDialog);
 el.pinTaskBtn.addEventListener('click', () => selectedId && togglePinTask(selectedId));
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });
 
@@ -3252,16 +4055,18 @@ document.addEventListener('keydown', (e) => {
 // ---------------------------------------------------------------------------
 
 function buildCurrencyOptions() {
-  const cur = el.currency.value;
-  el.currency.innerHTML = '';
-  for (const [code, sym] of Object.entries(CURRENCIES)) {
-    const o = document.createElement('option');
-    o.value = code;
-    o.textContent = `${code} ${sym}`;
-    el.currency.appendChild(o);
+  for (const select of [el.currency, el.settingsCurrency]) {
+    const cur = select.value;
+    select.innerHTML = '';
+    for (const [code, sym] of Object.entries(CURRENCIES)) {
+      const o = document.createElement('option');
+      o.value = code;
+      o.textContent = `${code} ${sym}`;
+      select.appendChild(o);
+    }
+    select.title = t('currency.title');
+    if (cur) select.value = cur;
   }
-  el.currency.title = t('currency.title');
-  if (cur) el.currency.value = cur;
 }
 
 function migrate() {
@@ -3271,9 +4076,11 @@ function migrate() {
   if (!state.settings || typeof state.settings !== 'object') state.settings = {};
   if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;
   if (typeof state.ui.navCollapsed !== 'boolean') state.ui.navCollapsed = false;
+  if (typeof state.ui.notifSeenAt !== 'string') state.ui.notifSeenAt = null;
   if (!['system', 'light', 'dark'].includes(state.settings.theme)) state.settings.theme = 'system';
   if (!T[state.settings.lang]) state.settings.lang = 'ru';
   if (typeof state.settings.syncEnabled !== 'boolean') state.settings.syncEnabled = true;
+  if (typeof state.settings.notifyEnabled !== 'boolean') state.settings.notifyEnabled = true;
   if (!state.settings.syncResolvedFor || typeof state.settings.syncResolvedFor !== 'object') state.settings.syncResolvedFor = null;
 
   let cur = state.settings.currency || 'RUB';
@@ -3289,6 +4096,15 @@ function migrate() {
   state.tasks.forEach((t2) => {
     if (t2.pinnedAt === undefined) t2.pinnedAt = null;
     if (t2.rate === undefined) t2.rate = null;
+    // Срок и напоминание. remindOffsetMin — «за сколько минут до срока»
+    // (0 = ровно в срок); когда он null, а remindAt задан — это выбранное
+    // вручную время. notifiedAt не даёт уведомить о задаче дважды и
+    // синхронизируется вместе с остальным, так что второе устройство
+    // не покажет то же самое ещё раз.
+    if (t2.dueAt === undefined) t2.dueAt = null;
+    if (t2.remindOffsetMin === undefined) t2.remindOffsetMin = null;
+    if (t2.remindAt === undefined) t2.remindAt = null;
+    if (t2.notifiedAt === undefined) t2.notifiedAt = null;
   });
 
   if (state.projects.length === 0 && state.tasks.length > 0) {
@@ -3329,6 +4145,12 @@ async function init() {
   setCalMode(calState.mode);
   scheduleSave();
   render();
+
+  const skeleton = $('app-skeleton');
+  if (skeleton) {
+    skeleton.classList.add('hide');
+    setTimeout(() => skeleton.remove(), 200);
+  }
 }
 
 init();

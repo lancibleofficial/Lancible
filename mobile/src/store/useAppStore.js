@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyState, migrate, uid, PALETTE } from '../lib/migrate';
+import { scheduleTaskReminder, cancelTaskReminder, rescheduleAll } from '../lib/notifications';
 import { effectiveRate, earnedOf, taskElapsedMs } from '../lib/format';
 
 export const useAppStore = create(
@@ -74,6 +75,7 @@ export const useAppStore = create(
         const task = {
           id: uid(), projectId, title: '', done: false, notes: null,
           totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
+          dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
         };
         set((s) => ({ tasks: [task, ...s.tasks] }));
         return task;
@@ -83,11 +85,39 @@ export const useAppStore = create(
           tasks: s.tasks.map((task) => (task.id === id ? { ...task, ...patch, updatedAt: new Date().toISOString() } : task)),
         }));
       },
+      /** Правка дедлайна/напоминания. notifiedAt сбрасывается, чтобы
+       *  перенесённая задача могла уведомить заново, и тут же
+       *  переставляется системное уведомление: приложение в фоне
+       *  выгружено и само проверить время не сможет. */
+      setTaskDue(id, patch) {
+        let updated = null;
+        set((s) => ({
+          tasks: s.tasks.map((task) => {
+            if (task.id !== id) return task;
+            updated = { ...task, ...patch, notifiedAt: null, updatedAt: new Date().toISOString() };
+            return updated;
+          }),
+        }));
+        const { lang, notifyEnabled } = get().settings;
+        if (updated) scheduleTaskReminder(updated, lang, notifyEnabled !== false);
+      },
+      markNotifSeen() {
+        set((s) => ({ ui: { ...s.ui, notifSeenAt: new Date().toISOString() } }));
+      },
+      setNotifyEnabled(value) {
+        set((s) => ({ settings: { ...s.settings, notifyEnabled: value } }));
+        const { tasks, settings } = get();
+        rescheduleAll(tasks, settings.lang, value);
+      },
       toggleTaskDone(id) {
         set((s) => ({
           tasks: s.tasks.map((task) =>
             task.id === id ? { ...task, done: !task.done, updatedAt: new Date().toISOString() } : task),
         }));
+        // Выполненной задаче напоминать не о чем, а снятой галочке — снова есть.
+        const task = get().tasks.find((t2) => t2.id === id);
+        const { lang, notifyEnabled } = get().settings;
+        if (task) scheduleTaskReminder(task, lang, notifyEnabled !== false);
       },
       togglePinTask(id) {
         set((s) => ({
@@ -98,6 +128,7 @@ export const useAppStore = create(
         }));
       },
       deleteTask(id) {
+        cancelTaskReminder(id);
         set((s) => ({
           tasks: s.tasks.filter((task) => task.id !== id),
           activeTimer: s.activeTimer && s.activeTimer.taskId === id ? null : s.activeTimer,

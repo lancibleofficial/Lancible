@@ -1,34 +1,38 @@
-import { useMemo, useRef, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
-import Icon from './Icon';
 import Text from './AppText';
-import { openSheet, closeSheet, setSheetFooter } from '../store/useSheetStore';
+import { closeSheet } from '../store/useSheetStore';
 import AppTextInput from './AppTextInput';
 import PrimaryButton from './PrimaryButton';
-import { useColors, spacing, radius } from '../theme';
+import { useColors, spacing } from '../theme';
 import { t } from '../lib/i18n';
 
 const QUILL_VERSION = '2.0.3';
+// Разумный минимум для пустого/короткого редактора — раньше высота
+// определялась родителем (flex:1 + собственный скролл WebView), теперь
+// редактор сам сообщает свою реальную высоту содержимого и живёт внутри
+// ScrollView экрана задачи (см. TaskDetailScreen.js) — при пустом контенте
+// высота не должна схлопываться в пару строк.
+const MIN_HEIGHT = 160;
 
 // Тот же Quill, что на десктопе/вебе (см. src/renderer/app.js) — внутри
 // WebView, с CDN вместо локальных vendor-файлов (WebView грузит их по сети
 // точно так же, как обычная страница, никаких ограничений на хосты тут нет —
-// это не веб-артефакт). Панель инструментов — НЕ штатная панель Quill (её
-// кнопки рассчитаны на мышь и мелкий текст), а собственная RN-панель под
-// пальцем: она шлёт команды в WebView через postMessage, а не рисует UI
-// внутри страницы. Таблицы и произвольный цвет текста из десктопной версии
-// сюда сознательно не перенесены — на телефоне это скорее мешает, чем
+// это не веб-артефакт). Панель инструментов вынесена в EditorToolbar.js и
+// живёт СНАРУЖИ этого компонента (см. TaskDetailScreen.js) — так она может
+// быть отдельным соседом ScrollView, а не частью прокручиваемого контента, и
+// не уезжает от клавиатуры. Таблицы и произвольный цвет текста из десктопной
+// версии сюда сознательно не перенесены — на телефоне это скорее мешает, чем
 // помогает (нет строки/столбца, где можно прицельно ткнуть пальцем).
 function buildHtml(colors, placeholder) {
   return `<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <link href="https://cdn.jsdelivr.net/npm/quill@${QUILL_VERSION}/dist/quill.snow.css" rel="stylesheet">
 <style>
-  html,body{margin:0;padding:0;height:100%;background:${colors.bg};}
-  #editor{height:100%;}
+  html,body{margin:0;padding:0;overflow:hidden;background:${colors.bg};}
   .ql-container.ql-snow{border:none;font-family:sans-serif;font-size:16px;}
-  .ql-editor{padding:${spacing.lg}px;color:${colors.text};min-height:100%;}
+  .ql-editor{padding:${spacing.lg}px;color:${colors.text};min-height:${MIN_HEIGHT}px;}
   .ql-editor.ql-blank::before{color:${colors.textDim};font-style:normal;left:${spacing.lg}px;right:${spacing.lg}px;}
   .ql-editor blockquote{border-left:3px solid ${colors.border};color:${colors.textDim};}
   .ql-editor pre.ql-syntax{background:${colors.panel2};color:${colors.text};border-radius:8px;}
@@ -52,13 +56,28 @@ try {
     return sel ? quill.getFormat(sel) : {};
   }
   function reportFormat() { post({ type: 'format', format: currentFormat() }); }
+  function reportHeight() { post({ type: 'height', height: document.body.scrollHeight }); }
+  function reportCaret() {
+    var sel = quill.getSelection();
+    if (!sel) return;
+    var b = quill.getBounds(sel.index, sel.length || 0);
+    if (b) post({ type: 'caret', top: b.top, bottom: b.bottom });
+  }
 
   quill.on('text-change', function () {
     post({ type: 'change', ops: quill.getContents().ops });
     reportFormat();
+    reportCaret();
+    // Не полагаемся только на ResizeObserver ниже — на некоторых WebView он
+    // может сработать на кадр-два позже самого текста, из-за чего контент
+    // кратко не помещается в ещё не выросшую высоту и мелькает собственный
+    // скролл. Явный вызов сразу (плюс с небольшой задержкой — на случай,
+    // если Quill ещё не успел доотрисовать DOM синхронно) убирает эту гонку.
+    reportHeight();
+    setTimeout(reportHeight, 50);
   });
   quill.on('selection-change', function (range) {
-    if (range) reportFormat();
+    if (range) { reportFormat(); reportCaret(); }
   });
 
   function handleMessage(e) {
@@ -92,6 +111,8 @@ try {
   window.addEventListener('message', handleMessage);
 
   quill.setContents(window.__initialOps || []);
+  reportHeight();
+  new ResizeObserver(reportHeight).observe(document.body);
 } catch (err) {
   document.body.style.background = '#c0392b';
   document.body.innerHTML = '<pre style="color:#fff;padding:16px;white-space:pre-wrap;font-size:14px">' + (err && err.stack || err) + '</pre>';
@@ -104,7 +125,7 @@ window.onerror = function (msg, src, line, col, err) {
 </body></html>`;
 }
 
-function LinkPromptSheet({ lang, initialValue, onConfirm }) {
+export function LinkPromptSheet({ lang, initialValue, onConfirm }) {
   const [url, setUrl] = useState(initialValue || '');
 
   function save() {
@@ -129,33 +150,17 @@ function LinkPromptSheet({ lang, initialValue, onConfirm }) {
   );
 }
 
-const TOOLBAR_ITEMS = [
-  { type: 'toggle', key: 'bold', label: 'B', bold: true },
-  { type: 'toggle', key: 'italic', label: 'I', italic: true },
-  { type: 'toggle', key: 'underline', label: 'U', underline: true },
-  { type: 'toggle', key: 'strike', label: 'S', strike: true },
-  { sep: true },
-  { type: 'header', value: 1, label: 'H1' },
-  { type: 'header', value: 2, label: 'H2' },
-  { type: 'header', value: 3, label: 'H3' },
-  { sep: true },
-  { type: 'list', value: 'bullet', icon: 'list-bullet' },
-  { type: 'list', value: 'ordered', icon: 'list-ordered' },
-  { type: 'list', value: 'checked', icon: 'list-check' },
-  { type: 'indent', dir: -1, icon: 'indent-dec' },
-  { type: 'indent', dir: 1, icon: 'indent-inc' },
-  { sep: true },
-  { type: 'toggle', key: 'blockquote', icon: 'blockquote' },
-  { type: 'toggle', key: 'code-block', icon: 'code' },
-  { type: 'link', icon: 'link' },
-  { type: 'clean', icon: 'eraser' },
-];
-
-export default function RichTextEditor({ value, onChange, placeholder, lang }) {
+// forwardRef: экран задачи владеет тулбаром (см. TaskDetailScreen.js/
+// EditorToolbar.js) отдельно от WebView — ему нужен способ слать команды
+// ("toggle bold" и т.п.) в этот компонент напрямую, а не через проп.
+const RichTextEditor = forwardRef(function RichTextEditor(
+  { value, onChange, onFormatChange, onHeightChange, onCaret, placeholder, lang },
+  ref,
+) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const webRef = useRef(null);
-  const [format, setFormat] = useState({});
+  const [height, setHeight] = useState(MIN_HEIGHT);
   const initialOpsRef = useRef(value);
 
   const html = useMemo(() => {
@@ -170,70 +175,47 @@ export default function RichTextEditor({ value, onChange, placeholder, lang }) {
   function send(msg) {
     webRef.current?.postMessage(JSON.stringify(msg));
   }
+  useImperativeHandle(ref, () => ({ send }));
 
   function onMessage(e) {
     let msg;
     try { msg = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (msg.type === 'change') onChange(msg.ops);
-    else if (msg.type === 'format') setFormat(msg.format || {});
-  }
-
-  function onLinkPress() {
-    openSheet(<LinkPromptSheet lang={lang} initialValue={format.link} onConfirm={(url) => send({ type: 'link', value: url })} />);
-  }
-
-  function onItemPress(item) {
-    if (item.type === 'link') return onLinkPress();
-    send(item);
-  }
-
-  function isActive(item) {
-    if (item.type === 'toggle') return !!format[item.key];
-    if (item.type === 'list') return format.list === item.value;
-    if (item.type === 'header') return format.header === item.value;
-    return false;
+    else if (msg.type === 'format') onFormatChange?.(msg.format || {});
+    else if (msg.type === 'height') {
+      const h = Math.max(MIN_HEIGHT, Math.ceil(msg.height));
+      setHeight(h);
+      onHeightChange?.(h);
+    } else if (msg.type === 'caret') onCaret?.(msg);
   }
 
   return (
     <View style={styles.container}>
       <WebView
         ref={webRef}
-        style={styles.webview}
+        style={[styles.webview, { height }]}
         source={{ html }}
         onMessage={onMessage}
+        scrollEnabled={false}
+        // nestedScrollEnabled по умолчанию true — WebView тогда участвует в
+        // Android-протоколе nested scrolling с ancestor ScrollView экрана
+        // задачи, из-за чего он сам решает, "может" ли он проскроллить,
+        // прежде чем отдать жест наружу — ощущается как отдельный,
+        // конкурирующий скролл внутри редактора, даже когда высота уже
+        // подогнана под контент. false отдаёт скролл-жест целиком странице.
+        nestedScrollEnabled={false}
+        overScrollMode="never"
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
       />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.toolbar} contentContainerStyle={styles.toolbarContent}>
-        {TOOLBAR_ITEMS.map((item, i) => {
-          if (item.sep) return <View key={`sep${i}`} style={styles.sep} />;
-          const active = isActive(item);
-          return (
-            <Pressable key={i} onPress={() => onItemPress(item)} style={[styles.btn, active && styles.btnActive]}>
-              {item.icon ? (
-                <Icon name={item.icon} size={17} color={active ? colors.accent : colors.text} />
-              ) : (
-                <Text style={[styles.btnLabel, item.bold && styles.bold, item.italic && styles.italic, item.underline && styles.underline, item.strike && styles.strike, active && { color: colors.accent }]}>
-                  {item.label}
-                </Text>
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
     </View>
   );
-}
+});
+
+export default RichTextEditor;
 
 const makeStyles = (colors) => StyleSheet.create({
-  container: { flex: 1 },
-  webview: { flex: 1, backgroundColor: colors.bg },
-  toolbar: { flexGrow: 0, backgroundColor: colors.panel, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  toolbarContent: { paddingHorizontal: spacing.sm, alignItems: 'center', gap: 2 },
-  sep: { width: StyleSheet.hairlineWidth, height: 22, backgroundColor: colors.border, marginHorizontal: spacing.xs },
-  btn: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
-  btnActive: { backgroundColor: colors.accentMuted },
-  btnLabel: { color: colors.text, fontSize: 15, fontWeight: '700' },
-  bold: { fontWeight: '900' },
-  italic: { fontStyle: 'italic' },
-  underline: { textDecorationLine: 'underline' },
-  strike: { textDecorationLine: 'line-through' },
+  container: { width: '100%' },
+  webview: { width: '100%', backgroundColor: colors.bg },
 });

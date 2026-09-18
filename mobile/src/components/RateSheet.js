@@ -42,7 +42,7 @@ export default function RateSheet({ lang, initialValue, onSave }) {
 const makeStyles = (colors) => StyleSheet.create({
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
   input: {
-    backgroundColor: colors.panel2, borderRadius: radius.md,
+    backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
   },
 });

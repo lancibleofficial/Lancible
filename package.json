@@ -1,7 +1,7 @@
 {
   "name": "lancible",
   "productName": "Lancible",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Lancible — задачи, учёт времени и заработка",
   "main": "src/main.js",
   "scripts": {
@@ -11,8 +11,10 @@
     "build:web": "node scripts/sync-web-assets.js",
     "serve:web": "npm run build:web && node scripts/serve-web.js",
     "icon": "electron scripts/make-icon.js",
-    "package": "electron-builder --win nsis",
-    "build:exe": "npm run icon && npm run package",
+    "package:win": "electron-builder --win nsis",
+    "package:mac": "electron-builder --mac dmg zip --universal",
+    "build:exe": "npm run icon && npm run package:win",
+    "build:dmg": "npm run icon && npm run package:mac",
     "publish:release": "node scripts/publish-release.js",
     "postinstall": "node scripts/copy-vendor.js"
   },
@@ -46,6 +48,14 @@
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity"
     },
     "protocols": [
       {

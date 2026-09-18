@@ -2,6 +2,7 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import { useAppStore } from '../store/useAppStore';
 import { fmtShort, taskElapsedMs } from '../lib/format';
+import { dueState, dueShort } from '../lib/due';
 import { useTicker } from '../hooks/useTicker';
 import Icon from './Icon';
 import { useColors, spacing, radius, fontSize } from '../theme';
@@ -21,6 +22,8 @@ export default function TaskListItem({ task, onPress }) {
 
   useTicker(!!isRunning);
 
+  const ds = dueState(task);
+
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
       <Pressable hitSlop={10} onPress={() => toggleTaskDone(task.id)} style={[styles.checkbox, task.done && styles.checkboxOn]}>
@@ -32,6 +35,11 @@ export default function TaskListItem({ task, onPress }) {
           {task.title || t(lang, 'task.no_name')}
         </Text>
         <View style={styles.timeRow}>
+          {ds ? (
+            <View style={[styles.dueBadge, styles[ds] || null]}>
+              <Text style={[styles.dueText, styles[ds + 'Text'] || null]}>{dueShort(task, lang)}</Text>
+            </View>
+          ) : null}
           {isRunning ? <View style={styles.liveDot} /> : null}
           <Text style={[styles.time, isRunning && styles.timeRunning]}>{fmtShort(taskElapsedMs(task, activeTimer), lang)}</Text>
         </View>
@@ -59,6 +67,16 @@ const makeStyles = (colors) => StyleSheet.create({
   title: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   titleDone: { color: colors.textDim, textDecorationLine: 'line-through' },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  // Тот же цветовой код, что в десктопной версии: красный — просрочено,
+  // акцент — в пределах суток, нейтральный — дальше.
+  dueBadge: { backgroundColor: colors.panel2, borderRadius: radius.pill, paddingHorizontal: 7, paddingVertical: 1 },
+  dueText: { color: colors.textDim, fontSize: 11 },
+  soon: { backgroundColor: colors.accentMuted },
+  soonText: { color: colors.accentHover },
+  overdue: { backgroundColor: 'rgba(255,92,80,0.18)' },
+  overdueText: { color: colors.danger },
+  later: {},
+  laterText: {},
   time: { color: colors.textDim, fontSize: fontSize.xs },
   timeRunning: { color: colors.accent, fontWeight: '700' },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
