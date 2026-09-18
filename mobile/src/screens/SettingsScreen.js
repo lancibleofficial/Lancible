@@ -42,8 +42,15 @@ export default function SettingsScreen() {
     checkForUpdate().then((result) => {
       if (!cancelled && result.available) setUpdate(result);
     });
-    // Разрешение могли поменять в системных настройках, пока приложение
-  // было в фоне, — перечитываем его при каждом заходе на экран.
+    return () => { cancelled = true; };
+  }, []);
+
+  // Разрешение могли поменять в системных настройках, пока приложение было
+  // в фоне, — перечитываем его при заходе на экран.
+  useEffect(() => { permissionStatus().then(setNotifPerm); }, []);
+
+  if (authStatus === 'needsOnboarding') return <OnboardingScreen />;
+
   async function onToggleNotify(value) {
     // Включение имеет смысл только вместе с разрешением: без него мы бы
     // молча ничего не планировали, а тумблер показывал бы «включено».
@@ -62,13 +69,6 @@ export default function SettingsScreen() {
     }
     Linking.openSettings();
   }
-
-  useEffect(() => { permissionStatus().then(setNotifPerm); }, []);
-
-  return () => { cancelled = true; };
-  }, []);
-
-  if (authStatus === 'needsOnboarding') return <OnboardingScreen />;
 
   function onOpenLanguage() {
     openSheet(
