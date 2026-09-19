@@ -22,6 +22,16 @@ try {
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'styles.css'), path.join(webDir, 'styles.css'));
   fs.copyFileSync(path.join(root, 'src', 'xlsx.js'), path.join(webDir, 'xlsx.js'));
 
+  // Чистая логика из src/renderer/core — те же файлы, что тестируются в Node.
+  // Копируется вся папка целиком, чтобы новый модуль не пришлось дописывать
+  // сюда отдельной строкой и не забыть.
+  const coreSrc = path.join(root, 'src', 'renderer', 'core');
+  const coreDest = path.join(webDir, 'core');
+  fs.mkdirSync(coreDest, { recursive: true });
+  for (const name of fs.readdirSync(coreSrc)) {
+    fs.copyFileSync(path.join(coreSrc, name), path.join(coreDest, name));
+  }
+
   // Quill + Supabase UMD — из web/node_modules (свои зависимости в web/package.json).
   fs.copyFileSync(
     path.join(webNodeModules, 'quill', 'dist', 'quill.js'),
@@ -43,7 +53,7 @@ try {
     fs.copyFileSync(path.join(root, 'assets', 'fonts', name), path.join(fontDest, name));
   }
 
-  console.log('[sync-web-assets] app.js/styles.css/xlsx.js/vendor скопированы в', webDir);
+  console.log('[sync-web-assets] app.js/styles.css/xlsx.js/core/vendor скопированы в', webDir);
 } catch (err) {
   console.error('[sync-web-assets] Ошибка синхронизации:', err.message);
   process.exitCode = 1;

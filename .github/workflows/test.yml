@@ -1,0 +1,64 @@
+# Автотесты на каждый push и каждый pull request. Релизные процессы
+# (release.yml, mobile-release.yml) этот файл не трогает: они запускаются по
+# тегам и живут отдельно.
+name: Тесты
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    name: Юниты
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # Установка скриптов пакетов нам здесь не нужна, а electron тянет
+      # сотни мегабайт ради ничего: юнитам хватает чистого Node.
+      - run: npm ci --ignore-scripts
+      - run: npm run test:unit
+      - run: npm run check:xlsx
+
+  e2e:
+    name: Браузер
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # Сборка веба: app.js, styles.css и core/ собираются из src/renderer,
+      # без этого шага в web/ нечего открывать.
+      - run: npm ci --ignore-scripts
+        working-directory: web
+      - run: npm run build:web
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  backend:
+    name: Права доступа к базе
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # Отдельной работой, а не шагом в юнитах: эти тесты ходят в сеть, и
+      # сбой на стороне Supabase не должен выглядеть как поломка кода.
+      - run: npm run test:backend

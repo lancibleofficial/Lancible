@@ -15,6 +15,7 @@ src/renderer/vendor/
 # Скриншоты и результаты локальных проверок — не часть исходников
 scripts/preview-*.png
 scripts/smoke-result.json
+scripts/_check.xlsx
 scripts/_smoke-export-*.xlsx
 
 # Данные пользователя (на случай локального запуска рядом с исходниками)
@@ -22,6 +23,10 @@ data.json
 
 # Секреты для scripts/publish-release.js (service_role-ключ Supabase) — никогда не коммитить
 .env
+
+# Отчёты и следы браузерных тестов — не исходники
+playwright-report/
+test-results/
 
 # ОС/редакторы
 .DS_Store

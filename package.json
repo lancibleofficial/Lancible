@@ -7,6 +7,11 @@
   "scripts": {
     "start": "electron .",
     "smoke": "electron scripts/smoke.js",
+    "test": "npm run test:unit && npm run check:xlsx && npm run test:backend && npm run test:e2e",
+    "test:fast": "npm run test:unit && npm run check:xlsx",
+    "test:unit": "node --test \"tests/unit/*.test.js\"",
+    "test:backend": "node --test \"tests/backend/*.test.js\"",
+    "test:e2e": "playwright test",
     "check:xlsx": "node scripts/xlsx-check.js",
     "build:web": "node scripts/sync-web-assets.js",
     "serve:web": "npm run build:web && node scripts/serve-web.js",
@@ -17,11 +22,13 @@
     "build:dmg": "npm run icon && npm run package:mac",
     "publish:release": "node scripts/publish-release.js",
     "postinstall": "node scripts/copy-vendor.js",
-    "serve:landing": "node scripts/serve-web.js 5174 --root landing"
+    "serve:landing": "node scripts/serve-web.js 5174 --root landing",
+    "prepare": "node scripts/setup-hooks.js"
   },
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "electron": "^33.2.1",
     "electron-builder": "^26.15.3",
     "png-to-ico": "^3.0.2",

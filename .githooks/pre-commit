@@ -1,0 +1,19 @@
+#!/bin/sh
+# Быстрые проверки перед каждым коммитом: юниты и генератор таблиц. Секунды,
+# а не минуты — браузерные тесты и обращения к базе сюда не входят, их гоняет
+# GitHub на каждый push.
+#
+# Крюк включается сам на `npm install` (scripts/setup-hooks.js).
+# Разово обойти: git commit --no-verify
+
+npm run test:fast --silent
+status=$?
+
+if [ $status -ne 0 ]; then
+  echo ""
+  echo "Коммит остановлен: тесты не прошли."
+  echo "Починить и повторить, либо обойти разово: git commit --no-verify"
+  exit 1
+fi
+
+exit 0

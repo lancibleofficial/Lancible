@@ -38,6 +38,10 @@ let selectedId = null;
 let quill = null;
 
 const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
+
+// Словарь переводов, LOCALE_MAP и LANG_NAMES — в core/i18n.js: там на них
+// есть тест, проверяющий, что набор ключей во всех языках одинаковый.
+const { T, LOCALE_MAP, LANG_NAMES } = Core;
 const HEARTBEAT_MS = 15000;
 const PALETTE = [
   '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5',
@@ -46,40 +50,8 @@ const PALETTE = [
 const TEXT_COLORS = ['', '#ecedef', '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#a4c2a8', '#767b86'];
 const FILL_COLORS = ['', '#3a4a34', '#2f4653', '#43385a', '#544a30', '#5a3a37', '#3e4a40'];
 
-// Смысловой вид статуса. Это не украшение: по нему приложение понимает, что
-// задача закончена, независимо от того, как пользователь назвал свой статус.
-// Разделение состояния и признака завершённости взято из YouTrack — там
-// «Исправлено» и «Не воспроизводится» разные состояния, но оба закрывают
-// задачу. Поэтому «готово» может быть несколько, а не один-единственный.
-// Пять видов вместо трёх. Названия набора по умолчанию подсказывают, что
-// разниц больше, чем «открыто / закрыто»:
-//
-//   backlog   — ещё не в работе и не запланировано. Отличается от «к
-//               выполнению» тем, что это склад идей: такие задачи не должны
-//               попадать в счёт ближайшей работы.
-//   todo      — запланировано, ждёт начала.
-//   progress  — в работе. Сюда же «Checking»: задача ещё открыта, просто
-//               находится на проверке, а не пишется.
-//   done      — сделано. Единственный вид, который считается выполненным.
-//   cancelled — закрыто, но НЕ сделано. Отменённая задача уходит из работы,
-//               как и выполненная, но записывать её в достижения нельзя:
-//               иначе «сделано 8 из 10» станет враньём. Отсюда отдельный вид,
-//               а не ещё один «done» с другим названием.
-const STATUS_KINDS = ['backlog', 'todo', 'progress', 'done', 'cancelled'];
-/** Виды, которые убирают задачу из активной работы. */
-const CLOSING_KINDS = ['done', 'cancelled'];
-
-// Набор по умолчанию. Встроенные статусы можно переименовать и перекрасить,
-// но не удалить: если убрать последний «готово», задачу станет нечем закрыть,
-// а весь учёт времени и статистика на этом и держатся.
-const DEFAULT_STATUSES = [
-  { key: 'backlog', kind: 'backlog', color: '#6b7cad' },
-  { key: 'todo', kind: 'todo', color: '#8a93a5' },
-  { key: 'progress', kind: 'progress', color: '#f5c451' },
-  { key: 'checking', kind: 'progress', color: '#5ec8f2' },
-  { key: 'done', kind: 'done', color: '#87ff65' },
-  { key: 'cancelled', kind: 'cancelled', color: '#8a93a5' },
-];
+// Виды статусов, набор по умолчанию и разбор — в core/status.js.
+const { STATUS_KINDS, CLOSING_KINDS, DEFAULT_STATUSES } = Core;
 
 const CURRENCIES = {
   USD: '$', EUR: '€', GBP: '£', RUB: '₽', KZT: '₸',
@@ -111,573 +83,18 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Интернационализация (i18n)
 // ---------------------------------------------------------------------------
 
-const LOCALE_MAP = { ru: 'ru-RU', en: 'en-US', uk: 'uk-UA', kk: 'kk-KZ' };
-const LANG_NAMES = { ru: 'Русский', en: 'English', uk: 'Українська', kk: 'Қазақша' };
 
-const T = {
-  ru: {
-    'app.default_project_name': 'Мои задачи',
-    'search.placeholder': 'Поиск',
-    'search.start_typing': 'Начни вводить название проекта или задачи',
-    'search.nothing_found': 'Ничего не найдено',
-    'search.projects_group': 'Проекты',
-    'search.tasks_group': 'Задачи',
-    'search.project_sub': '{n} {plural}',
-    'search.task_sub': 'проект: {name}',
-    'nav.home': 'Обзор', 'nav.calendar': 'Календарь', 'nav.settings': 'Настройки', 'nav.collapse': 'Свернуть',
-    'nav.language': 'Язык', 'nav.account': 'Аккаунт',
-    'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Установить и перезапустить',
-    'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
-    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'settings.section_statuses': 'Статусы задач', 'settings.section_tags': 'Теги', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Склад идей', 'status.kind_todo': 'Запланировано', 'status.kind_progress': 'В работе', 'status.kind_done': 'Сделано', 'status.kind_cancelled': 'Отменено', 'status.add': 'Новый статус', 'status.builtin_hint': 'Встроенный статус можно переименовать и перекрасить, но не удалить', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.pick': 'Теги', 'version.none': 'Без версии', 'version.add': 'Новая версия', 'nav.board': 'Доска', 'board.add_task': 'Добавить задачу', 'board.statuses': 'Статусы', 'status.dialog_title': 'Статусы проекта', 'status.name_ph': 'Название', 'status.delete_last_done': 'Это последний статус, завершающий задачу — его нельзя удалить', 'status.delete_last': 'Должен остаться хотя бы один статус', 'status.move_tasks': 'Задачи из этого статуса переедут в «{name}». Продолжить?', 'task.status_label': 'Статус', 'stats.by_status': 'По статусам', 'board.empty': 'Сначала создайте проект.', 'about.us': 'О нас', 'about.blog': 'Блог',
-    'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
-    'settings.section_account': 'Аккаунт', 'profile.name_label': 'Имя', 'profile.no_name': 'Не указано',
-    'profile.name_updated': 'Имя обновлено', 'profile.change_password': 'Изменить пароль',
-    'profile.new_password': 'Новый пароль', 'profile.confirm_password': 'Повторите пароль',
-    'profile.password_updated': 'Пароль обновлён', 'profile.password_mismatch': 'Пароли не совпадают',
-    'profile.password_too_short': 'Минимум 6 символов', 'profile.update_failed': 'Не удалось сохранить',
-    'profile.guest': 'Гость', 'profile.guest_sub': 'Войдите, чтобы синхронизировать данные между устройствами',
-    'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
-    'stats.month': 'заработано в этом месяце', 'stats.done': 'задач выполнено',
-    'nav.stats': 'Статистика', 'stats.by_project': 'По проектам', 'stats.by_task': 'По задачам',
-    'stats.empty': 'Пока нет данных — запусти таймер на любой задаче',
-    'export.all_excel': 'Скачать всё в Excel', 'export.all_projects': 'все проекты',
-    'export.title': 'Экспорт в Excel', 'export.pick_period': 'Выбрать период', 'export.period_label': 'Период',
-    'export.period_all': 'Всё время', 'export.period_month': 'Месяц', 'export.period_week': 'Неделя',
-    'export.period_day': 'День', 'export.period_half_year': 'Полгода', 'export.period_year': 'Год', 'export.period_custom': 'Свой',
-    'home.title': 'Проекты', 'home.create': 'Создать проект', 'home.pinned': 'Закреплённые',
-    'home.other': 'Остальные', 'home.recent': 'Недавние задачи',
-    'home.empty': 'Пока нет ни одного проекта. Создай первый.', 'home.calendar_link': 'Календарь',
-    'home.created_on': 'создан {date}', 'home.new_project_title': 'Создать проект',
-    'weekday.mon': 'Пн', 'weekday.tue': 'Вт', 'weekday.wed': 'Ср', 'weekday.thu': 'Чт',
-    'weekday.fri': 'Пт', 'weekday.sat': 'Сб', 'weekday.sun': 'Вс',
-    'project.all': 'Все проекты', 'project.tasks': 'Задачи',
-    'project.new_task_title': 'Новая задача (Ctrl+N)', 'project.new_task_label': 'Создать задачу',
-    'project.pick_task': 'Выбери задачу слева или создай новую.',
-    'project.opts': 'Опции', 'project.opts_menu': 'Опции проекта',
-    'project.open': 'Открыть', 'project.edit': 'Редактировать…', 'project.pin': 'Закрепить на главной',
-    'project.unpin': 'Открепить с главной', 'project.excel': 'Скачать Excel',
-    'project.copy_summary': 'Скопировать сводку', 'project.delete': 'Удалить проект',
-    'project.new_title': 'Новый проект', 'project.edit_title': 'Редактировать проект',
-    'project.summary': 'Проект: {time} · {money}',
-    'filter.all': 'Все', 'filter.active': 'В работе', 'filter.done': 'Готово',
-    'sidebar.empty_default': 'В этом проекте пока нет задач.<br />Нажми «+ Новая».',
-    'sidebar.no_match': 'Ничего не подходит под фильтр.',
-    'sep.pinned': 'Закреплённые', 'sep.rest': 'Остальные', 'sep.done': 'Выполненные',
-    'rate.default_label': 'Ставка по умолчанию', 'rate.per_hour': '/ч',
-    'task.title_ph': 'Название задачи', 'task.pin_title': 'Закрепить задачу',
-    'task.unpin_title': 'Открепить задачу', 'task.delete_title': 'Удалить задачу',
-    'task.pin_short': 'Закрепить наверх', 'task.unpin_short': 'Открепить',
-    'task.no_name': 'Без названия',
-    'due.label': 'Дедлайн',
-    'notif.title': 'Уведомления',
-    'settings.section_notifications': 'Уведомления',
-    'notif.system_hint': 'Разрешение на уведомления меняется в настройках браузера для этого сайта.', 'notif.enable': 'Напоминания о дедлайнах',
-    'notif.system': 'Уведомления в системе', 'notif.perm_granted': 'разрешены',
-    'notif.perm_denied': 'запрещены', 'notif.perm_ask': 'разрешить', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
-    'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.set': 'Поставить дедлайн', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
-    'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
-    'remind.none': 'Без напоминания', 'remind.at': 'В момент срока', 'remind.15m': 'За 15 минут',
-    'remind.1h': 'За час', 'remind.3h': 'За 3 часа', 'remind.1d': 'За день', 'remind.custom': 'Своё время',
-    'tabs.notes': 'Заметки', 'tabs.settings': 'Настройки', 'tabs.history': 'История',
-    'timer.sub_default': 'общее время по задаче', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
-    'timer.recording': 'идёт запись · сессия {time}', 'timer.other_task': 'таймер идёт по другой задаче',
-    'money.rate_label': 'Ставка', 'money.no_rate': 'ставка не задана', 'money.default_suffix': ' · по умолчанию',
-    'money.calc': '{time} × {rate} {cur}/ч =',
-    'editor.placeholder': 'Заметки, шаги, чеклист, таблица…',
-    'table.insert_title': 'Вставить таблицу 3×3',
-    'table.add_row': '+ строка', 'table.add_col': '+ столбец', 'table.del_row': '− строка', 'table.del_col': '− столбец',
-    'table.fill_label': 'залить:', 'table.scope_cell': 'ячейку', 'table.scope_row': 'строку', 'table.scope_col': 'столбец',
-    'table.del_table': 'удалить таблицу', 'table.fill_title': 'Залить', 'table.unfill_title': 'Убрать заливку',
-    'history.title': 'Записи времени', 'history.add': '+ Добавить запись', 'history.excel': '⬇ Excel',
-    'history.excel_title': 'Выгрузить логи времени этой задачи в Excel',
-    'history.empty': 'Ещё не было ни одного запуска таймера.',
-    'session.recovered': ' · восстановлено', 'session.manual': ' · вручную',
-    'session.edit_title': 'Изменить запись', 'session.delete_title': 'Удалить запись', 'session.today': 'сегодня {time}',
-    'calendar.month': 'Месяц', 'calendar.week': 'Неделя', 'calendar.day': 'День', 'calendar.today': 'Сегодня',
-    'calendar.choose_period': 'Выбрать период', 'calendar.pick_day': 'Выбери день',
-    'calendar.day_empty': 'В этот день записей не было.', 'calendar.pick_date': 'Выбрать дату',
-    'calendar.for_month': 'За месяц', 'calendar.for_week': 'За неделю',
-    'calendar.period_label': 'За период',
-    'calendar.for_period': 'За период: {time} · {money}',
-    'common.back': 'Назад', 'common.forward': 'Вперёд', 'common.done': 'Готово', 'common.cancel': 'Отмена', 'common.ok': 'ОК',
-    'common.skip': 'Пропустить', 'common.continue': 'Продолжить',
-    'auth.title': 'Вход', 'auth.subtitle': 'Необязательно — приложение и так работает офлайн. Войдите, чтобы синхронизировать данные между устройствами.',
-    'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
-    'auth.no_account': 'Нет аккаунта с таким email.', 'auth.create_account': 'Создать аккаунт',
-    'auth.sign_in': 'Войти', 'auth.sign_in_nav': 'Войти', 'auth.sign_out': 'Выйти',
-    'auth.sign_out_confirm': 'Выйти из аккаунта? Локальные данные останутся на этом устройстве.',
-    'auth.onboarding_title': 'Расскажите о себе', 'auth.name_label': 'Как вас зовут?',
-    'auth.usecase_label': 'Для чего будете использовать Lancible?',
-    'auth.usecase_personal': 'Личные задачи', 'auth.usecase_freelance': 'Фриланс / клиенты',
-    'auth.usecase_team': 'Работа в команде', 'auth.usecase_other': 'Другое',
-    'auth.error_invalid': 'Неверный email или пароль.', 'auth.error_generic': 'Что-то пошло не так. Попробуйте ещё раз.',
-    'auth.signed_in_toast': 'Вход выполнен', 'auth.signed_out_toast': 'Вы вышли из аккаунта',
-    'auth.confirm_title': 'Проверьте почту', 'auth.confirm_text': 'Мы отправили письмо на {email} — перейдите по ссылке в нём, потом войдите тем же паролем.',
-    'auth.google_btn': 'Войти через Google', 'auth.or_divider': 'или',
-    'sync.conflict_title': 'Какие данные оставить?',
-    'sync.conflict_text': 'На сервере уже есть сохранённые данные, а на этом компьютере — свои. Какие использовать?',
-    'sync.use_server': 'С сервера', 'sync.use_local': 'С этого компьютера',
-    'sync.updated_toast': 'Данные обновлены с другого устройства',
-    'sync.toggle_label': 'Синхронизировать с аккаунтом',
-    'sync.enabled_toast': 'Синхронизация включена', 'sync.disabled_toast': 'Синхронизация выключена — данные остаются только на этом устройстве',
-    'common.save': 'Сохранить', 'common.delete_q': 'Удалить?', 'common.delete': 'Удалить',
-    'confirm.delete_task_named': 'Удалить «{name}»? Отменить нельзя.',
-    'confirm.delete_task': 'Удалить эту задачу? Отменить нельзя.',
-    'confirm.delete_project_with_tasks': 'Удалить проект «{name}» и {n} {plural}? Отменить нельзя.',
-    'confirm.delete_project': 'Удалить проект «{name}»?',
-    'toast.summary_copied': 'Сводка скопирована', 'toast.copy_failed': 'Не удалось скопировать',
-    'toast.save_error': 'Ошибка сохранения данных', 'toast.load_error': 'Не удалось загрузить сохранённые данные',
-    'toast.file_saved': 'Файл сохранён', 'toast.save_failed': 'Не удалось сохранить: {err}',
-    'toast.export_failed': 'Экспорт не удался', 'toast.invalid_interval': 'Некорректный интервал',
-    'toast.put_cursor_table': 'Поставь курсор в таблицу',
-    'toast.timer_recovered': 'Таймер задачи «{name}» остановлен при закрытии (+{time})',
-    'pdlg.name_label': 'Название', 'pdlg.name_ph': 'Название проекта', 'pdlg.desc_label': 'Описание',
-    'pdlg.desc_ph': 'Необязательно', 'pdlg.color_label': 'Цвет',
-    'sdlg.add_title': 'Добавить запись', 'sdlg.edit_title': 'Изменить запись',
-    'sdlg.date_label': 'Дата', 'sdlg.start_label': 'Начало', 'sdlg.end_label': 'Конец',
-    'sdlg.duration': 'Длительность: {time}', 'sdlg.check_datetime': 'Проверь дату и время',
-    'currency.title': 'Валюта',
-    'plural.task': ['задача', 'задачи', 'задач'],
-    'xlsx.task': 'Задача', 'xlsx.project': 'Проект', 'xlsx.total_time': 'Всего времени', 'xlsx.sessions': 'Сессий',
-    'xlsx.rate_now': 'Ставка сейчас, {cur}/ч', 'xlsx.earned': 'Заработано, {cur}', 'xlsx.exported': 'Выгружено',
-    'xlsx.num': '#', 'xlsx.date': 'Дата', 'xlsx.start': 'Начало', 'xlsx.end': 'Конец', 'xlsx.duration': 'Длительность',
-    'xlsx.hours': 'Часы', 'xlsx.rate': 'Ставка, {cur}/ч', 'xlsx.sum': 'Сумма, {cur}', 'xlsx.note': 'Примечание',
-    'xlsx.recovered': 'восстановлено', 'xlsx.manual': 'вручную', 'xlsx.total': 'Итого',
-    'xlsx.status': 'Статус', 'xlsx.done': 'Готово', 'xlsx.active': 'В работе', 'xlsx.first_entry': 'Первая запись',
-    'xlsx.last_entry': 'Последняя запись', 'xlsx.description': 'Описание',
-    'xlsx.sheet_tasks': 'Задачи', 'xlsx.sheet_sessions': 'Сессии', 'xlsx.default_task_sheet': 'Задача',
-    'xlsx.no_project': '—', 'xlsx.no_title': 'Без названия',
-    'export.project_fallback': 'Проект', 'export.task_fallback': 'задача', 'export.all_tasks': 'все задачи', 'export.period': 'период', 'export.excel': 'Экспорт',
-  },
-  en: {
-    'app.default_project_name': 'My tasks',
-    'search.placeholder': 'Search',
-    'search.start_typing': 'Start typing a project or task name',
-    'search.nothing_found': 'Nothing found',
-    'search.projects_group': 'Projects',
-    'search.tasks_group': 'Tasks',
-    'search.project_sub': '{n} {plural}',
-    'search.task_sub': 'project: {name}',
-    'nav.home': 'Overview', 'nav.calendar': 'Calendar', 'nav.settings': 'Settings', 'nav.collapse': 'Collapse',
-    'nav.language': 'Language', 'nav.account': 'Account',
-    'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Install and restart',
-    'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
-    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'settings.section_statuses': 'Task statuses', 'settings.section_tags': 'Tags', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Backlog', 'status.kind_todo': 'Planned', 'status.kind_progress': 'In progress', 'status.kind_done': 'Completed', 'status.kind_cancelled': 'Cancelled', 'status.add': 'New status', 'status.builtin_hint': 'A built-in status can be renamed and recoloured, but not deleted', 'tag.add': 'New tag', 'tag.none': 'No tags yet', 'tag.pick': 'Tags', 'version.none': 'No version', 'version.add': 'New version', 'nav.board': 'Board', 'board.add_task': 'Add task', 'board.statuses': 'Statuses', 'status.dialog_title': 'Project statuses', 'status.name_ph': 'Name', 'status.delete_last_done': 'This is the last status that completes a task, so it cannot be deleted', 'status.delete_last': 'At least one status has to remain', 'status.move_tasks': 'Tasks in this status will move to “{name}”. Continue?', 'task.status_label': 'Status', 'stats.by_status': 'By status', 'board.empty': 'Create a project first.', 'about.us': 'About us', 'about.blog': 'Blog',
-    'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
-    'settings.section_account': 'Account', 'profile.name_label': 'Name', 'profile.no_name': 'Not set',
-    'profile.name_updated': 'Name updated', 'profile.change_password': 'Change password',
-    'profile.new_password': 'New password', 'profile.confirm_password': 'Confirm password',
-    'profile.password_updated': 'Password updated', 'profile.password_mismatch': "Passwords don't match",
-    'profile.password_too_short': 'At least 6 characters', 'profile.update_failed': "Couldn't save",
-    'profile.guest': 'Guest', 'profile.guest_sub': 'Sign in to sync your data across devices',
-    'stats.worked': 'total worked', 'stats.earned': 'total earned',
-    'stats.month': 'earned this month', 'stats.done': 'tasks done',
-    'nav.stats': 'Stats', 'stats.by_project': 'By project', 'stats.by_task': 'By task',
-    'stats.empty': 'No data yet — start a timer on any task',
-    'export.all_excel': 'Export everything', 'export.all_projects': 'all projects',
-    'export.title': 'Export to Excel', 'export.pick_period': 'Choose period', 'export.period_label': 'Period',
-    'export.period_all': 'All time', 'export.period_month': 'Month', 'export.period_week': 'Week',
-    'export.period_day': 'Day', 'export.period_half_year': 'Six months', 'export.period_year': 'Year', 'export.period_custom': 'Custom',
-    'home.title': 'Projects', 'home.create': 'Create project', 'home.pinned': 'Pinned',
-    'home.other': 'Other', 'home.recent': 'Recent tasks',
-    'home.empty': 'No projects yet. Create the first one.', 'home.calendar_link': 'Calendar',
-    'home.created_on': 'created {date}', 'home.new_project_title': 'Create project',
-    'weekday.mon': 'Mo', 'weekday.tue': 'Tu', 'weekday.wed': 'We', 'weekday.thu': 'Th',
-    'weekday.fri': 'Fr', 'weekday.sat': 'Sa', 'weekday.sun': 'Su',
-    'project.all': 'All projects', 'project.tasks': 'Tasks',
-    'project.new_task_title': 'New task (Ctrl+N)', 'project.new_task_label': 'New task',
-    'project.pick_task': 'Pick a task on the left or create a new one.',
-    'project.opts': 'Options', 'project.opts_menu': 'Project options',
-    'project.open': 'Open', 'project.edit': 'Edit…', 'project.pin': 'Pin to home',
-    'project.unpin': 'Unpin from home', 'project.excel': 'Download Excel',
-    'project.copy_summary': 'Copy summary', 'project.delete': 'Delete project',
-    'project.new_title': 'New project', 'project.edit_title': 'Edit project',
-    'project.summary': 'Project: {time} · {money}',
-    'filter.all': 'All', 'filter.active': 'Active', 'filter.done': 'Done',
-    'sidebar.empty_default': 'No tasks in this project yet.<br />Click "+ New".',
-    'sidebar.no_match': 'Nothing matches the filter.',
-    'sep.pinned': 'Pinned', 'sep.rest': 'Other', 'sep.done': 'Done',
-    'rate.default_label': 'Default rate', 'rate.per_hour': '/h',
-    'task.title_ph': 'Task name', 'task.pin_title': 'Pin task',
-    'task.unpin_title': 'Unpin task', 'task.delete_title': 'Delete task',
-    'task.pin_short': 'Pin to top', 'task.unpin_short': 'Unpin',
-    'task.no_name': 'Untitled',
-    'due.label': 'Deadline',
-    'notif.title': 'Notifications',
-    'settings.section_notifications': 'Notifications',
-    'notif.system_hint': 'Notification permission is changed in your browser settings for this site.', 'notif.enable': 'Deadline reminders',
-    'notif.system': 'System notifications', 'notif.perm_granted': 'allowed',
-    'notif.perm_denied': 'blocked', 'notif.perm_ask': 'allow', 'notif.empty': 'No due dates or reminders yet.', 'notif.mark_seen': 'Mark read',
-    'notif.overdue': 'Overdue', 'notif.soon': 'Due soon', 'notif.reminder': 'Reminder', 'due.none': 'not set', 'due.set': 'Set a deadline', 'due.clear': 'Clear due date', 'due.remind_at': 'Remind',
-    'due.overdue': 'overdue', 'due.today': 'today', 'due.tomorrow': 'tomorrow', 'due.in_days': 'in {n} d',
-    'remind.none': 'No reminder', 'remind.at': 'At due time', 'remind.15m': '15 minutes before',
-    'remind.1h': 'An hour before', 'remind.3h': '3 hours before', 'remind.1d': 'A day before', 'remind.custom': 'Custom time',
-    'tabs.notes': 'Notes', 'tabs.settings': 'Settings', 'tabs.history': 'History',
-    'timer.sub_default': 'total time on task', 'timer.start': 'Start', 'timer.stop': 'Stop',
-    'timer.recording': 'recording · session {time}', 'timer.other_task': 'timer is running on another task',
-    'money.rate_label': 'Rate', 'money.no_rate': 'no rate set', 'money.default_suffix': ' · default',
-    'money.calc': '{time} × {rate} {cur}/h =',
-    'editor.placeholder': 'Notes, steps, checklist, table…',
-    'table.insert_title': 'Insert 3×3 table',
-    'table.add_row': '+ row', 'table.add_col': '+ column', 'table.del_row': '− row', 'table.del_col': '− column',
-    'table.fill_label': 'fill:', 'table.scope_cell': 'cell', 'table.scope_row': 'row', 'table.scope_col': 'column',
-    'table.del_table': 'delete table', 'table.fill_title': 'Fill', 'table.unfill_title': 'Clear fill',
-    'history.title': 'Time entries', 'history.add': '+ Add entry', 'history.excel': '⬇ Excel',
-    'history.excel_title': 'Export this task’s time log to Excel',
-    'history.empty': 'The timer hasn’t been started yet.',
-    'session.recovered': ' · recovered', 'session.manual': ' · manual',
-    'session.edit_title': 'Edit entry', 'session.delete_title': 'Delete entry', 'session.today': 'today {time}',
-    'calendar.month': 'Month', 'calendar.week': 'Week', 'calendar.day': 'Day', 'calendar.today': 'Today',
-    'calendar.choose_period': 'Pick a period', 'calendar.pick_day': 'Pick a day',
-    'calendar.day_empty': 'No entries on this day.', 'calendar.pick_date': 'Pick a date',
-    'calendar.for_month': 'This month', 'calendar.for_week': 'This week',
-    'calendar.period_label': 'Period',
-    'calendar.for_period': 'Period: {time} · {money}',
-    'common.back': 'Back', 'common.forward': 'Forward', 'common.done': 'Done', 'common.cancel': 'Cancel', 'common.ok': 'OK',
-    'common.skip': 'Skip', 'common.continue': 'Continue',
-    'auth.title': 'Sign in', 'auth.subtitle': 'Optional — the app works offline either way. Sign in to sync your data across devices.',
-    'auth.email_label': 'Email', 'auth.password_label': 'Password',
-    'auth.no_account': 'No account with this email yet.', 'auth.create_account': 'Create account',
-    'auth.sign_in': 'Sign in', 'auth.sign_in_nav': 'Sign in', 'auth.sign_out': 'Sign out',
-    'auth.sign_out_confirm': 'Sign out? Local data stays on this device.',
-    'auth.onboarding_title': 'Tell us about yourself', 'auth.name_label': "What's your name?",
-    'auth.usecase_label': 'What will you use Lancible for?',
-    'auth.usecase_personal': 'Personal tasks', 'auth.usecase_freelance': 'Freelance / clients',
-    'auth.usecase_team': 'Team work', 'auth.usecase_other': 'Other',
-    'auth.error_invalid': 'Wrong email or password.', 'auth.error_generic': 'Something went wrong. Please try again.',
-    'auth.signed_in_toast': 'Signed in', 'auth.signed_out_toast': 'Signed out',
-    'auth.confirm_title': 'Check your email', 'auth.confirm_text': "We've sent a confirmation link to {email} — follow it, then sign in with the same password.",
-    'auth.google_btn': 'Sign in with Google', 'auth.or_divider': 'or',
-    'sync.conflict_title': 'Which data should we keep?',
-    'sync.conflict_text': 'There is already saved data on the server, and this computer has its own too. Which should we use?',
-    'sync.use_server': 'From the server', 'sync.use_local': 'From this computer',
-    'sync.updated_toast': 'Data updated from another device',
-    'sync.toggle_label': 'Sync with account',
-    'sync.enabled_toast': 'Sync enabled', 'sync.disabled_toast': 'Sync disabled — data stays on this device only',
-    'common.save': 'Save', 'common.delete_q': 'Delete?', 'common.delete': 'Delete',
-    'confirm.delete_task_named': 'Delete "{name}"? This can’t be undone.',
-    'confirm.delete_task': 'Delete this task? This can’t be undone.',
-    'confirm.delete_project_with_tasks': 'Delete project "{name}" and {n} {plural}? This can’t be undone.',
-    'confirm.delete_project': 'Delete project "{name}"?',
-    'toast.summary_copied': 'Summary copied', 'toast.copy_failed': 'Couldn’t copy',
-    'toast.save_error': 'Failed to save data', 'toast.load_error': 'Failed to load saved data',
-    'toast.file_saved': 'File saved', 'toast.save_failed': 'Failed to save: {err}',
-    'toast.export_failed': 'Export failed', 'toast.invalid_interval': 'Invalid interval',
-    'toast.put_cursor_table': 'Place the cursor inside a table',
-    'toast.timer_recovered': 'Timer for "{name}" was stopped on close (+{time})',
-    'pdlg.name_label': 'Name', 'pdlg.name_ph': 'Project name', 'pdlg.desc_label': 'Description',
-    'pdlg.desc_ph': 'Optional', 'pdlg.color_label': 'Color',
-    'sdlg.add_title': 'Add entry', 'sdlg.edit_title': 'Edit entry',
-    'sdlg.date_label': 'Date', 'sdlg.start_label': 'Start', 'sdlg.end_label': 'End',
-    'sdlg.duration': 'Duration: {time}', 'sdlg.check_datetime': 'Check the date and time',
-    'currency.title': 'Currency',
-    'plural.task': ['task', 'tasks', 'tasks'],
-    'xlsx.task': 'Task', 'xlsx.project': 'Project', 'xlsx.total_time': 'Total time', 'xlsx.sessions': 'Sessions',
-    'xlsx.rate_now': 'Current rate, {cur}/h', 'xlsx.earned': 'Earned, {cur}', 'xlsx.exported': 'Exported',
-    'xlsx.num': '#', 'xlsx.date': 'Date', 'xlsx.start': 'Start', 'xlsx.end': 'End', 'xlsx.duration': 'Duration',
-    'xlsx.hours': 'Hours', 'xlsx.rate': 'Rate, {cur}/h', 'xlsx.sum': 'Amount, {cur}', 'xlsx.note': 'Note',
-    'xlsx.recovered': 'recovered', 'xlsx.manual': 'manual', 'xlsx.total': 'Total',
-    'xlsx.status': 'Status', 'xlsx.done': 'Done', 'xlsx.active': 'Active', 'xlsx.first_entry': 'First entry',
-    'xlsx.last_entry': 'Last entry', 'xlsx.description': 'Description',
-    'xlsx.sheet_tasks': 'Tasks', 'xlsx.sheet_sessions': 'Sessions', 'xlsx.default_task_sheet': 'Task',
-    'xlsx.no_project': '—', 'xlsx.no_title': 'Untitled',
-    'export.project_fallback': 'Project', 'export.task_fallback': 'task', 'export.all_tasks': 'all tasks', 'export.period': 'period', 'export.excel': 'Export',
-  },
-  uk: {
-    'app.default_project_name': 'Мої завдання',
-    'search.placeholder': 'Пошук',
-    'search.start_typing': 'Почни вводити назву проєкту або завдання',
-    'search.nothing_found': 'Нічого не знайдено',
-    'search.projects_group': 'Проєкти',
-    'search.tasks_group': 'Завдання',
-    'search.project_sub': '{n} {plural}',
-    'search.task_sub': 'проєкт: {name}',
-    'nav.home': 'Огляд', 'nav.calendar': 'Календар', 'nav.settings': 'Налаштування', 'nav.collapse': 'Згорнути',
-    'nav.language': 'Мова', 'nav.account': 'Акаунт',
-    'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Встановити й перезапустити',
-    'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
-    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'settings.section_statuses': 'Статуси завдань', 'settings.section_tags': 'Теги', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Склад ідей', 'status.kind_todo': 'Заплановано', 'status.kind_progress': 'У роботі', 'status.kind_done': 'Зроблено', 'status.kind_cancelled': 'Скасовано', 'status.add': 'Новий статус', 'status.builtin_hint': 'Вбудований статус можна перейменувати та перефарбувати, але не видалити', 'tag.add': 'Новий тег', 'tag.none': 'Тегів поки немає', 'tag.pick': 'Теги', 'version.none': 'Без версії', 'version.add': 'Нова версія', 'nav.board': 'Дошка', 'board.add_task': 'Додати завдання', 'board.statuses': 'Статуси', 'status.dialog_title': 'Статуси проекту', 'status.name_ph': 'Назва', 'status.delete_last_done': 'Це останній статус, що завершує завдання — його не можна видалити', 'status.delete_last': 'Має залишитися щонайменше один статус', 'status.move_tasks': 'Завдання з цього статусу перейдуть до «{name}». Продовжити?', 'task.status_label': 'Статус', 'stats.by_status': 'За статусами', 'board.empty': 'Спочатку створіть проект.', 'about.us': 'Про нас', 'about.blog': 'Блог',
-    'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
-    'settings.section_account': 'Акаунт', 'profile.name_label': "Ім'я", 'profile.no_name': 'Не вказано',
-    'profile.name_updated': "Ім'я оновлено", 'profile.change_password': 'Змінити пароль',
-    'profile.new_password': 'Новий пароль', 'profile.confirm_password': 'Повторіть пароль',
-    'profile.password_updated': 'Пароль оновлено', 'profile.password_mismatch': 'Паролі не збігаються',
-    'profile.password_too_short': 'Мінімум 6 символів', 'profile.update_failed': 'Не вдалося зберегти',
-    'profile.guest': 'Гість', 'profile.guest_sub': 'Увійдіть, щоб синхронізувати дані між пристроями',
-    'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
-    'stats.month': 'зароблено цього місяця', 'stats.done': 'завдань виконано',
-    'nav.stats': 'Статистика', 'stats.by_project': 'За проєктами', 'stats.by_task': 'За завданнями',
-    'stats.empty': 'Поки немає даних — запусти таймер на будь-якому завданні',
-    'export.all_excel': 'Завантажити все в Excel', 'export.all_projects': 'усі проєкти',
-    'export.title': 'Експорт в Excel', 'export.pick_period': 'Обрати період', 'export.period_label': 'Період',
-    'export.period_all': 'Весь час', 'export.period_month': 'Місяць', 'export.period_week': 'Тиждень',
-    'export.period_day': 'День', 'export.period_half_year': 'Півроку', 'export.period_year': 'Рік', 'export.period_custom': 'Свій',
-    'home.title': 'Проєкти', 'home.create': 'Створити проєкт', 'home.pinned': 'Закріплені',
-    'home.other': 'Інші', 'home.recent': 'Недавні завдання',
-    'home.empty': 'Ще немає жодного проєкту. Створи перший.', 'home.calendar_link': 'Календар',
-    'home.created_on': 'створено {date}', 'home.new_project_title': 'Створити проєкт',
-    'weekday.mon': 'Пн', 'weekday.tue': 'Вт', 'weekday.wed': 'Ср', 'weekday.thu': 'Чт',
-    'weekday.fri': 'Пт', 'weekday.sat': 'Сб', 'weekday.sun': 'Нд',
-    'project.all': 'Усі проєкти', 'project.tasks': 'Завдання',
-    'project.new_task_title': 'Нове завдання (Ctrl+N)', 'project.new_task_label': 'Створити завдання',
-    'project.pick_task': 'Вибери завдання зліва або створи нове.',
-    'project.opts': 'Опції', 'project.opts_menu': 'Опції проєкту',
-    'project.open': 'Відкрити', 'project.edit': 'Редагувати…', 'project.pin': 'Закріпити на головній',
-    'project.unpin': 'Відкріпити з головної', 'project.excel': 'Завантажити Excel',
-    'project.copy_summary': 'Скопіювати підсумок', 'project.delete': 'Видалити проєкт',
-    'project.new_title': 'Новий проєкт', 'project.edit_title': 'Редагувати проєкт',
-    'project.summary': 'Проєкт: {time} · {money}',
-    'filter.all': 'Усі', 'filter.active': 'В роботі', 'filter.done': 'Готово',
-    'sidebar.empty_default': 'У цьому проєкті ще немає завдань.<br />Натисни «+ Нове».',
-    'sidebar.no_match': 'Нічого не підходить під фільтр.',
-    'sep.pinned': 'Закріплені', 'sep.rest': 'Інші', 'sep.done': 'Виконані',
-    'rate.default_label': 'Ставка за замовчуванням', 'rate.per_hour': '/год',
-    'task.title_ph': 'Назва завдання', 'task.pin_title': 'Закріпити завдання',
-    'task.unpin_title': 'Відкріпити завдання', 'task.delete_title': 'Видалити завдання',
-    'task.pin_short': 'Закріпити вгорі', 'task.unpin_short': 'Відкріпити',
-    'task.no_name': 'Без назви',
-    'due.label': 'Термін',
-    'notif.title': 'Сповіщення',
-    'settings.section_notifications': 'Сповіщення',
-    'notif.system_hint': 'Дозвіл на сповіщення змінюється в налаштуваннях браузера для цього сайту.', 'notif.enable': 'Нагадування про дедлайни',
-    'notif.system': 'Сповіщення в системі', 'notif.perm_granted': 'дозволено',
-    'notif.perm_denied': 'заборонено', 'notif.perm_ask': 'дозволити', 'notif.empty': 'Термінів і нагадувань поки немає.', 'notif.mark_seen': 'Прочитано',
-    'notif.overdue': 'Протерміновано', 'notif.soon': 'Скоро термін', 'notif.reminder': 'Нагадування', 'due.none': 'не задано', 'due.set': 'Встановити термін', 'due.clear': 'Прибрати термін', 'due.remind_at': 'Нагадати',
-    'due.overdue': 'протерміновано', 'due.today': 'сьогодні', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
-    'remind.none': 'Без нагадування', 'remind.at': 'У момент терміну', 'remind.15m': 'За 15 хвилин',
-    'remind.1h': 'За годину', 'remind.3h': 'За 3 години', 'remind.1d': 'За день', 'remind.custom': 'Свій час',
-    'tabs.notes': 'Нотатки', 'tabs.settings': 'Налаштування', 'tabs.history': 'Історія',
-    'timer.sub_default': 'загальний час по завданню', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
-    'timer.recording': 'триває запис · сесія {time}', 'timer.other_task': 'таймер працює на іншому завданні',
-    'money.rate_label': 'Ставка', 'money.no_rate': 'ставку не задано', 'money.default_suffix': ' · за замовчуванням',
-    'money.calc': '{time} × {rate} {cur}/год =',
-    'editor.placeholder': 'Нотатки, кроки, чекліст, таблиця…',
-    'table.insert_title': 'Вставити таблицю 3×3',
-    'table.add_row': '+ рядок', 'table.add_col': '+ стовпець', 'table.del_row': '− рядок', 'table.del_col': '− стовпець',
-    'table.fill_label': 'залити:', 'table.scope_cell': 'комірку', 'table.scope_row': 'рядок', 'table.scope_col': 'стовпець',
-    'table.del_table': 'видалити таблицю', 'table.fill_title': 'Залити', 'table.unfill_title': 'Прибрати заливку',
-    'history.title': 'Записи часу', 'history.add': '+ Додати запис', 'history.excel': '⬇ Excel',
-    'history.excel_title': 'Вивантажити журнал часу цього завдання в Excel',
-    'history.empty': 'Таймер ще жодного разу не запускали.',
-    'session.recovered': ' · відновлено', 'session.manual': ' · вручну',
-    'session.edit_title': 'Змінити запис', 'session.delete_title': 'Видалити запис', 'session.today': 'сьогодні {time}',
-    'calendar.month': 'Місяць', 'calendar.week': 'Тиждень', 'calendar.day': 'День', 'calendar.today': 'Сьогодні',
-    'calendar.choose_period': 'Обрати період', 'calendar.pick_day': 'Обери день',
-    'calendar.day_empty': 'Цього дня записів не було.', 'calendar.pick_date': 'Обрати дату',
-    'calendar.for_month': 'За місяць', 'calendar.for_week': 'За тиждень',
-    'calendar.period_label': 'За період',
-    'calendar.for_period': 'За період: {time} · {money}',
-    'common.back': 'Назад', 'common.forward': 'Вперед', 'common.done': 'Готово', 'common.cancel': 'Скасувати', 'common.ok': 'ОК',
-    'common.skip': 'Пропустити', 'common.continue': 'Продовжити',
-    'auth.title': 'Вхід', 'auth.subtitle': 'Необов’язково — застосунок і так працює офлайн. Увійдіть, щоб синхронізувати дані між пристроями.',
-    'auth.email_label': 'Email', 'auth.password_label': 'Пароль',
-    'auth.no_account': 'Немає акаунта з таким email.', 'auth.create_account': 'Створити акаунт',
-    'auth.sign_in': 'Увійти', 'auth.sign_in_nav': 'Увійти', 'auth.sign_out': 'Вийти',
-    'auth.sign_out_confirm': 'Вийти з акаунта? Локальні дані залишаться на цьому пристрої.',
-    'auth.onboarding_title': 'Розкажіть про себе', 'auth.name_label': 'Як вас звати?',
-    'auth.usecase_label': 'Для чого будете використовувати Lancible?',
-    'auth.usecase_personal': 'Особисті завдання', 'auth.usecase_freelance': 'Фриланс / клієнти',
-    'auth.usecase_team': 'Робота в команді', 'auth.usecase_other': 'Інше',
-    'auth.error_invalid': 'Невірний email або пароль.', 'auth.error_generic': 'Щось пішло не так. Спробуйте ще раз.',
-    'auth.signed_in_toast': 'Вхід виконано', 'auth.signed_out_toast': 'Ви вийшли з акаунта',
-    'auth.confirm_title': 'Перевірте пошту', 'auth.confirm_text': 'Ми надіслали лист на {email} — перейдіть за посиланням у ньому, потім увійдіть тим самим паролем.',
-    'auth.google_btn': 'Увійти через Google', 'auth.or_divider': 'або',
-    'sync.conflict_title': 'Які дані залишити?',
-    'sync.conflict_text': 'На сервері вже є збережені дані, а на цьому комп’ютері — свої. Які використати?',
-    'sync.use_server': 'З сервера', 'sync.use_local': 'З цього комп’ютера',
-    'sync.updated_toast': 'Дані оновлено з іншого пристрою',
-    'sync.toggle_label': 'Синхронізувати з акаунтом',
-    'sync.enabled_toast': 'Синхронізацію увімкнено', 'sync.disabled_toast': 'Синхронізацію вимкнено — дані залишаються лише на цьому пристрої',
-    'common.save': 'Зберегти', 'common.delete_q': 'Видалити?', 'common.delete': 'Видалити',
-    'confirm.delete_task_named': 'Видалити «{name}»? Скасувати не можна.',
-    'confirm.delete_task': 'Видалити це завдання? Скасувати не можна.',
-    'confirm.delete_project_with_tasks': 'Видалити проєкт «{name}» і {n} {plural}? Скасувати не можна.',
-    'confirm.delete_project': 'Видалити проєкт «{name}»?',
-    'toast.summary_copied': 'Підсумок скопійовано', 'toast.copy_failed': 'Не вдалося скопіювати',
-    'toast.save_error': 'Помилка збереження даних', 'toast.load_error': 'Не вдалося завантажити збережені дані',
-    'toast.file_saved': 'Файл збережено', 'toast.save_failed': 'Не вдалося зберегти: {err}',
-    'toast.export_failed': 'Експорт не вдався', 'toast.invalid_interval': 'Некоректний інтервал',
-    'toast.put_cursor_table': 'Постав курсор у таблицю',
-    'toast.timer_recovered': 'Таймер завдання «{name}» зупинено під час закриття (+{time})',
-    'pdlg.name_label': 'Назва', 'pdlg.name_ph': 'Назва проєкту', 'pdlg.desc_label': 'Опис',
-    'pdlg.desc_ph': 'Необов’язково', 'pdlg.color_label': 'Колір',
-    'sdlg.add_title': 'Додати запис', 'sdlg.edit_title': 'Змінити запис',
-    'sdlg.date_label': 'Дата', 'sdlg.start_label': 'Початок', 'sdlg.end_label': 'Кінець',
-    'sdlg.duration': 'Тривалість: {time}', 'sdlg.check_datetime': 'Перевір дату й час',
-    'currency.title': 'Валюта',
-    'plural.task': ['завдання', 'завдання', 'завдань'],
-    'xlsx.task': 'Завдання', 'xlsx.project': 'Проєкт', 'xlsx.total_time': 'Загальний час', 'xlsx.sessions': 'Сесій',
-    'xlsx.rate_now': 'Ставка зараз, {cur}/год', 'xlsx.earned': 'Зароблено, {cur}', 'xlsx.exported': 'Вивантажено',
-    'xlsx.num': '#', 'xlsx.date': 'Дата', 'xlsx.start': 'Початок', 'xlsx.end': 'Кінець', 'xlsx.duration': 'Тривалість',
-    'xlsx.hours': 'Години', 'xlsx.rate': 'Ставка, {cur}/год', 'xlsx.sum': 'Сума, {cur}', 'xlsx.note': 'Примітка',
-    'xlsx.recovered': 'відновлено', 'xlsx.manual': 'вручну', 'xlsx.total': 'Разом',
-    'xlsx.status': 'Статус', 'xlsx.done': 'Готово', 'xlsx.active': 'В роботі', 'xlsx.first_entry': 'Перший запис',
-    'xlsx.last_entry': 'Останній запис', 'xlsx.description': 'Опис',
-    'xlsx.sheet_tasks': 'Завдання', 'xlsx.sheet_sessions': 'Сесії', 'xlsx.default_task_sheet': 'Завдання',
-    'xlsx.no_project': '—', 'xlsx.no_title': 'Без назви',
-    'export.project_fallback': 'Проєкт', 'export.task_fallback': 'завдання', 'export.all_tasks': 'усі завдання', 'export.period': 'період', 'export.excel': 'Експорт',
-  },
-  kk: {
-    'app.default_project_name': 'Менің тапсырмаларым',
-    'search.placeholder': 'Іздеу',
-    'search.start_typing': 'Жоба немесе тапсырма атауын тере баста',
-    'search.nothing_found': 'Ештеңе табылмады',
-    'search.projects_group': 'Жобалар',
-    'search.tasks_group': 'Тапсырмалар',
-    'search.project_sub': '{n} {plural}',
-    'search.task_sub': 'жоба: {name}',
-    'nav.home': 'Шолу', 'nav.calendar': 'Күнтізбе', 'nav.settings': 'Параметрлер', 'nav.collapse': 'Жию',
-    'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
-    'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Орнатып қайта іске қосу',
-    'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
-    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'settings.section_statuses': 'Тапсырма күйлері', 'settings.section_tags': 'Тегтер', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Идеялар қоймасы', 'status.kind_todo': 'Жоспарланған', 'status.kind_progress': 'Жұмыста', 'status.kind_done': 'Орындалды', 'status.kind_cancelled': 'Болдырылды', 'status.add': 'Жаңа күй', 'status.builtin_hint': 'Кіріктірілген күйді атын өзгертуге және бояуға болады, бірақ жоюға болмайды', 'tag.add': 'Жаңа тег', 'tag.none': 'Тегтер әлі жоқ', 'tag.pick': 'Тегтер', 'version.none': 'Нұсқасыз', 'version.add': 'Жаңа нұсқа', 'nav.board': 'Тақта', 'board.add_task': 'Тапсырма қосу', 'board.statuses': 'Күйлер', 'status.dialog_title': 'Жоба күйлері', 'status.name_ph': 'Атауы', 'status.delete_last_done': 'Бұл — тапсырманы аяқтайтын соңғы күй, оны жоюға болмайды', 'status.delete_last': 'Кемінде бір күй қалуы керек', 'status.move_tasks': 'Бұл күйдегі тапсырмалар «{name}» күйіне көшеді. Жалғастыру керек пе?', 'task.status_label': 'Күй', 'stats.by_status': 'Күйлер бойынша', 'board.empty': 'Алдымен жоба құрыңыз.', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
-    'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
-    'settings.section_account': 'Аккаунт', 'profile.name_label': 'Аты', 'profile.no_name': 'Көрсетілмеген',
-    'profile.name_updated': 'Аты жаңартылды', 'profile.change_password': 'Құпиясөзді өзгерту',
-    'profile.new_password': 'Жаңа құпиясөз', 'profile.confirm_password': 'Құпиясөзді қайталаңыз',
-    'profile.password_updated': 'Құпиясөз жаңартылды', 'profile.password_mismatch': 'Құпиясөздер сәйкес емес',
-    'profile.password_too_short': 'Кемінде 6 таңба', 'profile.update_failed': 'Сақтау мүмкін болмады',
-    'profile.guest': 'Қонақ', 'profile.guest_sub': 'Деректерді құрылғылар арасында синхрондау үшін кіріңіз',
-    'stats.worked': 'барлығы істелген уақыт', 'stats.earned': 'барлығы табылған',
-    'stats.month': 'осы айда табылды', 'stats.done': 'тапсырма орындалды',
-    'nav.stats': 'Статистика', 'stats.by_project': 'Жобалар бойынша', 'stats.by_task': 'Тапсырмалар бойынша',
-    'stats.empty': 'Әзірге дерек жоқ — кез келген тапсырмада таймерді қос',
-    'export.all_excel': 'Барлығын Excel-ге', 'export.all_projects': 'барлық жобалар',
-    'export.title': 'Excel-ге экспорт', 'export.pick_period': 'Кезеңді таңдау', 'export.period_label': 'Кезең',
-    'export.period_all': 'Барлық уақыт', 'export.period_month': 'Ай', 'export.period_week': 'Апта',
-    'export.period_day': 'Күн', 'export.period_half_year': 'Жарты жыл', 'export.period_year': 'Жыл', 'export.period_custom': 'Өз',
-    'home.title': 'Жобалар', 'home.create': 'Жоба құру', 'home.pinned': 'Бекітілген',
-    'home.other': 'Басқалары', 'home.recent': 'Соңғы тапсырмалар',
-    'home.empty': 'Әзірге жоба жоқ. Біріншісін құр.', 'home.calendar_link': 'Күнтізбе',
-    'home.created_on': 'құрылды {date}', 'home.new_project_title': 'Жоба құру',
-    'weekday.mon': 'Дс', 'weekday.tue': 'Сс', 'weekday.wed': 'Ср', 'weekday.thu': 'Бс',
-    'weekday.fri': 'Жм', 'weekday.sat': 'Сб', 'weekday.sun': 'Жс',
-    'project.all': 'Барлық жобалар', 'project.tasks': 'Тапсырмалар',
-    'project.new_task_title': 'Жаңа тапсырма (Ctrl+N)', 'project.new_task_label': 'Тапсырма құру',
-    'project.pick_task': 'Сол жақтан тапсырманы таңда немесе жаңасын құр.',
-    'project.opts': 'Опциялар', 'project.opts_menu': 'Жоба опциялары',
-    'project.open': 'Ашу', 'project.edit': 'Өңдеу…', 'project.pin': 'Басты бетке бекіту',
-    'project.unpin': 'Басты беттен алып тастау', 'project.excel': 'Excel жүктеу',
-    'project.copy_summary': 'Қорытындыны көшіру', 'project.delete': 'Жобаны жою',
-    'project.new_title': 'Жаңа жоба', 'project.edit_title': 'Жобаны өңдеу',
-    'project.summary': 'Жоба: {time} · {money}',
-    'filter.all': 'Барлығы', 'filter.active': 'Жұмыста', 'filter.done': 'Дайын',
-    'sidebar.empty_default': 'Бұл жобада әлі тапсырма жоқ.<br />«+ Жаңа» түймесін бас.',
-    'sidebar.no_match': 'Сүзгіге сәйкес ештеңе жоқ.',
-    'sep.pinned': 'Бекітілген', 'sep.rest': 'Басқалары', 'sep.done': 'Орындалған',
-    'rate.default_label': 'Әдепкі баға', 'rate.per_hour': '/сағ',
-    'task.title_ph': 'Тапсырма атауы', 'task.pin_title': 'Тапсырманы бекіту',
-    'task.unpin_title': 'Бекітуден алу', 'task.delete_title': 'Тапсырманы жою',
-    'task.pin_short': 'Жоғарыға бекіту', 'task.unpin_short': 'Бекітуден алу',
-    'task.no_name': 'Атаусыз',
-    'due.label': 'Мерзім',
-    'notif.title': 'Хабарламалар',
-    'settings.section_notifications': 'Хабарламалар',
-    'notif.system_hint': 'Хабарлама рұқсаты осы сайт үшін браузер параметрлерінде өзгереді.', 'notif.enable': 'Дедлайн еске салулары',
-    'notif.system': 'Жүйедегі хабарламалар', 'notif.perm_granted': 'рұқсат етілген',
-    'notif.perm_denied': 'тыйым салынған', 'notif.perm_ask': 'рұқсат беру', 'notif.empty': 'Мерзімдер мен еске салулар жоқ.', 'notif.mark_seen': 'Оқылды',
-    'notif.overdue': 'Мерзімі өтті', 'notif.soon': 'Мерзімі жақын', 'notif.reminder': 'Еске салу', 'due.none': 'қойылмаған', 'due.set': 'Мерзім қою', 'due.clear': 'Мерзімді алып тастау', 'due.remind_at': 'Еске салу',
-    'due.overdue': 'мерзімі өтті', 'due.today': 'бүгін', 'due.tomorrow': 'ертең', 'due.in_days': '{n} күнде',
-    'remind.none': 'Еске салусыз', 'remind.at': 'Мерзім сәтінде', 'remind.15m': '15 минут бұрын',
-    'remind.1h': 'Бір сағат бұрын', 'remind.3h': '3 сағат бұрын', 'remind.1d': 'Бір күн бұрын', 'remind.custom': 'Өз уақыты',
-    'tabs.notes': 'Жазбалар', 'tabs.settings': 'Параметрлер', 'tabs.history': 'Тарих',
-    'timer.sub_default': 'тапсырма бойынша жалпы уақыт', 'timer.start': 'Старт', 'timer.stop': 'Тоқтату',
-    'timer.recording': 'жазылуда · сессия {time}', 'timer.other_task': 'таймер басқа тапсырмада жүріп жатыр',
-    'money.rate_label': 'Баға', 'money.no_rate': 'баға белгіленбеген', 'money.default_suffix': ' · әдепкі',
-    'money.calc': '{time} × {rate} {cur}/сағ =',
-    'editor.placeholder': 'Жазбалар, қадамдар, чек-лист, кесте…',
-    'table.insert_title': '3×3 кесте кірістіру',
-    'table.add_row': '+ жол', 'table.add_col': '+ баған', 'table.del_row': '− жол', 'table.del_col': '− баған',
-    'table.fill_label': 'бояу:', 'table.scope_cell': 'ұяшық', 'table.scope_row': 'жол', 'table.scope_col': 'баған',
-    'table.del_table': 'кестені жою', 'table.fill_title': 'Бояу', 'table.unfill_title': 'Бояуды өшіру',
-    'history.title': 'Уақыт жазбалары', 'history.add': '+ Жазба қосу', 'history.excel': '⬇ Excel',
-    'history.excel_title': 'Осы тапсырманың уақыт журналын Excel-ге жүктеу',
-    'history.empty': 'Таймер әлі бір рет те іске қосылмаған.',
-    'session.recovered': ' · қалпына келтірілді', 'session.manual': ' · қолмен',
-    'session.edit_title': 'Жазбаны өзгерту', 'session.delete_title': 'Жазбаны жою', 'session.today': 'бүгін {time}',
-    'calendar.month': 'Ай', 'calendar.week': 'Апта', 'calendar.day': 'Күн', 'calendar.today': 'Бүгін',
-    'calendar.choose_period': 'Кезеңді таңдау', 'calendar.pick_day': 'Күнді таңда',
-    'calendar.day_empty': 'Бұл күні жазба болған жоқ.', 'calendar.pick_date': 'Күнді таңдау',
-    'calendar.for_month': 'Ай бойынша', 'calendar.for_week': 'Апта бойынша',
-    'calendar.period_label': 'Кезең бойынша',
-    'calendar.for_period': 'Кезең бойынша: {time} · {money}',
-    'common.back': 'Артқа', 'common.forward': 'Алға', 'common.done': 'Дайын', 'common.cancel': 'Бас тарту', 'common.ok': 'ОК',
-    'common.skip': 'Өткізіп жіберу', 'common.continue': 'Жалғастыру',
-    'auth.title': 'Кіру', 'auth.subtitle': 'Міндетті емес — қолданба офлайн жұмыс істей береді. Құрылғылар арасында деректерді синхрондау үшін кіріңіз.',
-    'auth.email_label': 'Email', 'auth.password_label': 'Құпия сөз',
-    'auth.no_account': 'Бұл email-мен аккаунт жоқ.', 'auth.create_account': 'Аккаунт құру',
-    'auth.sign_in': 'Кіру', 'auth.sign_in_nav': 'Кіру', 'auth.sign_out': 'Шығу',
-    'auth.sign_out_confirm': 'Аккаунттан шығу керек пе? Жергілікті деректер осы құрылғыда қалады.',
-    'auth.onboarding_title': 'Өзіңіз туралы айтыңыз', 'auth.name_label': 'Атыңыз кім?',
-    'auth.usecase_label': 'Lancible-ды не үшін пайдаланасыз?',
-    'auth.usecase_personal': 'Жеке тапсырмалар', 'auth.usecase_freelance': 'Фриланс / клиенттер',
-    'auth.usecase_team': 'Команда жұмысы', 'auth.usecase_other': 'Басқа',
-    'auth.error_invalid': 'Email немесе құпия сөз қате.', 'auth.error_generic': 'Бірдеңе дұрыс болмады. Қайталап көріңіз.',
-    'auth.signed_in_toast': 'Кіру сәтті өтті', 'auth.signed_out_toast': 'Аккаунттан шықтыңыз',
-    'auth.confirm_title': 'Поштаны тексеріңіз', 'auth.confirm_text': '{email} мекенжайына хат жібердік — сілтеме бойынша өтіп, содан кейін сол құпия сөзбен кіріңіз.',
-    'auth.google_btn': 'Google арқылы кіру', 'auth.or_divider': 'немесе',
-    'sync.conflict_title': 'Қай деректерді қалдырамыз?',
-    'sync.conflict_text': 'Серверде деректер бар, осы компьютерде де өз деректері бар. Қайсысын пайдаланамыз?',
-    'sync.use_server': 'Сервердегі', 'sync.use_local': 'Осы компьютердегі',
-    'sync.updated_toast': 'Деректер басқа құрылғыдан жаңартылды',
-    'sync.toggle_label': 'Аккаунтпен синхрондау',
-    'sync.enabled_toast': 'Синхрондау қосылды', 'sync.disabled_toast': 'Синхрондау өшірілді — деректер тек осы құрылғыда қалады',
-    'common.save': 'Сақтау', 'common.delete_q': 'Жою керек пе?', 'common.delete': 'Жою',
-    'confirm.delete_task_named': '«{name}» жойылсын ба? Қайтару мүмкін емес.',
-    'confirm.delete_task': 'Бұл тапсырма жойылсын ба? Қайтару мүмкін емес.',
-    'confirm.delete_project_with_tasks': '«{name}» жобасы және {n} {plural} жойылсын ба? Қайтару мүмкін емес.',
-    'confirm.delete_project': '«{name}» жобасы жойылсын ба?',
-    'toast.summary_copied': 'Қорытынды көшірілді', 'toast.copy_failed': 'Көшіру мүмкін болмады',
-    'toast.save_error': 'Деректерді сақтау қатесі', 'toast.load_error': 'Сақталған деректерді жүктеу мүмкін болмады',
-    'toast.file_saved': 'Файл сақталды', 'toast.save_failed': 'Сақтау мүмкін болмады: {err}',
-    'toast.export_failed': 'Экспорт сәтсіз аяқталды', 'toast.invalid_interval': 'Интервал дұрыс емес',
-    'toast.put_cursor_table': 'Курсорды кестеге қой',
-    'toast.timer_recovered': '«{name}» тапсырмасының таймері жабу кезінде тоқтатылды (+{time})',
-    'pdlg.name_label': 'Атауы', 'pdlg.name_ph': 'Жоба атауы', 'pdlg.desc_label': 'Сипаттама',
-    'pdlg.desc_ph': 'Міндетті емес', 'pdlg.color_label': 'Түс',
-    'sdlg.add_title': 'Жазба қосу', 'sdlg.edit_title': 'Жазбаны өзгерту',
-    'sdlg.date_label': 'Күні', 'sdlg.start_label': 'Басы', 'sdlg.end_label': 'Соңы',
-    'sdlg.duration': 'Ұзақтығы: {time}', 'sdlg.check_datetime': 'Күні мен уақытын тексер',
-    'currency.title': 'Валюта',
-    'plural.task': ['тапсырма', 'тапсырма', 'тапсырма'],
-    'xlsx.task': 'Тапсырма', 'xlsx.project': 'Жоба', 'xlsx.total_time': 'Жалпы уақыт', 'xlsx.sessions': 'Сессиялар',
-    'xlsx.rate_now': 'Қазіргі баға, {cur}/сағ', 'xlsx.earned': 'Табылды, {cur}', 'xlsx.exported': 'Жүктелген күні',
-    'xlsx.num': '#', 'xlsx.date': 'Күні', 'xlsx.start': 'Басы', 'xlsx.end': 'Соңы', 'xlsx.duration': 'Ұзақтығы',
-    'xlsx.hours': 'Сағат', 'xlsx.rate': 'Баға, {cur}/сағ', 'xlsx.sum': 'Сома, {cur}', 'xlsx.note': 'Ескертпе',
-    'xlsx.recovered': 'қалпына келтірілді', 'xlsx.manual': 'қолмен', 'xlsx.total': 'Жиыны',
-    'xlsx.status': 'Күйі', 'xlsx.done': 'Дайын', 'xlsx.active': 'Жұмыста', 'xlsx.first_entry': 'Алғашқы жазба',
-    'xlsx.last_entry': 'Соңғы жазба', 'xlsx.description': 'Сипаттама',
-    'xlsx.sheet_tasks': 'Тапсырмалар', 'xlsx.sheet_sessions': 'Сессиялар', 'xlsx.default_task_sheet': 'Тапсырма',
-    'xlsx.no_project': '—', 'xlsx.no_title': 'Атаусыз',
-    'export.project_fallback': 'Жоба', 'export.task_fallback': 'тапсырма', 'export.all_tasks': 'барлық тапсырмалар', 'export.period': 'кезең', 'export.excel': 'Экспорт',
-  },
-};
 
 /** Текущий язык интерфейса. */
 const lang = () => (state.settings && state.settings.lang) || 'ru';
 const locale = () => LOCALE_MAP[lang()] || 'ru-RU';
 
-/** t('key', {a:1}) — перевод строки с подстановкой {a}; откат на русский, затем на сам ключ. */
-function t(key, vars) {
-  const dict = T[lang()] || T.ru;
-  let s = dict[key] !== undefined ? dict[key] : (T.ru[key] !== undefined ? T.ru[key] : key);
-  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, v);
-  return s;
-}
+/** t('key', {a:1}) — перевод строки с подстановкой {a}. */
+const t = (key, vars) => Core.translate(T, lang(), key, vars);
 
-/** Число + правильная форма слова "задача" под текущий язык. */
-function pluralForm(n, baseKey) {
-  const forms = (T[lang()] && T[lang()][baseKey]) || T.ru[baseKey];
-  const l = lang();
-  if (l === 'en') return forms[n === 1 ? 0 : 1];
-  if (l === 'kk') return forms[0];
-  // ru / uk — общее славянское правило
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return forms[0];
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
-  return forms[2];
-}
+/** Число + правильная форма слова под текущий язык. */
+const pluralForm = (n, baseKey) => Core.pluralForm(T, lang(), n, baseKey);
+
 
 /** Применяет переводы ко всем статическим data-i18n* элементам разметки. */
 function applyStaticTranslations() {
@@ -833,23 +250,13 @@ const tasksOf = (projectId) => state.tasks.filter((t2) => t2.projectId === proje
 
 // --- Статусы ---------------------------------------------------------------
 
-/** Статусы проекта в порядке, заданном пользователем: это же порядок столбцов
- *  доски. Набор свой у каждого проекта — у разных работ разный процесс. */
-const orderedStatuses = (projectId) =>
-  state.statuses.filter((s) => s.projectId === projectId).sort((a, b) => a.order - b.order);
-const getStatus = (id) => state.statuses.find((s) => s.id === id) || null;
-const statusesOfKind = (projectId, kind) => orderedStatuses(projectId).filter((s) => s.kind === kind);
-
-/** Куда попадает задача, у которой статуса ещё нет: первый «готово» для
- *  завершённой, первый «к выполнению» для остальных. Всё в пределах её
- *  проекта. */
-function defaultStatusId(projectId, done) {
-  const pool = statusesOfKind(projectId, done ? 'done' : 'todo');
-  const fallback = orderedStatuses(projectId);
-  return (pool[0] || (done ? fallback[fallback.length - 1] : fallback[0]) || {}).id || null;
-}
-
-const isDoneStatus = (id) => { const s = getStatus(id); return !!s && s.kind === 'done'; };
+// Обёртки над core/status.js: там те же функции, но список статусов
+// приходит параметром, поэтому их можно проверить тестом.
+const orderedStatuses = (projectId) => Core.orderedStatuses(state.statuses, projectId);
+const getStatus = (id) => Core.getStatus(state.statuses, id);
+const statusesOfKind = (projectId, kind) => Core.statusesOfKind(state.statuses, projectId, kind);
+const defaultStatusId = (projectId, done) => Core.defaultStatusId(state.statuses, projectId, done);
+const isDoneStatus = (id) => Core.isDoneStatus(state.statuses, id);
 
 /** Набор по умолчанию для нового проекта. Вызывается при создании, а не
  *  только из migrate(): та правит уже сохранённые данные при загрузке и до
@@ -857,17 +264,14 @@ const isDoneStatus = (id) => { const s = getStatus(id); return !!s && s.kind ===
  *  бы без единого столбца. */
 function seedProjectStatuses(projectId) {
   if (state.statuses.some((s) => s.projectId === projectId)) return;
-  DEFAULT_STATUSES.forEach((s, i) => {
-    state.statuses.push({
-      id: uid(), projectId, name: t(`status.default_${s.key}`),
-      color: s.color, kind: s.kind, order: i, builtin: true,
-    });
-  });
+  for (const row of Core.makeProjectStatuses(projectId, (key) => t(`status.default_${key}`), uid)) {
+    state.statuses.push(row);
+  }
 }
 
 /** Единственное место, где статус задачи меняется. Здесь же done приводится в
  *  соответствие — иначе статистика и календарь разойдутся с доской. */
-const isClosedStatus = (id) => { const s = getStatus(id); return !!s && CLOSING_KINDS.includes(s.kind); };
+const isClosedStatus = (id) => Core.isClosedStatus(state.statuses, id);
 
 function setTaskStatus(task, statusId) {
   const s = getStatus(statusId);
@@ -929,32 +333,13 @@ function filteredProjectTasks() {
   return list;
 }
 
-function taskElapsedMs(task) {
-  let ms = task.totalMs || 0;
-  if (state.activeTimer && state.activeTimer.taskId === task.id) {
-    ms += Date.now() - new Date(state.activeTimer.startedAt).getTime();
-  }
-  return ms;
-}
-
-const pad2 = (n) => String(n).padStart(2, '0');
-function fmtClock(ms) {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  return `${pad2(Math.floor(total / 3600))}:${pad2(Math.floor((total % 3600) / 60))}:${pad2(total % 60)}`;
-}
-const DUR_UNITS = {
-  ru: { h: 'ч', m: 'м' }, en: { h: 'h', m: 'm' }, uk: { h: 'г', m: 'хв' }, kk: { h: 'сағ', m: 'мин' },
-};
-function fmtShort(ms) {
-  const min = Math.round(ms / 60000);
-  if (min < 1) return '—';
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  const u = DUR_UNITS[lang()] || DUR_UNITS.ru;
-  if (h === 0) return `${m}${u.m}`;
-  return m === 0 ? `${h}${u.h}` : `${h}${u.h} ${m}${u.m}`;
-}
-const fmtDur = (ms) => (fmtShort(ms) === '—' ? `0${(DUR_UNITS[lang()] || DUR_UNITS.ru).m}` : fmtShort(ms));
+// Чистое форматирование живёт в core/format.js — оно тестируется отдельно,
+// без браузера. Здесь остаются обёртки с прежними именами и сигнатурами:
+// они подставляют то, что раньше бралось из state прямо внутри функции.
+const { pad2, fmtClock, DUR_UNITS, fmtDate, fmtTime, dayKey, keyToDate, hoursOf, escapeHtml, capFirst, parseNum } = Core;
+const taskElapsedMs = (task) => Core.taskElapsedMs(task, state.activeTimer, Date.now());
+const fmtShort = (ms) => Core.fmtShort(ms, lang());
+const fmtDur = (ms) => Core.fmtDur(ms, lang());
 
 function fmtWhen(iso) {
   const d = new Date(iso);
@@ -963,25 +348,8 @@ function fmtWhen(iso) {
   return `${d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' })} ${time}`;
 }
 const fmtDateShort = (iso) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
-const capFirst = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const monthLabel = (y, m) => `${capFirst(new Date(y, m, 1).toLocaleDateString(locale(), { month: 'long' }))} ${y}`;
-const fmtDate = (iso) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-};
-const fmtTime = (iso) => {
-  const d = new Date(iso);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-};
-const dayKey = (d) => {
-  d = new Date(d);
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-};
-const keyToDate = (k) => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
-const hoursOf = (ms) => ms / 3_600_000;
 
-const escapeHtml = (s) =>
-  String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // ---------------------------------------------------------------------------
 // Деньги
@@ -989,86 +357,36 @@ const escapeHtml = (s) =>
 
 const moneyFmt = () => new Intl.NumberFormat(locale(), { maximumFractionDigits: 2 });
 
-function parseNum(s) {
-  const n = parseFloat(String(s).replace(/\s/g, '').replace(',', '.'));
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
 
 const currencySym = () => {
   const c = state.settings && state.settings.currency;
   return CURRENCIES[c] || c || '₽';
 };
 
-function effectiveRate(task) {
-  const own = task.rate;
-  if (own !== null && own !== undefined && own !== '' && Number.isFinite(Number(own))) return Number(own);
-  return Number(state.settings && state.settings.hourlyRate) || 0;
-}
-const hasOwnRate = (task) =>
-  task.rate !== null && task.rate !== undefined && task.rate !== '' && Number.isFinite(Number(task.rate));
-
-function sessionRate(s, task) {
-  const r = s && s.rate;
-  return r !== null && r !== undefined && Number.isFinite(Number(r)) ? Number(r) : effectiveRate(task);
-}
-const sessionMoney = (s, task) => hoursOf(s.ms) * sessionRate(s, task);
-
-function earnedOf(task) {
-  let money = (task.sessions || []).reduce((a, s) => a + sessionMoney(s, task), 0);
-  if (state.activeTimer && state.activeTimer.taskId === task.id) {
-    const runMs = Date.now() - new Date(state.activeTimer.startedAt).getTime();
-    money += hoursOf(runMs) * effectiveRate(task);
-  }
-  return money;
-}
+// Расчёт денег и сводки живут в core/money.js: там их можно проверить
+// тестом, потому что ставка, идущий таймер и текущий момент приходят
+// параметрами. Здесь — обёртки с прежними именами, подставляющие state.
+const defaultRate = () => Number(state.settings && state.settings.hourlyRate) || 0;
+const effectiveRate = (task) => Core.effectiveRate(task, defaultRate());
+const hasOwnRate = Core.hasOwnRate;
+const sessionRate = (s, task) => Core.sessionRate(s, task, defaultRate());
+const sessionMoney = (s, task) => Core.sessionMoney(s, task, defaultRate());
+const earnedOf = (task) => Core.earnedOf(task, defaultRate(), state.activeTimer, Date.now());
+const allSessionPairs = () => Core.allSessionPairs(state.tasks);
+const aggregateDays = () => Core.aggregateDays(state.tasks, defaultRate());
+const rangeAgg = (from, to) => Core.rangeAgg(state.tasks, from, to, defaultRate());
+const tasksDoneOnDay = (key) => Core.tasksDoneOnDay(state.tasks, key);
+const projectMoney = (id) => Core.projectMoney(tasksOf(id), defaultRate(), state.activeTimer, Date.now());
+const projectMs = (id) => Core.projectMs(tasksOf(id), state.activeTimer, Date.now());
+const reminderTime = Core.reminderTime;
+const dueState = (task) => Core.dueState(task, Date.now());
 
 const fmtMoney = (n) => `${moneyFmt().format(Math.round((n + Number.EPSILON) * 100) / 100)} ${currencySym()}`;
-const projectMoney = (id) => tasksOf(id).reduce((a, t2) => a + earnedOf(t2), 0);
-const projectMs = (id) => tasksOf(id).reduce((a, t2) => a + taskElapsedMs(t2), 0);
 
-function allSessionPairs() {
-  const out = [];
-  for (const t2 of state.tasks) for (const s of t2.sessions || []) out.push({ t: t2, s });
-  return out;
-}
-function aggregateDays() {
-  const map = new Map();
-  for (const { t: t2, s } of allSessionPairs()) {
-    const k = dayKey(s.start);
-    let e = map.get(k);
-    if (!e) { e = { ms: 0, money: 0, count: 0 }; map.set(k, e); }
-    e.ms += s.ms;
-    e.money += sessionMoney(s, t2);
-    e.count += 1;
-  }
-  return map;
-}
-/** Задачи, отмеченные выполненными в конкретный день (по task.doneAt) — для
- * карточек дня в календаре. У задач, отмеченных выполненными до появления
- * этого поля, doneAt нет, так что старые завершения просто не попадают ни в
- * один день — это ожидаемо, а не баг. */
-function tasksDoneOnDay(key) {
-  return state.tasks.filter((t2) => t2.doneAt && dayKey(t2.doneAt) === key);
-}
 const REMIND_PRESETS = [null, 0, 15, 60, 180, 1440, 'custom'];
 const REMIND_LABEL = { null: 'remind.none', 0: 'remind.at', 15: 'remind.15m', 60: 'remind.1h', 180: 'remind.3h', 1440: 'remind.1d', custom: 'remind.custom' };
 
-/** Момент напоминания: либо смещение от срока, либо своё время. */
-function reminderTime(task) {
-  if (task.remindOffsetMin !== null && task.remindOffsetMin !== undefined && task.dueAt) {
-    return new Date(new Date(task.dueAt).getTime() - task.remindOffsetMin * 60000);
-  }
-  return task.remindAt ? new Date(task.remindAt) : null;
-}
 
-/** 'overdue' | 'soon' (в пределах суток) | 'later' | null. Выполненная
- *  задача срока не имеет — она уже не горит. */
-function dueState(task) {
-  if (!task.dueAt || task.done) return null;
-  const diff = new Date(task.dueAt).getTime() - Date.now();
-  if (diff < 0) return 'overdue';
-  return diff <= 86400000 ? 'soon' : 'later';
-}
 
 /** Короткая подпись срока для списка: «просрочено» / «сегодня» / дата. */
 function dueShort(task) {
@@ -1083,16 +401,6 @@ function dueShort(task) {
   return fmtDateShort(due);
 }
 
-/** Сумма за диапазон дат [from, to] включительно (Date). */
-function rangeAgg(from, to) {
-  let ms = 0;
-  let money = 0;
-  for (const { t: t2, s } of allSessionPairs()) {
-    const d = new Date(s.start);
-    if (d >= from && d <= to) { ms += s.ms; money += sessionMoney(s, t2); }
-  }
-  return { ms, money };
-}
 
 // ---------------------------------------------------------------------------
 // Тост
@@ -4639,133 +3947,19 @@ function buildCurrencyOptions() {
   }
 }
 
+// Сама миграция живёт в core/migrate.js и покрыта тестами: она трогает все
+// данные пользователя при каждом запуске, и её ошибку уже не откатить.
+// Здесь — подстановка того, что она берёт из окружения.
 function migrate() {
-  if (!Array.isArray(state.tasks)) state.tasks = [];
-  if (!Array.isArray(state.projects)) state.projects = [];
-  if (!Array.isArray(state.statuses)) state.statuses = [];
-  if (!Array.isArray(state.tags)) state.tags = [];
-  if (!Array.isArray(state.versions)) state.versions = [];
-  if (!state.ui || typeof state.ui !== 'object') state.ui = {};
-  if (!state.settings || typeof state.settings !== 'object') state.settings = {};
-  if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;
-  if (typeof state.ui.navCollapsed !== 'boolean') state.ui.navCollapsed = false;
-  if (typeof state.ui.notifSeenAt !== 'string') state.ui.notifSeenAt = null;
-  if (!['system', 'light', 'dark'].includes(state.settings.theme)) state.settings.theme = 'system';
-  if (!T[state.settings.lang]) state.settings.lang = 'ru';
-  if (typeof state.settings.syncEnabled !== 'boolean') state.settings.syncEnabled = true;
-  if (typeof state.settings.notifyEnabled !== 'boolean') state.settings.notifyEnabled = true;
-  if (!state.settings.syncResolvedFor || typeof state.settings.syncResolvedFor !== 'object') state.settings.syncResolvedFor = null;
-
-  let cur = state.settings.currency || 'RUB';
-  if (SYM2CODE[cur]) cur = SYM2CODE[cur];
-  if (!CURRENCIES[cur]) cur = 'RUB';
-  state.settings.currency = cur;
-
-  // Статусы принадлежат проекту: у каждого свой набор, который можно
-  // настроить под его процесс. Новый проект получает набор по умолчанию, а
-  // дальше это обычные пользовательские данные.
-  //
-  // Первая версия делала статусы общими для всех проектов. Здесь такой набор
-  // (у него нет projectId) разводится по проектам: каждому достаётся своя
-  // копия с теми же названиями и цветами, а задачи переезжают на копию своего
-  // проекта. Без переноса задача осталась бы со статусом, которого в её
-  // проекте нет, и молча сбросилась бы в «к выполнению».
-  const projectIds = new Set(state.projects.map((p) => p.id));
-  const legacy = state.statuses.filter((s) => !s.projectId);
-  const template = legacy.length ? legacy : null;
-  const remap = new Map(); // `${projectId}:${oldId}` -> новый id
-
-  for (const p of state.projects) {
-    if (state.statuses.some((s) => s.projectId === p.id)) continue;
-    const source = template || DEFAULT_STATUSES.map((s, i) => ({
-      id: `d${i}`, name: t(`status.default_${s.key}`), color: s.color, kind: s.kind, order: i, builtin: true,
-    }));
-    source.forEach((s, i) => {
-      const copy = {
-        id: uid(), projectId: p.id, name: s.name, color: s.color,
-        kind: s.kind, order: Number.isFinite(Number(s.order)) ? s.order : i, builtin: !!s.builtin,
-      };
-      remap.set(`${p.id}:${s.id}`, copy.id);
-      state.statuses.push(copy);
-    });
-  }
-  if (legacy.length) state.statuses = state.statuses.filter((s) => s.projectId);
-  state.statuses = state.statuses.filter((s) => projectIds.has(s.projectId));
-
-  state.statuses.forEach((s, i) => {
-    if (!STATUS_KINDS.includes(s.kind)) s.kind = 'todo';
-    if (!s.color) s.color = PALETTE[i % PALETTE.length];
-    if (!Number.isFinite(Number(s.order))) s.order = i;
-    if (typeof s.builtin !== 'boolean') s.builtin = false;
+  Core.migrate(state, {
+    t,
+    uid,
+    langs: Object.keys(T),
+    palette: PALETTE,
+    currencies: CURRENCIES,
+    sym2code: SYM2CODE,
+    defaultProjectNameKey: DEFAULT_PROJECT_NAME_KEY,
   });
-  for (const p of state.projects) {
-    orderedStatuses(p.id).forEach((s, i) => { s.order = i; });
-  }
-  // Перенос задач на статусы их собственного проекта — до общей проверки ниже.
-  if (remap.size) {
-    for (const t2 of state.tasks) {
-      const moved = remap.get(`${t2.projectId}:${t2.statusId}`);
-      if (moved) t2.statusId = moved;
-    }
-  }
-
-  state.tags.forEach((tg, i) => {
-    if (!tg.color) tg.color = PALETTE[i % PALETTE.length];
-    if (typeof tg.name !== 'string') tg.name = '';
-  });
-
-  state.versions = state.versions.filter((v) => projectIds.has(v.projectId));
-  state.versions.forEach((v) => {
-    if (typeof v.name !== 'string') v.name = '';
-    if (v.releasedAt === undefined) v.releasedAt = null;
-  });
-
-  const tagIds = new Set(state.tags.map((tg) => tg.id));
-  const keepTags = (arr) => (Array.isArray(arr) ? arr.filter((id) => tagIds.has(id)) : []);
-
-  state.projects.forEach((p, i) => {
-    if (!p.color) p.color = PALETTE[i % PALETTE.length];
-    if (typeof p.description !== 'string') p.description = '';
-    if (p.pinnedAt === undefined) p.pinnedAt = null;
-    p.tagIds = keepTags(p.tagIds);
-  });
-  state.tasks.forEach((t2) => {
-    if (t2.pinnedAt === undefined) t2.pinnedAt = null;
-    if (t2.rate === undefined) t2.rate = null;
-    // Срок и напоминание. remindOffsetMin — «за сколько минут до срока»
-    // (0 = ровно в срок); когда он null, а remindAt задан — это выбранное
-    // вручную время. notifiedAt не даёт уведомить о задаче дважды и
-    // синхронизируется вместе с остальным, так что второе устройство
-    // не покажет то же самое ещё раз.
-    if (t2.dueAt === undefined) t2.dueAt = null;
-    if (t2.remindOffsetMin === undefined) t2.remindOffsetMin = null;
-    if (t2.remindAt === undefined) t2.remindAt = null;
-    if (t2.notifiedAt === undefined) t2.notifiedAt = null;
-    // Статус и done живут в паре. Ведущим остаётся done: на нём держатся
-    // статистика, календарь и счётчики, и переписывать их разом было бы
-    // рискованно. Статус добавляет подробность — в каком именно состоянии
-    // задача, — а done отвечает на единственный вопрос «закончена ли».
-    if (!t2.statusId || !state.statuses.some((s) => s.id === t2.statusId)) {
-      t2.statusId = defaultStatusId(t2.projectId, t2.done);
-    }
-    t2.tagIds = keepTags(t2.tagIds);
-    if (t2.versionId !== undefined && !state.versions.some((v) => v.id === t2.versionId)) t2.versionId = null;
-    if (t2.versionId === undefined) t2.versionId = null;
-    if (t2.repeat !== undefined && t2.repeat !== null && typeof t2.repeat !== 'object') t2.repeat = null;
-    if (t2.repeat === undefined) t2.repeat = null;
-    t2.cancelled = isClosedStatus(t2.statusId) && !t2.done;
-  });
-
-  if (state.projects.length === 0 && state.tasks.length > 0) {
-    state.projects.push({
-      id: uid(), name: t(DEFAULT_PROJECT_NAME_KEY), createdAt: new Date().toISOString(),
-      color: PALETTE[0], description: '', pinnedAt: null,
-    });
-  }
-  const known = new Set(state.projects.map((p) => p.id));
-  const fallback = state.projects[0] ? state.projects[0].id : null;
-  for (const t2 of state.tasks) if (!t2.projectId || !known.has(t2.projectId)) t2.projectId = fallback;
-  if (!known.has(state.ui.projectId)) state.ui.projectId = fallback;
 }
 
 async function init() {

@@ -248,7 +248,10 @@ app.whenReady().then(async () => {
     JSON.stringify({ label: document.getElementById('update-btn-label').textContent })
   `);
   flow.updateBtnShowsOnAvailable = !JSON.parse(updateAfterAvailable).hidden;
-  flow.updateBtnLabelMatchesReady = JSON.parse(updateAfterReady).label === 'Перезапустить';
+  // Строка должна совпадать с ключом update.ready из core/i18n.js. Здесь она
+  // записана буквально намеренно: проверка обязана падать, если текст кнопки
+  // поменяли не подумав, а не подстраиваться под него молча.
+  flow.updateBtnLabelMatchesReady = JSON.parse(updateAfterReady).label === 'Установить и перезапустить';
 
   const unzip = (buf) => {
     const files = {};
