@@ -811,20 +811,37 @@ const tasksOf = (projectId) => state.tasks.filter((t2) => t2.projectId === proje
 
 // --- Статусы ---------------------------------------------------------------
 
-/** Статусы в порядке, заданном пользователем: это же порядок столбцов доски. */
-const orderedStatuses = () => [...state.statuses].sort((a, b) => a.order - b.order);
+/** Статусы проекта в порядке, заданном пользователем: это же порядок столбцов
+ *  доски. Набор свой у каждого проекта — у разных работ разный процесс. */
+const orderedStatuses = (projectId) =>
+  state.statuses.filter((s) => s.projectId === projectId).sort((a, b) => a.order - b.order);
 const getStatus = (id) => state.statuses.find((s) => s.id === id) || null;
-const statusesOfKind = (kind) => orderedStatuses().filter((s) => s.kind === kind);
+const statusesOfKind = (projectId, kind) => orderedStatuses(projectId).filter((s) => s.kind === kind);
 
 /** Куда попадает задача, у которой статуса ещё нет: первый «готово» для
- *  завершённой, первый «к выполнению» для остальных. */
-function defaultStatusId(done) {
-  const pool = done ? statusesOfKind('done') : statusesOfKind('todo');
-  const fallback = orderedStatuses();
+ *  завершённой, первый «к выполнению» для остальных. Всё в пределах её
+ *  проекта. */
+function defaultStatusId(projectId, done) {
+  const pool = statusesOfKind(projectId, done ? 'done' : 'todo');
+  const fallback = orderedStatuses(projectId);
   return (pool[0] || (done ? fallback[fallback.length - 1] : fallback[0]) || {}).id || null;
 }
 
 const isDoneStatus = (id) => { const s = getStatus(id); return !!s && s.kind === 'done'; };
+
+/** Набор по умолчанию для нового проекта. Вызывается при создании, а не
+ *  только из migrate(): та правит уже сохранённые данные при загрузке и до
+ *  проекта, заведённого в этой же сессии, не доберётся — его доска осталась
+ *  бы без единого столбца. */
+function seedProjectStatuses(projectId) {
+  if (state.statuses.some((s) => s.projectId === projectId)) return;
+  DEFAULT_STATUSES.forEach((s, i) => {
+    state.statuses.push({
+      id: uid(), projectId, name: t(`status.default_${s.key}`),
+      color: s.color, kind: s.kind, order: i, builtin: true,
+    });
+  });
+}
 
 /** Единственное место, где статус задачи меняется. Здесь же done приводится в
  *  соответствие — иначе статистика и календарь разойдутся с доской. */
@@ -844,7 +861,7 @@ function setTaskStatus(task, statusId) {
 function setTaskDone(task, done) {
   if (!task) return;
   if (isDoneStatus(task.statusId) !== done) {
-    const next = defaultStatusId(done);
+    const next = defaultStatusId(task.projectId, done);
     if (next) { setTaskStatus(task, next); return; }
   }
   task.done = done;
@@ -2761,9 +2778,10 @@ function renderBoardPage() {
 }
 
 function renderBoard() {
-  const tasks = tasksOf(boardProjectId());
+  const pid = boardProjectId();
+  const tasks = tasksOf(pid);
   el.boardCols.innerHTML = '';
-  for (const st of orderedStatuses()) {
+  for (const st of orderedStatuses(pid)) {
     const col = document.createElement('section');
     col.className = 'board-col';
     col.dataset.statusId = st.id;
@@ -3227,7 +3245,7 @@ function newTask() {
     // сохранённые данные при загрузке и до новой задачи в этой же сессии не
     // доберётся — задача осталась бы без статуса и не попала ни в один
     // столбец доски.
-    statusId: defaultStatusId(false), tagIds: [], versionId: null, repeat: null,
+    statusId: defaultStatusId(state.ui.projectId, false), tagIds: [], versionId: null, repeat: null,
   };
   state.tasks.unshift(task);
   selectedId = task.id;
@@ -3434,8 +3452,9 @@ function saveProjectDialog() {
     render();
     scheduleSave();
   } else {
-    const p = { id: uid(), name, description, color: pdlg.color, createdAt: new Date().toISOString(), pinnedAt: null };
+    const p = { id: uid(), name, description, color: pdlg.color, createdAt: new Date().toISOString(), pinnedAt: null, tagIds: [] };
     state.projects.push(p);
+    seedProjectStatuses(p.id);
     closeProjectDialog();
     openProject(p.id);
   }
@@ -4393,28 +4412,59 @@ function migrate() {
   if (!CURRENCIES[cur]) cur = 'RUB';
   state.settings.currency = cur;
 
-  // Статусы заводятся один раз, при первом запуске после обновления. Дальше
-  // это обычные пользовательские данные: их можно переименовать, перекрасить,
-  // переставить и дополнить своими.
-  if (state.statuses.length === 0) {
-    state.statuses = DEFAULT_STATUSES.map((s, i) => ({
-      id: uid(), name: t(`status.default_${s.key}`), color: s.color, kind: s.kind, order: i, builtin: true,
+  // Статусы принадлежат проекту: у каждого свой набор, который можно
+  // настроить под его процесс. Новый проект получает набор по умолчанию, а
+  // дальше это обычные пользовательские данные.
+  //
+  // Первая версия делала статусы общими для всех проектов. Здесь такой набор
+  // (у него нет projectId) разводится по проектам: каждому достаётся своя
+  // копия с теми же названиями и цветами, а задачи переезжают на копию своего
+  // проекта. Без переноса задача осталась бы со статусом, которого в её
+  // проекте нет, и молча сбросилась бы в «к выполнению».
+  const projectIds = new Set(state.projects.map((p) => p.id));
+  const legacy = state.statuses.filter((s) => !s.projectId);
+  const template = legacy.length ? legacy : null;
+  const remap = new Map(); // `${projectId}:${oldId}` -> новый id
+
+  for (const p of state.projects) {
+    if (state.statuses.some((s) => s.projectId === p.id)) continue;
+    const source = template || DEFAULT_STATUSES.map((s, i) => ({
+      id: `d${i}`, name: t(`status.default_${s.key}`), color: s.color, kind: s.kind, order: i, builtin: true,
     }));
+    source.forEach((s, i) => {
+      const copy = {
+        id: uid(), projectId: p.id, name: s.name, color: s.color,
+        kind: s.kind, order: Number.isFinite(Number(s.order)) ? s.order : i, builtin: !!s.builtin,
+      };
+      remap.set(`${p.id}:${s.id}`, copy.id);
+      state.statuses.push(copy);
+    });
   }
+  if (legacy.length) state.statuses = state.statuses.filter((s) => s.projectId);
+  state.statuses = state.statuses.filter((s) => projectIds.has(s.projectId));
+
   state.statuses.forEach((s, i) => {
     if (!STATUS_KINDS.includes(s.kind)) s.kind = 'todo';
     if (!s.color) s.color = PALETTE[i % PALETTE.length];
     if (!Number.isFinite(Number(s.order))) s.order = i;
     if (typeof s.builtin !== 'boolean') s.builtin = false;
   });
-  state.statuses.sort((a, b) => a.order - b.order).forEach((s, i) => { s.order = i; });
+  for (const p of state.projects) {
+    orderedStatuses(p.id).forEach((s, i) => { s.order = i; });
+  }
+  // Перенос задач на статусы их собственного проекта — до общей проверки ниже.
+  if (remap.size) {
+    for (const t2 of state.tasks) {
+      const moved = remap.get(`${t2.projectId}:${t2.statusId}`);
+      if (moved) t2.statusId = moved;
+    }
+  }
 
   state.tags.forEach((tg, i) => {
     if (!tg.color) tg.color = PALETTE[i % PALETTE.length];
     if (typeof tg.name !== 'string') tg.name = '';
   });
 
-  const projectIds = new Set(state.projects.map((p) => p.id));
   state.versions = state.versions.filter((v) => projectIds.has(v.projectId));
   state.versions.forEach((v) => {
     if (typeof v.name !== 'string') v.name = '';
@@ -4447,7 +4497,7 @@ function migrate() {
     // рискованно. Статус добавляет подробность — в каком именно состоянии
     // задача, — а done отвечает на единственный вопрос «закончена ли».
     if (!t2.statusId || !state.statuses.some((s) => s.id === t2.statusId)) {
-      t2.statusId = defaultStatusId(t2.done);
+      t2.statusId = defaultStatusId(t2.projectId, t2.done);
     }
     t2.tagIds = keepTags(t2.tagIds);
     if (t2.versionId !== undefined && !state.versions.some((v) => v.id === t2.versionId)) t2.versionId = null;
