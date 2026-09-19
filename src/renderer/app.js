@@ -2840,7 +2840,9 @@ function renderBoard() {
     const add = document.createElement('button');
     add.type = 'button';
     add.className = 'board-add';
-    add.textContent = `+ ${t('board.add_task')}`;
+    add.title = t('board.add_task');
+    add.setAttribute('aria-label', t('board.add_task'));
+    add.textContent = '+';
     add.addEventListener('click', () => newTaskInStatus(pid, st.id));
     body.appendChild(add);
     col.appendChild(body);

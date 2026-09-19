@@ -764,6 +764,9 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 .task-params > .due-bar { margin: 0; }
 .task-params > .due-bar + .due-bar { margin-top: 8px; }
 /* Разделитель между параметрами — только между строками, не по краям. */
+/* Статус стоит первым, поэтому нужна и обратная пара: иначе он прилипал к
+   ставке, а ставка со сроком были разделены как надо. */
+.task-params > .due-bar + .money-bar,
 .task-params > .money-bar + .due-bar {
   border-top: 1px solid var(--border);
   padding-top: 10px;
@@ -964,7 +967,9 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .ctx-menu {
   position: fixed;
-  z-index: 90;
+  /* Выше модалок (100) и всплывающих календарей (120): меню вызывается и из
+     диалога статусов, а на слое 90 оно пряталось под его подложкой. */
+  z-index: 130;
   min-width: 190px;
   background: var(--panel);
   border: 1px solid var(--border-strong);
@@ -1984,7 +1989,9 @@ body.platform-web .tb-account {
   min-height: 0;
   display: flex;
   align-items: stretch;
-  gap: 18px;
+  /* Колонки стоят тесно, а воздух — внутри них, вокруг карточек: так видно,
+     что карточка принадлежит колонке, а не висит между двумя. */
+  gap: 8px;
   padding: 14px 16px 0;
   overflow-x: auto;
 }
@@ -2006,7 +2013,7 @@ body.platform-web .tb-account {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 6px 10px;
+  padding: 11px 12px 10px;
 }
 .board-col-body {
   flex: 1;
@@ -2015,28 +2022,30 @@ body.platform-web .tb-account {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 2px 4px;
+  padding: 0 10px 12px;
 }
-/* «Добавить задачу» — ссылкой, не кнопкой: это не действие уровня страницы,
-   а тихая подсказка внизу колонки. Показывается по наведению на колонку,
-   чтобы в покое доска оставалась только из карточек. */
+/* Добавление — такая же карточка, как задачи, только с плюсом по центру:
+   она встаёт в тот же ряд и сразу читается как «здесь появится ещё одна».
+   Появляется при наведении на любое место колонки. */
 .board-add {
   flex: none;
-  margin: 6px 2px 10px;
-  padding: 5px 6px;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px dashed var(--border);
   background: none;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-dim);
   font-family: inherit;
-  font-size: 12.5px;
-  text-align: left;
+  font-size: 17px;
+  line-height: 1;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.12s var(--ease), color 0.12s var(--ease), background 0.12s var(--ease);
+  transition: opacity 0.12s var(--ease), color 0.12s var(--ease), border-color 0.12s var(--ease), background 0.12s var(--ease);
 }
 .board-col:hover .board-add, .board-add:focus-visible { opacity: 1; }
-.board-add:hover { color: var(--text); background: var(--panel-2); }
+.board-add:hover { color: var(--text); border-color: var(--border-strong); background: var(--panel-2); }
 .board-card {
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -2118,3 +2127,7 @@ body.platform-web .tb-account {
   white-space: nowrap;
 }
 .board-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--sc, var(--accent)); flex: none; }
+
+/* Воздух между полосой вкладок и содержимым вкладки настроек: карточка
+   параметров начиналась вплотную под ними. */
+#tab-settings { padding-top: 14px; }
