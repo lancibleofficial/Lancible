@@ -216,6 +216,56 @@ test('удаление тега предупреждает, скольких о�
   expect(after).toEqual({ tags: 0, project: 0, tasks: 0 });
 });
 
+test('бейдж красится цветом тега и читается в обеих темах', async ({ page }) => {
+  // Тонированный бейдж — первое, что ломается при смене темы: яркий цвет,
+  // годный на тёмном фоне, на белом превращается в невидимку. Проверяем не
+  // «красиво», а измеримое — контраст надписи к подложке карточки.
+  const pid = await seedProject(page);
+  await createTag(page, 'Срочное');
+  await createTag(page, 'Бэкенд');
+  await page.evaluate((id) => {
+    state.tags[0].color = '#f0736b';
+    state.tags[1].color = '#f5c451';
+    state.tasks[0].tagIds = state.tags.map((t) => t.id);
+    state.ui.view = 'board';
+    state.ui.boardProjectId = id;
+    renderBoardPage();
+    render();
+  }, pid);
+
+  const chips = page.locator('.board-card .tag-chip');
+  await expect(chips).toHaveCount(2);
+  // Цвет несёт подложка, отдельной точке внутри бейджа делать нечего.
+  await expect(page.locator('.board-card .tag-chip .tag-dot')).toHaveCount(0);
+
+  const measure = (theme) => page.evaluate((th) => {
+    state.settings.theme = th;
+    applyTheme();
+    const parse = (s) => {
+      const m = s.match(/[\d.]+/g).map(Number);
+      return s.startsWith('color(') ? m.slice(0, 3) : m.slice(0, 3).map((v) => v / 255);
+    };
+    const lum = (rgb) => {
+      const f = rgb.map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+      return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2];
+    };
+    const card = parse(getComputedStyle(document.querySelector('.board-card')).backgroundColor.replace('rgba', 'rgb'));
+    return [...document.querySelectorAll('.board-card .tag-chip')].map((c) => {
+      const ink = parse(getComputedStyle(c).color);
+      const [a, b] = [lum(ink), lum(card)];
+      return { color: getComputedStyle(c).color, contrast: (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) };
+    });
+  }, theme);
+
+  for (const theme of ['dark', 'light']) {
+    const got = await measure(theme);
+    expect(new Set(got.map((c) => c.color)).size, `в теме ${theme} бейджи одного цвета`).toBe(2);
+    for (const c of got) {
+      expect(c.contrast, `в теме ${theme} контраст надписи всего ${c.contrast.toFixed(2)}`).toBeGreaterThanOrEqual(4.5);
+    }
+  }
+});
+
 test('у неиспользуемого тега удаление не пугает лишними подробностями', async ({ page }) => {
   await createTag(page, 'Черновик');
   await page.locator('#tags-list .settings-row-btn').click();

@@ -2233,9 +2233,12 @@ function tagUsageLabel(u) {
 
 /** Разметка чипа — отдельно от сборки узла: доска рисуется строками, а
  *  редактор узлами, и двух описаний одного и того же чипа быть не должно. */
+// Цветной точки внутри бейджа нет: цвет несёт сама подложка, и точка рядом с
+// ней была бы вторым сообщением об одном и том же. Точка осталась там, где
+// подложки нет — в списке настроек и в пикере.
 const tagChipHtml = (tag) =>
   `<span class="tag-chip" data-id="${escapeHtml(tag.id)}" style="--sc:${escapeHtml(tag.color || PALETTE[0])}">`
-  + `<span class="tag-dot"></span><span class="tag-name">${escapeHtml(tag.name || '')}</span></span>`;
+  + `<span class="tag-name">${escapeHtml(tag.name || '')}</span></span>`;
 
 /** Чипы сущности одной строкой — для мест, которые собираются через innerHTML. */
 const tagChipsHtml = (ids) => tagsOf(ids).map(tagChipHtml).join('');
