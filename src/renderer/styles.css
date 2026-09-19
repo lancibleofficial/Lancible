@@ -1956,3 +1956,68 @@ body.platform-web .tb-account {
 .settings-row.switch { cursor: pointer; }
 .settings-row.switch .switch-track { margin-left: auto; }
 .settings-footer { text-align: center; color: var(--text-dim); font-size: 11.5px; margin-top: 22px; }
+
+/* ---------- Проект: доска ---------- */
+
+/* Переключатель вида рядом с экспортом. Иконками, а не словами: в шапке
+   проекта и так тесно, а два состояния распознаются по форме. */
+.pv-modes { display: flex; gap: 2px; margin-left: auto; background: var(--panel-2); border-radius: 7px; padding: 2px; }
+.pv-modes button {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 22px; border: none; background: none; border-radius: 5px;
+  color: var(--icon); cursor: pointer; transition: background 0.12s var(--ease), color 0.12s var(--ease);
+}
+.pv-modes button .icon { width: 13px; height: 13px; }
+.pv-modes button:hover { color: var(--text); }
+.pv-modes button.on { background: var(--tab-active-bg); color: var(--text); }
+
+/* В режиме доски боковая панель со списком и редактор уходят: доска занимает
+   всю ширину, иначе столбцы сжимаются до нечитаемых. */
+/* #project-view — сетка из двух колонок под список и редактор. В режиме
+   доски обе скрыты, и сетка становится одноколоночной: иначе доска попадает
+   в узкую колонку списка и столбцы обрезаются. */
+body.board-mode #project-view { grid-template-columns: 1fr; }
+body.board-mode #sidebar, body.board-mode #detail { display: none; }
+#project-board { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.board-cols {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  overflow-x: auto;
+  align-items: flex-start;
+}
+.board-col {
+  flex: 0 0 272px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.12s var(--ease), background 0.12s var(--ease);
+}
+/* Столбец под курсором во время переноса. */
+.board-col.over { border-color: var(--sc, var(--accent)); background: color-mix(in srgb, var(--sc, var(--accent)) 7%, var(--panel)); }
+.board-col-head { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-bottom: 1px solid var(--border); }
+.board-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--sc, var(--accent)); flex: none; }
+.board-col-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-count { flex: none; font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.board-col-body { flex: 1; min-height: 40px; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.board-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--sc, var(--accent));
+  border-radius: 8px;
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: border-color 0.12s var(--ease), opacity 0.12s var(--ease);
+}
+.board-card:hover { border-color: var(--border-strong); }
+.board-card.dragging { opacity: 0.4; }
+.board-card.done .bc-title { color: var(--text-dim); text-decoration: line-through; }
+.bc-title { font-size: 13px; line-height: 1.35; }
+.bc-foot { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.bc-time { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.bc-time .icon { width: 10px; height: 10px; }

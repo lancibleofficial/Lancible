@@ -24,6 +24,12 @@ if (window.__LANCIBLE_PLATFORM__ === 'web') {
 let state = {
   projects: [],
   tasks: [],
+  // Статусы задач — общие для всех проектов: пользователь просил, чтобы они
+  // «отражались везде». Теги тоже общие и заводятся в настройках. Версии,
+  // наоборот, принадлежат конкретному проекту.
+  statuses: [],
+  tags: [],
+  versions: [],
   activeTimer: null,
   ui: { view: 'home', projectId: null, navCollapsed: false },
   settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, syncResolvedFor: null },
@@ -39,6 +45,22 @@ const PALETTE = [
 ];
 const TEXT_COLORS = ['', '#ecedef', '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#a4c2a8', '#767b86'];
 const FILL_COLORS = ['', '#3a4a34', '#2f4653', '#43385a', '#544a30', '#5a3a37', '#3e4a40'];
+
+// Смысловой вид статуса. Это не украшение: по нему приложение понимает, что
+// задача закончена, независимо от того, как пользователь назвал свой статус.
+// Разделение состояния и признака завершённости взято из YouTrack — там
+// «Исправлено» и «Не воспроизводится» разные состояния, но оба закрывают
+// задачу. Поэтому «готово» может быть несколько, а не один-единственный.
+const STATUS_KINDS = ['todo', 'progress', 'done'];
+
+// Набор по умолчанию. Встроенные статусы можно переименовать и перекрасить,
+// но не удалить: если убрать последний «готово», задачу станет нечем закрыть,
+// а весь учёт времени и статистика на этом и держатся.
+const DEFAULT_STATUSES = [
+  { key: 'todo', kind: 'todo', color: '#8a93a5' },
+  { key: 'progress', kind: 'progress', color: '#5ec8f2' },
+  { key: 'done', kind: 'done', color: '#87ff65' },
+];
 
 const CURRENCIES = {
   USD: '$', EUR: '€', GBP: '£', RUB: '₽', KZT: '₸',
@@ -87,7 +109,7 @@ const T = {
     'nav.language': 'Язык', 'nav.account': 'Аккаунт',
     'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Установить и перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
-    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'about.us': 'О нас', 'about.blog': 'Блог',
+    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'settings.section_statuses': 'Статусы задач', 'settings.section_tags': 'Теги', 'status.default_todo': 'К выполнению', 'status.default_progress': 'В работе', 'status.default_done': 'Готово', 'status.kind_todo': 'К выполнению', 'status.kind_progress': 'В работе', 'status.kind_done': 'Завершает задачу', 'status.add': 'Новый статус', 'status.builtin_hint': 'Встроенный статус можно переименовать и перекрасить, но не удалить', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.pick': 'Теги', 'version.none': 'Без версии', 'version.add': 'Новая версия', 'board.title': 'Доска', 'list.title': 'Список', 'about.us': 'О нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Аккаунт', 'profile.name_label': 'Имя', 'profile.no_name': 'Не указано',
     'profile.name_updated': 'Имя обновлено', 'profile.change_password': 'Изменить пароль',
@@ -221,7 +243,7 @@ const T = {
     'nav.language': 'Language', 'nav.account': 'Account',
     'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Install and restart',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
-    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'about.us': 'About us', 'about.blog': 'Blog',
+    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'settings.section_statuses': 'Task statuses', 'settings.section_tags': 'Tags', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_done': 'Done', 'status.kind_todo': 'To do', 'status.kind_progress': 'In progress', 'status.kind_done': 'Completes the task', 'status.add': 'New status', 'status.builtin_hint': 'A built-in status can be renamed and recoloured, but not deleted', 'tag.add': 'New tag', 'tag.none': 'No tags yet', 'tag.pick': 'Tags', 'version.none': 'No version', 'version.add': 'New version', 'board.title': 'Board', 'list.title': 'List', 'about.us': 'About us', 'about.blog': 'Blog',
     'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
     'settings.section_account': 'Account', 'profile.name_label': 'Name', 'profile.no_name': 'Not set',
     'profile.name_updated': 'Name updated', 'profile.change_password': 'Change password',
@@ -355,7 +377,7 @@ const T = {
     'nav.language': 'Мова', 'nav.account': 'Акаунт',
     'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Встановити й перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
-    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'about.us': 'Про нас', 'about.blog': 'Блог',
+    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'settings.section_statuses': 'Статуси завдань', 'settings.section_tags': 'Теги', 'status.default_todo': 'До виконання', 'status.default_progress': 'У роботі', 'status.default_done': 'Готово', 'status.kind_todo': 'До виконання', 'status.kind_progress': 'У роботі', 'status.kind_done': 'Завершує завдання', 'status.add': 'Новий статус', 'status.builtin_hint': 'Вбудований статус можна перейменувати та перефарбувати, але не видалити', 'tag.add': 'Новий тег', 'tag.none': 'Тегів поки немає', 'tag.pick': 'Теги', 'version.none': 'Без версії', 'version.add': 'Нова версія', 'board.title': 'Дошка', 'list.title': 'Список', 'about.us': 'Про нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Акаунт', 'profile.name_label': "Ім'я", 'profile.no_name': 'Не вказано',
     'profile.name_updated': "Ім'я оновлено", 'profile.change_password': 'Змінити пароль',
@@ -489,7 +511,7 @@ const T = {
     'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
     'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Орнатып қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
-    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
+    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'settings.section_statuses': 'Тапсырма күйлері', 'settings.section_tags': 'Тегтер', 'status.default_todo': 'Орындалуы тиіс', 'status.default_progress': 'Жұмыста', 'status.default_done': 'Дайын', 'status.kind_todo': 'Орындалуы тиіс', 'status.kind_progress': 'Жұмыста', 'status.kind_done': 'Тапсырманы аяқтайды', 'status.add': 'Жаңа күй', 'status.builtin_hint': 'Кіріктірілген күйді атын өзгертуге және бояуға болады, бірақ жоюға болмайды', 'tag.add': 'Жаңа тег', 'tag.none': 'Тегтер әлі жоқ', 'tag.pick': 'Тегтер', 'version.none': 'Нұсқасыз', 'version.add': 'Жаңа нұсқа', 'board.title': 'Тақта', 'list.title': 'Тізім', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
     'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Аккаунт', 'profile.name_label': 'Аты', 'profile.no_name': 'Көрсетілмеген',
     'profile.name_updated': 'Аты жаңартылды', 'profile.change_password': 'Құпиясөзді өзгерту',
@@ -714,6 +736,7 @@ const el = {
 
   backHome: $('back-home'), phDot: $('ph-dot'), phName: $('ph-name'),
   phDesc: $('ph-desc'), projectMenuBtn: $('project-menu-btn'),
+  pvModes: $('pv-modes'), projectBoard: $('project-board'), boardCols: $('board-cols'),
 
   taskList: $('task-list'), sidebarEmpty: $('sidebar-empty'), newTaskBtn: $('new-task-btn'),
   defaultRate: $('default-rate'), currency: $('currency'), projectEarned: $('project-earned'),
@@ -784,6 +807,40 @@ const uid = () =>
 const getTask = (id) => state.tasks.find((t2) => t2.id === id) || null;
 const getProject = (id) => state.projects.find((p) => p.id === id) || null;
 const tasksOf = (projectId) => state.tasks.filter((t2) => t2.projectId === projectId);
+
+// --- Статусы ---------------------------------------------------------------
+
+/** Статусы в порядке, заданном пользователем: это же порядок столбцов доски. */
+const orderedStatuses = () => [...state.statuses].sort((a, b) => a.order - b.order);
+const getStatus = (id) => state.statuses.find((s) => s.id === id) || null;
+const statusesOfKind = (kind) => orderedStatuses().filter((s) => s.kind === kind);
+
+/** Куда попадает задача, у которой статуса ещё нет: первый «готово» для
+ *  завершённой, первый «к выполнению» для остальных. */
+function defaultStatusId(done) {
+  const pool = done ? statusesOfKind('done') : statusesOfKind('todo');
+  const fallback = orderedStatuses();
+  return (pool[0] || (done ? fallback[fallback.length - 1] : fallback[0]) || {}).id || null;
+}
+
+const isDoneStatus = (id) => { const s = getStatus(id); return !!s && s.kind === 'done'; };
+
+/** Единственное место, где статус задачи меняется. Здесь же done приводится в
+ *  соответствие — иначе статистика и календарь разойдутся с доской. */
+function setTaskStatus(task, statusId) {
+  const s = getStatus(statusId);
+  if (!task || !s) return;
+  task.statusId = s.id;
+  task.done = s.kind === 'done';
+  task.updatedAt = new Date().toISOString();
+}
+
+// --- Теги и версии ---------------------------------------------------------
+
+const getTag = (id) => state.tags.find((tg) => tg.id === id) || null;
+const tagsOf = (entity) => (entity && Array.isArray(entity.tagIds) ? entity.tagIds.map(getTag).filter(Boolean) : []);
+const getVersion = (id) => state.versions.find((v) => v.id === id) || null;
+const versionsOf = (projectId) => state.versions.filter((v) => v.projectId === projectId);
 const visibleTasks = () => tasksOf(state.ui.projectId);
 const byPinned = (a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt);
 
@@ -1628,7 +1685,16 @@ let syncRetryTimer = null;
 let lastSyncedJSON = null;
 
 function syncPayload() {
-  return { projects: state.projects, tasks: state.tasks };
+  // Статусы, теги и версии — такие же пользовательские данные, как проекты и
+  // задачи: без них на втором устройстве задача приедет со статусом, которого
+  // там не существует, и миграция молча сбросит её в «к выполнению».
+  return {
+    projects: state.projects,
+    tasks: state.tasks,
+    statuses: state.statuses,
+    tags: state.tags,
+    versions: state.versions,
+  };
 }
 
 async function pushSyncState() {
@@ -1668,6 +1734,12 @@ window.addEventListener('online', () => { if (syncDirty && currentUser) pushSync
 function applyRemoteData(data) {
   state.projects = Array.isArray(data && data.projects) ? data.projects : [];
   state.tasks = Array.isArray(data && data.tasks) ? data.tasks : [];
+  // Пришло с устройства, которое ещё не знает про статусы, — не затираем свои
+  // пустым массивом, иначе migrate() заведёт дубликаты набора по умолчанию.
+  if (Array.isArray(data && data.statuses)) state.statuses = data.statuses;
+  if (Array.isArray(data && data.tags)) state.tags = data.tags;
+  if (Array.isArray(data && data.versions)) state.versions = data.versions;
+  migrate();
   if (selectedId && !getTask(selectedId)) selectedId = null;
   if (state.ui.projectId && !getProject(state.ui.projectId)) {
     state.ui.view = 'home';
@@ -1839,7 +1911,7 @@ function render() {
   }
 
   if (v === 'home') renderHome();
-  else if (v === 'project') { renderProjectHeader(); renderSidebar(); renderDetail(); renderFooter(); }
+  else if (v === 'project') renderProjectView();
   else if (v === 'stats') renderStatsPage();
   else if (v === 'settings') renderSettings();
   else renderCalendar();
@@ -2635,6 +2707,99 @@ function renderPeriodSummary() {
 // ---------------------------------------------------------------------------
 // Шапка проекта + подвал + список задач
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Проект: список или доска
+// ---------------------------------------------------------------------------
+
+/** Режим живёт в ui, а не в проекте: это способ смотреть, а не свойство самого
+ *  проекта, и переключение не должно попадать в синхронизацию как изменение. */
+const projectMode = () => (state.ui.projectMode === 'board' ? 'board' : 'list');
+
+function renderProjectView() {
+  const board = projectMode() === 'board';
+  document.body.classList.toggle('board-mode', board);
+  el.projectBoard.hidden = !board;
+  el.pvModes.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.pmode === projectMode()));
+  renderProjectHeader();
+  if (board) { renderBoard(); return; }
+  renderSidebar();
+  renderDetail();
+  renderFooter();
+}
+
+function setProjectMode(mode) {
+  state.ui.projectMode = mode === 'board' ? 'board' : 'list';
+  render();
+}
+
+/** Столбцы доски — статусы в заданном пользователем порядке. Карточка
+ *  перетаскивается между столбцами, и это единственное, что она меняет:
+ *  статус задачи. */
+function renderBoard() {
+  const tasks = tasksOf(state.ui.projectId);
+  el.boardCols.innerHTML = '';
+  for (const st of orderedStatuses()) {
+    const col = document.createElement('section');
+    col.className = 'board-col';
+    col.dataset.statusId = st.id;
+    col.style.setProperty('--sc', st.color);
+
+    const inCol = tasks.filter((t2) => t2.statusId === st.id);
+    const head = document.createElement('div');
+    head.className = 'board-col-head';
+    head.innerHTML = `<span class="board-dot"></span><span class="board-col-name">${escapeHtml(st.name)}</span><span class="board-count">${inCol.length}</span>`;
+    col.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'board-col-body';
+    for (const task of inCol) body.appendChild(boardCard(task));
+    col.appendChild(body);
+
+    // Подсветка столбца под курсором и сам перенос.
+    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('over'));
+    col.addEventListener('drop', (e) => {
+      e.preventDefault();
+      col.classList.remove('over');
+      const task = getTask(e.dataTransfer.getData('text/plain'));
+      if (!task || task.statusId === st.id) return;
+      setTaskStatus(task, st.id);
+      render();
+      scheduleSave();
+    });
+
+    el.boardCols.appendChild(col);
+  }
+}
+
+function boardCard(task) {
+  const card = document.createElement('article');
+  card.className = 'board-card' + (task.done ? ' done' : '');
+  card.draggable = true;
+  card.dataset.id = task.id;
+  const due = dueState(task);
+  card.innerHTML = `
+    <div class="bc-title">${escapeHtml(task.title || t('task.no_name'))}</div>
+    <div class="bc-foot">
+      ${task.totalMs ? `<span class="bc-time">${icon('clock')} ${fmtDur(task.totalMs)}</span>` : ''}
+      ${due ? `<span class="task-due ${due}">${escapeHtml(dueShort(task))}</span>` : ''}
+    </div>`;
+  card.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('text/plain', task.id);
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+  });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  // Клик по карточке открывает задачу в обычном режиме — доска для
+  // раскладки, а редактор всё равно один.
+  card.addEventListener('click', () => {
+    selectedId = task.id;
+    loadEditor(task);
+    setProjectMode('list');
+  });
+  return card;
+}
 
 function renderProjectHeader() {
   const p = getProject(state.ui.projectId);
@@ -3943,6 +4108,11 @@ el.searchInput.addEventListener('keydown', (e) => {
 el.openCalendarBtn.addEventListener('click', () => openView('calendar'));
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
 el.backHome.addEventListener('click', backHome);
+el.pvModes.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-pmode]');
+  if (b) setProjectMode(b.dataset.pmode);
+});
+
 el.projectMenuBtn.addEventListener('click', (e) => {
   const p = getProject(state.ui.projectId);
   if (p) openProjectMenu(p, e.currentTarget);
@@ -4175,6 +4345,9 @@ function buildCurrencyOptions() {
 function migrate() {
   if (!Array.isArray(state.tasks)) state.tasks = [];
   if (!Array.isArray(state.projects)) state.projects = [];
+  if (!Array.isArray(state.statuses)) state.statuses = [];
+  if (!Array.isArray(state.tags)) state.tags = [];
+  if (!Array.isArray(state.versions)) state.versions = [];
   if (!state.ui || typeof state.ui !== 'object') state.ui = {};
   if (!state.settings || typeof state.settings !== 'object') state.settings = {};
   if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;
@@ -4191,10 +4364,42 @@ function migrate() {
   if (!CURRENCIES[cur]) cur = 'RUB';
   state.settings.currency = cur;
 
+  // Статусы заводятся один раз, при первом запуске после обновления. Дальше
+  // это обычные пользовательские данные: их можно переименовать, перекрасить,
+  // переставить и дополнить своими.
+  if (state.statuses.length === 0) {
+    state.statuses = DEFAULT_STATUSES.map((s, i) => ({
+      id: uid(), name: t(`status.default_${s.key}`), color: s.color, kind: s.kind, order: i, builtin: true,
+    }));
+  }
+  state.statuses.forEach((s, i) => {
+    if (!STATUS_KINDS.includes(s.kind)) s.kind = 'todo';
+    if (!s.color) s.color = PALETTE[i % PALETTE.length];
+    if (!Number.isFinite(Number(s.order))) s.order = i;
+    if (typeof s.builtin !== 'boolean') s.builtin = false;
+  });
+  state.statuses.sort((a, b) => a.order - b.order).forEach((s, i) => { s.order = i; });
+
+  state.tags.forEach((tg, i) => {
+    if (!tg.color) tg.color = PALETTE[i % PALETTE.length];
+    if (typeof tg.name !== 'string') tg.name = '';
+  });
+
+  const projectIds = new Set(state.projects.map((p) => p.id));
+  state.versions = state.versions.filter((v) => projectIds.has(v.projectId));
+  state.versions.forEach((v) => {
+    if (typeof v.name !== 'string') v.name = '';
+    if (v.releasedAt === undefined) v.releasedAt = null;
+  });
+
+  const tagIds = new Set(state.tags.map((tg) => tg.id));
+  const keepTags = (arr) => (Array.isArray(arr) ? arr.filter((id) => tagIds.has(id)) : []);
+
   state.projects.forEach((p, i) => {
     if (!p.color) p.color = PALETTE[i % PALETTE.length];
     if (typeof p.description !== 'string') p.description = '';
     if (p.pinnedAt === undefined) p.pinnedAt = null;
+    p.tagIds = keepTags(p.tagIds);
   });
   state.tasks.forEach((t2) => {
     if (t2.pinnedAt === undefined) t2.pinnedAt = null;
@@ -4208,6 +4413,18 @@ function migrate() {
     if (t2.remindOffsetMin === undefined) t2.remindOffsetMin = null;
     if (t2.remindAt === undefined) t2.remindAt = null;
     if (t2.notifiedAt === undefined) t2.notifiedAt = null;
+    // Статус и done живут в паре. Ведущим остаётся done: на нём держатся
+    // статистика, календарь и счётчики, и переписывать их разом было бы
+    // рискованно. Статус добавляет подробность — в каком именно состоянии
+    // задача, — а done отвечает на единственный вопрос «закончена ли».
+    if (!t2.statusId || !state.statuses.some((s) => s.id === t2.statusId)) {
+      t2.statusId = defaultStatusId(t2.done);
+    }
+    t2.tagIds = keepTags(t2.tagIds);
+    if (t2.versionId !== undefined && !state.versions.some((v) => v.id === t2.versionId)) t2.versionId = null;
+    if (t2.versionId === undefined) t2.versionId = null;
+    if (t2.repeat !== undefined && t2.repeat !== null && typeof t2.repeat !== 'object') t2.repeat = null;
+    if (t2.repeat === undefined) t2.repeat = null;
   });
 
   if (state.projects.length === 0 && state.tasks.length > 0) {
