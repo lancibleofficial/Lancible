@@ -392,9 +392,14 @@
       <!-- НАСТРОЙКИ -->
       <div id="board-view" class="view" hidden>
         <div class="board-head">
-          <button type="button" class="dp-btn" id="board-project" data-i18n-title="nav.board" title="Доска"></button>
+          <button type="button" class="board-project" id="board-project" data-i18n-aria="board.pick_project" aria-label="Выбрать проект">
+            <span id="board-project-name"></span>
+            <svg class="icon board-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>
+          </button>
           <span class="board-head-sum" id="board-sum"></span>
-          <button type="button" class="btn-soft" id="board-statuses" data-i18n="board.statuses">Статусы</button>
+          <button type="button" class="icon-btn" id="board-statuses" data-i18n-title="board.statuses" data-i18n-aria="board.statuses" title="Статусы" aria-label="Статусы">
+            <svg class="icon" viewBox="0 0 16 16" fill-rule="evenodd" aria-hidden="true"><path d="M6.82 1.4a.9.9 0 01.89-.75h.58a.9.9 0 01.89.75l.15.94c.4.13.77.29 1.12.5l.77-.55a.9.9 0 011.14.1l.41.41a.9.9 0 01.1 1.14l-.55.77c.21.35.37.72.5 1.12l.94.15a.9.9 0 01.75.89v.58a.9.9 0 01-.75.89l-.94.15c-.13.4-.29.77-.5 1.12l.55.77a.9.9 0 01-.1 1.14l-.41.41a.9.9 0 01-1.14.1l-.77-.55c-.35.21-.72.37-1.12.5l-.15.94a.9.9 0 01-.89.75h-.58a.9.9 0 01-.89-.75l-.15-.94c-.4-.13-.77-.29-1.12-.5l-.77.55a.9.9 0 01-1.14-.1l-.41-.41a.9.9 0 01-.1-1.14l.55-.77c-.21-.35-.37-.72-.5-1.12l-.94-.15a.9.9 0 01-.75-.89v-.58a.9.9 0 01.75-.89l.94-.15c.13-.4.29-.77.5-1.12l-.55-.77a.9.9 0 01.1-1.14l.41-.41a.9.9 0 011.14-.1l.77.55c.35-.21.72-.37 1.12-.5l.15-.94zM8 5.55a2.45 2.45 0 100 4.9 2.45 2.45 0 000-4.9z"/></svg>
+          </button>
         </div>
         <div class="board-cols" id="board-cols"></div>
         <div class="board-empty muted" id="board-empty" hidden data-i18n="board.empty">Сначала создайте проект.</div>

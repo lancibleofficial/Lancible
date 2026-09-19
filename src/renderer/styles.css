@@ -608,8 +608,9 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 .ti-bottom .task-time { margin-left: auto; }
 .task-item:hover { background: var(--panel-2); }
 .task-item.selected { background: var(--panel-2); border-color: var(--border); }
-.task-item.pinned { background: color-mix(in srgb, var(--accent) 7%, transparent); }
-.task-item.pinned.selected { background: color-mix(in srgb, var(--accent) 12%, var(--panel-2)); }
+/* Закрепление показывает только иконка пина справа: заливка целой строки
+   красила треть списка в акцентный цвет и читалась как выделение, а не как
+   пометка. Выделение остаётся за .selected, и теперь они не спорят. */
 .task-item .task-done { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
 .task-item .task-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .task-item.done .task-name { text-decoration: line-through; color: var(--text-dim); }
@@ -760,28 +761,74 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
   border: 1px solid var(--border);
   border-radius: 10px;
 }
-.task-params > .money-bar,
-.task-params > .due-bar { margin: 0; }
+/* Отступы строк, разделители, иконки и подписи заданы ниже, в блоке
+   параметров задачи — здесь их дублировать не нужно. */
 .task-params > .due-bar + .due-bar { margin-top: 8px; }
-/* Разделитель между параметрами — только между строками, не по краям. */
-/* Статус стоит первым, поэтому нужна и обратная пара: иначе он прилипал к
-   ставке, а ставка со сроком были разделены как надо. */
-.task-params > .due-bar + .money-bar,
-.task-params > .money-bar + .due-bar {
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-  margin-top: 10px;
+
+/* Параметры задачи: подпись слева капителью, управление справа одной
+   колонкой. Разнобой шёл оттого, что ставка была полем ввода со своими
+   размерами, а остальное — пилюлями со своими; теперь у всех одна высота,
+   один шрифт и одна начальная позиция.
+
+   Иконка и подпись вынуты из потока и прижаты к левому краю строки, а сама
+   строка отодвинута на их ширину. Из-за этого всё, что не поместилось в
+   первую линию — расчёт по ставке, кнопка напоминания, — переносится не к
+   краю панели, а под управление, в ту же колонку. Без этого перенос ломал
+   ровную левую границу, ради которой всё и затевалось. */
+.task-params > .status-bar,
+.task-params > .money-bar,
+.task-params > .due-bar:not(.due-custom) {
+  position: relative;
+  margin: 0;
+  padding: 11px 0 11px 113px;
+  border-top: none;
 }
-/* Явная ширина обеим иконкам: без неё они рисуются чуть по-разному, и подписи
-   рядом с ними уезжают друг относительно друга на пару пикселей. */
+.task-params > .status-bar + .money-bar,
+.task-params > .money-bar + .due-bar { border-top: 1px solid var(--border); }
+.task-params .due-label,
+.task-params .money-bar label {
+  position: absolute;
+  left: 21px;
+  top: 18px;
+  min-width: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
 .task-params > .money-bar > .icon,
-.task-params > .due-bar > .icon { color: var(--icon); flex: none; width: 15px; height: 15px; }
-/* Одинаковая ширина подписей в обеих строках — иначе поля не встают в колонку. */
-.task-params .money-bar label,
-.task-params .due-label { min-width: 68px; }
+.task-params > .due-bar > .icon {
+  position: absolute;
+  left: 0;
+  top: 19px;
+  width: 13px;
+  height: 13px;
+  color: var(--text-faint);
+}
+/* Одна высота и один шрифт у всех управляющих элементов строки. */
+.task-params .dp-btn,
+.task-params #task-rate {
+  height: 28px;
+  min-width: 132px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  border-radius: 7px;
+}
+.task-params #task-rate { width: 132px; text-align: left; }
+/* Цветная точка статуса стоит перед колонкой управления, а не внутри неё:
+   иначе она сдвигала пилюлю статуса на свою ширину, и из трёх строк
+   ровными получались только две. */
+.task-params .st-swatch { position: absolute; left: 99px; top: 22px; }
+/* Расчёт по ставке — примечание под полем, а не число, улетевшее к правому
+   краю: там оно читалось как отдельный параметр. */
+.task-params .money-calc {
+  flex-basis: 100%;
+  margin-left: 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
 
 .money-bar { display: flex; align-items: center; gap: 10px; margin: -4px 0 6px; padding: 0 2px; font-size: 13px; flex-wrap: wrap; }
-.task-params .money-bar { padding: 0; }
 .money-bar label { color: var(--text-dim); }
 /* Пустой дедлайн — это действие, а не пустое поле: акцент даёт понять, что
    сюда можно нажать, а не что здесь чего-то не хватает. */
@@ -1979,7 +2026,33 @@ body.platform-web .tb-account {
   gap: 10px;
   padding: 14px 16px 0;
 }
+/* Название проекта — заголовок, который можно нажать, а не поле ввода.
+   Подложка-пилюля делала его похожей именно на поле и спорила с тем, что это
+   главная надпись на странице. Осталась одна стрелка: она и сообщает, что
+   тут есть выбор. Кнопка одна на название и стрелку, поэтому зона клика у
+   них общая сама собой. */
+.board-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -6px;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background 0.12s var(--ease);
+}
+.board-project:hover { background: var(--panel-2); }
+.board-chev { width: 12px; height: 12px; flex: none; color: var(--text-dim); transition: color 0.12s var(--ease); }
+.board-project:hover .board-chev { color: var(--text); }
 .board-head-sum { color: var(--text-dim); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+#board-statuses { margin-left: auto; }
 .board-empty { padding: 40px 16px; text-align: center; font-size: 13px; }
 /* Колонки без собственной рамки и подложки: видимую форму держат карточки,
    а колонка — это только заголовок и отступ. Так доска остаётся спокойной
@@ -2015,6 +2088,12 @@ body.platform-web .tb-account {
   gap: 8px;
   padding: 11px 12px 10px;
 }
+.board-col-name { font-size: 12.5px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-count { font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+/* Сумма времени прижата к правому краю заголовка: слева — что это за
+   столбец, справа — сколько в нём работы. Между ними пусто, поэтому
+   длинное название статуса сжимается, а не выталкивает сумму за край. */
+.board-col-time { margin-left: auto; font-size: 11.5px; color: var(--text-dim); font-variant-numeric: tabular-nums; flex: none; }
 .board-col-body {
   flex: 1;
   min-height: 0;
@@ -2062,6 +2141,10 @@ body.platform-web .tb-account {
 .bc-foot { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .bc-time { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .bc-time .icon { width: 10px; height: 10px; }
+/* Деньги приглушены сильнее времени: на доске это справка, а не то, ради
+   чего её открыли. Цифры моноширинные, чтобы столбец карточек читался
+   колонкой, а не лесенкой. */
+.bc-money { font-size: 11px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
 
 /* ---------- Настройка статусов проекта ---------- */
 

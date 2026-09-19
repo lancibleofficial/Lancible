@@ -96,7 +96,10 @@ app.whenReady().then(async () => {
     [...document.querySelectorAll('#ctx-menu .ctx-item')].find(b => b.textContent.includes('English')).click();
     await wait(60);
     out.navLabelTranslatedToEnglish = document.querySelector('.nav-label[data-i18n="nav.home"]').textContent === 'Overview';
-    out.searchPlaceholderTranslated = document.getElementById('search-input').placeholder === 'Search (Ctrl+F)';
+    // Строка должна совпадать с ключом search.placeholder из core/i18n.js.
+    // Записана буквально намеренно: проверка обязана падать, если подпись
+    // поменяли не подумав, а не подстраиваться под неё молча.
+    out.searchPlaceholderTranslated = document.getElementById('search-input').placeholder === 'Search';
     out.statLabelTranslated = document.querySelector('.stat-card span[data-i18n="stats.worked"]').textContent === 'total worked';
 
     // --- тема: icon-табы (не цикличная кнопка) ---

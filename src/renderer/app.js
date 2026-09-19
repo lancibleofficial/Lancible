@@ -172,7 +172,7 @@ const el = {
 
   backHome: $('back-home'), phDot: $('ph-dot'), phName: $('ph-name'),
   phDesc: $('ph-desc'), projectMenuBtn: $('project-menu-btn'),
-  boardView: $('board-view'), boardProject: $('board-project'), boardCols: $('board-cols'),
+  boardView: $('board-view'), boardProject: $('board-project'), boardProjectName: $('board-project-name'), boardCols: $('board-cols'),
   boardStatuses: $('board-statuses'), stdlgBackdrop: $('stdlg-backdrop'), stList: $('st-list'), stAdd: $('st-add'), stdlgClose: $('stdlg-close'),
   boardSum: $('board-sum'), boardEmpty: $('board-empty'),
 
@@ -2116,7 +2116,7 @@ function renderBoardPage() {
   if (!has) { el.boardCols.innerHTML = ''; return; }
 
   const cur = getProject(pid);
-  el.boardProject.textContent = cur ? cur.name : '';
+  el.boardProjectName.textContent = cur ? cur.name : '';
   const tasks = tasksOf(pid);
   const done = tasks.filter((t2) => t2.done).length;
   el.boardSum.textContent = `${done}/${tasks.length}`;
@@ -2136,7 +2136,10 @@ function renderBoard() {
     const inCol = tasks.filter((t2) => t2.statusId === st.id);
     const head = document.createElement('div');
     head.className = 'board-col-head';
-    head.innerHTML = `<span class="board-dot"></span><span class="board-col-name">${escapeHtml(st.name)}</span><span class="board-count">${inCol.length}</span>`;
+    // Сумма времени по колонке — справа, у края. Она отвечает на вопрос, на
+    // который счётчик задач не отвечает: сколько работы там реально лежит.
+    const colMs = inCol.reduce((a, t2) => a + taskElapsedMs(t2), 0);
+    head.innerHTML = `<span class="board-dot"></span><span class="board-col-name">${escapeHtml(st.name)}</span><span class="board-count">${inCol.length}</span><span class="board-col-time">${fmtDur(colMs)}</span>`;
     col.appendChild(head);
 
     const body = document.createElement('div');
@@ -2339,10 +2342,15 @@ function boardCard(task) {
   card.draggable = true;
   card.dataset.id = task.id;
   const due = dueState(task);
+  // Время и деньги показываются всегда, даже нулевые: строка под названием
+  // остаётся одной высоты, и карточки не прыгают, когда таймер тронули.
+  // Время считается вместе с идущим таймером — иначе доска расходится с
+  // карточкой задачи ровно на то время, которое идёт прямо сейчас.
   card.innerHTML = `
     <div class="bc-title">${escapeHtml(task.title || t('task.no_name'))}</div>
     <div class="bc-foot">
-      ${task.totalMs ? `<span class="bc-time">${icon('clock')} ${fmtDur(task.totalMs)}</span>` : ''}
+      <span class="bc-time">${icon('clock')} ${fmtDur(taskElapsedMs(task))}</span>
+      <span class="bc-money">${escapeHtml(fmtMoney(earnedOf(task)))}</span>
       ${due ? `<span class="task-due ${due}">${escapeHtml(dueShort(task))}</span>` : ''}
     </div>`;
   card.addEventListener('dragstart', (e) => {
