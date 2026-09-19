@@ -242,61 +242,15 @@ export default function TaskDetailScreen({ route, navigation }) {
             </Pressable>
           </View>
 
-          <View style={styles.splitRow}>
-            <View style={styles.splitHalf}>
-              <Text style={styles.label}>{t(LANG, 'task.rate_label')}</Text>
-              <TextInput
-                style={styles.input}
-                value={rateText}
-                onChangeText={onRateChange}
-                keyboardType="decimal-pad"
-                placeholder={String(hourlyRate || 0)}
-                placeholderTextColor={colors.textDim}
-              />
-            </View>
-            <View style={styles.splitHalf}>
-              <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
-              <View style={styles.earnedBox}>
-                <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
-              </View>
-            </View>
-          </View>
-
-          <Pressable style={styles.dueRow} onPress={onOpenDue}>
-            <Icon name="clock" size={15} color={colors.textDim} />
-            <View style={styles.dueMain}>
-              <Text style={styles.dueLabel}>{t(LANG, 'due.label')}</Text>
-              {task.dueAt ? (
-                <Text style={styles.dueRemind}>{t(LANG, REMIND_LABEL[remindKey(task)])}</Text>
-              ) : null}
-            </View>
-            {task.dueAt ? (
-              <Text style={styles.dueValue}>{`${dueShort(task, LANG)}, ${fmtHm(task.dueAt)}`}</Text>
-            ) : (
-              <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
-            )}
-            <Icon name="chevron-right" size={14} color={colors.textDim} />
-          </Pressable>
-
-          {/* Теги задачи. Строка устроена как строка срока: подпись слева,
-              значение справа, тап открывает лист выбора. Бейджи переносятся
-              по строкам — их может быть больше, чем влезает в ширину. */}
-          <Pressable style={styles.dueRow} onPress={onOpenTags}>
-            <Icon name="pin" size={15} color={colors.textDim} />
-            <View style={styles.dueMain}>
-              <Text style={styles.dueLabel}>{t(LANG, 'tag.pick')}</Text>
-            </View>
-            {taskTags.length ? (
-              <TagBadgeRow tags={taskTags} style={styles.tagRowValue} />
-            ) : (
-              <Text style={styles.dueNone}>{t(LANG, 'tag.not_set')}</Text>
-            )}
-            <Icon name="chevron-right" size={14} color={colors.textDim} />
-          </Pressable>
-
+          {/* Ставка, срок и теги переехали во вкладку «Настройки» — как на
+              десктопе. Над вкладками остаётся то, ради чего задачу открывают:
+              название и таймер. */}
           <View style={styles.tabRow}>
             <Pressable style={[styles.tab, tab === 'notes' && styles.tabActive]} onPress={() => setTab('notes')}>
               <Text style={[styles.tabText, tab === 'notes' && styles.tabTextActive]}>{t(LANG, 'tabs.notes')}</Text>
+            </Pressable>
+            <Pressable style={[styles.tab, tab === 'settings' && styles.tabActive]} onPress={() => setTab('settings')}>
+              <Text style={[styles.tabText, tab === 'settings' && styles.tabTextActive]}>{t(LANG, 'tabs.settings')}</Text>
             </Pressable>
             <Pressable style={[styles.tab, tab === 'history' && styles.tabActive]} onPress={() => setTab('history')}>
               <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>{t(LANG, 'tabs.history')}</Text>
@@ -315,6 +269,62 @@ export default function TaskDetailScreen({ route, navigation }) {
               placeholder={t(LANG, 'editor.placeholder')}
               lang={LANG}
             />
+          </View>
+        ) : tab === 'settings' ? (
+          <View style={styles.settingsPanel}>
+            <View style={styles.splitRow}>
+              <View style={styles.splitHalf}>
+                <Text style={styles.label}>{t(LANG, 'task.rate_label')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={rateText}
+                  onChangeText={onRateChange}
+                  keyboardType="decimal-pad"
+                  placeholder={String(hourlyRate || 0)}
+                  placeholderTextColor={colors.textDim}
+                />
+              </View>
+              {/* Заработано стоит рядом со ставкой, а не отдельно: это её
+                  результат, и врозь они читаются хуже. */}
+              <View style={styles.splitHalf}>
+                <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
+                <View style={styles.earnedBox}>
+                  <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
+                </View>
+              </View>
+            </View>
+
+            <Pressable style={styles.dueRow} onPress={onOpenDue}>
+              <Icon name="clock" size={15} color={colors.textDim} />
+              <View style={styles.dueMain}>
+                <Text style={styles.dueLabel}>{t(LANG, 'due.label')}</Text>
+                {task.dueAt ? (
+                  <Text style={styles.dueRemind}>{t(LANG, REMIND_LABEL[remindKey(task)])}</Text>
+                ) : null}
+              </View>
+              {task.dueAt ? (
+                <Text style={styles.dueValue}>{`${dueShort(task, LANG)}, ${fmtHm(task.dueAt)}`}</Text>
+              ) : (
+                <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
+              )}
+              <Icon name="chevron-right" size={14} color={colors.textDim} />
+            </Pressable>
+
+            {/* Теги задачи. Строка устроена как строка срока: подпись слева,
+                значение справа, тап открывает лист выбора. Бейджи переносятся
+                по строкам — их может быть больше, чем влезает в ширину. */}
+            <Pressable style={styles.dueRow} onPress={onOpenTags}>
+              <Icon name="pin" size={15} color={colors.textDim} />
+              <View style={styles.dueMain}>
+                <Text style={styles.dueLabel}>{t(LANG, 'tag.pick')}</Text>
+              </View>
+              {taskTags.length ? (
+                <TagBadgeRow tags={taskTags} style={styles.tagRowValue} />
+              ) : (
+                <Text style={styles.dueNone}>{t(LANG, 'tag.not_set')}</Text>
+              )}
+              <Icon name="chevron-right" size={14} color={colors.textDim} />
+            </Pressable>
           </View>
         ) : (
           <View style={styles.historyScroll}>
@@ -402,6 +412,10 @@ const makeStyles = (colors) => StyleSheet.create({
   tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
   // См. комментарий у modeTextActive в CalendarScreen.js — тот же принцип.
   tabTextActive: { color: colors.text },
+  // Те же поля и отступы, что были над вкладками, — переехал только адрес.
+  // Воздух между полосой вкладок и первой подписью: без него подпись
+  // «Ставка в час» прилипала к вкладкам. На десктопе исправлено тем же.
+  settingsPanel: { padding: spacing.lg, paddingTop: spacing.md, gap: spacing.sm },
   historyScroll: { padding: spacing.lg, paddingTop: 0, gap: spacing.sm },
   historyEmpty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.lg },
   sessionRow: {
