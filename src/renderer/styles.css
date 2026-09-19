@@ -783,8 +783,11 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
   padding: 11px 0 11px 113px;
   border-top: none;
 }
-.task-params > .status-bar + .money-bar,
-.task-params > .money-bar + .due-bar { border-top: 1px solid var(--border); }
+/* Разделитель у каждой строки, кроме первой. Раньше пары перечислялись
+   поимённо, и добавление строки тегов между статусом и ставкой молча
+   оставило бы её без границы. Строка «напомнить» — продолжение срока, а не
+   отдельный параметр, поэтому она исключена. */
+.task-params > div + div:not(.due-custom) { border-top: 1px solid var(--border); }
 .task-params .due-label,
 .task-params .money-bar label {
   position: absolute;
@@ -1036,11 +1039,15 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-item .ctx-check { color: var(--accent); flex: none; }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
-#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #expdlg-backdrop, #stdlg-backdrop {
+#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #expdlg-backdrop, #stdlg-backdrop, #tagdlg-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
 }
+/* Подтверждение всегда поверх того окна, которое его вызвало: удаление тега
+   спрашивают из окна тега, и вопрос, спрятавшийся под ним, выглядел бы как
+   зависшее приложение. */
+#confirm-backdrop { z-index: 110; }
 .modal {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -2210,6 +2217,69 @@ body.platform-web .tb-account {
   white-space: nowrap;
 }
 .board-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--sc, var(--accent)); flex: none; }
+
+/* ---------- Теги ---------- */
+/* Чип повторяет метку статуса: тот же рост, та же подложка, тот же вес. Это
+   соседние по смыслу пометки, и разный вид у них читался бы как разная
+   важность. Цвет тега — только в точке: залитый цветом чип на доске
+   перетягивал бы внимание с самой задачи. */
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 5px; flex: none; max-width: 100%;
+  font-size: 11px; color: var(--text-dim);
+  background: var(--panel-2); border-radius: 999px; padding: 2px 8px 2px 6px;
+}
+.tag-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--sc, var(--accent)); flex: none; display: inline-block; }
+.tag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag-chip-x {
+  border: none; background: none; padding: 0; margin-right: -2px;
+  width: 12px; height: 12px; flex: none; cursor: pointer;
+  color: var(--text-faint); opacity: 0; transition: opacity 0.12s var(--ease), color 0.12s var(--ease);
+}
+.tag-chip-x .icon { width: 9px; height: 9px; }
+/* Крестик появляется по наведению на чип: в спокойном состоянии он шумел бы
+   в каждой строке, а без него снять тег было бы нечем. */
+.tag-chip:hover .tag-chip-x { opacity: 1; }
+.tag-chip-x:hover { color: var(--text); opacity: 1; }
+.tag-chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
+
+.tag-add-btn {
+  flex: none; width: 22px; height: 22px; line-height: 1;
+  border: 1px dashed var(--border); border-radius: 999px; background: none;
+  color: var(--text-faint); font-size: 14px; cursor: pointer;
+  transition: border-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+.tag-add-btn:hover { border-color: var(--accent); color: var(--text); border-style: solid; }
+.tag-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ph-tags { margin-top: 6px; }
+.bc-tags { margin-top: 6px; }
+.tags-empty .settings-row-label { font-size: 12px; line-height: 1.5; white-space: normal; }
+.tagdlg-error { margin: -6px 0 10px; font-size: 12px; color: var(--danger); }
+
+/* Пикер тегов — поиск и он же вход в создание. */
+.tag-pop {
+  position: fixed; z-index: 130;
+  width: 232px; max-height: 300px; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4); overflow: hidden;
+}
+.tag-pop-search {
+  border: none; border-bottom: 1px solid var(--border); background: none;
+  color: var(--text); font-family: inherit; font-size: 12.5px; padding: 9px 11px; outline: none;
+}
+.tag-pop-list { overflow-y: auto; padding: 4px; }
+.tag-pop-item, .tag-pop-create {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  border: none; background: none; border-radius: 6px; cursor: pointer;
+  color: var(--text); font-family: inherit; font-size: 12.5px; text-align: left; padding: 6px 8px;
+}
+.tag-pop-item:hover, .tag-pop-create:hover { background: var(--panel-2); }
+.tag-pop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Выбранный тег помечен галочкой справа, а не заливкой: заливка спорила бы с
+   наведением, и было бы непонятно, что выбрано, а что под курсором. */
+.tag-pop-item.sel::after { content: '✓'; margin-left: auto; color: var(--accent); font-size: 11px; }
+.tag-pop-create { color: var(--text-dim); border-top: 1px solid var(--border-soft); border-radius: 0; margin-top: 4px; padding-top: 9px; }
+.tag-pop-create:hover { color: var(--text); }
+.tag-pop-empty { padding: 10px 9px; font-size: 12px; line-height: 1.5; }
 
 /* Воздух между полосой вкладок и содержимым вкладки настроек: карточка
    параметров начиналась вплотную под ними. */

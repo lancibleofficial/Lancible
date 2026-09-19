@@ -217,6 +217,60 @@ app.whenReady().then(async () => {
     const [rLeft, rRight] = recentCarousel.querySelectorAll('.car-arrow');
     out.carouselArrowsHiddenWhenNoOverflow = !!rLeft && !!rRight && rLeft.hidden && rRight.hidden;
 
+    // --- теги: завести, повесить на задачу и на проект, увидеть чипы ---
+    // Проходим тем же путём, что и человек: через настройки и пикеры, а не
+    // подстановкой в состояние — иначе проверка не заметит, если кнопка
+    // перестанет открывать окно.
+    document.querySelector('.nav-item[data-view="settings"]').click();
+    await wait(60);
+    document.getElementById('tags-add').click();
+    await wait(60);
+    out.tagDialogOpens = !$('#tagdlg-backdrop').hidden;
+    document.getElementById('tagdlg-name').value = 'Срочное';
+    document.getElementById('tagdlg-save').click();
+    await wait(60);
+    // state — лексическая переменная модуля, в window её нет: обращаемся прямо.
+    out.tagCreated = state.tags.length === 1 && state.tags[0].name === 'Срочное';
+    out.tagRowShowsUnused = /не используется/.test(document.querySelector('#tags-list .settings-row-btn').textContent);
+
+    // На задачу.
+    const tagTask = state.tasks[0];
+    state.ui.view = 'project';
+    state.ui.projectId = tagTask.projectId;
+    selectedId = tagTask.id;
+    loadEditor(tagTask);
+    render();
+    setTaskTab('settings');
+    await wait(60);
+    document.getElementById('task-tags-add').click();
+    await wait(60);
+    out.tagPickerOpens = !!document.querySelector('.tag-pop .tag-pop-item');
+    document.querySelector('.tag-pop .tag-pop-item').click();
+    await wait(60);
+    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    await wait(40);
+    out.taskTagChipRendered = document.querySelectorAll('#task-tags .tag-chip').length === 1;
+
+    // На проект.
+    openProjectDialog(getProject(tagTask.projectId));
+    await wait(60);
+    document.getElementById('pdlg-tags-add').click();
+    await wait(60);
+    document.querySelector('.tag-pop .tag-pop-item').click();
+    document.getElementById('pdlg-title').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    await wait(40);
+    document.getElementById('pdlg-save').click();
+    await wait(80);
+    out.projectTagChipRendered = document.querySelectorAll('#ph-tags .tag-chip').length === 1;
+    out.tagRowCountsBoth = /проектов: 1/.test(
+      (() => { state.ui.view = 'settings'; render(); return document.querySelector('#tags-list .settings-row-btn').textContent; })(),
+    );
+    // В списке задач тегов быть не должно — там и так тесно.
+    state.ui.view = 'project';
+    render();
+    await wait(40);
+    out.taskListHasNoTagChips = document.querySelectorAll('#task-list .tag-chip').length === 0;
+
     // --- диалог входа: открытие/закрытие (без реальных сетевых вызовов Supabase) ---
     document.getElementById('account-btn').click();
     await wait(40);

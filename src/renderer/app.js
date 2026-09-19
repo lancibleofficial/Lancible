@@ -229,6 +229,13 @@ const el = {
   modalInput: $('modal-input'), modalOk: $('modal-ok'), modalCancel: $('modal-cancel'),
   confirmBackdrop: $('confirm-backdrop'), confirmTitle: $('confirm-title'), confirmText: $('confirm-text'),
   confirmOk: $('confirm-ok'), confirmCancel: $('confirm-cancel'),
+  // Теги
+  tagsList: $('tags-list'), tagsAdd: $('tags-add'),
+  tagdlgBackdrop: $('tagdlg-backdrop'), tagdlgTitle: $('tagdlg-title'), tagdlgName: $('tagdlg-name'),
+  tagdlgError: $('tagdlg-error'), tagdlgSwatches: $('tagdlg-swatches'), tagdlgDelete: $('tagdlg-delete'),
+  tagdlgCancel: $('tagdlg-cancel'), tagdlgSave: $('tagdlg-save'),
+  taskTags: $('task-tags'), taskTagsAdd: $('task-tags-add'),
+  pdlgTags: $('pdlg-tags'), pdlgTagsAdd: $('pdlg-tags-add'), phTags: $('ph-tags'),
   pdlgBackdrop: $('pdlg-backdrop'), pdlgTitle: $('pdlg-title'), pdlgName: $('pdlg-name'),
   pdlgDesc: $('pdlg-desc'), pdlgSwatches: $('pdlg-swatches'), pdlgSave: $('pdlg-save'), pdlgCancel: $('pdlg-cancel'),
   sdlgBackdrop: $('sdlg-backdrop'), sdlgTitle: $('sdlg-title'),
@@ -301,10 +308,10 @@ function setTaskDone(task, done) {
   task.updatedAt = new Date().toISOString();
 }
 
-// --- Теги и версии ---------------------------------------------------------
+// --- Версии ----------------------------------------------------------------
+// Теги живут ниже, своим разделом: они общие на всё приложение, а версии —
+// принадлежат проекту.
 
-const getTag = (id) => state.tags.find((tg) => tg.id === id) || null;
-const tagsOf = (entity) => (entity && Array.isArray(entity.tagIds) ? entity.tagIds.map(getTag).filter(Boolean) : []);
 const getVersion = (id) => state.versions.find((v) => v.id === id) || null;
 const versionsOf = (projectId) => state.versions.filter((v) => v.projectId === projectId);
 const visibleTasks = () => tasksOf(state.ui.projectId);
@@ -786,6 +793,8 @@ function renderSettings() {
     el.settingsRate.value = state.settings.hourlyRate ? String(state.settings.hourlyRate) : '';
   }
   el.settingsCurrency.value = state.settings.currency;
+
+  renderTagsSettings();
 }
 
 function buildUsecaseButtons() {
@@ -2202,6 +2211,247 @@ function openColorPicker(anchor, onPick) {
   setTimeout(() => document.addEventListener('mousedown', away), 0);
 }
 
+// --- Теги -------------------------------------------------------------------
+// Теги общие на всё приложение, а не свои у каждого проекта, как статусы: один
+// и тот же тег живёт и на проекте, и на задаче в любом другом проекте.
+// Отбор, поиск и подсчёт использований — в core/tags.js, здесь только то, что
+// трогает разметку и состояние.
+
+const getTag = (id) => Core.getTag(state.tags, id);
+const tagsOf = (ids) => Core.tagsOf(state.tags, ids);
+const tagUsage = (id) => Core.tagUsage(state.projects, state.tasks, id);
+
+/** Подпись об использовании тега. Нулевые части не попадают в строку: «задач:
+ *  0» — это не сведения, а шум, из-за которого приходится читать строку
+ *  целиком, чтобы понять, что тег нигде не стоит. */
+function tagUsageLabel(u) {
+  const parts = [];
+  if (u.projects) parts.push(t('tag.used_projects', { n: u.projects }));
+  if (u.tasks) parts.push(t('tag.used_tasks', { n: u.tasks }));
+  return parts.length ? parts.join(' · ') : t('tag.unused');
+}
+
+/** Разметка чипа — отдельно от сборки узла: доска рисуется строками, а
+ *  редактор узлами, и двух описаний одного и того же чипа быть не должно. */
+const tagChipHtml = (tag) =>
+  `<span class="tag-chip" data-id="${escapeHtml(tag.id)}" style="--sc:${escapeHtml(tag.color || PALETTE[0])}">`
+  + `<span class="tag-dot"></span><span class="tag-name">${escapeHtml(tag.name || '')}</span></span>`;
+
+/** Чипы сущности одной строкой — для мест, которые собираются через innerHTML. */
+const tagChipsHtml = (ids) => tagsOf(ids).map(tagChipHtml).join('');
+
+/** Чип тега. Если передан onRemove — у чипа появляется крестик. */
+function tagChip(tag, onRemove) {
+  const box = document.createElement('div');
+  box.innerHTML = tagChipHtml(tag);
+  const chip = box.firstElementChild;
+  if (onRemove) {
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'tag-chip-x';
+    x.title = t('common.delete');
+    x.innerHTML = icon('x');
+    x.addEventListener('click', (e) => { e.stopPropagation(); onRemove(tag.id); });
+    chip.appendChild(x);
+  }
+  return chip;
+}
+
+function renderTagChips(box, ids, onRemove) {
+  box.innerHTML = '';
+  for (const tag of tagsOf(ids)) box.appendChild(tagChip(tag, onRemove));
+}
+
+/** Список тегов в настройках. Счётчик использований здесь не украшение: по
+ *  нему видно, какие теги живые, а какие можно убрать. */
+function renderTagsSettings() {
+  el.tagsList.innerHTML = '';
+  if (!state.tags.length) {
+    const empty = document.createElement('div');
+    empty.className = 'settings-row tags-empty';
+    empty.innerHTML = `<span class="settings-row-label muted">${escapeHtml(t('tag.empty_hint'))}</span>`;
+    el.tagsList.appendChild(empty);
+    return;
+  }
+  for (const tag of state.tags) {
+    const u = tagUsage(tag.id);
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'settings-row settings-row-btn';
+    row.dataset.id = tag.id;
+    row.innerHTML = `
+      <span class="tag-dot" style="--sc:${escapeHtml(tag.color || PALETTE[0])}"></span>
+      <span class="settings-row-label">${escapeHtml(tag.name || '')}</span>
+      <span class="settings-row-value">${escapeHtml(tagUsageLabel(u))}</span>`;
+    row.addEventListener('click', () => openTagDialog(tag));
+    el.tagsList.appendChild(row);
+  }
+}
+
+const tagdlg = { editing: null, color: PALETTE[0], after: null };
+
+function buildTagSwatches() {
+  el.tagdlgSwatches.innerHTML = '';
+  for (const c of PALETTE) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch' + (c === tagdlg.color ? ' sel' : '');
+    b.style.background = c;
+    b.addEventListener('click', () => { tagdlg.color = c; buildTagSwatches(); });
+    el.tagdlgSwatches.appendChild(b);
+  }
+}
+
+/** @param {object|null} tag — редактируемый тег или null для нового
+ *  @param {string} [presetName] — имя, набранное в пикере
+ *  @param {function} [after] — что сделать с созданным тегом (повесить его) */
+function openTagDialog(tag, presetName, after) {
+  tagdlg.editing = tag || null;
+  tagdlg.color = tag ? (tag.color || PALETTE[0]) : PALETTE[state.tags.length % PALETTE.length];
+  tagdlg.after = after || null;
+  el.tagdlgTitle.textContent = tag ? t('tag.dialog_edit') : t('tag.dialog_new');
+  el.tagdlgName.value = tag ? (tag.name || '') : (presetName || '');
+  el.tagdlgError.hidden = true;
+  el.tagdlgDelete.hidden = !tag;
+  buildTagSwatches();
+  el.tagdlgBackdrop.hidden = false;
+  el.tagdlgName.focus();
+  el.tagdlgName.select();
+}
+
+function closeTagDialog() {
+  el.tagdlgBackdrop.hidden = true;
+  tagdlg.editing = null;
+  tagdlg.after = null;
+}
+
+function saveTagDialog() {
+  const name = el.tagdlgName.value.trim();
+  if (!name) { el.tagdlgName.focus(); return; }
+  // Два тега с одинаковым именем различить на глаз нельзя, и заводить оба
+  // бессмысленно — поэтому отказ с объяснением, а не молчаливое создание.
+  if (Core.nameTaken(state.tags, name, tagdlg.editing ? tagdlg.editing.id : null)) {
+    el.tagdlgError.textContent = t('tag.name_taken');
+    el.tagdlgError.hidden = false;
+    el.tagdlgName.focus();
+    return;
+  }
+  let created = null;
+  if (tagdlg.editing) {
+    Object.assign(tagdlg.editing, { name, color: tagdlg.color });
+  } else {
+    created = { id: uid(), name, color: tagdlg.color };
+    state.tags.push(created);
+  }
+  const after = tagdlg.after;
+  closeTagDialog();
+  if (after) after(created);
+  render();
+  scheduleSave();
+}
+
+/** Удаление тега. Переносить его некуда — тег просто снимается со всех
+ *  сущностей, поэтому предупреждение называет, скольких это коснётся. */
+async function deleteTagFromDialog() {
+  const tag = tagdlg.editing;
+  if (!tag) return;
+  const u = tagUsage(tag.id);
+  const message = u.projects + u.tasks
+    ? t('tag.delete_used', { name: tag.name, n: tagUsageLabel(u) })
+    : t('tag.delete_confirm', { name: tag.name });
+  const ok = await confirmDialog(message);
+  if (!ok) return;
+  state.tags = state.tags.filter((x) => x.id !== tag.id);
+  for (const p of state.projects) p.tagIds = (p.tagIds || []).filter((id) => id !== tag.id);
+  for (const task of state.tasks) task.tagIds = (task.tagIds || []).filter((id) => id !== tag.id);
+  closeTagDialog();
+  render();
+  scheduleSave();
+}
+
+/** Пикер тегов — один на все места, где теги вешают. Поле ввода служит и
+ *  поиском, и входом в создание: если набранного имени нет ни у одного тега,
+ *  внизу появляется «Создать тег».
+ *  @param {Element} anchor — у чего открыть
+ *  @param {function} getIds — текущие теги сущности
+ *  @param {function} setIds — куда записать новый набор */
+function openTagPicker(anchor, getIds, setIds) {
+  document.querySelectorAll('.tag-pop').forEach((n) => n.remove());
+  const pop = document.createElement('div');
+  pop.className = 'tag-pop';
+
+  const search = document.createElement('input');
+  search.type = 'text';
+  search.className = 'tag-pop-search';
+  search.placeholder = t('tag.search_ph');
+  const list = document.createElement('div');
+  list.className = 'tag-pop-list';
+  pop.append(search, list);
+
+  const draw = () => {
+    const ids = getIds();
+    const query = search.value.trim();
+    list.innerHTML = '';
+
+    for (const tag of Core.searchTags(state.tags, query)) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'tag-pop-item' + (ids.includes(tag.id) ? ' sel' : '');
+      row.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(tag.color || PALETTE[0])}"></span>`
+        + `<span class="tag-pop-name">${escapeHtml(tag.name || '')}</span>`;
+      row.addEventListener('click', () => { setIds(Core.toggleTag(getIds(), tag.id)); draw(); });
+      list.appendChild(row);
+    }
+
+    if (query && !Core.exactMatch(state.tags, query)) {
+      const create = document.createElement('button');
+      create.type = 'button';
+      create.className = 'tag-pop-create';
+      create.textContent = t('tag.create_named', { name: query });
+      create.addEventListener('click', () => {
+        pop.remove();
+        openTagDialog(null, query, (made) => { if (made) setIds([...getIds(), made.id]); });
+      });
+      list.appendChild(create);
+    } else if (!state.tags.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tag-pop-empty muted';
+      empty.textContent = t('tag.none');
+      list.appendChild(empty);
+    }
+  };
+
+  search.addEventListener('input', draw);
+  draw();
+  document.body.appendChild(pop);
+
+  const r = anchor.getBoundingClientRect();
+  pop.style.left = `${Math.max(8, Math.min(r.left, innerWidth - pop.offsetWidth - 8))}px`;
+  // Если внизу не помещается — открываем вверх, а не за краем окна.
+  const below = r.bottom + 6;
+  pop.style.top = below + pop.offsetHeight > innerHeight - 8
+    ? `${Math.max(8, r.top - pop.offsetHeight - 6)}px`
+    : `${below}px`;
+
+  const away = (e) => {
+    if (pop.contains(e.target) || anchor.contains(e.target)) return;
+    pop.remove();
+    document.removeEventListener('mousedown', away);
+  };
+  setTimeout(() => document.addEventListener('mousedown', away), 0);
+  search.focus();
+}
+
+/** Теги открытой задачи. */
+function renderTaskTags(task) {
+  renderTagChips(el.taskTags, task.tagIds, (id) => {
+    task.tagIds = Core.toggleTag(task.tagIds, id);
+    touchTask(task);
+    render();
+    scheduleSave();
+  });
+}
+
 // --- Настройка статусов проекта --------------------------------------------
 
 /** Набор статусов настраивается у каждого проекта отдельно, поэтому диалог
@@ -2346,8 +2596,10 @@ function boardCard(task) {
   // остаётся одной высоты, и карточки не прыгают, когда таймер тронули.
   // Время считается вместе с идущим таймером — иначе доска расходится с
   // карточкой задачи ровно на то время, которое идёт прямо сейчас.
+  const chips = tagChipsHtml(task.tagIds);
   card.innerHTML = `
     <div class="bc-title">${escapeHtml(task.title || t('task.no_name'))}</div>
+    ${chips ? `<div class="tag-chips bc-tags">${chips}</div>` : ''}
     <div class="bc-foot">
       <span class="bc-time">${icon('clock')} ${fmtDur(taskElapsedMs(task))}</span>
       <span class="bc-money">${escapeHtml(fmtMoney(earnedOf(task)))}</span>
@@ -2378,6 +2630,10 @@ function renderProjectHeader() {
   el.phDot.style.background = p.color || PALETTE[0];
   el.phDesc.textContent = p.description || '';
   el.phDesc.hidden = !p.description;
+  // Теги проекта — под названием. Здесь они только показываются: менять их
+  // логично там же, где название и цвет, то есть в окне проекта.
+  renderTagChips(el.phTags, p.tagIds);
+  el.phTags.hidden = !tagsOf(p.tagIds).length;
 }
 
 function renderFooter() {
@@ -2660,6 +2916,7 @@ function renderDetail() {
 
   renderTimer(task);
   renderTaskStatus(task);
+  renderTaskTags(task);
   renderMoney(task);
   renderDue(task);
   renderSessions(task);
@@ -2964,7 +3221,16 @@ function openProjectMenu(p, anchor) {
 // Диалог проекта
 // ---------------------------------------------------------------------------
 
-const pdlg = { editing: null, color: PALETTE[0] };
+const pdlg = { editing: null, color: PALETTE[0], tagIds: [] };
+
+/** Теги в окне проекта. Правятся до сохранения, поэтому живут в pdlg, а не
+ *  прямо в проекте: отмена должна отменять и их. */
+function renderPdlgTags() {
+  renderTagChips(el.pdlgTags, pdlg.tagIds, (id) => {
+    pdlg.tagIds = Core.toggleTag(pdlg.tagIds, id);
+    renderPdlgTags();
+  });
+}
 
 function openProjectDialog(project) {
   pdlg.editing = project || null;
@@ -2972,6 +3238,8 @@ function openProjectDialog(project) {
   el.pdlgTitle.textContent = project ? t('project.edit_title') : t('project.new_title');
   el.pdlgName.value = project ? project.name : '';
   el.pdlgDesc.value = project ? (project.description || '') : '';
+  pdlg.tagIds = Core.keepKnown(state.tags, project ? project.tagIds : []);
+  renderPdlgTags();
   buildSwatches();
   el.pdlgBackdrop.hidden = false;
   el.pdlgName.focus();
@@ -2994,12 +3262,12 @@ function saveProjectDialog() {
   if (!name) { el.pdlgName.focus(); return; }
   const description = el.pdlgDesc.value.trim();
   if (pdlg.editing) {
-    Object.assign(pdlg.editing, { name, description, color: pdlg.color });
+    Object.assign(pdlg.editing, { name, description, color: pdlg.color, tagIds: pdlg.tagIds.slice() });
     closeProjectDialog();
     render();
     scheduleSave();
   } else {
-    const p = { id: uid(), name, description, color: pdlg.color, createdAt: new Date().toISOString(), pinnedAt: null, tagIds: [] };
+    const p = { id: uid(), name, description, color: pdlg.color, createdAt: new Date().toISOString(), pinnedAt: null, tagIds: pdlg.tagIds.slice() };
     state.projects.push(p);
     seedProjectStatuses(p.id);
     closeProjectDialog();
@@ -3707,6 +3975,38 @@ el.boardStatuses.addEventListener('click', openStatusDialog);
 el.stAdd.addEventListener('click', addStatus);
 el.stdlgClose.addEventListener('click', closeStatusDialog);
 el.stdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.stdlgBackdrop) closeStatusDialog(); });
+
+// --- Теги ---
+el.tagsAdd.addEventListener('click', () => openTagDialog(null));
+el.tagdlgSave.addEventListener('click', saveTagDialog);
+el.tagdlgCancel.addEventListener('click', closeTagDialog);
+el.tagdlgDelete.addEventListener('click', deleteTagFromDialog);
+el.tagdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.tagdlgBackdrop) closeTagDialog(); });
+el.tagdlgName.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); saveTagDialog(); }
+  if (e.key === 'Escape') closeTagDialog();
+});
+// Набранное имя перестало быть занятым — убираем сообщение, не дожидаясь
+// повторного нажатия на «Сохранить».
+el.tagdlgName.addEventListener('input', () => { el.tagdlgError.hidden = true; });
+
+el.taskTagsAdd.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  openTagPicker(el.taskTagsAdd, () => task.tagIds || [], (ids) => {
+    task.tagIds = ids;
+    touchTask(task);
+    render();
+    scheduleSave();
+  });
+});
+
+el.pdlgTagsAdd.addEventListener('click', () => {
+  openTagPicker(el.pdlgTagsAdd, () => pdlg.tagIds, (ids) => {
+    pdlg.tagIds = ids;
+    renderPdlgTags();
+  });
+});
 
 el.boardProject.addEventListener('click', () => {
   openMenu(el.boardProject, state.projects.map((p) => ({
