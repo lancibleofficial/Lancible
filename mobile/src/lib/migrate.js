@@ -26,6 +26,14 @@ export function emptyState() {
   return {
     projects: [],
     tasks: [],
+    // Теги общие на всё приложение — такие же пользовательские данные, как
+    // проекты и задачи, и ездят в синхронизации вместе с ними.
+    tags: [],
+    // Статусы и версии мобильное приложение пока не показывает, но обязано
+    // не терять: они приходят с десктопа и должны уехать обратно целыми.
+    // Здесь их только проносят через себя, не трогая содержимое.
+    statuses: [],
+    versions: [],
     activeTimer: null,
     ui: { view: 'home', projectId: null },
     settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, notifyEnabled: true, syncResolvedFor: null },
@@ -37,6 +45,9 @@ export function emptyState() {
 export function migrate(state) {
   if (!Array.isArray(state.tasks)) state.tasks = [];
   if (!Array.isArray(state.projects)) state.projects = [];
+  if (!Array.isArray(state.tags)) state.tags = [];
+  if (!Array.isArray(state.statuses)) state.statuses = [];
+  if (!Array.isArray(state.versions)) state.versions = [];
   if (!state.ui || typeof state.ui !== 'object') state.ui = {};
   if (!state.settings || typeof state.settings !== 'object') state.settings = {};
   if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;
@@ -51,10 +62,20 @@ export function migrate(state) {
   if (!CURRENCIES[cur]) cur = 'RUB';
   state.settings.currency = cur;
 
+  state.tags.forEach((tg, i) => {
+    if (!tg.color) tg.color = PALETTE[i % PALETTE.length];
+    if (typeof tg.name !== 'string') tg.name = '';
+  });
+  // Ссылки на исчезнувшие теги вычищаются, иначе на карточке остался бы
+  // пустой бейдж: тег удалили на другом устройстве, а ссылка доехала.
+  const tagIds = new Set(state.tags.map((tg) => tg.id));
+  const keepTags = (arr) => (Array.isArray(arr) ? arr.filter((id) => tagIds.has(id)) : []);
+
   state.projects.forEach((p, i) => {
     if (!p.color) p.color = PALETTE[i % PALETTE.length];
     if (typeof p.description !== 'string') p.description = '';
     if (p.pinnedAt === undefined) p.pinnedAt = null;
+    p.tagIds = keepTags(p.tagIds);
   });
   state.tasks.forEach((task) => {
     if (task.pinnedAt === undefined) task.pinnedAt = null;
@@ -67,6 +88,7 @@ export function migrate(state) {
     if (task.remindOffsetMin === undefined) task.remindOffsetMin = null;
     if (task.remindAt === undefined) task.remindAt = null;
     if (task.notifiedAt === undefined) task.notifiedAt = null;
+    task.tagIds = keepTags(task.tagIds);
   });
 
   if (state.projects.length === 0 && state.tasks.length > 0) {

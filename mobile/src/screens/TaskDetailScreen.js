@@ -11,6 +11,9 @@ import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import DueSheet from '../components/DueSheet';
+import TagPickerSheet from '../components/TagPickerSheet';
+import { TagBadgeRow } from '../components/TagBadge';
+import { tagsOf } from '../lib/tags';
 import { dueShort, remindKey, REMIND_LABEL } from '../lib/due';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
@@ -29,6 +32,8 @@ export default function TaskDetailScreen({ route, navigation }) {
   const currency = useAppStore((s) => s.settings.currency);
   const updateTask = useAppStore((s) => s.updateTask);
   const setTaskDue = useAppStore((s) => s.setTaskDue);
+  const setTaskTags = useAppStore((s) => s.setTaskTags);
+  const allTags = useAppStore((s) => s.tags);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const togglePinTask = useAppStore((s) => s.togglePinTask);
   const startTimer = useAppStore((s) => s.startTimer);
@@ -36,6 +41,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   const showToast = useAppStore((s) => s.showToast);
 
   const task = getTask(tasks, taskId);
+  const taskTags = tagsOf(allTags, task ? task.tagIds : []);
   const isRunning = activeTimer && activeTimer.taskId === taskId;
   useTicker(!!isRunning);
 
@@ -175,6 +181,15 @@ export default function TaskDetailScreen({ route, navigation }) {
     );
   }
 
+  function onOpenTags() {
+    openSheet(
+      <TagPickerSheet
+        value={task.tagIds || []}
+        onChange={(ids) => setTaskTags(taskId, ids)}
+      />,
+    );
+  }
+
   useEffect(() => () => { clearTimeout(titleTimer.current); clearTimeout(notesTimer.current); }, []);
 
   if (!task) return null;
@@ -259,6 +274,22 @@ export default function TaskDetailScreen({ route, navigation }) {
               <Text style={styles.dueValue}>{`${dueShort(task, LANG)}, ${fmtHm(task.dueAt)}`}</Text>
             ) : (
               <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
+            )}
+            <Icon name="chevron-right" size={14} color={colors.textDim} />
+          </Pressable>
+
+          {/* Теги задачи. Строка устроена как строка срока: подпись слева,
+              значение справа, тап открывает лист выбора. Бейджи переносятся
+              по строкам — их может быть больше, чем влезает в ширину. */}
+          <Pressable style={styles.dueRow} onPress={onOpenTags}>
+            <Icon name="pin" size={15} color={colors.textDim} />
+            <View style={styles.dueMain}>
+              <Text style={styles.dueLabel}>{t(LANG, 'tag.pick')}</Text>
+            </View>
+            {taskTags.length ? (
+              <TagBadgeRow tags={taskTags} style={styles.tagRowValue} />
+            ) : (
+              <Text style={styles.dueNone}>{t(LANG, 'tag.not_set')}</Text>
             )}
             <Icon name="chevron-right" size={14} color={colors.textDim} />
           </Pressable>
@@ -361,6 +392,9 @@ const makeStyles = (colors) => StyleSheet.create({
   dueLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   dueRemind: { color: colors.textDim, fontSize: fontSize.xs, marginTop: 1 },
   dueValue: { color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
+  // Бейджи выравниваются вправо, как и остальные значения в этих строках,
+  // и переносятся: их может быть больше, чем влезает в одну строку.
+  tagRowValue: { flex: 1, justifyContent: "flex-end" },
   dueNone: { color: colors.textDim, fontSize: fontSize.sm },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },

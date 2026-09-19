@@ -30,8 +30,12 @@ let currentUserId = null;
 let lastSyncedJSON = null;
 
 function syncPayload() {
-  const { projects, tasks } = useAppStore.getState();
-  return { projects, tasks };
+  // Статусы, теги и версии отправляются наравне с проектами и задачами.
+  // Раньше пакет состоял только из projects и tasks, и запись с телефона
+  // затирала на сервере всё остальное: само мобильное приложение статусов не
+  // показывает, но новое устройство скачало бы данные уже без них.
+  const { projects, tasks, tags, statuses, versions } = useAppStore.getState();
+  return { projects, tasks, tags, statuses, versions };
 }
 
 export async function pushSyncState() {
@@ -73,9 +77,18 @@ function applyRemoteData(data) {
   useAppStore.setState((s) => {
     const knownProjectIds = new Set(projects.map((p) => p.id));
     const ui = s.ui.projectId && !knownProjectIds.has(s.ui.projectId) ? { view: 'home', projectId: null } : s.ui;
-    return { projects, tasks, ui };
+    // Пришло с устройства, которое ещё не знает про теги и статусы, — свои не
+    // затираем пустотой: иначе обмен с такой версией стирал бы их по кругу.
+    const next = { projects, tasks, ui };
+    if (Array.isArray(data && data.tags)) next.tags = data.tags;
+    if (Array.isArray(data && data.statuses)) next.statuses = data.statuses;
+    if (Array.isArray(data && data.versions)) next.versions = data.versions;
+    return next;
   });
-  lastSyncedJSON = JSON.stringify({ projects, tasks });
+  const s = useAppStore.getState();
+  lastSyncedJSON = JSON.stringify({
+    projects, tasks, tags: s.tags, statuses: s.statuses, versions: s.versions,
+  });
 }
 
 function confirmDialog(message, { title, okLabel, cancelLabel }) {

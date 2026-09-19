@@ -35,13 +35,14 @@ export const useAppStore = create(
       },
 
       // --- проекты ---
-      createProject({ name, color, description }) {
+      createProject({ name, color, description, tagIds }) {
         const now = new Date().toISOString();
         const project = {
           id: uid(),
           name: (name || '').trim() || PALETTE[0],
           color: color || PALETTE[get().projects.length % PALETTE.length],
           description: description || '',
+          tagIds: Array.isArray(tagIds) ? tagIds : [],
           createdAt: now,
           pinnedAt: null,
         };
@@ -76,10 +77,50 @@ export const useAppStore = create(
           id: uid(), projectId, title: '', done: false, notes: null,
           totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
           dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+          // Поле заводится здесь, а не только в migrate(): та правит уже
+          // сохранённые данные при загрузке и до задачи, созданной в этом же
+          // запуске, не доберётся.
+          tagIds: [],
         };
         set((s) => ({ tasks: [task, ...s.tasks] }));
         return task;
       },
+      // --- теги ---
+      // Общие на всё приложение: один тег живёт и на проекте, и на задаче в
+      // любом другом проекте. Чистая часть — в lib/tags.js.
+      createTag({ name, color }) {
+        const tag = {
+          id: uid(),
+          name: (name || '').trim(),
+          color: color || PALETTE[get().tags.length % PALETTE.length],
+        };
+        set((s) => ({ tags: [...s.tags, tag] }));
+        return tag;
+      },
+      updateTag(id, patch) {
+        set((s) => ({ tags: s.tags.map((tg) => (tg.id === id ? { ...tg, ...patch } : tg)) }));
+      },
+      /** Удаление снимает тег со всех сущностей: переносить его некуда, в
+       *  отличие от статуса, у которого есть соседний столбец. */
+      deleteTag(id) {
+        set((s) => ({
+          tags: s.tags.filter((tg) => tg.id !== id),
+          projects: s.projects.map((p) => ((p.tagIds || []).includes(id)
+            ? { ...p, tagIds: p.tagIds.filter((x) => x !== id) } : p)),
+          tasks: s.tasks.map((t) => ((t.tagIds || []).includes(id)
+            ? { ...t, tagIds: t.tagIds.filter((x) => x !== id) } : t)),
+        }));
+      },
+      setTaskTags(taskId, tagIds) {
+        set((s) => ({
+          tasks: s.tasks.map((t) => (t.id === taskId
+            ? { ...t, tagIds, updatedAt: new Date().toISOString() } : t)),
+        }));
+      },
+      setProjectTags(projectId, tagIds) {
+        set((s) => ({ projects: s.projects.map((p) => (p.id === projectId ? { ...p, tagIds } : p)) }));
+      },
+
       updateTask(id, patch) {
         set((s) => ({
           tasks: s.tasks.map((task) => (task.id === id ? { ...task, ...patch, updatedAt: new Date().toISOString() } : task)),

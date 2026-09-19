@@ -4,26 +4,48 @@ import Text from './AppText';
 import TextInput from './AppTextInput';
 import { useAppStore } from '../store/useAppStore';
 import { PALETTE } from '../lib/migrate';
+import { tagsOf } from '../lib/tags';
+import TagPickerSheet from './TagPickerSheet';
+import { TagBadgeRow } from './TagBadge';
 import { t } from '../lib/i18n';
 import PrimaryButton from './PrimaryButton';
-import { setSheetFooter } from '../store/useSheetStore';
+import { openSheet, setSheetFooter } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize } from '../theme';
 
-export default function NewProjectSheet({ onCreated, onCancel }) {
+export default function NewProjectSheet({ onCreated, onCancel, initial }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
   const projects = useAppStore((s) => s.projects);
   const createProject = useAppStore((s) => s.createProject);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [color, setColor] = useState(PALETTE[projects.length % PALETTE.length]);
+  const [name, setName] = useState((initial && initial.name) || '');
+  const [description, setDescription] = useState((initial && initial.description) || '');
+  const [color, setColor] = useState((initial && initial.color) || PALETTE[projects.length % PALETTE.length]);
+  const [tagIds, setTagIds] = useState((initial && initial.tagIds) || []);
+  const allTags = useAppStore((s) => s.tags);
+  const projectTags = tagsOf(allTags, tagIds);
 
   function onSave() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const project = createProject({ name: trimmed, description: description.trim(), color });
+    const project = createProject({ name: trimmed, description: description.trim(), color, tagIds });
     onCreated(project);
+  }
+
+  // Лист в приложении один, поэтому пикер закрывает собой это окно. Чтобы
+  // набранные название и описание не пропали, по «Готово» открываем себя же
+  // заново с теми же полями и новым набором тегов.
+  function onOpenTags() {
+    const draft = { name, description, color };
+    openSheet(
+      <TagPickerSheet
+        value={tagIds}
+        onChange={() => {}}
+        onDone={(ids) => openSheet(
+          <NewProjectSheet initial={{ ...draft, tagIds: ids }} onCreated={onCreated} onCancel={onCancel} />,
+        )}
+      />,
+    );
   }
 
   useEffect(() => {
@@ -63,6 +85,12 @@ export default function NewProjectSheet({ onCreated, onCancel }) {
           </Pressable>
         ))}
       </ScrollView>
+
+      <Pressable style={styles.tagsRow} onPress={onOpenTags}>
+        {projectTags.length
+          ? <TagBadgeRow tags={projectTags} />
+          : <Text style={styles.tagsEmpty}>{t(lang, 'tag.pick')}</Text>}
+      </Pressable>
     </View>
   );
 }
@@ -74,6 +102,8 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
   },
+  tagsRow: { minHeight: 32, justifyContent: "center" },
+  tagsEmpty: { color: colors.textDim, fontSize: fontSize.sm },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
   swatchRow: { flexDirection: 'row', gap: spacing.xs / 2, paddingVertical: spacing.xs, paddingRight: spacing.md },
   swatchRing: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },

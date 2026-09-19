@@ -99,6 +99,8 @@ export const T = {
     'profile.change_password_confirm': 'Изменить пароль?',
     'settings.title': 'Настройки', 'settings.theme_label': 'Тема', 'settings.rate_label': 'Ставка по умолчанию',
     'settings.currency_label': 'Валюта по умолчанию', 'settings.section_main': 'Основное', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'about.us': 'О нас', 'about.blog': 'Блог',
+
+    'settings.section_tags': 'Теги', 'tag.pick': 'Теги', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.dialog_new': 'Новый тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Название тега', 'tag.search_ph': 'Найти или создать', 'tag.create_named': 'Создать тег «{name}»', 'tag.name_taken': 'Тег с таким названием уже есть', 'tag.unused': 'не используется', 'tag.not_set': 'не заданы', 'tag.used_projects': 'проектов: {n}', 'tag.used_tasks': 'задач: {n}', 'tag.delete_confirm': 'Удалить тег «{name}»?', 'tag.delete_used': 'Тег «{name}» используется ({n}). Он будет снят со всех и удалён. Продолжить?', 'tag.empty_hint': 'Теги общие для всего приложения: один тег можно повесить и на проект, и на задачу в любом другом проекте.', 'tag.color_label': 'Цвет',
     'settings.update_available': 'Доступна версия {version}', 'settings.update_download': 'Скачать', 'settings.update_install': 'Обновить', 'settings.update_downloading': 'Скачивание… {percent}%', 'settings.update_failed': 'Не удалось обновиться',
     'settings.section_data': 'Данные',
     'sync.conflict_title': 'Какие данные оставить?',
@@ -232,6 +234,8 @@ export const T = {
     'profile.change_password_confirm': 'Change password?',
     'settings.title': 'Settings', 'settings.theme_label': 'Theme', 'settings.rate_label': 'Default rate',
     'settings.currency_label': 'Default currency', 'settings.section_main': 'General', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'about.us': 'About us', 'about.blog': 'Blog',
+
+    'settings.section_tags': 'Tags', 'tag.pick': 'Tags', 'tag.add': 'New tag', 'tag.none': 'No tags yet', 'tag.dialog_new': 'New tag', 'tag.dialog_edit': 'Tag', 'tag.name_ph': 'Tag name', 'tag.search_ph': 'Find or create', 'tag.create_named': 'Create tag “{name}”', 'tag.name_taken': 'A tag with this name already exists', 'tag.unused': 'not used', 'tag.not_set': 'not set', 'tag.used_projects': 'projects: {n}', 'tag.used_tasks': 'tasks: {n}', 'tag.delete_confirm': 'Delete the tag “{name}”?', 'tag.delete_used': 'The tag “{name}” is in use ({n}). It will be removed from everything and deleted. Continue?', 'tag.empty_hint': 'Tags are shared across the whole app: one tag can sit on a project and on a task in any other project.', 'tag.color_label': 'Colour',
     'settings.update_available': 'Version {version} is available', 'settings.update_download': 'Download', 'settings.update_install': 'Update', 'settings.update_downloading': 'Downloading… {percent}%', 'settings.update_failed': 'Update failed',
     'settings.section_data': 'Data',
     'sync.conflict_title': 'Which data should we keep?',
@@ -365,6 +369,8 @@ export const T = {
     'profile.change_password_confirm': 'Змінити пароль?',
     'settings.title': 'Налаштування', 'settings.theme_label': 'Тема', 'settings.rate_label': 'Ставка за замовчуванням',
     'settings.currency_label': 'Валюта за замовчуванням', 'settings.section_main': 'Основне', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'about.us': 'Про нас', 'about.blog': 'Блог',
+
+    'settings.section_tags': 'Теги', 'tag.pick': 'Теги', 'tag.add': 'Новий тег', 'tag.none': 'Тегів поки немає', 'tag.dialog_new': 'Новий тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Назва тега', 'tag.search_ph': 'Знайти або створити', 'tag.create_named': 'Створити тег «{name}»', 'tag.name_taken': 'Тег із такою назвою вже є', 'tag.unused': 'не використовується', 'tag.not_set': 'не задані', 'tag.used_projects': 'проектів: {n}', 'tag.used_tasks': 'завдань: {n}', 'tag.delete_confirm': 'Видалити тег «{name}»?', 'tag.delete_used': 'Тег «{name}» використовується ({n}). Його буде знято з усього і видалено. Продовжити?', 'tag.empty_hint': 'Теги спільні для всього застосунку: один тег можна повісити і на проект, і на завдання в будь-якому іншому проекті.', 'tag.color_label': 'Колір',
     'settings.update_available': 'Доступна версія {version}', 'settings.update_download': 'Завантажити', 'settings.update_install': 'Оновити', 'settings.update_downloading': 'Завантаження… {percent}%', 'settings.update_failed': 'Не вдалося оновитися',
     'settings.section_data': 'Дані',
     'sync.conflict_title': 'Які дані залишити?',
@@ -498,6 +504,8 @@ export const T = {
     'profile.change_password_confirm': 'Құпия сөзді өзгерту керек пе?',
     'settings.title': 'Баптаулар', 'settings.theme_label': 'Тема', 'settings.rate_label': 'Әдепкі баға',
     'settings.currency_label': 'Әдепкі валюта', 'settings.section_main': 'Негізгі', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
+
+    'settings.section_tags': 'Тегтер', 'tag.pick': 'Тегтер', 'tag.add': 'Жаңа тег', 'tag.none': 'Тегтер әлі жоқ', 'tag.dialog_new': 'Жаңа тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Тег атауы', 'tag.search_ph': 'Табу немесе құру', 'tag.create_named': '«{name}» тегін құру', 'tag.name_taken': 'Мұндай атаулы тег бар', 'tag.unused': 'қолданылмайды', 'tag.not_set': 'қойылмаған', 'tag.used_projects': 'жобалар: {n}', 'tag.used_tasks': 'тапсырмалар: {n}', 'tag.delete_confirm': '«{name}» тегін жою керек пе?', 'tag.delete_used': '«{name}» тегі қолданыста ({n}). Ол барлық жерден алынып, жойылады. Жалғастыру керек пе?', 'tag.empty_hint': 'Тегтер бүкіл қосымшаға ортақ: бір тегті жобаға да, кез келген басқа жобадағы тапсырмаға да қоюға болады.', 'tag.color_label': 'Түс',
     'settings.update_available': '{version} нұсқасы қолжетімді', 'settings.update_download': 'Жүктеп алу', 'settings.update_install': 'Жаңарту', 'settings.update_downloading': 'Жүктелуде… {percent}%', 'settings.update_failed': 'Жаңарту сәтсіз аяқталды',
     'settings.section_data': 'Деректер',
     'sync.conflict_title': 'Қай деректерді қалдырамыз?',

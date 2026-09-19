@@ -6,6 +6,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import ThemeSwitch from '../components/ThemeSwitch';
 import SettingsRow, { SettingsCard } from '../components/SettingsRow';
 import PickerSheet from '../components/PickerSheet';
+import TagEditSheet from '../components/TagEditSheet';
 import RateSheet from '../components/RateSheet';
 import ProfileSheet from '../components/ProfileSheet';
 import AuthSheet from '../components/AuthSheet';
@@ -14,6 +15,7 @@ import OnboardingScreen from './auth/OnboardingScreen';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 import { CURRENCIES } from '../lib/migrate';
+import { tagUsage } from '../lib/tags';
 import { CURRENCY_SYMBOLS, fmtMoney } from '../lib/format';
 import { openSheet } from '../store/useSheetStore';
 import { setSyncEnabled } from '../lib/sync';
@@ -36,6 +38,9 @@ export default function SettingsScreen() {
   const settings = useAppStore((s) => s.settings);
   const setNotifyEnabled = useAppStore((s) => s.setNotifyEnabled);
   const setSettings = useAppStore((s) => s.setSettings);
+  const tags = useAppStore((s) => s.tags);
+  const projects = useAppStore((s) => s.projects);
+  const tasks = useAppStore((s) => s.tasks);
   const resolvedMode = useThemeMode();
   const appVersion = (Constants.expoConfig && Constants.expoConfig.version) || '1.0.0';
   const [update, setUpdate] = useState(null);
@@ -124,6 +129,16 @@ export default function SettingsScreen() {
 
   function onOpenProfile() {
     openSheet(<ProfileSheet />);
+  }
+
+  /** Подпись об использовании тега. Нулевые части в строку не попадают:
+   *  «задач: 0» — это не сведения, а шум. */
+  function tagUsageLabel(tagId) {
+    const u = tagUsage(projects, tasks, tagId);
+    const parts = [];
+    if (u.projects) parts.push(t(settings.lang, 'tag.used_projects', { n: u.projects }));
+    if (u.tasks) parts.push(t(settings.lang, 'tag.used_tasks', { n: u.tasks }));
+    return parts.length ? parts.join(' · ') : t(settings.lang, 'tag.unused');
   }
 
   function onOpenAuth(tab) {
@@ -238,6 +253,29 @@ export default function SettingsScreen() {
         <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
       </SettingsCard>
 
+      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_tags')}</Text>
+      <SettingsCard>
+        {tags.length ? tags.map((tag) => (
+          <SettingsRow
+            key={tag.id}
+            icon="pin"
+            label={tag.name}
+            value={tagUsageLabel(tag.id)}
+            onPress={() => openSheet(<TagEditSheet tag={tag} />)}
+          />
+        )) : (
+          <View style={styles.tagsHint}>
+            <Text style={styles.tagsHintText}>{t(settings.lang, 'tag.empty_hint')}</Text>
+          </View>
+        )}
+        <SettingsRow
+          icon="plus"
+          label={t(settings.lang, 'tag.add')}
+          onPress={() => openSheet(<TagEditSheet />)}
+          last
+        />
+      </SettingsCard>
+
       <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_about')}</Text>
       <SettingsCard>
         <SettingsRow icon="link" label={t(settings.lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
@@ -268,6 +306,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   profileName: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   profileSub: { color: colors.textDim, fontSize: fontSize.sm, marginTop: 2 },
   guestActions: { flexDirection: 'row', gap: spacing.sm },
+  tagsHint: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  tagsHintText: { color: colors.textDim, fontSize: fontSize.sm, lineHeight: 20 },
   sectionLabel: {
     color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6,
     marginTop: spacing.sm, marginLeft: spacing.xs,

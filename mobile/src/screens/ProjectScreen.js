@@ -3,6 +3,9 @@ import { View, SectionList, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
+import TagPickerSheet from '../components/TagPickerSheet';
+import { TagBadgeRow } from '../components/TagBadge';
+import { tagsOf } from '../lib/tags';
 import { useAppStore, sortedProjectTasks, tasksOf, projectMs, projectMoney, getProject } from '../store/useAppStore';
 import { fmtDur, fmtMoney } from '../lib/format';
 import { buildProjectSheets } from '../lib/xlsxReports';
@@ -28,6 +31,8 @@ export default function ProjectScreen({ route, navigation }) {
   const currency = useAppStore((s) => s.settings.currency);
   const createTask = useAppStore((s) => s.createTask);
   const deleteProject = useAppStore((s) => s.deleteProject);
+  const allTags = useAppStore((s) => s.tags);
+  const setProjectTags = useAppStore((s) => s.setProjectTags);
   const togglePinProject = useAppStore((s) => s.togglePinProject);
   const showToast = useAppStore((s) => s.showToast);
 
@@ -77,6 +82,20 @@ export default function ProjectScreen({ route, navigation }) {
     });
   }, [navigation, project, colors]);
 
+  const projectTags = tagsOf(allTags, project ? project.tagIds : []);
+
+
+
+  function onOpenTags() {
+
+
+    openSheet(<TagPickerSheet value={(project && project.tagIds) || []} onChange={(ids) => setProjectTags(projectId, ids)} />);
+
+
+  }
+
+
+
   function onAddTask() {
     const task = createTask(projectId);
     navigation.navigate('TaskDetail', { taskId: task.id });
@@ -105,6 +124,16 @@ export default function ProjectScreen({ route, navigation }) {
         </View>
         <PrimaryButton icon="download" onPress={onOpenExport} style={styles.exportBtn} />
       </View>
+      {/* Теги проекта. Экрана правки проекта на мобильном нет вовсе, поэтому
+          ряд бейджей здесь же и редактируется по тапу — иначе выставленные
+          при создании теги остались бы навсегда. */}
+      <Pressable style={styles.tagsRow} onPress={onOpenTags}>
+        {projectTags.length ? (
+          <TagBadgeRow tags={projectTags} />
+        ) : (
+          <Text style={styles.tagsEmpty}>{t(LANG, 'tag.pick')}</Text>
+        )}
+      </Pressable>
       <SectionList
         style={styles.list}
         sections={sections}
@@ -145,6 +174,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   // horizontal padding), которая на практике давала прямоугольник уже, чем
   // высота кнопки.
   exportBtn: { width: buttonHeight, height: buttonHeight, paddingHorizontal: 0 },
+  tagsRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, minHeight: 28, justifyContent: "center" },
+  tagsEmpty: { color: colors.textDim, fontSize: fontSize.sm },
   list: { flex: 1 },
   listContent: { padding: spacing.lg, paddingTop: 0, paddingBottom: spacing.lg },
   headerActions: { flexDirection: 'row' },
