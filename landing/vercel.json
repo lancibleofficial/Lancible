@@ -9,12 +9,24 @@
   ],
   "rewrites": [
     {
+      "source": "/logs",
+      "destination": "/logs.html"
+    },
+    {
       "source": "/app/",
       "destination": "https://lancible-yrkx.vercel.app/index.html"
     },
     {
       "source": "/app/:path*",
       "destination": "https://lancible-yrkx.vercel.app/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/logs(.html)?",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
     }
   ]
 }

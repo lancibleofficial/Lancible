@@ -16,7 +16,8 @@
     "build:exe": "npm run icon && npm run package:win",
     "build:dmg": "npm run icon && npm run package:mac",
     "publish:release": "node scripts/publish-release.js",
-    "postinstall": "node scripts/copy-vendor.js"
+    "postinstall": "node scripts/copy-vendor.js",
+    "serve:landing": "node scripts/serve-web.js 5174 --root landing"
   },
   "author": "",
   "license": "MIT",
@@ -51,8 +52,18 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["universal"] },
-        { "target": "zip", "arch": ["universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.productivity"
@@ -60,7 +71,9 @@
     "protocols": [
       {
         "name": "Lancible",
-        "schemes": ["lancible"]
+        "schemes": [
+          "lancible"
+        ]
       }
     ],
     "nsis": {
