@@ -2137,7 +2137,10 @@ body.platform-web .tb-account {
 .board-col:hover .board-add, .board-add:focus-visible { opacity: 1; }
 .board-add:hover { color: var(--text); border-color: var(--border-strong); background: var(--panel-2); }
 .board-card {
-  background: var(--panel-2);
+  /* Та же поверхность, что у карточек проектов на главной: panel, а не
+     panel-2. На светлой теме это белый, и карточка наконец отделяется от
+     подложки столбца, а не сливается с ней в два оттенка серого. */
+  background: var(--panel);
   border: 1px solid var(--border);
   border-left: 3px solid var(--sc, var(--accent));
   border-radius: 8px;

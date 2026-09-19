@@ -98,6 +98,33 @@ test('идущий таймер попадает и в карточку, и в �
   await expect(page.locator('.board-col-head').nth(1).locator('.board-col-time')).toHaveText(/3ч/);
 });
 
+test('карточка доски лежит на той же поверхности, что карточка проекта', async ({ page }) => {
+  // Доска была единственным местом, где карточка стояла на «второй» серой
+  // поверхности: на светлой теме та темнее фона страницы, и карточка
+  // читалась провалом, а не листком поверх столбца.
+  await seed(page);
+
+  for (const theme of ['dark', 'light']) {
+    const got = await page.evaluate((th) => {
+      state.settings.theme = th;
+      applyTheme();
+      state.ui.view = 'board';
+      renderBoardPage();
+      render();
+      const board = getComputedStyle(document.querySelector('.board-card')).backgroundColor;
+      state.ui.view = 'home';
+      render();
+      const tile = getComputedStyle(document.querySelector('.ptile')).backgroundColor;
+      const panel = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim();
+      return { board, tile, panel };
+    }, theme);
+    expect(got.board, `в теме ${theme} карточка доски отличается от карточки проекта`).toBe(got.tile);
+    if (theme === 'light') {
+      expect(got.board, 'на светлой теме карточка должна быть белой').toBe('rgb(255, 255, 255)');
+    }
+  }
+});
+
 test('шапка доски: название без подложки, стрелка и шестерёнка', async ({ page }) => {
   await seed(page);
   await openBoard(page);
