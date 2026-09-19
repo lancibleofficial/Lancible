@@ -76,6 +76,10 @@
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3l6.6 5.5-1.15 1.35-.75-.62V13.6a1.1 1.1 0 01-1.1 1.1H9.35V9.9h-2.7v4.8H4.4a1.1 1.1 0 01-1.1-1.1V7.5l-.75.63L1.4 6.8 8 1.3z"/></svg>
           <span class="nav-label" data-i18n="nav.home">Обзор</span>
         </button>
+        <button class="nav-item" data-view="board">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h3.4v12H2zm4.3 0h3.4v8H6.3zm4.3 0H14v10h-3.4z"/></svg>
+          <span class="nav-label" data-i18n="nav.board">Доска</span>
+        </button>
         <button class="nav-item" data-view="stats">
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 1.4h1.4v13.2H2zM2 13.2h12v1.4H2zM4.4 9h2v4.6h-2zM7.6 6.2h2v7.4h-2zM10.8 3.4h2v10.2h-2z"/></svg>
           <span class="nav-label" data-i18n="nav.stats">Статистика</span>
@@ -196,10 +200,6 @@
             <div class="ph-row">
               <span class="ph-dot" id="ph-dot"></span>
               <span class="ph-name" id="ph-name"></span>
-              <div class="pv-modes" id="pv-modes">
-                <button type="button" data-pmode="list" class="on" data-i18n-title="list.title" title="Список"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h12v2H2z"/></svg></button>
-                <button type="button" data-pmode="board" data-i18n-title="board.title" title="Доска"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h3.4v12H2zm4.3 0h3.4v8H6.3zm4.3 0H14v10h-3.4z"/></svg></button>
-              </div>
               <button id="export-project-btn" class="icon-btn" data-i18n-title="project.excel" title="Скачать Excel">
                 <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
               </button>
@@ -238,8 +238,6 @@
             <div id="project-earned" class="project-earned muted"></div>
           </div>
         </aside>
-
-        <div id="project-board" hidden><div class="board-cols" id="board-cols"></div></div>
 
         <main id="detail">
           <div id="empty-state" class="muted">
@@ -377,6 +375,15 @@
       </div>
 
       <!-- НАСТРОЙКИ -->
+      <div id="board-view" class="view" hidden>
+        <div class="board-head">
+          <select id="board-project" class="settings-row-select" data-i18n-title="nav.board" title="Доска"></select>
+          <span class="board-head-sum" id="board-sum"></span>
+        </div>
+        <div class="board-cols" id="board-cols"></div>
+        <div class="board-empty muted" id="board-empty" hidden data-i18n="board.empty">Сначала создайте проект.</div>
+      </div>
+
       <main id="stats-view" class="view" hidden>
         <div class="stats-wrap">
           <div class="stat-cards">
