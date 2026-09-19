@@ -154,7 +154,11 @@ async function main() {
     console.log(`в очереди: ${lines.length}`);
     for (const line of lines) {
       const { payload } = JSON.parse(line);
-      console.log(`  ${payload.task.id} — ${payload.task.title} (${(payload.events || []).length} событий)`);
+      const n = (payload.events || []).length;
+      const m10 = n % 10, m100 = n % 100;
+      const word = m10 === 1 && m100 !== 11 ? 'событие'
+        : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? 'события' : 'событий';
+      console.log(`  ${payload.task.id} — ${payload.task.title} (${n} ${word})`);
     }
     return;
   }
