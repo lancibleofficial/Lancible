@@ -592,10 +592,14 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
   animation: tileIn 0.2s var(--ease) backwards;
 }
 .ti-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
+/* Переносится: в строке теперь и статус, и срок, и время — в узкой боковой
+   панели они в одну строку не помещаются, и срок просто выдавливался за край. */
 .ti-bottom {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  row-gap: 4px;
   padding-left: 23px;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -980,7 +984,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-item .ctx-check { color: var(--accent); flex: none; }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
-#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #expdlg-backdrop {
+#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #expdlg-backdrop, #stdlg-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
@@ -1990,10 +1994,13 @@ body.platform-web .tb-account {
   display: flex;
   flex-direction: column;
   border-radius: 10px;
+  /* Слабая заливка цветом статуса: колонки различимы и без рамок, а сам
+     цвет повторяет точку в заголовке и полосу на карточках. */
+  background: color-mix(in srgb, var(--sc, var(--accent)) 5%, transparent);
   transition: background 0.12s var(--ease);
 }
 /* Колонка под курсором во время переноса. */
-.board-col.over { background: color-mix(in srgb, var(--sc, var(--accent)) 8%, transparent); }
+.board-col.over { background: color-mix(in srgb, var(--sc, var(--accent)) 14%, transparent); }
 .board-col-head {
   flex: none;
   display: flex;

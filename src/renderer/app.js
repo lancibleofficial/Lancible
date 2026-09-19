@@ -51,15 +51,34 @@ const FILL_COLORS = ['', '#3a4a34', '#2f4653', '#43385a', '#544a30', '#5a3a37', 
 // Разделение состояния и признака завершённости взято из YouTrack — там
 // «Исправлено» и «Не воспроизводится» разные состояния, но оба закрывают
 // задачу. Поэтому «готово» может быть несколько, а не один-единственный.
-const STATUS_KINDS = ['todo', 'progress', 'done'];
+// Пять видов вместо трёх. Названия набора по умолчанию подсказывают, что
+// разниц больше, чем «открыто / закрыто»:
+//
+//   backlog   — ещё не в работе и не запланировано. Отличается от «к
+//               выполнению» тем, что это склад идей: такие задачи не должны
+//               попадать в счёт ближайшей работы.
+//   todo      — запланировано, ждёт начала.
+//   progress  — в работе. Сюда же «Checking»: задача ещё открыта, просто
+//               находится на проверке, а не пишется.
+//   done      — сделано. Единственный вид, который считается выполненным.
+//   cancelled — закрыто, но НЕ сделано. Отменённая задача уходит из работы,
+//               как и выполненная, но записывать её в достижения нельзя:
+//               иначе «сделано 8 из 10» станет враньём. Отсюда отдельный вид,
+//               а не ещё один «done» с другим названием.
+const STATUS_KINDS = ['backlog', 'todo', 'progress', 'done', 'cancelled'];
+/** Виды, которые убирают задачу из активной работы. */
+const CLOSING_KINDS = ['done', 'cancelled'];
 
 // Набор по умолчанию. Встроенные статусы можно переименовать и перекрасить,
 // но не удалить: если убрать последний «готово», задачу станет нечем закрыть,
 // а весь учёт времени и статистика на этом и держатся.
 const DEFAULT_STATUSES = [
+  { key: 'backlog', kind: 'backlog', color: '#6b7cad' },
   { key: 'todo', kind: 'todo', color: '#8a93a5' },
-  { key: 'progress', kind: 'progress', color: '#5ec8f2' },
+  { key: 'progress', kind: 'progress', color: '#f5c451' },
+  { key: 'checking', kind: 'progress', color: '#5ec8f2' },
   { key: 'done', kind: 'done', color: '#87ff65' },
+  { key: 'cancelled', kind: 'cancelled', color: '#8a93a5' },
 ];
 
 const CURRENCIES = {
@@ -109,7 +128,7 @@ const T = {
     'nav.language': 'Язык', 'nav.account': 'Аккаунт',
     'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Установить и перезапустить',
     'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
-    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'settings.section_statuses': 'Статусы задач', 'settings.section_tags': 'Теги', 'status.default_todo': 'К выполнению', 'status.default_progress': 'В работе', 'status.default_done': 'Готово', 'status.kind_todo': 'К выполнению', 'status.kind_progress': 'В работе', 'status.kind_done': 'Завершает задачу', 'status.add': 'Новый статус', 'status.builtin_hint': 'Встроенный статус можно переименовать и перекрасить, но не удалить', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.pick': 'Теги', 'version.none': 'Без версии', 'version.add': 'Новая версия', 'nav.board': 'Доска', 'board.add_task': 'Добавить задачу', 'board.statuses': 'Статусы', 'status.dialog_title': 'Статусы проекта', 'status.name_ph': 'Название', 'status.delete_last_done': 'Это последний статус, завершающий задачу — его нельзя удалить', 'status.delete_last': 'Должен остаться хотя бы один статус', 'status.move_tasks': 'Задачи из этого статуса переедут в «{name}». Продолжить?', 'task.status_label': 'Статус', 'stats.by_status': 'По статусам', 'board.empty': 'Сначала создайте проект.', 'about.us': 'О нас', 'about.blog': 'Блог',
+    'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'settings.section_statuses': 'Статусы задач', 'settings.section_tags': 'Теги', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Склад идей', 'status.kind_todo': 'Запланировано', 'status.kind_progress': 'В работе', 'status.kind_done': 'Сделано', 'status.kind_cancelled': 'Отменено', 'status.add': 'Новый статус', 'status.builtin_hint': 'Встроенный статус можно переименовать и перекрасить, но не удалить', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.pick': 'Теги', 'version.none': 'Без версии', 'version.add': 'Новая версия', 'nav.board': 'Доска', 'board.add_task': 'Добавить задачу', 'board.statuses': 'Статусы', 'status.dialog_title': 'Статусы проекта', 'status.name_ph': 'Название', 'status.delete_last_done': 'Это последний статус, завершающий задачу — его нельзя удалить', 'status.delete_last': 'Должен остаться хотя бы один статус', 'status.move_tasks': 'Задачи из этого статуса переедут в «{name}». Продолжить?', 'task.status_label': 'Статус', 'stats.by_status': 'По статусам', 'board.empty': 'Сначала создайте проект.', 'about.us': 'О нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Аккаунт', 'profile.name_label': 'Имя', 'profile.no_name': 'Не указано',
     'profile.name_updated': 'Имя обновлено', 'profile.change_password': 'Изменить пароль',
@@ -159,7 +178,7 @@ const T = {
     'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
     'remind.none': 'Без напоминания', 'remind.at': 'В момент срока', 'remind.15m': 'За 15 минут',
     'remind.1h': 'За час', 'remind.3h': 'За 3 часа', 'remind.1d': 'За день', 'remind.custom': 'Своё время',
-    'tabs.notes': 'Заметки', 'tabs.history': 'История',
+    'tabs.notes': 'Заметки', 'tabs.settings': 'Настройки', 'tabs.history': 'История',
     'timer.sub_default': 'общее время по задаче', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
     'timer.recording': 'идёт запись · сессия {time}', 'timer.other_task': 'таймер идёт по другой задаче',
     'money.rate_label': 'Ставка', 'money.no_rate': 'ставка не задана', 'money.default_suffix': ' · по умолчанию',
@@ -243,7 +262,7 @@ const T = {
     'nav.language': 'Language', 'nav.account': 'Account',
     'update.available': 'Update available', 'update.downloading': 'Downloading…', 'update.ready': 'Install and restart',
     'nav.theme_system': 'System', 'nav.theme_light': 'Light', 'nav.theme_dark': 'Dark',
-    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'settings.section_statuses': 'Task statuses', 'settings.section_tags': 'Tags', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_done': 'Done', 'status.kind_todo': 'To do', 'status.kind_progress': 'In progress', 'status.kind_done': 'Completes the task', 'status.add': 'New status', 'status.builtin_hint': 'A built-in status can be renamed and recoloured, but not deleted', 'tag.add': 'New tag', 'tag.none': 'No tags yet', 'tag.pick': 'Tags', 'version.none': 'No version', 'version.add': 'New version', 'nav.board': 'Board', 'board.add_task': 'Add task', 'board.statuses': 'Statuses', 'status.dialog_title': 'Project statuses', 'status.name_ph': 'Name', 'status.delete_last_done': 'This is the last status that completes a task, so it cannot be deleted', 'status.delete_last': 'At least one status has to remain', 'status.move_tasks': 'Tasks in this status will move to “{name}”. Continue?', 'task.status_label': 'Status', 'stats.by_status': 'By status', 'board.empty': 'Create a project first.', 'about.us': 'About us', 'about.blog': 'Blog',
+    'settings.section_main': 'General', 'settings.section_data': 'Data', 'settings.section_work': 'Work', 'settings.section_about': 'About', 'settings.section_statuses': 'Task statuses', 'settings.section_tags': 'Tags', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Backlog', 'status.kind_todo': 'Planned', 'status.kind_progress': 'In progress', 'status.kind_done': 'Completed', 'status.kind_cancelled': 'Cancelled', 'status.add': 'New status', 'status.builtin_hint': 'A built-in status can be renamed and recoloured, but not deleted', 'tag.add': 'New tag', 'tag.none': 'No tags yet', 'tag.pick': 'Tags', 'version.none': 'No version', 'version.add': 'New version', 'nav.board': 'Board', 'board.add_task': 'Add task', 'board.statuses': 'Statuses', 'status.dialog_title': 'Project statuses', 'status.name_ph': 'Name', 'status.delete_last_done': 'This is the last status that completes a task, so it cannot be deleted', 'status.delete_last': 'At least one status has to remain', 'status.move_tasks': 'Tasks in this status will move to “{name}”. Continue?', 'task.status_label': 'Status', 'stats.by_status': 'By status', 'board.empty': 'Create a project first.', 'about.us': 'About us', 'about.blog': 'Blog',
     'settings.theme_label': 'Theme', 'settings.currency_label': 'Currency',
     'settings.section_account': 'Account', 'profile.name_label': 'Name', 'profile.no_name': 'Not set',
     'profile.name_updated': 'Name updated', 'profile.change_password': 'Change password',
@@ -293,7 +312,7 @@ const T = {
     'due.overdue': 'overdue', 'due.today': 'today', 'due.tomorrow': 'tomorrow', 'due.in_days': 'in {n} d',
     'remind.none': 'No reminder', 'remind.at': 'At due time', 'remind.15m': '15 minutes before',
     'remind.1h': 'An hour before', 'remind.3h': '3 hours before', 'remind.1d': 'A day before', 'remind.custom': 'Custom time',
-    'tabs.notes': 'Notes', 'tabs.history': 'History',
+    'tabs.notes': 'Notes', 'tabs.settings': 'Settings', 'tabs.history': 'History',
     'timer.sub_default': 'total time on task', 'timer.start': 'Start', 'timer.stop': 'Stop',
     'timer.recording': 'recording · session {time}', 'timer.other_task': 'timer is running on another task',
     'money.rate_label': 'Rate', 'money.no_rate': 'no rate set', 'money.default_suffix': ' · default',
@@ -377,7 +396,7 @@ const T = {
     'nav.language': 'Мова', 'nav.account': 'Акаунт',
     'update.available': 'Доступне оновлення', 'update.downloading': 'Завантаження…', 'update.ready': 'Встановити й перезапустити',
     'nav.theme_system': 'Системна', 'nav.theme_light': 'Світла', 'nav.theme_dark': 'Темна',
-    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'settings.section_statuses': 'Статуси завдань', 'settings.section_tags': 'Теги', 'status.default_todo': 'До виконання', 'status.default_progress': 'У роботі', 'status.default_done': 'Готово', 'status.kind_todo': 'До виконання', 'status.kind_progress': 'У роботі', 'status.kind_done': 'Завершує завдання', 'status.add': 'Новий статус', 'status.builtin_hint': 'Вбудований статус можна перейменувати та перефарбувати, але не видалити', 'tag.add': 'Новий тег', 'tag.none': 'Тегів поки немає', 'tag.pick': 'Теги', 'version.none': 'Без версії', 'version.add': 'Нова версія', 'nav.board': 'Дошка', 'board.add_task': 'Додати завдання', 'board.statuses': 'Статуси', 'status.dialog_title': 'Статуси проекту', 'status.name_ph': 'Назва', 'status.delete_last_done': 'Це останній статус, що завершує завдання — його не можна видалити', 'status.delete_last': 'Має залишитися щонайменше один статус', 'status.move_tasks': 'Завдання з цього статусу перейдуть до «{name}». Продовжити?', 'task.status_label': 'Статус', 'stats.by_status': 'За статусами', 'board.empty': 'Спочатку створіть проект.', 'about.us': 'Про нас', 'about.blog': 'Блог',
+    'settings.section_main': 'Основне', 'settings.section_data': 'Дані', 'settings.section_work': 'Робота', 'settings.section_about': 'Про застосунок', 'settings.section_statuses': 'Статуси завдань', 'settings.section_tags': 'Теги', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Склад ідей', 'status.kind_todo': 'Заплановано', 'status.kind_progress': 'У роботі', 'status.kind_done': 'Зроблено', 'status.kind_cancelled': 'Скасовано', 'status.add': 'Новий статус', 'status.builtin_hint': 'Вбудований статус можна перейменувати та перефарбувати, але не видалити', 'tag.add': 'Новий тег', 'tag.none': 'Тегів поки немає', 'tag.pick': 'Теги', 'version.none': 'Без версії', 'version.add': 'Нова версія', 'nav.board': 'Дошка', 'board.add_task': 'Додати завдання', 'board.statuses': 'Статуси', 'status.dialog_title': 'Статуси проекту', 'status.name_ph': 'Назва', 'status.delete_last_done': 'Це останній статус, що завершує завдання — його не можна видалити', 'status.delete_last': 'Має залишитися щонайменше один статус', 'status.move_tasks': 'Завдання з цього статусу перейдуть до «{name}». Продовжити?', 'task.status_label': 'Статус', 'stats.by_status': 'За статусами', 'board.empty': 'Спочатку створіть проект.', 'about.us': 'Про нас', 'about.blog': 'Блог',
     'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Акаунт', 'profile.name_label': "Ім'я", 'profile.no_name': 'Не вказано',
     'profile.name_updated': "Ім'я оновлено", 'profile.change_password': 'Змінити пароль',
@@ -427,7 +446,7 @@ const T = {
     'due.overdue': 'протерміновано', 'due.today': 'сьогодні', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
     'remind.none': 'Без нагадування', 'remind.at': 'У момент терміну', 'remind.15m': 'За 15 хвилин',
     'remind.1h': 'За годину', 'remind.3h': 'За 3 години', 'remind.1d': 'За день', 'remind.custom': 'Свій час',
-    'tabs.notes': 'Нотатки', 'tabs.history': 'Історія',
+    'tabs.notes': 'Нотатки', 'tabs.settings': 'Налаштування', 'tabs.history': 'Історія',
     'timer.sub_default': 'загальний час по завданню', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
     'timer.recording': 'триває запис · сесія {time}', 'timer.other_task': 'таймер працює на іншому завданні',
     'money.rate_label': 'Ставка', 'money.no_rate': 'ставку не задано', 'money.default_suffix': ' · за замовчуванням',
@@ -511,7 +530,7 @@ const T = {
     'nav.language': 'Тіл', 'nav.account': 'Аккаунт',
     'update.available': 'Жаңарту бар', 'update.downloading': 'Жүктелуде…', 'update.ready': 'Орнатып қайта іске қосу',
     'nav.theme_system': 'Жүйелік', 'nav.theme_light': 'Ашық', 'nav.theme_dark': 'Қараңғы',
-    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'settings.section_statuses': 'Тапсырма күйлері', 'settings.section_tags': 'Тегтер', 'status.default_todo': 'Орындалуы тиіс', 'status.default_progress': 'Жұмыста', 'status.default_done': 'Дайын', 'status.kind_todo': 'Орындалуы тиіс', 'status.kind_progress': 'Жұмыста', 'status.kind_done': 'Тапсырманы аяқтайды', 'status.add': 'Жаңа күй', 'status.builtin_hint': 'Кіріктірілген күйді атын өзгертуге және бояуға болады, бірақ жоюға болмайды', 'tag.add': 'Жаңа тег', 'tag.none': 'Тегтер әлі жоқ', 'tag.pick': 'Тегтер', 'version.none': 'Нұсқасыз', 'version.add': 'Жаңа нұсқа', 'nav.board': 'Тақта', 'board.add_task': 'Тапсырма қосу', 'board.statuses': 'Күйлер', 'status.dialog_title': 'Жоба күйлері', 'status.name_ph': 'Атауы', 'status.delete_last_done': 'Бұл — тапсырманы аяқтайтын соңғы күй, оны жоюға болмайды', 'status.delete_last': 'Кемінде бір күй қалуы керек', 'status.move_tasks': 'Бұл күйдегі тапсырмалар «{name}» күйіне көшеді. Жалғастыру керек пе?', 'task.status_label': 'Күй', 'stats.by_status': 'Күйлер бойынша', 'board.empty': 'Алдымен жоба құрыңыз.', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
+    'settings.section_main': 'Негізгі', 'settings.section_data': 'Деректер', 'settings.section_work': 'Жұмыс', 'settings.section_about': 'Қосымша туралы', 'settings.section_statuses': 'Тапсырма күйлері', 'settings.section_tags': 'Тегтер', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Идеялар қоймасы', 'status.kind_todo': 'Жоспарланған', 'status.kind_progress': 'Жұмыста', 'status.kind_done': 'Орындалды', 'status.kind_cancelled': 'Болдырылды', 'status.add': 'Жаңа күй', 'status.builtin_hint': 'Кіріктірілген күйді атын өзгертуге және бояуға болады, бірақ жоюға болмайды', 'tag.add': 'Жаңа тег', 'tag.none': 'Тегтер әлі жоқ', 'tag.pick': 'Тегтер', 'version.none': 'Нұсқасыз', 'version.add': 'Жаңа нұсқа', 'nav.board': 'Тақта', 'board.add_task': 'Тапсырма қосу', 'board.statuses': 'Күйлер', 'status.dialog_title': 'Жоба күйлері', 'status.name_ph': 'Атауы', 'status.delete_last_done': 'Бұл — тапсырманы аяқтайтын соңғы күй, оны жоюға болмайды', 'status.delete_last': 'Кемінде бір күй қалуы керек', 'status.move_tasks': 'Бұл күйдегі тапсырмалар «{name}» күйіне көшеді. Жалғастыру керек пе?', 'task.status_label': 'Күй', 'stats.by_status': 'Күйлер бойынша', 'board.empty': 'Алдымен жоба құрыңыз.', 'about.us': 'Біз туралы', 'about.blog': 'Блог',
     'settings.theme_label': 'Тақырып', 'settings.currency_label': 'Валюта',
     'settings.section_account': 'Аккаунт', 'profile.name_label': 'Аты', 'profile.no_name': 'Көрсетілмеген',
     'profile.name_updated': 'Аты жаңартылды', 'profile.change_password': 'Құпиясөзді өзгерту',
@@ -561,7 +580,7 @@ const T = {
     'due.overdue': 'мерзімі өтті', 'due.today': 'бүгін', 'due.tomorrow': 'ертең', 'due.in_days': '{n} күнде',
     'remind.none': 'Еске салусыз', 'remind.at': 'Мерзім сәтінде', 'remind.15m': '15 минут бұрын',
     'remind.1h': 'Бір сағат бұрын', 'remind.3h': '3 сағат бұрын', 'remind.1d': 'Бір күн бұрын', 'remind.custom': 'Өз уақыты',
-    'tabs.notes': 'Жазбалар', 'tabs.history': 'Тарих',
+    'tabs.notes': 'Жазбалар', 'tabs.settings': 'Параметрлер', 'tabs.history': 'Тарих',
     'timer.sub_default': 'тапсырма бойынша жалпы уақыт', 'timer.start': 'Старт', 'timer.stop': 'Тоқтату',
     'timer.recording': 'жазылуда · сессия {time}', 'timer.other_task': 'таймер басқа тапсырмада жүріп жатыр',
     'money.rate_label': 'Баға', 'money.no_rate': 'баға белгіленбеген', 'money.default_suffix': ' · әдепкі',
@@ -747,7 +766,7 @@ const el = {
 
   emptyState: $('empty-state'), detail: $('task-detail'),
   title: $('task-title'), pinTaskBtn: $('pin-task-btn'),
-  taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), tabHistory: $('tab-history'),
+  taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), tabSettings: $('tab-settings'), tabHistory: $('tab-history'),
   timerDisplay: $('timer-display'), timerSub: $('timer-sub'), timerBtn: $('timer-btn'),
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
@@ -848,11 +867,17 @@ function seedProjectStatuses(projectId) {
 
 /** Единственное место, где статус задачи меняется. Здесь же done приводится в
  *  соответствие — иначе статистика и календарь разойдутся с доской. */
+const isClosedStatus = (id) => { const s = getStatus(id); return !!s && CLOSING_KINDS.includes(s.kind); };
+
 function setTaskStatus(task, statusId) {
   const s = getStatus(statusId);
   if (!task || !s) return;
   task.statusId = s.id;
+  // done означает именно «сделано», а не «закрыто»: отменённая задача тоже
+  // уходит из работы, но записывать её в выполненные нельзя — счёт «сделано
+  // 8 из 10» перестал бы быть правдой.
   task.done = s.kind === 'done';
+  task.cancelled = s.kind === 'cancelled';
   task.doneAt = task.done ? (task.doneAt || new Date().toISOString()) : null;
   task.updatedAt = new Date().toISOString();
 }
@@ -2782,14 +2807,8 @@ function renderBoardPage() {
   el.boardSum.hidden = !has;
   if (!has) { el.boardCols.innerHTML = ''; return; }
 
-  el.boardProject.innerHTML = '';
-  for (const p of state.projects) {
-    const o = document.createElement('option');
-    o.value = p.id;
-    o.textContent = p.name;
-    o.selected = p.id === pid;
-    el.boardProject.appendChild(o);
-  }
+  const cur = getProject(pid);
+  el.boardProject.textContent = cur ? cur.name : '';
   const tasks = tasksOf(pid);
   const done = tasks.filter((t2) => t2.done).length;
   el.boardSum.textContent = `${done}/${tasks.length}`;
@@ -2815,16 +2834,16 @@ function renderBoard() {
     const body = document.createElement('div');
     body.className = 'board-col-body';
     for (const task of inCol) body.appendChild(boardCard(task));
-    col.appendChild(body);
-
-    // Задача заводится сразу в том статусе, в колонке которого нажали, —
-    // иначе её пришлось бы создавать и потом перетаскивать.
+    // Кнопка живёт внутри тела, сразу под последней карточкой, а не внизу
+    // страницы: колонка растянута на всю высоту, и прижатая к её низу кнопка
+    // оказывалась в сотнях пикселей от задач.
     const add = document.createElement('button');
     add.type = 'button';
     add.className = 'board-add';
     add.textContent = `+ ${t('board.add_task')}`;
     add.addEventListener('click', () => newTaskInStatus(pid, st.id));
-    col.appendChild(add);
+    body.appendChild(add);
+    col.appendChild(body);
 
     // Подсветка столбца под курсором и сам перенос.
     col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); });
@@ -2891,9 +2910,7 @@ function renderStatusDialog() {
     row.innerHTML = `
       <button type="button" class="st-color" style="--sc:${st.color}" data-act="color" data-i18n-title="project.color" title="Цвет"></button>
       <input class="st-name" type="text" value="${escapeHtml(st.name)}" data-i18n-ph="status.name_ph" placeholder="Название" />
-      <select class="st-kind settings-row-select">
-        ${STATUS_KINDS.map((k) => `<option value="${k}"${k === st.kind ? ' selected' : ''}>${escapeHtml(t(`status.kind_${k}`))}</option>`).join('')}
-      </select>
+      <button type="button" class="dp-btn st-kind" data-act="kind">${escapeHtml(t(`status.kind_${st.kind}`))}</button>
       <button type="button" class="icon-btn" data-act="up" ${i === 0 ? 'disabled' : ''} data-i18n-title="common.back" title="Выше">
         <svg class="icon" viewBox="0 0 16 16"><path d="M8 3.6l5.2 5.2-1.4 1.4L8 6.4l-3.8 3.8-1.4-1.4z"/></svg>
       </button>
@@ -2908,19 +2925,28 @@ function renderStatusDialog() {
       st.name = e.target.value;
       scheduleSave();
     });
-    row.querySelector('.st-kind').addEventListener('change', (e) => {
-      st.kind = e.target.value;
-      // Вид определяет, закрыта ли задача, поэтому все задачи в этом статусе
-      // надо привести в соответствие — иначе доска и статистика разойдутся.
-      for (const task of state.tasks) if (task.statusId === st.id) setTaskStatus(task, st.id);
-      renderStatusDialog();
-      scheduleSave();
-    });
     row.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-act]');
       if (!b) return;
       const act = b.dataset.act;
       if (act === 'color') { openColorPicker(b, (c) => { st.color = c; renderStatusDialog(); scheduleSave(); }); return; }
+      if (act === 'kind') {
+        openMenu(b, STATUS_KINDS.map((k) => ({
+          label: t(`status.kind_${k}`),
+          selected: k === st.kind,
+          onClick: () => {
+            st.kind = k;
+            // Вид решает, закрыта ли задача и считается ли она сделанной,
+            // поэтому все задачи в этом статусе надо пересчитать — иначе
+            // доска, галочки и статистика разойдутся.
+            for (const task of state.tasks) if (task.statusId === st.id) setTaskStatus(task, st.id);
+            renderStatusDialog();
+            render();
+            scheduleSave();
+          },
+        })));
+        return;
+      }
       if (act === 'up' || act === 'down') {
         const j = act === 'up' ? i - 1 : i + 1;
         const other = list[j];
@@ -2982,7 +3008,7 @@ function newTaskInStatus(projectId, statusId) {
   const task = {
     id: uid(), projectId, title: '', done: false, notes: null,
     totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
-    statusId, tagIds: [], versionId: null, repeat: null,
+    statusId, tagIds: [], versionId: null, repeat: null, cancelled: false,
     dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
   };
   setTaskStatus(task, statusId);
@@ -3325,16 +3351,8 @@ function renderDetail() {
  *  перетаскиванием на доске — здесь он рядом со ставкой и сроком, среди
  *  остальных параметров задачи. */
 function renderTaskStatus(task) {
-  const list = orderedStatuses(task.projectId);
-  el.taskStatus.innerHTML = '';
-  for (const st of list) {
-    const o = document.createElement('option');
-    o.value = st.id;
-    o.textContent = st.name;
-    o.selected = st.id === task.statusId;
-    el.taskStatus.appendChild(o);
-  }
   const cur = getStatus(task.statusId);
+  el.taskStatus.textContent = cur ? cur.name : t('due.none');
   el.taskStatusDot.style.setProperty('--sc', cur ? cur.color : 'transparent');
 }
 
@@ -3427,6 +3445,7 @@ function setTaskTab(tab) {
   activeTaskTab = tab;
   el.taskTabs.forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
   el.tabNotes.hidden = tab !== 'notes';
+  el.tabSettings.hidden = tab !== 'settings';
   el.tabHistory.hidden = tab !== 'history';
 }
 
@@ -3455,7 +3474,7 @@ function newTask() {
     // сохранённые данные при загрузке и до новой задачи в этой же сессии не
     // доберётся — задача осталась бы без статуса и не попала ни в один
     // столбец доски.
-    statusId: defaultStatusId(state.ui.projectId, false), tagIds: [], versionId: null, repeat: null,
+    statusId: defaultStatusId(state.ui.projectId, false), tagIds: [], versionId: null, repeat: null, cancelled: false,
   };
   state.tasks.unshift(task);
   selectedId = task.id;
@@ -4371,9 +4390,12 @@ el.stAdd.addEventListener('click', addStatus);
 el.stdlgClose.addEventListener('click', closeStatusDialog);
 el.stdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.stdlgBackdrop) closeStatusDialog(); });
 
-el.boardProject.addEventListener('change', () => {
-  state.ui.boardProjectId = el.boardProject.value;
-  renderBoardPage();
+el.boardProject.addEventListener('click', () => {
+  openMenu(el.boardProject, state.projects.map((p) => ({
+    label: p.name,
+    selected: p.id === boardProjectId(),
+    onClick: () => { state.ui.boardProjectId = p.id; renderBoardPage(); },
+  })));
 });
 
 el.projectMenuBtn.addEventListener('click', (e) => {
@@ -4520,12 +4542,14 @@ el.stRunning.addEventListener('click', () => {
   selectTask(task.id);
 });
 
-el.taskStatus.addEventListener('change', () => {
+el.taskStatus.addEventListener('click', () => {
   const task = getTask(selectedId);
   if (!task) return;
-  setTaskStatus(task, el.taskStatus.value);
-  render();
-  scheduleSave();
+  openMenu(el.taskStatus, orderedStatuses(task.projectId).map((st) => ({
+    label: st.name,
+    selected: st.id === task.statusId,
+    onClick: () => { setTaskStatus(task, st.id); render(); scheduleSave(); },
+  })));
 });
 
 el.taskRate.addEventListener('input', () => {
@@ -4727,6 +4751,7 @@ function migrate() {
     if (t2.versionId === undefined) t2.versionId = null;
     if (t2.repeat !== undefined && t2.repeat !== null && typeof t2.repeat !== 'object') t2.repeat = null;
     if (t2.repeat === undefined) t2.repeat = null;
+    t2.cancelled = isClosedStatus(t2.statusId) && !t2.done;
   });
 
   if (state.projects.length === 0 && state.tasks.length > 0) {
