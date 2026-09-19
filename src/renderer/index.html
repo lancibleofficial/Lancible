@@ -269,6 +269,12 @@
               </div>
 
               <div class="task-params">
+                <div class="due-bar status-bar">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a6.6 6.6 0 100 13.2A6.6 6.6 0 008 1.4zm0 2a4.6 4.6 0 110 9.2 4.6 4.6 0 010-9.2zm0 1.9a2.7 2.7 0 100 5.4 2.7 2.7 0 000-5.4z"/></svg>
+                  <span class="due-label" data-i18n="task.status_label">Статус</span>
+                  <span class="st-swatch" id="task-status-dot"></span>
+                  <select id="task-status" class="settings-row-select"></select>
+                </div>
                 <div class="money-bar">
                   <svg class="icon" viewBox="0 0 16 16"><path d="M2.2 4.4A2.2 2.2 0 014.4 2.2h7.2a2.2 2.2 0 012.2 2.2v.6H4.4a.6.6 0 100 1.2h9.4a2.2 2.2 0 012.2 2.2v3.2a2.2 2.2 0 01-2.2 2.2H4.4a2.2 2.2 0 01-2.2-2.2V4.4zm9.6 5.2a1 1 0 100 2 1 1 0 000-2z"/></svg>
                   <label for="task-rate" data-i18n="money.rate_label">Ставка</label>
@@ -379,6 +385,7 @@
         <div class="board-head">
           <select id="board-project" class="settings-row-select" data-i18n-title="nav.board" title="Доска"></select>
           <span class="board-head-sum" id="board-sum"></span>
+          <button type="button" class="btn-soft" id="board-statuses" data-i18n="board.statuses">Статусы</button>
         </div>
         <div class="board-cols" id="board-cols"></div>
         <div class="board-empty muted" id="board-empty" hidden data-i18n="board.empty">Сначала создайте проект.</div>
@@ -412,6 +419,8 @@
           <button id="sp-running" class="st-running" hidden></button>
           <div class="row-label" id="sp-proj-label" data-i18n="stats.by_project">По проектам</div>
           <ul class="stats-list" id="sp-projects"></ul>
+          <div class="row-label" id="sp-status-label" data-i18n="stats.by_status">По статусам</div>
+          <ul class="stats-list" id="sp-statuses"></ul>
           <div class="row-label" id="sp-task-label" data-i18n="stats.by_task">По задачам</div>
           <ul class="stats-list" id="sp-tasks"></ul>
           <div class="stats-empty" id="sp-empty" hidden data-i18n="stats.empty">Пока нет данных</div>
@@ -574,6 +583,17 @@
   </div>
 
   <!-- Диалог подтверждения удаления -->
+  <div id="stdlg-backdrop" hidden>
+    <div class="modal modal-wide">
+      <div class="modal-title" data-i18n="status.dialog_title">Статусы проекта</div>
+      <div class="st-list" id="st-list"></div>
+      <button type="button" class="st-add" id="st-add" data-i18n="status.add">Новый статус</button>
+      <div class="modal-buttons">
+        <button id="stdlg-close" class="primary" data-i18n="common.done">Готово</button>
+      </div>
+    </div>
+  </div>
+
   <div id="expdlg-backdrop" hidden>
     <div class="modal">
       <div class="modal-title" data-i18n="export.title">Экспорт в Excel</div>
