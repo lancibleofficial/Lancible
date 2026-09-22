@@ -127,6 +127,52 @@ test('заголовок дорожки считает время и задач�
   await expect(lane(4).locator('.board-col-time')).toHaveText(/1ч/);
 });
 
+test('заголовок дорожки — полоса во всю видимую ширину и не уезжает вбок', async ({ page }) => {
+  // И ширина, и удержание держатся на замере в app.js, а не на CSS: дорожка
+  // шире окна, проценты считались бы от неё, а position: sticky двигает
+  // элемент только внутри его дорожки — заголовку шириной с неё сдвигаться
+  // уже некуда.
+  await seed(page);
+  await openBoard(page);
+  await page.waitForTimeout(300); // раскладка должна улечься
+
+  const measure = () => page.evaluate(() => {
+    const box = document.getElementById('board-cols');
+    const cs = getComputedStyle(box);
+    const padL = parseFloat(cs.paddingLeft);
+    const padR = parseFloat(cs.paddingRight);
+    const boxLeft = box.getBoundingClientRect().left;
+    return {
+      scrollLeft: Math.round(box.scrollLeft),
+      overflow: box.scrollWidth > box.clientWidth,
+      visible: { left: Math.round(boxLeft + padL), right: Math.round(boxLeft + box.clientWidth - padR) },
+      heads: [...document.querySelectorAll('.board-lane-head')].map((h) => {
+        const b = h.getBoundingClientRect();
+        return { left: Math.round(b.left), right: Math.round(b.right), w: Math.round(b.width) };
+      }),
+    };
+  });
+
+  const before = await measure();
+  expect(before.overflow, 'для проверки нужна доска шире окна').toBe(true);
+  expect(new Set(before.heads.map((h) => h.w)).size, 'все заголовки одной ширины').toBe(1);
+  expect(before.heads[0].left).toBe(before.visible.left);
+  expect(Math.abs(before.heads[0].right - before.visible.right)).toBeLessThanOrEqual(1);
+
+  await page.evaluate(() => {
+    const box = document.getElementById('board-cols');
+    box.scrollLeft = box.scrollWidth;
+  });
+  await page.waitForTimeout(150);
+
+  const after = await measure();
+  expect(after.scrollLeft, 'доска должна была уехать вправо').toBeGreaterThan(0);
+  for (const [i, head] of after.heads.entries()) {
+    expect(head.left, `заголовок ${i} уехал вместе с доской`).toBe(before.heads[0].left);
+    expect(head.w, `заголовок ${i} изменил ширину`).toBe(before.heads[0].w);
+  }
+});
+
 test('у выпущенной версии в заголовке стоит дата', async ({ page }) => {
   await seed(page);
   await openBoard(page);

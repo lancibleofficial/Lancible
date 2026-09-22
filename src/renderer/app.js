@@ -2150,7 +2150,40 @@ function renderBoard() {
     return;
   }
   for (const lane of lanes) el.boardCols.appendChild(boardLane(pid, lane));
+  syncLaneWidth();
+  syncLaneOffset();
 }
+
+/** Ширина видимой части доски — в переменную --lane-w, из неё заголовок
+ *  дорожки берёт свою. Сама дорожка шире окна, когда столбцов много, и
+ *  проценты в CSS считались бы от неё, а не от того, что видно. */
+function syncLaneWidth() {
+  const box = el.boardCols;
+  const cs = getComputedStyle(box);
+  const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+  const next = Math.max(0, Math.round(box.clientWidth - pad)) + 'px';
+  // Пишем только на изменение: наблюдатель ниже сработал бы на собственную
+  // правку и закрутился бы.
+  if (box.style.getPropertyValue('--lane-w') !== next) box.style.setProperty('--lane-w', next);
+}
+
+/** Гасит горизонтальный сдвиг доски у заголовков дорожек. position: sticky
+ *  тут бессилен: он двигает элемент только внутри его дорожки, а заголовок
+ *  теперь ровно её ширины — сдвигаться некуда. */
+function syncLaneOffset() {
+  const box = el.boardCols;
+  const next = Math.round(box.scrollLeft) + 'px';
+  if (box.style.getPropertyValue('--lane-x') !== next) box.style.setProperty('--lane-x', next);
+}
+
+// Доска меняет ширину не только вместе с окном: сворачивается боковая
+// панель, открывается панель уведомлений. Наблюдатель ловит всё разом.
+if (typeof ResizeObserver !== 'undefined' && el.boardCols) {
+  new ResizeObserver(() => {
+    if (el.boardCols.classList.contains('has-lanes')) syncLaneWidth();
+  }).observe(el.boardCols);
+}
+if (el.boardCols) el.boardCols.addEventListener('scroll', syncLaneOffset, { passive: true });
 
 /** Свёрнутость дорожки живёт в ui, а не в данных: это способ смотреть, и на
  *  второе устройство он уезжать не должен — как и выбор проекта на доске. */
