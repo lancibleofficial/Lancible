@@ -2413,3 +2413,64 @@ body.platform-web .tb-account {
 /* Одинаковые названия не запрещаем — только показываем: двух «v1.2» в одном
    проекте всё равно не различить на глаз. */
 .ver-row.dup .st-name { border-color: var(--danger); }
+
+/* ---------- Дорожки доски: плотнее и на своей поверхности ---------- */
+/* Заголовок стоял на цвете страницы и читался висящим в воздухе. Теперь он
+   на той же поверхности, что и столбцы под ним, а промежутки между
+   дорожками меньше промежутка внутри дорожки — полоса читается целым. */
+.board-cols.has-lanes { gap: 10px; }
+.board-lane-head { background: var(--board-col); margin: 0 0 3px; }
+/* На светлой теме --panel-2 и --board-col совпадают, поэтому наведение
+   считается от самой поверхности, а не берётся готовым токеном. */
+.board-lane-head:hover { background: color-mix(in srgb, var(--text) 7%, var(--board-col)); }
+
+/* ---------- Полоска фильтров ---------- */
+.filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-reset {
+  border: none; background: none; border-radius: 6px;
+  padding: 5px 8px; color: var(--text-dim);
+  font-family: inherit; font-size: 12px; cursor: pointer;
+  transition: color 0.12s var(--ease), background 0.12s var(--ease);
+}
+.filter-reset:hover { color: var(--text); background: var(--panel-2); }
+/* Выбор версии в списке задач — рядом с пилюлями статуса, не растягиваясь:
+   ширину ряда держат они. */
+.tf-version { flex: none; max-width: 45%; }
+
+/* ---------- Статистика вместе с календарём ---------- */
+/* Страница теперь одна: сверху четыре карточки, под ними календарь как был.
+   Ширину карточкам снимаем — иначе узкая колонка цифр стояла бы над
+   календарём во всю ширину. */
+#stats-view .stats-wrap { max-width: none; margin: 0; padding: 18px 22px 0; }
+#stats-view .cal-grid { height: auto; min-height: 560px; }
+#stats-view .cal-main { padding-top: 0; }
+
+/* ---------- Правая панель: записи по проектам ---------- */
+/* Обёртка группы — не карточка: карточками остаются строки внутри неё. */
+.cal-day-list > li.cdl-group,
+.period-list > li.cdl-group {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+}
+.cal-day-list > li.cdl-group:hover,
+.period-list > li.cdl-group:hover { border-color: transparent; }
+.cal-day-list > li.cdl-group + li.cdl-group,
+.period-list > li.cdl-group + li.cdl-group { margin-top: 12px; }
+
+.cdl-group-head {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  border: none; background: none; cursor: pointer;
+  padding: 3px 2px 7px;
+  color: var(--text); font-family: inherit; font-size: 12px; font-weight: 500;
+  text-align: left;
+}
+.cdl-group-head:hover .cdl-group-name { color: var(--accent); }
+.cdl-chev { flex: none; width: 13px; height: 13px; color: var(--text-faint); transition: transform 0.14s var(--ease); }
+.cdl-group.closed .cdl-chev { transform: rotate(-90deg); }
+.cdl-group-dot { flex: none; width: 8px; height: 8px; border-radius: 3px; background: var(--pc, var(--accent)); }
+.cdl-group-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdl-group-tot { margin-left: auto; flex: none; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.cdl-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cdl-group.closed .cdl-rows { display: none; }

@@ -150,7 +150,7 @@ const el = {
   topbar: $('topbar'),
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
 
-  homeView: $('home-view'), projectView: $('project-view'), calendarView: $('calendar-view'),
+  homeView: $('home-view'), projectView: $('project-view'),
   settingsView: $('settings-view'), settingsProfile: $('settings-profile'),
   settingsLangRow: $('settings-lang-row'), settingsLangValue: $('settings-lang-value'),
   settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
@@ -189,10 +189,10 @@ const el = {
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
   exportProjectBtn: $('export-project-btn'), exportCalendarBtn: $('export-calendar-btn'),
-  statsView: $('stats-view'), spTime: $('sp-time'), spMoney: $('sp-money'), spDone: $('sp-done'),
-  spRunning: $('sp-running'), spProjLabel: $('sp-proj-label'), spProjects: $('sp-projects'),
-  spTaskLabel: $('sp-task-label'), spTasks: $('sp-tasks'), spEmpty: $('sp-empty'),
-  spStatusLabel: $('sp-status-label'), spStatuses: $('sp-statuses'),
+  statsView: $('stats-view'), spTime: $('sp-time'), spMoney: $('sp-money'),
+  spMonth: $('sp-month'), spDone: $('sp-done'), spRunning: $('sp-running'),
+  tfVersion: $('tf-version'),
+  sfProject: $('sf-project'), sfVersion: $('sf-version'), sfReset: $('sf-reset'),
   exportAllBtn: $('export-all-btn'),
   exportPeriodBtn: $('export-period-btn'),
   expdlgBackdrop: $('expdlg-backdrop'), expPills: $('exp-pills'), expRange: $('exp-range'),
@@ -334,13 +334,19 @@ function sortedProjectTasks() {
 // Фильтр списка задач (не сохраняется — временное состояние вида)
 // ---------------------------------------------------------------------------
 
-let taskFilter = { status: 'all' };
-const isFilterActive = () => taskFilter.status !== 'all';
+let taskFilter = { status: 'all', versionId: 'all' };
+// Фильтр «Статистики» — свой: там проектов сразу несколько, и проект
+// приходится выбирать до версии. Держим его рядом с taskFilter, а не в
+// state.ui: это способ смотреть, он не переживает перезагрузку и никуда
+// не синхронизируется.
+let statsFilter = { projectId: 'all', versionId: 'all' };
+const isFilterActive = () => taskFilter.status !== 'all' || taskFilter.versionId !== 'all';
 
 function filteredProjectTasks() {
   let list = visibleTasks();
   if (taskFilter.status === 'active') list = list.filter((t2) => !t2.done);
   else if (taskFilter.status === 'done') list = list.filter((t2) => t2.done);
+  if (taskFilter.versionId !== 'all') list = Core.filterTasks(list, state.versions, { versionId: taskFilter.versionId });
   return list;
 }
 
@@ -687,68 +693,36 @@ function renderAccountBtn() {
  *  приложения. Карточки сверху дублируют топбар главной намеренно: там
  *  они идут довеском к списку проектов, здесь — заголовок собственной
  *  страницы, на которой ниже лежат разбивки по проектам и по задачам. */
+/** Страница «Статистика»: четыре карточки, как на главной, и под ними
+ *  календарь. Разбивки по проектам, статусам и задачам убраны — то же самое
+ *  теперь видно в правой панели календаря, разложенное по проектам. */
 function renderStatsPage() {
-  const totalMs = state.tasks.reduce((a, t2) => a + taskElapsedMs(t2), 0);
-  const totalMoney = state.tasks.reduce((a, t2) => a + earnedOf(t2), 0);
+  renderFilterBar(statsNodes(), statsFilter, () => render());
+  const tasks = statsTasks();
+
+  const totalMs = tasks.reduce((a, t2) => a + taskElapsedMs(t2), 0);
+  const totalMoney = tasks.reduce((a, t2) => a + earnedOf(t2), 0);
   el.spTime.textContent = fmtDur(totalMs);
   el.spMoney.textContent = fmtMoney(totalMoney);
-  const done = state.tasks.filter((t2) => t2.done).length;
-  el.spDone.textContent = state.tasks.length ? `${done} / ${state.tasks.length}` : '0';
 
-  const running = state.activeTimer && getTask(state.activeTimer.taskId);
+  const now = new Date();
+  const monthFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthTo = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  el.spMonth.textContent = fmtMoney(Core.rangeAgg(tasks, monthFrom, monthTo, defaultRate()).money);
+
+  const done = tasks.filter((t2) => t2.done).length;
+  el.spDone.textContent = tasks.length ? `${done} / ${tasks.length}` : '0';
+
+  // Идущий таймер показываем, только если его задача попала под фильтр:
+  // иначе строка спорила бы с цифрами прямо над ней.
+  const ticking = state.activeTimer && getTask(state.activeTimer.taskId);
+  const running = ticking && tasks.includes(ticking) ? ticking : null;
   el.spRunning.hidden = !running;
   if (running) {
     const sec = fmtClock(Date.now() - new Date(state.activeTimer.startedAt).getTime());
     el.spRunning.innerHTML = `<span class="r-name">${icon('clock')} ${escapeHtml(running.title || t('task.no_name'))}</span><span class="r-time">${sec}</span>`;
     el.spRunning.onclick = () => { openProject(running.projectId); selectTask(running.id); };
   }
-
-  const byProject = state.projects
-    .map((p) => ({ p, ms: tasksOf(p.id).reduce((a, t2) => a + taskElapsedMs(t2), 0), money: tasksOf(p.id).reduce((a, t2) => a + earnedOf(t2), 0) }))
-    .filter((r) => r.ms > 0)
-    .sort((a, b) => b.ms - a.ms);
-  const byTask = state.tasks
-    .map((t2) => ({ t2, ms: taskElapsedMs(t2), money: earnedOf(t2) }))
-    .filter((r) => r.ms > 0)
-    .sort((a, b) => b.ms - a.ms);
-
-  const row = (color, name, ms, money, onClick) => {
-    const li = document.createElement('li');
-    li.style.setProperty('--pc', color);
-    li.innerHTML = `<span class="stats-dot"></span><span class="stats-name">${escapeHtml(name)}</span>`
-      + `<span class="stats-val">${fmtDur(ms)}</span><span class="stats-val">${fmtMoney(money)}</span>`;
-    if (onClick) { li.classList.add('clickable'); li.addEventListener('click', onClick); }
-    return li;
-  };
-
-  el.spProjects.innerHTML = '';
-  for (const { p, ms, money } of byProject) {
-    el.spProjects.appendChild(row(p.color || PALETTE[0], p.name, ms, money, () => openProject(p.id)));
-  }
-  // Разбивка по статусам: сколько времени и денег стоит каждое состояние.
-  // Статусы принадлежат проектам, поэтому одноимённые из разных проектов
-  // складываются — иначе список превратился бы в перечисление всех наборов.
-  const byStatus = new Map();
-  for (const { t2, ms, money } of byTask) {
-    const st = getStatus(t2.statusId);
-    if (!st) continue;
-    const cur = byStatus.get(st.name) || { name: st.name, color: st.color, ms: 0, money: 0, count: 0 };
-    cur.ms += ms; cur.money += money; cur.count += 1;
-    byStatus.set(st.name, cur);
-  }
-  el.spStatuses.innerHTML = '';
-  const statusRows = [...byStatus.values()].sort((a, b) => b.ms - a.ms);
-  for (const r of statusRows) el.spStatuses.appendChild(row(r.color, r.name, r.ms, r.money));
-  el.spStatusLabel.hidden = !statusRows.length;
-
-  el.spTasks.innerHTML = '';
-  for (const { t2, ms, money } of byTask) {
-    const p = getProject(t2.projectId);
-    el.spTasks.appendChild(row(p ? p.color : PALETTE[0], t2.title || t('task.no_name'), ms, money, () => { openProject(t2.projectId); selectTask(t2.id); }));
-  }
-  el.spProjLabel.hidden = !byProject.length;
-  el.spTaskLabel.hidden = !byTask.length;
-  el.spEmpty.hidden = byProject.length > 0 || byTask.length > 0;
 }
 
 function renderSettings() {
@@ -1302,7 +1276,7 @@ function render() {
     tab.classList.toggle('active', active);
   });
 
-  const views = { home: el.homeView, project: el.projectView, board: el.boardView, calendar: el.calendarView, stats: el.statsView, settings: el.settingsView };
+  const views = { home: el.homeView, project: el.projectView, board: el.boardView, stats: el.statsView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1312,9 +1286,9 @@ function render() {
   if (v === 'home') renderHome();
   else if (v === 'project') { renderProjectHeader(); renderSidebar(); renderDetail(); renderFooter(); }
   else if (v === 'board') renderBoardPage();
-  else if (v === 'stats') renderStatsPage();
+  // Календарь живёт внутри «Статистики»: сначала цифры, следом сетка.
+  else if (v === 'stats') { renderStatsPage(); renderCalendar(); }
   else if (v === 'settings') renderSettings();
-  else renderCalendar();
 }
 
 function openView(view) {
@@ -1538,7 +1512,7 @@ function renderHomeSide() {
       calState.selected = key;
       if (calState.periodOn) togglePeriod();
       setCalMode('month');
-      openView('calendar');
+      openView('stats');
     });
     el.miniCal.appendChild(c);
   }
@@ -1909,7 +1883,7 @@ function renderViewTotal() {
   if (calState.mode === 'day') { el.calViewTot.hidden = true; return; }
   const [from, to] = currentViewBounds();
   const toEnd = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59);
-  const { ms, money } = rangeAgg(from, toEnd);
+  const { ms, money } = calRangeAgg(from, toEnd);
   const label = calState.mode === 'month' ? t('calendar.for_month') : t('calendar.for_week');
   el.calViewTot.hidden = false;
   el.calViewTot.classList.remove('period');
@@ -1920,7 +1894,7 @@ function renderCalendar() {
   if (calState.mode === 'day') { el.calViewTot.hidden = true; renderDayHours(); return; }
   renderViewTotal();
 
-  const days = aggregateDays();
+  const days = calAggregateDays();
   el.calDays.className = `cal-days ${calState.mode}`;
 
   const cells = [];
@@ -1996,7 +1970,7 @@ function renderDayHours() {
   el.calDays.innerHTML = '';
 
   const key = dayKey(calState.day);
-  const sessions = allSessionPairs()
+  const sessions = calSessionPairs()
     .filter(({ s }) => dayKey(s.start) === key)
     .sort((a, b) => new Date(a.s.start) - new Date(b.s.start));
   const byHour = new Map();
@@ -2033,28 +2007,32 @@ function renderCalDay() {
   el.calDayHead.textContent = capFirst(
     keyToDate(key).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'long' }),
   );
-  const items = allSessionPairs()
+  const items = calSessionPairs()
     .filter(({ s }) => dayKey(s.start) === key)
-    .sort((a, b) => new Date(a.s.start) - new Date(b.s.start));
+    .sort((a, b) => new Date(a.s.start) - new Date(b.s.start))
+    .map(({ t: t2, s }) => ({ t: t2, s, ms: s.ms, money: sessionMoney(s, t2) }));
 
-  let ms = 0;
-  let money = 0;
+  const totalMs = items.reduce((a, r) => a + r.ms, 0);
+  const totalMoney = items.reduce((a, r) => a + r.money, 0);
+
+  // Записи разложены по проектам: за день их набирается из нескольких сразу,
+  // и плоский список не отвечал на вопрос «сколько ушло на что».
   el.calDayList.innerHTML = '';
-  for (const { t: t2, s } of items) {
-    ms += s.ms;
-    money += sessionMoney(s, t2);
-    const p = getProject(t2.projectId);
-    const li = document.createElement('li');
-    li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
-    li.innerHTML = `
-      <div class="cdl-time">${fmtTime(s.start).slice(0, 5)}–${s.end ? fmtTime(s.end).slice(0, 5) : '…'}</div>
-      <div class="cdl-dur">${fmtDur(s.ms)}</div>
-      <div class="cdl-task">${escapeHtml(t2.title || t('task.no_name'))}<span class="cdl-proj">${escapeHtml(p ? p.name : '')}</span></div>
-      <div class="cdl-money">${fmtMoney(sessionMoney(s, t2))}</div>`;
-    li.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
-    el.calDayList.appendChild(li);
+  for (const g of groupByProject(items)) {
+    el.calDayList.appendChild(calGroupNode(g, ({ t: t2, s, money }) => {
+      const row = document.createElement('li');
+      row.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
+      // Название проекта ушло в заголовок группы — в строке оно повторялось бы.
+      row.innerHTML = `
+        <div class="cdl-time">${fmtTime(s.start).slice(0, 5)}–${s.end ? fmtTime(s.end).slice(0, 5) : '…'}</div>
+        <div class="cdl-dur">${fmtDur(s.ms)}</div>
+        <div class="cdl-task">${escapeHtml(t2.title || t('task.no_name'))}</div>
+        <div class="cdl-money">${fmtMoney(money)}</div>`;
+      row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
+      return row;
+    }));
   }
-  el.calDayTot.textContent = items.length ? `${fmtDur(ms)} · ${fmtMoney(money)}` : '';
+  el.calDayTot.textContent = items.length ? `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}` : '';
   el.calDayEmpty.hidden = items.length > 0;
 }
 
@@ -2069,7 +2047,7 @@ function renderPeriodSummary() {
   el.calDayHead.textContent = fromLabel === toLabel ? fromLabel : `${fromLabel} – ${toLabel}`;
 
   const map = new Map();
-  for (const { t: t2, s } of allSessionPairs()) {
+  for (const { t: t2, s } of calSessionPairs()) {
     const d = new Date(s.start);
     if (d < from || d > to) continue;
     let e = map.get(t2.id);
@@ -2089,16 +2067,17 @@ function renderPeriodSummary() {
   el.calDayEmpty.hidden = tasks.length > 0;
 
   el.calDayList.innerHTML = '';
-  for (const { t: t2, ms, money } of tasks) {
-    const p = getProject(t2.projectId);
-    const li = document.createElement('li');
-    li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
-    li.innerHTML = `
-      <span class="pl-check${t2.done ? ' done' : ''}">${icon('check')}</span>
-      <span><span class="pl-name">${escapeHtml(t2.title || t('task.no_name'))}</span><span class="pl-proj">${escapeHtml(p ? p.name : '')}</span></span>
-      <span class="pl-right"><span class="pl-money">${fmtMoney(money)}</span><span class="pl-time">${fmtDur(ms)}</span></span>`;
-    li.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
-    el.calDayList.appendChild(li);
+  for (const g of groupByProject(tasks)) {
+    el.calDayList.appendChild(calGroupNode(g, ({ t: t2, ms, money }) => {
+      const row = document.createElement('li');
+      row.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
+      row.innerHTML = `
+        <span class="pl-check${t2.done ? ' done' : ''}">${icon('check')}</span>
+        <span><span class="pl-name">${escapeHtml(t2.title || t('task.no_name'))}</span></span>
+        <span class="pl-right"><span class="pl-money">${fmtMoney(money)}</span><span class="pl-time">${fmtDur(ms)}</span></span>`;
+      row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
+      return row;
+    }));
   }
 }
 
@@ -2787,6 +2766,7 @@ function renderFooter() {
 
 function renderSidebar() {
   el.tfStatus.forEach((b) => b.classList.toggle('on', b.dataset.status === taskFilter.status));
+  renderTaskVersionFilter();
   el.taskList.innerHTML = '';
 
   if (isFilterActive()) {
@@ -3243,7 +3223,7 @@ function openProject(id) {
   flushEditor();
   closeMenu();
   closeSearch();
-  taskFilter = { status: 'all' };
+  taskFilter = { status: 'all', versionId: 'all' };
   state.ui.view = 'project';
   state.ui.projectId = id;
   const first = sortedProjectTasks().all[0];
@@ -3539,14 +3519,15 @@ function buildTaskSheets(task) {
   return [{ name: task.title || t('xlsx.default_task_sheet'), cols: [6, 12, 10, 10, 14, 9, 12, 12, 14].map((width) => ({ width })), rows }];
 }
 
-function buildProjectSheets(project) {
-  const tasks = tasksOf(project.id);
+function buildProjectSheets(project, versionId) {
+  const tasks = Core.filterTasks(tasksOf(project.id), state.versions, { versionId: versionId || 'all' });
   const stamp = `${fmtDate(Date.now())} ${fmtTime(Date.now())}`;
   const cur = currencySym();
   const taskMoney = (t2) => (t2.sessions || []).reduce((a, s) => a + sessionMoney(s, t2), 0);
   const taskRows = [
     [cellBold(t('xlsx.project')), project.name],
     project.description ? [cellBold(t('xlsx.description')), project.description] : [],
+    versionId && versionId !== 'all' ? [cellBold(t('xlsx.version')), versionFilterLabel(project.id, versionId)] : [],
     [cellBold(t('xlsx.exported')), stamp],
     [],
     [t('xlsx.num'), t('xlsx.task'), t('xlsx.status'), t('xlsx.total_time'), t('xlsx.hours'), t('xlsx.sum', { cur }),
@@ -3655,7 +3636,7 @@ function buildAllProjectsSheets() {
  *  сессии всех задач, добавляя колонку с названием проекта. */
 function buildPeriodSheets(from, to) {
   const cur = currencySym();
-  const all = allSessionPairs()
+  const all = calSessionPairs()
     .filter(({ s }) => { const d = new Date(s.start); return d >= from && d <= to; })
     .sort((a, b) => new Date(a.s.start) - new Date(b.s.start));
   const rows = [
@@ -3694,10 +3675,11 @@ function exportTask() {
   const project = getProject(task.projectId);
   runExport(`${project ? project.name : t('export.project_fallback')} — ${task.title || t('export.task_fallback')} — ${fmtDate(Date.now())}`, buildTaskSheets(task));
 }
-function exportProjectById(id) {
+function exportProjectById(id, versionId) {
   const p = getProject(id);
   if (!p) return;
-  runExport(`${p.name} — ${t('export.all_tasks')} — ${fmtDate(Date.now())}`, buildProjectSheets(p));
+  const suffix = versionId && versionId !== 'all' ? ` — ${versionFilterLabel(id, versionId)}` : '';
+  runExport(`${p.name} — ${t('export.all_tasks')}${suffix} — ${fmtDate(Date.now())}`, buildProjectSheets(p, versionId));
 }
 /** Выбор периода выгрузки — то же, что лист ExportPeriodSheet в мобильном:
  *  пресеты плюс «Свой» с двумя датами. «Всё время» уходит в сводку по всем
@@ -3818,7 +3800,7 @@ el.expdlgOk.addEventListener('click', () => {
   closeExpdlg();
   if (!range) { exportAllProjects(); return; }
   const [from, to] = range;
-  runExport(`Lancible — ${t('export.period')} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
+  runExport(`Lancible — ${t('export.period')}${filterSuffix(statsFilter)} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
 });
 
 function exportAllProjects() {
@@ -3827,7 +3809,7 @@ function exportAllProjects() {
 /** Экспорт открытого проекта — та же выгрузка, что в контекстном меню
  *  плитки на главной, но доступная изнутри проекта (как в мобильном). */
 function exportProject() {
-  if (state.ui.projectId) exportProjectById(state.ui.projectId);
+  if (state.ui.projectId) exportProjectById(state.ui.projectId, taskFilter.versionId);
 }
 /** Выгружает то, что сейчас показано в календаре: выбранный период, если
  *  он включён, иначе границы текущего вида (месяц/неделя/день). */
@@ -3838,7 +3820,7 @@ function exportCalendar() {
     from = new Date(from.getFullYear(), from.getMonth(), from.getDate());
     to = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59);
   }
-  runExport(`Lancible — ${t('export.period')} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
+  runExport(`Lancible — ${t('export.period')}${filterSuffix(statsFilter)} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
 }
 
 // ---------------------------------------------------------------------------
@@ -4116,7 +4098,7 @@ el.searchInput.addEventListener('keydown', (e) => {
     items[i].scrollIntoView({ block: 'nearest' });
   }
 });
-el.openCalendarBtn.addEventListener('click', () => openView('calendar'));
+el.openCalendarBtn.addEventListener('click', () => openView('stats'));
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
 el.backHome.addEventListener('click', backHome);
 el.boardStatuses.addEventListener('click', openStatusDialog);
@@ -4637,6 +4619,190 @@ async function deleteVersion(v) {
 }
 
 el.verAdd.addEventListener('click', addVersion);
+
+
+// --- Фильтр по проекту и версии ---------------------------------------------
+// Список задач знает свой проект, поэтому там выбирается только версия. На
+// объединённой «Статистике» проектов сразу несколько, и выбирать приходится
+// по очереди: сначала проект, потом его версию — «v1.2» разных проектов не
+// имеют друг к другу отношения.
+
+/** Пункты меню выбора версии. Пока проект не выбран, предлагать нечего —
+ *  остаётся один пункт «Все версии». */
+function versionMenuItems(projectId, current, onPick) {
+  const items = [{ label: t('version.all'), selected: current === 'all', onClick: () => onPick('all') }];
+  if (!projectId || projectId === 'all') return items;
+  for (const v of versionsOf(projectId)) {
+    items.push({ label: versionLabel(v), selected: current === v.id, onClick: () => onPick(v.id) });
+  }
+  items.push({ sep: true });
+  items.push({ label: t('version.none'), selected: current === 'none', onClick: () => onPick('none') });
+  return items;
+}
+
+/** Подпись кнопки: сама версия, «Без версии» или «Все версии». В кнопке
+ *  только название — дата выпуска видна в меню, а в узкой кнопке она
+ *  вытеснила бы сам номер версии. */
+function versionFilterLabel(projectId, versionId) {
+  if (versionId === 'none') return t('version.none');
+  if (versionId && versionId !== 'all') {
+    const v = getVersion(versionId);
+    if (v) return v.name || t('task.no_name');
+  }
+  return t('version.all');
+}
+
+/** Хвост к имени файла выгрузки, когда она ограничена фильтром: иначе по
+ *  имени не отличить полную выгрузку от урезанной. */
+function filterSuffix(filter) {
+  if (!Core.filterActive(filter)) return '';
+  const p = filter.projectId === 'all' ? null : getProject(filter.projectId);
+  const parts = [];
+  if (p) parts.push(p.name);
+  if (filter.versionId && filter.versionId !== 'all') parts.push(versionFilterLabel(filter.projectId, filter.versionId));
+  return parts.length ? ` — ${parts.join(' · ')}` : '';
+}
+
+// --- Список задач проекта ---
+
+function renderTaskVersionFilter() {
+  const pid = state.ui.projectId;
+  const has = !!pid && versionsOf(pid).length > 0;
+  el.tfVersion.hidden = !has;
+  if (!has) return;
+  el.tfVersion.textContent = versionFilterLabel(pid, taskFilter.versionId);
+  el.tfVersion.classList.toggle('on', taskFilter.versionId !== 'all');
+}
+
+el.tfVersion.addEventListener('click', () => {
+  openMenu(el.tfVersion, versionMenuItems(state.ui.projectId, taskFilter.versionId, (id) => {
+    taskFilter.versionId = id;
+    renderSidebar();
+  }));
+});
+
+// --- Статистика вместе с календарём ---
+
+function projectMenuItems(current, onPick) {
+  const items = [{ label: t('filter.all_projects'), selected: current === 'all', onClick: () => onPick('all') }];
+  for (const p of state.projects) {
+    items.push({ label: p.name, selected: current === p.id, onClick: () => onPick(p.id) });
+  }
+  return items;
+}
+
+/** Пара кнопок «проект → версия» и сброс. Обработчики вешаются присваиванием,
+ *  а не addEventListener: полоска перерисовывается на каждый показ страницы,
+ *  и подписчики копились бы.
+ *
+ *  @param {{project: Element, version: Element, reset: Element}} nodes
+ *  @param {object} filter — меняется на месте
+ *  @param {Function} onChange — что перерисовать после выбора */
+function renderFilterBar(nodes, filter, onChange) {
+  const p = filter.projectId === 'all' ? null : getProject(filter.projectId);
+  // Проект мог исчезнуть, пока фильтр держал на него ссылку.
+  if (filter.projectId !== 'all' && !p) { filter.projectId = 'all'; filter.versionId = 'all'; }
+
+  nodes.project.textContent = p ? p.name : t('filter.all_projects');
+  nodes.project.classList.toggle('on', !!p);
+
+  // Версия появляется, только когда проект выбран и версии у него есть.
+  const versions = p ? versionsOf(p.id) : [];
+  nodes.version.hidden = !versions.length;
+  if (versions.length) {
+    nodes.version.textContent = versionFilterLabel(filter.projectId, filter.versionId);
+    nodes.version.classList.toggle('on', filter.versionId !== 'all');
+  }
+  nodes.reset.hidden = !Core.filterActive(filter);
+
+  nodes.project.onclick = () => openMenu(nodes.project, projectMenuItems(filter.projectId, (id) => {
+    filter.projectId = id;
+    // Версия принадлежит проекту: со сменой проекта прежняя ссылка теряет
+    // смысл, и оставить её значило бы показать пустой экран.
+    filter.versionId = 'all';
+    onChange();
+  }));
+  nodes.version.onclick = () => openMenu(nodes.version, versionMenuItems(filter.projectId, filter.versionId, (id) => {
+    filter.versionId = id;
+    onChange();
+  }));
+  nodes.reset.onclick = () => {
+    filter.projectId = 'all';
+    filter.versionId = 'all';
+    onChange();
+  };
+}
+
+const statsNodes = () => ({ project: el.sfProject, version: el.sfVersion, reset: el.sfReset });
+
+// Календарь живёт на той же странице, поэтому фильтр у них один: два разных
+// ответа на вопрос «за какой проект смотрим» на одном экране сбивали бы.
+const statsTasks = () => Core.filterTasks(state.tasks, state.versions, statsFilter);
+const calAggregateDays = () => Core.aggregateDays(statsTasks(), defaultRate());
+const calRangeAgg = (from, to) => Core.rangeAgg(statsTasks(), from, to, defaultRate());
+const calSessionPairs = () => Core.allSessionPairs(statsTasks());
+
+// --- Правая панель: записи, разложенные по проектам ---
+
+/** Свёрнутые проекты в правой панели. Как и свёрнутые дорожки на доске —
+ *  способ смотреть, в данных ему делать нечего. */
+const calGroupsClosed = new Set();
+
+function toggleCalGroup(projectId) {
+  if (calGroupsClosed.has(projectId)) calGroupsClosed.delete(projectId);
+  else calGroupsClosed.add(projectId);
+  renderCalDayPanel();
+}
+
+function renderCalDayPanel() {
+  if (calState.periodOn) renderPeriodSummary();
+  else renderCalDay();
+}
+
+/** Раскладывает строки по проектам, сохраняя порядок первого появления: так
+ *  проект, с которого начался день, и стоит первым.
+ *  @param {Array<{t: object, ms: number, money: number}>} rows */
+function groupByProject(rows) {
+  const groups = new Map();
+  for (const r of rows) {
+    const pid = r.t.projectId;
+    let g = groups.get(pid);
+    if (!g) { g = { id: pid || '', project: getProject(pid), ms: 0, money: 0, rows: [] }; groups.set(pid, g); }
+    g.rows.push(r);
+    g.ms += r.ms;
+    g.money += r.money;
+  }
+  return [...groups.values()];
+}
+
+/** Заголовок проекта в правой панели — он же кнопка сворачивания. */
+function calGroupHead(g) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'cdl-group-head';
+  b.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
+  b.setAttribute('aria-expanded', String(!calGroupsClosed.has(g.id)));
+  b.innerHTML = `
+    <svg class="icon cdl-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>
+    <span class="cdl-group-dot"></span>
+    <span class="cdl-group-name">${escapeHtml(g.project ? g.project.name : t('xlsx.no_project'))}</span>
+    <span class="cdl-group-tot">${fmtDur(g.ms)} · ${fmtMoney(g.money)}</span>`;
+  b.addEventListener('click', () => toggleCalGroup(g.id));
+  return b;
+}
+
+/** Обёртка группы: заголовок плюс вложенный список её строк. */
+function calGroupNode(g, buildRow) {
+  const li = document.createElement('li');
+  li.className = 'cdl-group';
+  li.classList.toggle('closed', calGroupsClosed.has(g.id));
+  li.appendChild(calGroupHead(g));
+  const inner = document.createElement('ul');
+  inner.className = 'cdl-rows';
+  for (const r of g.rows) inner.appendChild(buildRow(r, g));
+  li.appendChild(inner);
+  return li;
+}
 
 
 init();

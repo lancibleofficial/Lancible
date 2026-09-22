@@ -201,7 +201,8 @@ app.whenReady().then(async () => {
     out.recentTileUsesPanelBg = !!rtile && getComputedStyle(rtile).backgroundColor === expectedPanelBg;
 
     // --- часовые строки в "День": не сжимаются флексом ниже контента (регресс — раньше чипы вылезали за границы часа) ---
-    document.querySelector('.nav-item[data-view="calendar"]').click();
+    // Календарь живёт внутри «Статистики» — отдельного пункта меню у него нет.
+    document.querySelector('.nav-item[data-view="stats"]').click();
     await wait(40);
     document.querySelector('.cal-modes button[data-mode="day"]').click();
     await wait(60);

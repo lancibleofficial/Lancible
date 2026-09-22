@@ -64,7 +64,40 @@
       && String(v.name || '').trim().toLowerCase() === n);
   }
 
-  const api = { getVersion, versionsOf, laneVersions, boardLanes, versionUsage, versionNameTaken };
+  /** Отбор задач по проекту и версии — один на список, статистику, календарь
+   *  и выгрузку, чтобы они не разошлись в трактовке «все».
+   *
+   *  'all' в любом из двух полей значит «не отбирать по нему». 'none' в
+   *  версии — только задачи без версии; туда же попадают ссылки на удалённую
+   *  версию, иначе такая задача пропала бы из всех разрезов разом.
+   *
+   *  @param {{projectId?: string, versionId?: string}} filter */
+  function filterTasks(tasks, versions, filter) {
+    const f = filter || {};
+    let out = tasks;
+    if (f.projectId && f.projectId !== 'all') out = out.filter((t) => t.projectId === f.projectId);
+    if (f.versionId && f.versionId !== 'all') {
+      if (f.versionId === 'none') {
+        const known = new Set(versions.map((v) => v.id));
+        out = out.filter((t) => !t.versionId || !known.has(t.versionId));
+      } else {
+        out = out.filter((t) => t.versionId === f.versionId);
+      }
+    }
+    return out === tasks ? tasks.slice() : out;
+  }
+
+  /** Отбор включён хоть по одному полю — по этому решается, показывать ли
+   *  полоску «фильтр включён» и кнопку сброса. */
+  const filterActive = (filter) => {
+    const f = filter || {};
+    return (!!f.projectId && f.projectId !== 'all') || (!!f.versionId && f.versionId !== 'all');
+  };
+
+  const api = {
+    getVersion, versionsOf, laneVersions, boardLanes, versionUsage, versionNameTaken,
+    filterTasks, filterActive,
+  };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);

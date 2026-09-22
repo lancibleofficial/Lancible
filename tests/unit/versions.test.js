@@ -68,6 +68,42 @@ test('подсчёт задач в версии', () => {
   assert.equal(V.versionUsage(tasks, 'v4'), 0);
 });
 
+test('отбор по проекту и версии: «все» ничего не отсекает', () => {
+  assert.equal(V.filterTasks(tasks, versions, { projectId: 'all', versionId: 'all' }).length, tasks.length);
+  assert.equal(V.filterTasks(tasks, versions, {}).length, tasks.length);
+  assert.equal(V.filterTasks(tasks, versions, null).length, tasks.length);
+});
+
+test('отбор не отдаёт наружу исходный массив', () => {
+  // Иначе вызывающий, отсортировав результат, переставил бы state.tasks.
+  assert.notEqual(V.filterTasks(tasks, versions, { projectId: 'all' }), tasks);
+});
+
+test('отбор по версии берёт только её задачи', () => {
+  assert.deepEqual(V.filterTasks(tasks, versions, { versionId: 'v3' }).map((t) => t.id), ['t1', 't2']);
+  assert.deepEqual(V.filterTasks(tasks, versions, { versionId: 'v4' }), []);
+});
+
+test('«без версии» забирает и тех, чья версия удалена', () => {
+  // Иначе задача со ссылкой на удалённую версию пропала бы из всех разрезов
+  // разом: ни в одной версии её нет, и в «без версии» тоже.
+  assert.deepEqual(V.filterTasks(tasks, versions, { versionId: 'none' }).map((t) => t.id), ['t4', 't5']);
+});
+
+test('проект и версия отбирают вместе', () => {
+  const mixed = tasks.concat([{ id: 'z1', projectId: 'p2', versionId: 'v3' }]);
+  assert.deepEqual(V.filterTasks(mixed, versions, { projectId: 'p1', versionId: 'v3' }).map((t) => t.id), ['t1', 't2']);
+  assert.deepEqual(V.filterTasks(mixed, versions, { projectId: 'p2' }).map((t) => t.id), ['z1']);
+});
+
+test('включённость фильтра видна по нему самому', () => {
+  assert.equal(V.filterActive({ projectId: 'all', versionId: 'all' }), false);
+  assert.equal(V.filterActive({}), false);
+  assert.equal(V.filterActive(null), false);
+  assert.equal(V.filterActive({ projectId: 'p1', versionId: 'all' }), true);
+  assert.equal(V.filterActive({ projectId: 'all', versionId: 'none' }), true);
+});
+
 test('одинаковые названия версий ловятся только внутри проекта', () => {
   assert.equal(V.versionNameTaken(versions, 'p1', 'v1.2'), true);
   assert.equal(V.versionNameTaken(versions, 'p1', '  V1.2 '), true, 'регистр и пробелы значения не имеют');
