@@ -101,6 +101,19 @@
       if (typeof v.name !== 'string') v.name = '';
       if (v.releasedAt === undefined) v.releasedAt = null;
     });
+    // Порядок версий — как у статусов: он решает, в каком порядке идут
+    // дорожки на доске, и должен переживать перезагрузку. Нумерация сплошная
+    // внутри проекта, иначе после удаления версии «выше/ниже» начинают
+    // прыгать через дырки.
+    const byProject = new Map();
+    state.versions.forEach((v) => {
+      if (!byProject.has(v.projectId)) byProject.set(v.projectId, []);
+      byProject.get(v.projectId).push(v);
+    });
+    byProject.forEach((list) => {
+      list.sort((a, b) => (Number.isFinite(a.order) ? a.order : Infinity) - (Number.isFinite(b.order) ? b.order : Infinity));
+      list.forEach((v, i) => { v.order = i; });
+    });
 
     const tagIds = new Set(state.tags.map((tg) => tg.id));
     const keepTags = (arr) => (Array.isArray(arr) ? arr.filter((id) => tagIds.has(id)) : []);

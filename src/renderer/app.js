@@ -174,6 +174,7 @@ const el = {
   phDesc: $('ph-desc'), projectMenuBtn: $('project-menu-btn'),
   boardView: $('board-view'), boardProject: $('board-project'), boardProjectName: $('board-project-name'), boardCols: $('board-cols'),
   boardStatuses: $('board-statuses'), stdlgBackdrop: $('stdlg-backdrop'), stList: $('st-list'), stAdd: $('st-add'), stdlgClose: $('stdlg-close'),
+  verList: $('ver-list'), verAdd: $('ver-add'),
   boardSum: $('board-sum'), boardEmpty: $('board-empty'),
 
   taskList: $('task-list'), sidebarEmpty: $('sidebar-empty'), newTaskBtn: $('new-task-btn'),
@@ -200,6 +201,7 @@ const el = {
   expdlgOk: $('expdlg-ok'), expdlgCancel: $('expdlg-cancel'),
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   taskStatus: $('task-status'), taskStatusDot: $('task-status-dot'),
+  taskVersion: $('task-version'), taskVersionRow: $('task-version-row'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
   settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
   settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
@@ -312,8 +314,10 @@ function setTaskDone(task, done) {
 // Теги живут ниже, своим разделом: они общие на всё приложение, а версии —
 // принадлежат проекту.
 
-const getVersion = (id) => state.versions.find((v) => v.id === id) || null;
-const versionsOf = (projectId) => state.versions.filter((v) => v.projectId === projectId);
+// Отбор, порядок и подсчёт — в core/versions.js, здесь только подстановка state.
+const getVersion = (id) => Core.getVersion(state.versions, id);
+const versionsOf = (projectId) => Core.versionsOf(state.versions, projectId);
+const versionUsage = (id) => Core.versionUsage(state.tasks, id);
 const visibleTasks = () => tasksOf(state.ui.projectId);
 const byPinned = (a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt);
 
@@ -2136,52 +2140,149 @@ function renderBoard() {
   const pid = boardProjectId();
   const tasks = tasksOf(pid);
   el.boardCols.innerHTML = '';
-  for (const st of orderedStatuses(pid)) {
-    const col = document.createElement('section');
-    col.className = 'board-col';
-    col.dataset.statusId = st.id;
-    col.style.setProperty('--sc', st.color);
-
-    const inCol = tasks.filter((t2) => t2.statusId === st.id);
-    const head = document.createElement('div');
-    head.className = 'board-col-head';
-    // Сумма времени по колонке — справа, у края. Она отвечает на вопрос, на
-    // который счётчик задач не отвечает: сколько работы там реально лежит.
-    const colMs = inCol.reduce((a, t2) => a + taskElapsedMs(t2), 0);
-    head.innerHTML = `<span class="board-dot"></span><span class="board-col-name">${escapeHtml(st.name)}</span><span class="board-count">${inCol.length}</span><span class="board-col-time">${fmtDur(colMs)}</span>`;
-    col.appendChild(head);
-
-    const body = document.createElement('div');
-    body.className = 'board-col-body';
-    for (const task of inCol) body.appendChild(boardCard(task));
-    // Кнопка живёт внутри тела, сразу под последней карточкой, а не внизу
-    // страницы: колонка растянута на всю высоту, и прижатая к её низу кнопка
-    // оказывалась в сотнях пикселей от задач.
-    const add = document.createElement('button');
-    add.type = 'button';
-    add.className = 'board-add';
-    add.title = t('board.add_task');
-    add.setAttribute('aria-label', t('board.add_task'));
-    add.textContent = '+';
-    add.addEventListener('click', () => newTaskInStatus(pid, st.id));
-    body.appendChild(add);
-    col.appendChild(body);
-
-    // Подсветка столбца под курсором и сам перенос.
-    col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); });
-    col.addEventListener('dragleave', () => col.classList.remove('over'));
-    col.addEventListener('drop', (e) => {
-      e.preventDefault();
-      col.classList.remove('over');
-      const task = getTask(e.dataTransfer.getData('text/plain'));
-      if (!task || task.statusId === st.id) return;
-      setTaskStatus(task, st.id);
-      render();
-      scheduleSave();
-    });
-
-    el.boardCols.appendChild(col);
+  // Пока у проекта нет ни одной версии, доска остаётся ровно такой, какой
+  // была: одна-единственная дорожка — это не дорожка, а лишняя полоса над
+  // столбцами.
+  const lanes = versionsOf(pid).length ? Core.boardLanes(state.versions, tasks, pid) : null;
+  el.boardCols.classList.toggle('has-lanes', !!lanes);
+  if (!lanes) {
+    for (const st of orderedStatuses(pid)) el.boardCols.appendChild(boardColumn(pid, st, tasks, undefined));
+    return;
   }
+  for (const lane of lanes) el.boardCols.appendChild(boardLane(pid, lane));
+}
+
+/** Свёрнутость дорожки живёт в ui, а не в данных: это способ смотреть, и на
+ *  второе устройство он уезжать не должен — как и выбор проекта на доске. */
+const laneKey = (pid, version) => `${pid}:${version ? version.id : 'none'}`;
+
+function laneCollapsed(pid, version) {
+  const map = state.ui.lanesClosed || {};
+  const key = laneKey(pid, version);
+  // Выпущенная версия закрыта, и раскрывать её при каждом открытии доски
+  // незачем. Но если её однажды развернули руками — так и останется.
+  return key in map ? !!map[key] : !!(version && version.releasedAt);
+}
+
+function toggleLane(pid, version) {
+  if (!state.ui.lanesClosed) state.ui.lanesClosed = {};
+  state.ui.lanesClosed[laneKey(pid, version)] = !laneCollapsed(pid, version);
+}
+
+/** Дорожка версии: заголовок, под ним — обычные столбцы статусов. Столбцы
+ *  повторяются в каждой дорожке, потому что иначе карточку некуда класть;
+ *  заодно в заголовке столбца видно время по этой версии, а не по всему
+ *  проекту. */
+function boardLane(pid, lane) {
+  const v = lane.version;
+  const sec = document.createElement('section');
+  sec.className = 'board-lane';
+  sec.dataset.versionId = v ? v.id : '';
+  const collapsed = laneCollapsed(pid, v);
+  sec.classList.toggle('collapsed', collapsed);
+
+  const ms = lane.tasks.reduce((a, t2) => a + taskElapsedMs(t2), 0);
+  const head = document.createElement('button');
+  head.type = 'button';
+  head.className = 'board-lane-head' + (v && v.releasedAt ? ' released' : '');
+  head.title = t('version.lane_toggle');
+  head.setAttribute('aria-expanded', String(!collapsed));
+  head.innerHTML = `
+    <svg class="icon lane-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>
+    <span class="lane-name">${escapeHtml(v ? (v.name || t('task.no_name')) : t('version.none'))}</span>
+    ${v && v.releasedAt ? `<span class="lane-released">${escapeHtml(t('version.released_on', { date: fmtDateShort(v.releasedAt) }))}</span>` : ''}
+    <span class="board-count">${lane.tasks.length}</span>
+    <span class="board-col-time">${fmtDur(ms)}</span>`;
+  head.addEventListener('click', () => { toggleLane(pid, v); renderBoard(); scheduleSave(); });
+  // Заголовок тоже принимает карточки, и это не украшение: у свёрнутой
+  // дорожки столбцов на экране нет, и отправить туда задачу было бы нечем.
+  laneDropTarget(head, v ? v.id : null);
+  sec.appendChild(head);
+
+  const row = document.createElement('div');
+  row.className = 'board-lane-cols';
+  for (const st of orderedStatuses(pid)) row.appendChild(boardColumn(pid, st, lane.tasks, v ? v.id : null));
+  sec.appendChild(row);
+  return sec;
+}
+
+/** Приём карточки на заголовок дорожки: меняется только версия, статус
+ *  остаётся прежним. */
+function laneDropTarget(node, versionId) {
+  node.addEventListener('dragover', (e) => { e.preventDefault(); node.classList.add('over'); });
+  node.addEventListener('dragleave', () => node.classList.remove('over'));
+  node.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    node.classList.remove('over');
+    const task = getTask(e.dataTransfer.getData('text/plain'));
+    if (!task || task.versionId === versionId) return;
+    task.versionId = versionId;
+    task.updatedAt = new Date().toISOString();
+    render();
+    scheduleSave();
+  });
+}
+
+/** Один столбец доски.
+ *
+ *  @param {string|null|undefined} laneVersionId — версия дорожки, в которой
+ *  стоит столбец. undefined значит «доска без дорожек»: версию задачи такой
+ *  столбец не трогает вовсе. null — дорожка «Без версии»: перенос туда
+ *  версию снимает. */
+function boardColumn(pid, st, tasks, laneVersionId) {
+  const col = document.createElement('section');
+  col.className = 'board-col';
+  col.dataset.statusId = st.id;
+  col.style.setProperty('--sc', st.color);
+
+  const inCol = tasks.filter((t2) => t2.statusId === st.id);
+  const head = document.createElement('div');
+  head.className = 'board-col-head';
+  // Сумма времени по колонке — справа, у края. Она отвечает на вопрос, на
+  // который счётчик задач не отвечает: сколько работы там реально лежит.
+  const colMs = inCol.reduce((a, t2) => a + taskElapsedMs(t2), 0);
+  head.innerHTML = `<span class="board-dot"></span><span class="board-col-name">${escapeHtml(st.name)}</span><span class="board-count">${inCol.length}</span><span class="board-col-time">${fmtDur(colMs)}</span>`;
+  col.appendChild(head);
+
+  const body = document.createElement('div');
+  body.className = 'board-col-body';
+  for (const task of inCol) body.appendChild(boardCard(task));
+  // Кнопка живёт внутри тела, сразу под последней карточкой, а не внизу
+  // страницы: колонка растянута на всю высоту, и прижатая к её низу кнопка
+  // оказывалась в сотнях пикселей от задач.
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'board-add';
+  add.title = t('board.add_task');
+  add.setAttribute('aria-label', t('board.add_task'));
+  add.textContent = '+';
+  add.addEventListener('click', () => newTaskInStatus(pid, st.id, laneVersionId || null));
+  body.appendChild(add);
+  col.appendChild(body);
+
+  // Подсветка столбца под курсором и сам перенос. На доске с дорожками
+  // перенос меняет разом и статус, и версию — именно так задача и
+  // переезжает из выпуска в выпуск.
+  col.addEventListener('dragover', (e) => { e.preventDefault(); col.classList.add('over'); });
+  col.addEventListener('dragleave', () => col.classList.remove('over'));
+  col.addEventListener('drop', (e) => {
+    e.preventDefault();
+    col.classList.remove('over');
+    const task = getTask(e.dataTransfer.getData('text/plain'));
+    if (!task) return;
+    const moveVersion = laneVersionId !== undefined && task.versionId !== laneVersionId;
+    if (task.statusId === st.id && !moveVersion) return;
+    if (task.statusId !== st.id) setTaskStatus(task, st.id);
+    if (moveVersion) {
+      task.versionId = laneVersionId;
+      task.updatedAt = new Date().toISOString();
+    }
+    render();
+    scheduleSave();
+  });
+
+  return col;
 }
 
 /** Палитра у якоря. Отдельный маленький попап, потому что в строке статуса
@@ -2462,6 +2563,7 @@ function renderTaskTags(task) {
 function openStatusDialog() {
   if (!boardProjectId()) return;
   renderStatusDialog();
+  renderVersionDialog();
   el.stdlgBackdrop.hidden = false;
 }
 function closeStatusDialog() { el.stdlgBackdrop.hidden = true; }
@@ -2569,12 +2671,12 @@ function addStatus() {
 
 /** Создаёт задачу прямо в колонке доски и открывает её в проекте: название
  *  всё равно вводится в редакторе, а доска показывает только карточки. */
-function newTaskInStatus(projectId, statusId) {
+function newTaskInStatus(projectId, statusId, versionId) {
   const now = new Date().toISOString();
   const task = {
     id: uid(), projectId, title: '', done: false, notes: null,
     totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
-    statusId, tagIds: [], versionId: null, repeat: null, cancelled: false,
+    statusId, tagIds: [], versionId: versionId || null, repeat: null, cancelled: false,
     dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
   };
   setTaskStatus(task, statusId);
@@ -2742,6 +2844,15 @@ function taskItem(task, i) {
     chip.style.setProperty('--sc', st.color);
     chip.innerHTML = `<span class="st-swatch"></span>${escapeHtml(st.name)}`;
     bottom.appendChild(chip);
+  }
+  // Версия рядом со статусом: на доске её видно по дорожке, а в списке
+  // задач её было не видно нигде, кроме как открыв задачу.
+  const ver = task.versionId ? getVersion(task.versionId) : null;
+  if (ver) {
+    const vchip = document.createElement('span');
+    vchip.className = 'task-version' + (ver.releasedAt ? ' released' : '');
+    vchip.textContent = ver.name || t('task.no_name');
+    bottom.appendChild(vchip);
   }
   const ds = dueState(task);
   if (ds) {
@@ -2919,6 +3030,7 @@ function renderDetail() {
 
   renderTimer(task);
   renderTaskStatus(task);
+  renderTaskVersion(task);
   renderTaskTags(task);
   renderMoney(task);
   renderDue(task);
@@ -4306,5 +4418,192 @@ async function init() {
     setTimeout(() => skeleton.remove(), 200);
   }
 }
+
+// --- Версии проекта ---------------------------------------------------------
+// Версия принадлежит проекту, как статусы, а не всему приложению, как теги:
+// «v1.2» одного проекта не имеет ничего общего с «v1.2» другого. Поэтому и
+// настраиваются версии там же, где статусы, — по шестерёнке на доске.
+
+/** Версия задачи в редакторе. Строка прячется, пока в проекте нет ни одной
+ *  версии: пустой выбор в каждой задаче только занимал бы место, а завести
+ *  версию всё равно можно только в настройках проекта. */
+function renderTaskVersion(task) {
+  const list = versionsOf(task.projectId);
+  el.taskVersionRow.hidden = !list.length;
+  if (!list.length) return;
+  const cur = task.versionId ? getVersion(task.versionId) : null;
+  el.taskVersion.textContent = cur ? (cur.name || t('task.no_name')) : t('version.none');
+  el.taskVersion.classList.toggle('unset', !cur);
+}
+
+function setTaskVersion(task, versionId) {
+  if (task.versionId === versionId) return;
+  task.versionId = versionId;
+  task.updatedAt = new Date().toISOString();
+  render();
+  scheduleSave();
+}
+
+function versionLabel(v) {
+  const name = v.name || t('task.no_name');
+  return v.releasedAt ? `${name} · ${t('version.released_on', { date: fmtDateShort(v.releasedAt) })}` : name;
+}
+
+el.taskVersion.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  const items = [{
+    label: t('version.none'),
+    selected: !task.versionId,
+    onClick: () => setTaskVersion(task, null),
+  }];
+  for (const v of versionsOf(task.projectId)) {
+    items.push({ label: versionLabel(v), selected: v.id === task.versionId, onClick: () => setTaskVersion(task, v.id) });
+  }
+  items.push({ sep: true });
+  items.push({
+    label: t('version.manage'),
+    onClick: () => { state.ui.boardProjectId = task.projectId; openStatusDialog(); },
+  });
+  openMenu(el.taskVersion, items);
+});
+
+function renderVersionDialog() {
+  const pid = boardProjectId();
+  const list = versionsOf(pid);
+  el.verList.innerHTML = '';
+
+  if (!list.length) {
+    const hint = document.createElement('div');
+    hint.className = 'st-hint muted';
+    hint.textContent = t('version.empty_hint');
+    el.verList.appendChild(hint);
+    return;
+  }
+
+  list.forEach((v, i) => {
+    const row = document.createElement('div');
+    row.className = 'st-row ver-row';
+    const used = versionUsage(v.id);
+    row.innerHTML = `
+      <input class="st-name" type="text" value="${escapeHtml(v.name)}" data-i18n-ph="version.name_ph" placeholder="Название версии" />
+      <button type="button" class="dp-btn ver-rel${v.releasedAt ? ' released' : ''}" data-act="rel">${escapeHtml(v.releasedAt ? t('version.released_on', { date: fmtDateShort(v.releasedAt) }) : t('version.in_progress'))}</button>
+      <span class="ver-use muted">${escapeHtml(t('version.tasks_n', { n: used }))}</span>
+      <button type="button" class="icon-btn" data-act="up" ${i === 0 ? 'disabled' : ''} data-i18n-title="common.back" title="Выше">
+        <svg class="icon" viewBox="0 0 16 16"><path d="M8 3.6l5.2 5.2-1.4 1.4L8 6.4l-3.8 3.8-1.4-1.4z"/></svg>
+      </button>
+      <button type="button" class="icon-btn" data-act="down" ${i === list.length - 1 ? 'disabled' : ''} data-i18n-title="common.forward" title="Ниже">
+        <svg class="icon" viewBox="0 0 16 16"><path d="M8 12.4L2.8 7.2l1.4-1.4L8 9.6l3.8-3.8 1.4 1.4z"/></svg>
+      </button>
+      <button type="button" class="icon-btn st-del" data-act="del" data-i18n-title="common.delete" title="Удалить">
+        <svg class="icon" viewBox="0 0 16 16"><path d="M6.2 1.6h3.6l.5 1.2h3.1v1.6H2.6V2.8h3.1zM3.6 5.6h8.8l-.6 8.2a1 1 0 01-1 .93H5.2a1 1 0 01-1-.93z"/></svg>
+      </button>`;
+
+    const nameInput = row.querySelector('.st-name');
+    // Про одинаковые названия предупреждаем, но не запрещаем: у статусов
+    // ограничения нет, и заводить его только здесь было бы странно. Двух
+    // «v1.2» в одном проекте всё равно не различить на глаз.
+    const markDuplicate = () => {
+      const dup = Core.versionNameTaken(state.versions, pid, nameInput.value, v.id);
+      row.classList.toggle('dup', dup);
+      nameInput.title = dup ? t('version.name_taken') : '';
+    };
+    markDuplicate();
+    nameInput.addEventListener('input', (e) => {
+      v.name = e.target.value;
+      markDuplicate();
+      render();
+      scheduleSave();
+    });
+
+    row.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-act]');
+      if (!b) return;
+      const act = b.dataset.act;
+      if (act === 'rel') { openReleaseMenu(b, v); return; }
+      if (act === 'up' || act === 'down') {
+        const other = list[act === 'up' ? i - 1 : i + 1];
+        if (!other) return;
+        [v.order, other.order] = [other.order, v.order];
+        renderVersionDialog();
+        render();
+        scheduleSave();
+        return;
+      }
+      if (act === 'del') deleteVersion(v);
+    });
+
+    el.verList.appendChild(row);
+  });
+  applyStaticTranslations();
+}
+
+/** Выпущена версия или ещё в работе. Дату спрашиваем обычным выбором даты —
+ *  тем же, что у срока задачи. */
+function openReleaseMenu(anchor, v) {
+  openMenu(anchor, [
+    {
+      label: t('version.mark_open'),
+      selected: !v.releasedAt,
+      onClick: () => {
+        v.releasedAt = null;
+        renderVersionDialog();
+        render();
+        scheduleSave();
+      },
+    },
+    {
+      label: t('version.mark_released'),
+      selected: !!v.releasedAt,
+      onClick: () => {
+        openDatePicker(anchor, dayKey(v.releasedAt ? new Date(v.releasedAt) : new Date()), (key) => {
+          v.releasedAt = keyToDate(key).toISOString();
+          renderVersionDialog();
+          render();
+          scheduleSave();
+        });
+      },
+    },
+  ]);
+}
+
+function addVersion() {
+  const pid = boardProjectId();
+  if (!pid) return;
+  const list = versionsOf(pid);
+  state.versions.push({
+    id: uid(), projectId: pid, name: t('version.add'), releasedAt: null, order: list.length,
+  });
+  renderVersionDialog();
+  render();
+  scheduleSave();
+  const last = el.verList.querySelector('.ver-row:last-child .st-name');
+  if (last) { last.focus(); last.select(); }
+}
+
+/** Удаление версии задачи не трогает — в отличие от удаления статуса, где
+ *  задаче некуда деться. Версии у задачи может не быть вовсе, поэтому она
+ *  просто снимается, и задача уезжает в дорожку «Без версии». */
+async function deleteVersion(v) {
+  const used = versionUsage(v.id);
+  const name = v.name || t('task.no_name');
+  const ok = await confirmDialog(used
+    ? t('version.delete_used', { name, n: used })
+    : t('version.delete_confirm', { name }));
+  if (!ok) return;
+  for (const task of state.tasks) {
+    if (task.versionId !== v.id) continue;
+    task.versionId = null;
+    task.updatedAt = new Date().toISOString();
+  }
+  state.versions = state.versions.filter((x) => x.id !== v.id);
+  versionsOf(v.projectId).forEach((x, i) => { x.order = i; });
+  renderVersionDialog();
+  render();
+  scheduleSave();
+}
+
+el.verAdd.addEventListener('click', addVersion);
+
 
 init();

@@ -2309,3 +2309,101 @@ body.platform-web .tb-account {
 /* Воздух между полосой вкладок и содержимым вкладки настроек: карточка
    параметров начиналась вплотную под ними. */
 #tab-settings { padding-top: 14px; }
+
+/* ---------- Версии ---------- */
+/* Версия принадлежит проекту, а не всему приложению, как тег. На доске версии
+   показываются дорожками: полоса на версию, внутри полосы — те же столбцы
+   статусов. Пока версий нет, доска остаётся ровно такой, какой была. */
+.board-cols.has-lanes {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding-bottom: 16px;
+  overflow: auto;
+}
+/* Полоса шире окна, когда столбцов много: ширину ей задаёт содержимое, иначе
+   столбцы вылезали бы за пределы дорожки, а не прокручивались вместе с ней. */
+.board-lane { width: max-content; min-width: 100%; display: flex; flex-direction: column; }
+.board-lane-cols { display: flex; align-items: stretch; gap: 8px; }
+/* Столбец в дорожке живёт по высоте содержимого: дорожка — это полоса, а не
+   вся страница, и растягивать её до низа экрана незачем. */
+.board-lane-cols .board-col { min-height: 88px; }
+
+/* Заголовок дорожки прилипает к левому краю: при сдвиге вправо к дальним
+   столбцам иначе теряется единственное, что говорит, какая это версия. */
+.board-lane-head {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 264px;
+  max-width: 100%;
+  margin: 0 0 6px;
+  padding: 5px 10px 5px 6px;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s var(--ease);
+}
+.board-lane-head:hover { background: var(--panel-2); }
+/* Заголовок принимает карточку и сам: у свёрнутой дорожки столбцов на экране
+   нет, и отправить туда задачу было бы нечем. */
+.board-lane-head.over { background: color-mix(in srgb, var(--accent) 22%, var(--panel-2)); }
+.lane-chev { flex: none; color: var(--text-faint); transition: transform 0.14s var(--ease); }
+.board-lane.collapsed .lane-chev { transform: rotate(-90deg); }
+.board-lane.collapsed .board-lane-cols { display: none; }
+.lane-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane-released { flex: none; font-size: 11px; font-weight: 400; color: var(--text-faint); }
+/* Выпущенная версия закрыта: её дорожка звучит тише живой работы. */
+.board-lane-head.released .lane-name { color: var(--text-dim); font-weight: 500; }
+
+/* Бейдж версии в списке задач — рядом с меткой статуса и того же роста:
+   это соседние по смыслу пометки. Цвета у версии нет, поэтому она остаётся
+   нейтральной и не спорит со статусом за внимание. */
+.task-version {
+  display: inline-flex; align-items: center; flex: none;
+  font-size: 11px; font-weight: 500; line-height: 1.5;
+  color: var(--text-dim);
+  background: var(--panel-2);
+  border-radius: 5px; padding: 2px 7px;
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.task-version.released { color: var(--text-faint); }
+
+/* Строка версии в редакторе задачи: «Без версии» звучит тише выбранной. */
+.dp-btn.unset { color: var(--text-faint); }
+
+/* Настройки проекта: два раздела в одном окне — статусы и версии. */
+.setup-section {
+  margin: 0 0 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-faint);
+}
+.st-add + .setup-section { margin-top: 20px; }
+.st-hint { font-size: 12px; line-height: 1.5; }
+/* У версии нет цвета, зато есть выпуск и счётчик задач — остальное такое же,
+   как у строки статуса, и раскладку она берёт оттуда же. */
+/* Пустое место под кружок цвета, которого у версии нет: без него поля
+   версий стояли на 27 пикселей левее полей статусов, и два списка в одном
+   окне читались как случайно сдвинутые. */
+.ver-row::before { content: ''; flex: none; width: 22px; }
+/* Ширина кнопки выпуска зафиксирована: «в работе» и «выпущена 12 сент.»
+   разной длины, и без этого счётчик задач и стрелки гуляли из строки в
+   строку. Класс .on здесь не годится — в приложении он значит «список
+   открыт», и выпущенная версия выглядела бы вечно раскрытым выбором. */
+.ver-rel { flex: none; width: 158px; }
+.ver-rel.released { color: var(--text-dim); }
+.ver-use { flex: none; min-width: 58px; text-align: right; font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Одинаковые названия не запрещаем — только показываем: двух «v1.2» в одном
+   проекте всё равно не различить на глаз. */
+.ver-row.dup .st-name { border-color: var(--danger); }
