@@ -210,6 +210,13 @@ const el = {
   taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
   taskStatus: $('task-status'), taskStatusDot: $('task-status-dot'),
   taskVersion: $('task-version'), taskVersionRow: $('task-version-row'),
+  repeatRow: $('repeat-row'), taskRepeat: $('task-repeat'), repeatNext: $('repeat-next'),
+  rpdlgBackdrop: $('rpdlg-backdrop'), rpEvery: $('rp-every'), rpFreq: $('rp-freq'),
+  rpDaysRow: $('rp-days-row'), rpDays: $('rp-days'), rpMonthRow: $('rp-month-row'),
+  rpMonthMode: $('rp-month-mode'), rpFrom: $('rp-from'), rpEnds: $('rp-ends'),
+  rpCount: $('rp-count'), rpAfter: $('rp-after'), rpUntil: $('rp-until'),
+  rpHistory: $('rp-history'), rpPreview: $('rp-preview'),
+  rpdlgOff: $('rpdlg-off'), rpdlgCancel: $('rpdlg-cancel'), rpdlgSave: $('rpdlg-save'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
   settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
   settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
@@ -293,6 +300,7 @@ const isClosedStatus = (id) => Core.isClosedStatus(state.statuses, id);
 function setTaskStatus(task, statusId) {
   const s = getStatus(statusId);
   if (!task || !s) return;
+  const wasDone = !!task.done;
   task.statusId = s.id;
   // done означает именно «сделано», а не «закрыто»: отменённая задача тоже
   // уходит из работы, но записывать её в выполненные нельзя — счёт «сделано
@@ -301,6 +309,7 @@ function setTaskStatus(task, statusId) {
   task.cancelled = s.kind === 'cancelled';
   task.doneAt = task.done ? (task.doneAt || new Date().toISOString()) : null;
   task.updatedAt = new Date().toISOString();
+  afterTaskClosed(task, wasDone);
 }
 
 /** Обратная сторона: галочка «выполнено» в списке тоже должна двигать задачу
@@ -313,9 +322,11 @@ function setTaskDone(task, done) {
     const next = defaultStatusId(task.projectId, done);
     if (next) { setTaskStatus(task, next); return; }
   }
+  const wasDone = !!task.done;
   task.done = done;
   task.doneAt = done ? new Date().toISOString() : null;
   task.updatedAt = new Date().toISOString();
+  afterTaskClosed(task, wasDone);
 }
 
 // --- Версии ----------------------------------------------------------------
@@ -2877,6 +2888,13 @@ function taskItem(task, i) {
     vchip.textContent = ver.name || t('task.no_name');
     bottom.appendChild(vchip);
   }
+  if (Core.normalizeRepeat(task.repeat)) {
+    const rep = document.createElement('span');
+    rep.className = 'task-repeat-mark';
+    rep.title = repeatLabel(task.repeat);
+    rep.textContent = '↻';
+    bottom.appendChild(rep);
+  }
   const ds = dueState(task);
   if (ds) {
     const badge = document.createElement('span');
@@ -3014,6 +3032,9 @@ function checkReminders() {
 }
 
 function renderDue(task) {
+  // Повторение считается от дедлайна: появился или исчез срок — строка
+  // повторения должна это заметить.
+  if (el.repeatRow) renderTaskRepeat(task);
   const has = !!task.dueAt;
   const due = has ? new Date(task.dueAt) : null;
   el.dueDateBtn.textContent = has ? fmtDpBtn(dayKey(due)) : t('due.set');
@@ -3054,6 +3075,7 @@ function renderDetail() {
   renderTimer(task);
   renderTaskStatus(task);
   renderTaskVersion(task);
+  renderTaskRepeat(task);
   renderTaskTags(task);
   renderMoney(task);
   renderDue(task);
@@ -4971,7 +4993,7 @@ function renderAgendaTime() {
 
   for (const node of [el.agDaynames, el.agAllday, el.agCols]) node.style.setProperty('--ag-days', String(days));
 
-  const deadlines = Core.deadlineItems(tasks, from, to);
+  const deadlines = Core.deadlineItems(tasks, from, to).concat(repeatGhosts(tasks, from, to));
   el.agDaynames.innerHTML = '';
   el.agAllday.innerHTML = '';
   for (let i = 0; i < days; i += 1) {
@@ -4991,10 +5013,10 @@ function renderAgendaTime() {
       const task = getTask(dl.taskId);
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'ag-dl' + (dl.done ? ' done' : '');
+      chip.className = 'ag-dl' + (dl.done ? ' done' : '') + (dl.ghost ? ' ghost' : '');
       chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
       chip.title = `${t('agenda.deadline')} · ${fmtTime(dl.at)}`;
-      chip.textContent = task ? (task.title || t('task.no_name')) : '';
+      chip.textContent = (dl.ghost ? '↻ ' : '') + (task ? (task.title || t('task.no_name')) : '');
       chip.addEventListener('click', () => { openProject(dl.projectId); selectTask(dl.taskId); });
       cell.appendChild(chip);
     }
@@ -5082,7 +5104,7 @@ function renderAgendaMonth() {
   const today = dayKey(new Date());
   const cur = new Date(agenda.anchor).getMonth();
   const segments = Core.sessionSegments(tasks, from, to);
-  const deadlines = Core.deadlineItems(tasks, from, to);
+  const deadlines = Core.deadlineItems(tasks, from, to).concat(repeatGhosts(tasks, from, to));
 
   el.agMonth.innerHTML = '';
   const head = document.createElement('div');
@@ -5117,7 +5139,7 @@ function renderAgendaMonth() {
       const task = getTask(dl.taskId);
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'ag-mchip dl' + (dl.done ? ' done' : '');
+      chip.className = 'ag-mchip dl' + (dl.done ? ' done' : '') + (dl.ghost ? ' ghost' : '');
       chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
       chip.textContent = task ? (task.title || t('task.no_name')) : '';
       chip.addEventListener('click', () => { openProject(dl.projectId); selectTask(dl.taskId); });
@@ -5153,7 +5175,7 @@ function renderAgendaList() {
   const { from, to } = agendaSpan();
   const tasks = agendaTasks();
   const segments = Core.sessionSegments(tasks, from, to);
-  const deadlines = Core.deadlineItems(tasks, from, to);
+  const deadlines = Core.deadlineItems(tasks, from, to).concat(repeatGhosts(tasks, from, to));
 
   el.agList.innerHTML = '';
   const byDay = new Map();
@@ -5182,7 +5204,7 @@ function renderAgendaList() {
     for (const row of rows) {
       const line = document.createElement('button');
       line.type = 'button';
-      line.className = 'ag-list-row' + (row.kind === 'dl' ? ' dl' : '');
+      line.className = 'ag-list-row' + (row.kind === 'dl' ? ' dl' : '') + (row.dl && row.dl.ghost ? ' ghost' : '');
       if (row.kind === 'dl') {
         const task = getTask(row.dl.taskId);
         line.style.setProperty('--pc', agendaProjectColor(row.dl.projectId));
@@ -5474,6 +5496,295 @@ document.addEventListener('keydown', (e) => {
 setInterval(() => {
   if (state.ui.view === 'calendar' && AG_TIME_MODES.includes(agenda.mode)) renderAgendaNow();
 }, 60_000);
+
+
+// --- Повторение задач -------------------------------------------------------
+// Правило лежит в task.repeat, разбор и расчёт следующего срока — в
+// core/repeat.js. Здесь связь с интерфейсом и то, что происходит с задачей,
+// когда её закрывают.
+
+const WEEKDAY_KEYS = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat'];
+const REPEAT_UNIT_KEY = { day: 'repeat.unit_day', week: 'repeat.unit_week', month: 'repeat.unit_month', year: 'repeat.unit_year' };
+const REPEAT_PRESET_KEY = { day: 'repeat.daily', week: 'repeat.weekly', month: 'repeat.monthly', year: 'repeat.yearly' };
+
+const weekdayName = (d) => t(WEEKDAY_KEYS[d % 7]);
+
+/** Человеческая подпись правила. Ядро отдаёт ключ и подстановки — перевод и
+ *  склейка дней недели делаются здесь, где известен язык. */
+function repeatLabel(rule) {
+  const d = Core.describeRepeat(rule);
+  if (!d) return t('repeat.none');
+  const vars = { ...d.vars };
+  if (Array.isArray(vars.days)) vars.days = vars.days.map(weekdayName).join(', ');
+  return capFirst(t(d.key, vars));
+}
+
+/** Строка повторения в настройках задачи. Прячется без дедлайна: повторение
+ *  считается от него, и предлагать его раньше было бы обманом. */
+function renderTaskRepeat(task) {
+  const has = !!task.dueAt;
+  el.repeatRow.hidden = !has;
+  if (!has) return;
+  const rule = Core.normalizeRepeat(task.repeat);
+  el.taskRepeat.textContent = rule ? repeatLabel(rule) : t('repeat.none');
+  // Класс .on тут не годится: у dp-btn он значит «список открыт».
+  // Что повторение включено, видно по самой подписи.
+
+  if (!rule || Core.repeatFinished(rule)) {
+    el.repeatNext.hidden = true;
+    return;
+  }
+  const next = Core.nextDue(rule, new Date(task.dueAt).getTime());
+  el.repeatNext.hidden = next == null;
+  if (next != null) el.repeatNext.textContent = t('repeat.next', { date: fmtDateShort(next) });
+}
+
+/** Готовое правило из пресета меню. */
+function presetRule(freq, weekdays) {
+  return {
+    freq,
+    every: 1,
+    weekdays: weekdays || [],
+    monthMode: 'day',
+    from: 'schedule',
+    keepHistory: false,
+    ends: { kind: 'never', count: 10, at: null },
+    done: 0,
+  };
+}
+
+function setTaskRepeat(task, rule) {
+  task.repeat = rule ? Core.normalizeRepeat(rule) : null;
+  task.updatedAt = new Date().toISOString();
+  render();
+  scheduleSave();
+}
+
+el.taskRepeat.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  if (!task.dueAt) { toast(t('repeat.needs_due')); return; }
+  const cur = Core.normalizeRepeat(task.repeat);
+  const isPreset = (freq, days) => cur && cur.freq === freq && cur.every === 1
+    && cur.ends.kind === 'never' && !cur.keepHistory && cur.from === 'schedule'
+    && JSON.stringify(cur.weekdays) === JSON.stringify(days || []);
+
+  const items = [
+    { label: t('repeat.none'), selected: !cur, onClick: () => setTaskRepeat(task, null) },
+    { label: t('repeat.daily'), selected: isPreset('day'), onClick: () => setTaskRepeat(task, presetRule('day')) },
+    { label: t('repeat.weekly'), selected: isPreset('week'), onClick: () => setTaskRepeat(task, presetRule('week')) },
+    { label: t('repeat.weekdays_preset'), selected: isPreset('week', [1, 2, 3, 4, 5]), onClick: () => setTaskRepeat(task, presetRule('week', [1, 2, 3, 4, 5])) },
+    { label: t('repeat.monthly'), selected: isPreset('month'), onClick: () => setTaskRepeat(task, presetRule('month')) },
+    { label: t('repeat.yearly'), selected: isPreset('year'), onClick: () => setTaskRepeat(task, presetRule('year')) },
+    { sep: true },
+    { label: t('repeat.custom'), onClick: () => openRepeatDialog(task) },
+  ];
+  openMenu(el.taskRepeat, items);
+});
+
+// --- Окно тонкой настройки --------------------------------------------------
+
+const rpdlg = { task: null, rule: null };
+
+function openRepeatDialog(task) {
+  rpdlg.task = task;
+  rpdlg.rule = Core.normalizeRepeat(task.repeat) || presetRule('week');
+  renderRepeatDialog();
+  el.rpdlgBackdrop.hidden = false;
+}
+function closeRepeatDialog() {
+  el.rpdlgBackdrop.hidden = true;
+  rpdlg.task = null;
+  closeDatePicker();
+}
+
+function renderRepeatDialog() {
+  const r = rpdlg.rule;
+  if (document.activeElement !== el.rpEvery) el.rpEvery.value = String(r.every);
+  el.rpFreq.textContent = t(REPEAT_UNIT_KEY[r.freq]);
+
+  el.rpDaysRow.hidden = r.freq !== 'week';
+  if (r.freq === 'week') {
+    el.rpDays.innerHTML = '';
+    // Неделя начинается с понедельника — как во всём приложении.
+    for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rp-day' + (r.weekdays.includes(d) ? ' on' : '');
+      b.dataset.day = String(d);
+      b.textContent = weekdayName(d);
+      b.addEventListener('click', () => {
+        r.weekdays = r.weekdays.includes(d) ? r.weekdays.filter((x) => x !== d) : [...r.weekdays, d].sort((a, b2) => a - b2);
+        renderRepeatDialog();
+      });
+      el.rpDays.appendChild(b);
+    }
+  }
+
+  el.rpMonthRow.hidden = r.freq !== 'month';
+  el.rpMonthMode.textContent = t(r.monthMode === 'weekday' ? 'repeat.month_mode_weekday' : 'repeat.month_mode_day');
+  el.rpFrom.textContent = t(r.from === 'done' ? 'repeat.from_done' : 'repeat.from_schedule');
+
+  const ends = r.ends.kind;
+  el.rpEnds.textContent = t(ends === 'after' ? 'repeat.ends_after' : ends === 'on' ? 'repeat.ends_on' : 'repeat.ends_never');
+  el.rpAfter.hidden = ends !== 'after';
+  el.rpUntil.hidden = ends !== 'on';
+  if (ends === 'after' && document.activeElement !== el.rpCount) el.rpCount.value = String(r.ends.count);
+  if (ends === 'on') el.rpUntil.textContent = r.ends.at ? fmtDpBtn(r.ends.at) : fmtDpBtn(dayKey(new Date()));
+
+  el.rpHistory.checked = !!r.keepHistory;
+
+  // Живой просмотр: правило словами и ближайшие сроки — иначе «третий
+  // вторник каждого второго месяца» проверить нечем.
+  const base = rpdlg.task && rpdlg.task.dueAt ? new Date(rpdlg.task.dueAt).getTime() : Date.now();
+  const soon = Core.upcomingDue(r, base, base + (400 * 86400000), 3);
+  el.rpPreview.innerHTML = `<b>${escapeHtml(repeatLabel(r))}</b>`
+    + (soon.length ? `<span class="rp-preview-dates">${soon.map((ms) => escapeHtml(fmtDateShort(ms))).join(' · ')}</span>` : '');
+  applyStaticTranslations();
+}
+
+el.rpEvery.addEventListener('input', () => {
+  const n = parseInt(el.rpEvery.value.replace(/\D/g, ''), 10);
+  rpdlg.rule.every = Number.isFinite(n) && n > 0 ? Math.min(99, n) : 1;
+  renderRepeatDialog();
+});
+el.rpCount.addEventListener('input', () => {
+  const n = parseInt(el.rpCount.value.replace(/\D/g, ''), 10);
+  rpdlg.rule.ends.count = Number.isFinite(n) && n > 0 ? Math.min(999, n) : 1;
+  renderRepeatDialog();
+});
+el.rpFreq.addEventListener('click', () => {
+  openMenu(el.rpFreq, Core.REPEAT_FREQS.map((f) => ({
+    label: t(REPEAT_PRESET_KEY[f]),
+    selected: rpdlg.rule.freq === f,
+    onClick: () => { rpdlg.rule.freq = f; renderRepeatDialog(); },
+  })));
+});
+el.rpMonthMode.addEventListener('click', () => {
+  openMenu(el.rpMonthMode, ['day', 'weekday'].map((m) => ({
+    label: t(m === 'weekday' ? 'repeat.month_mode_weekday' : 'repeat.month_mode_day'),
+    selected: rpdlg.rule.monthMode === m,
+    onClick: () => { rpdlg.rule.monthMode = m; renderRepeatDialog(); },
+  })));
+});
+el.rpFrom.addEventListener('click', () => {
+  openMenu(el.rpFrom, ['schedule', 'done'].map((f) => ({
+    label: t(f === 'done' ? 'repeat.from_done' : 'repeat.from_schedule'),
+    selected: rpdlg.rule.from === f,
+    onClick: () => { rpdlg.rule.from = f; renderRepeatDialog(); },
+  })));
+});
+el.rpEnds.addEventListener('click', () => {
+  openMenu(el.rpEnds, ['never', 'after', 'on'].map((k) => ({
+    label: t(k === 'after' ? 'repeat.ends_after' : k === 'on' ? 'repeat.ends_on' : 'repeat.ends_never'),
+    selected: rpdlg.rule.ends.kind === k,
+    onClick: () => {
+      rpdlg.rule.ends.kind = k;
+      if (k === 'on' && !rpdlg.rule.ends.at) rpdlg.rule.ends.at = dayKey(new Date(Date.now() + (90 * 86400000)));
+      renderRepeatDialog();
+    },
+  })));
+});
+el.rpUntil.addEventListener('click', () => {
+  openDatePicker(el.rpUntil, rpdlg.rule.ends.at || dayKey(new Date()), (key) => {
+    rpdlg.rule.ends.at = key;
+    renderRepeatDialog();
+  });
+});
+el.rpHistory.addEventListener('change', () => { rpdlg.rule.keepHistory = el.rpHistory.checked; });
+el.rpdlgCancel.addEventListener('click', closeRepeatDialog);
+el.rpdlgOff.addEventListener('click', () => { const task = rpdlg.task; closeRepeatDialog(); setTaskRepeat(task, null); });
+el.rpdlgSave.addEventListener('click', () => {
+  const task = rpdlg.task;
+  const rule = rpdlg.rule;
+  // Неделя без выбранных дней — это просто «раз в N недель», и такое правило
+  // тоже осмысленно: пусть остаётся как есть.
+  closeRepeatDialog();
+  setTaskRepeat(task, rule);
+});
+el.rpdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.rpdlgBackdrop) closeRepeatDialog(); });
+
+// --- Что происходит при закрытии задачи -------------------------------------
+
+/** Единая точка «задачу только что закрыли»: повторение должно срабатывать и
+ *  с галочки в списке, и с переноса на доске, и из меню статуса. */
+function afterTaskClosed(task, wasDone) {
+  if (!task || wasDone || !task.done) return;
+  rollRepeat(task);
+}
+
+/** Переводит повторяющуюся задачу на следующий срок. */
+function rollRepeat(task) {
+  const rule = Core.normalizeRepeat(task.repeat);
+  if (!rule || !task.dueAt || Core.repeatFinished(rule)) return;
+
+  const base = rule.from === 'done' ? Date.now() : new Date(task.dueAt).getTime();
+  let next = Core.nextDue(rule, base);
+  // Если задачу не трогали неделями, один шаг оставил бы срок в прошлом —
+  // догоняем до ближайшего будущего, не тратя на это лимит повторений.
+  let guard = 0;
+  while (next != null && next < Date.now() && guard < 500) {
+    const further = Core.nextDue(rule, next);
+    if (further == null) break;
+    next = further;
+    guard += 1;
+  }
+
+  const spent = { ...rule, done: rule.done + 1 };
+  if (next == null) {
+    task.repeat = spent;
+    task.updatedAt = new Date().toISOString();
+    toast(t('repeat.series_done'));
+    return;
+  }
+
+  if (rule.keepHistory) {
+    // Выполненная копия остаётся в списке со своим временем, а сама задача
+    // уезжает на следующий срок с чистого листа.
+    const copy = {
+      ...task,
+      id: uid(),
+      repeat: null,
+      tagIds: [...(task.tagIds || [])],
+      sessions: (task.sessions || []).map((s) => ({ ...s })),
+      pinnedAt: null,
+      updatedAt: new Date().toISOString(),
+    };
+    state.tasks.push(copy);
+    task.sessions = [];
+    task.totalMs = 0;
+  }
+
+  task.repeat = spent;
+  task.dueAt = new Date(next).toISOString();
+  task.doneAt = null;
+  task.notifiedAt = null;
+  const back = defaultStatusId(task.projectId, false);
+  if (back) setTaskStatus(task, back);
+  else { task.done = false; task.cancelled = false; }
+  task.updatedAt = new Date().toISOString();
+  toast(t('repeat.moved', { date: fmtDateShort(next) }));
+}
+
+/** Будущие сроки повторений — призраками на календаре. */
+function repeatGhosts(tasks, from, to) {
+  const out = [];
+  for (const task of tasks) {
+    const rule = Core.normalizeRepeat(task.repeat);
+    if (!rule || !task.dueAt || Core.repeatFinished(rule)) continue;
+    for (const at of Core.upcomingDue(rule, new Date(task.dueAt).getTime(), to, 40)) {
+      if (at < from) continue;
+      out.push({
+        taskId: task.id,
+        projectId: task.projectId,
+        at,
+        ghost: true,
+        dayIndex: Math.round((Core.startOfDayMs(at) - from) / Core.DAY),
+      });
+    }
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
 
 
 init();

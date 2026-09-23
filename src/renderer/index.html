@@ -329,6 +329,12 @@
                 <svg class="icon" viewBox="0 0 16 16"><path d="M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z"/></svg>
                 </button>
                 </div>
+                <div class="due-bar repeat-bar" id="repeat-row">
+                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.2a5.8 5.8 0 014.9 2.7l1.3-1.3v4.1h-4.1l1.5-1.5A4 4 0 004 8H2.2A5.8 5.8 0 018 2.2zm5.8 5.8A5.8 5.8 0 013.1 11.1L1.8 12.4V8.3h4.1L4.4 9.8A4 4 0 0012 8h1.8z"/></svg>
+                  <span class="due-label" data-i18n="repeat.label">Повторение</span>
+                  <button type="button" class="dp-btn" id="task-repeat"></button>
+                  <span class="repeat-next muted" id="repeat-next" hidden></span>
+                </div>
                 <div class="due-bar due-custom" id="due-custom-row" hidden>
                 <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
                 <span class="due-label" data-i18n="due.remind_at">Напомнить</span>
@@ -703,6 +709,51 @@
     </div>
   </div>
 
+  <div id="rpdlg-backdrop" hidden>
+    <div class="modal">
+      <div class="modal-title" data-i18n="repeat.dialog_title">Повторение задачи</div>
+      <div class="rp-row">
+        <span class="rp-label" data-i18n="repeat.every">Повторять каждые</span>
+        <input id="rp-every" class="rp-num" type="text" inputmode="numeric" autocomplete="off" />
+        <button type="button" class="dp-btn" id="rp-freq"></button>
+      </div>
+      <div class="rp-row" id="rp-days-row" hidden>
+        <span class="rp-label" data-i18n="repeat.on_days">В дни</span>
+        <div class="rp-days" id="rp-days"></div>
+      </div>
+      <div class="rp-row" id="rp-month-row" hidden>
+        <span class="rp-label" data-i18n="repeat.month_mode_day">По числу месяца</span>
+        <button type="button" class="dp-btn" id="rp-month-mode"></button>
+      </div>
+      <div class="rp-row">
+        <span class="rp-label" data-i18n="repeat.from_label">Отсчёт</span>
+        <button type="button" class="dp-btn" id="rp-from"></button>
+      </div>
+      <div class="rp-row">
+        <span class="rp-label" data-i18n="repeat.ends_label">Окончание</span>
+        <button type="button" class="dp-btn" id="rp-ends"></button>
+        <span class="rp-after" id="rp-after" hidden>
+          <input id="rp-count" class="rp-num" type="text" inputmode="numeric" autocomplete="off" />
+          <span class="rp-unit" data-i18n="repeat.ends_times">раз</span>
+        </span>
+        <button type="button" class="dp-btn" id="rp-until" hidden></button>
+      </div>
+      <label class="rp-check">
+        <input type="checkbox" id="rp-history" />
+        <span class="rp-check-text">
+          <span data-i18n="repeat.keep_history">Оставлять выполненные копии</span>
+          <span class="rp-hint muted" data-i18n="repeat.keep_history_hint">Каждый раз в списке останется завершённая задача со своим временем</span>
+        </span>
+      </label>
+      <div class="rp-preview" id="rp-preview"></div>
+      <div class="modal-buttons">
+        <button id="rpdlg-off" data-i18n="repeat.none">Не повторяется</button>
+        <button id="rpdlg-cancel" data-i18n="common.cancel">Отмена</button>
+        <button id="rpdlg-save" class="primary" data-i18n="common.done">Готово</button>
+      </div>
+    </div>
+  </div>
+
   <div id="expdlg-backdrop" hidden>
     <div class="modal">
       <div class="modal-title" data-i18n="export.title">Экспорт в Excel</div>
@@ -842,6 +893,7 @@
   <script src="core/tags.js"></script>
   <script src="core/versions.js"></script>
   <script src="core/agenda.js"></script>
+  <script src="core/repeat.js"></script>
   <script src="core/format.js"></script>
   <script src="core/money.js"></script>
   <script src="core/migrate.js"></script>
