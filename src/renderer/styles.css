@@ -727,18 +727,9 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 }
 .rate-row input:focus { border-color: var(--accent); }
 #default-rate { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
-#currency {
-  appearance: none;
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 6px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: border-color 0.12s var(--ease);
-}
-#currency:focus { border-color: var(--accent); outline: none; }
+/* Кнопка выбора валюты — общий .dp-btn, ей нужен только размер по месту:
+   рядом со ставкой в узком подвале боковой панели. */
+#currency { min-width: 0; padding: 5px 8px; font-size: 12px; }
 .rate-row .muted { font-size: 12px; }
 .project-earned { font-size: 12px; font-variant-numeric: tabular-nums; min-height: 1em; }
 
@@ -2077,10 +2068,7 @@ body.platform-web .tb-account {
   width: 70px; text-align: right; background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 6px; padding: 5px 8px; color: var(--text); font-family: inherit; font-size: 13px;
 }
-.settings-row-select {
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
-  padding: 5px 8px; color: var(--text); font-family: inherit; font-size: 13px; cursor: pointer;
-}
+
 .settings-row-danger .settings-row-label { color: var(--danger); }
 .settings-row-danger .icon { color: var(--danger); }
 .modal-error { margin-top: 8px; color: var(--danger); font-size: 12.5px; }
@@ -2285,7 +2273,6 @@ body.platform-web .tb-account {
    доске, чтобы статус узнавался по цвету, а не только по подписи. */
 .st-swatch { width: 8px; height: 8px; border-radius: 3px; background: var(--sc, var(--accent)); flex: none; display: inline-block; }
 .status-bar .st-swatch { margin-right: -2px; }
-.status-bar .settings-row-select { max-width: 190px; }
 /* Метка статуса в строке задачи — рядом со сроком, тем же весом. */
 .task-status {
   display: inline-flex; align-items: center; gap: 5px; flex: none;

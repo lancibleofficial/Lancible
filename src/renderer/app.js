@@ -574,7 +574,7 @@ function setLang(code) {
   state.settings.lang = code;
   el.langLabel.textContent = LANG_NAMES[code] || code;
   applyStaticTranslations();
-  buildCurrencyOptions();
+  renderCurrency();
   renderUpdateBtn();
   renderAccountBtn();
   render();
@@ -649,11 +649,7 @@ el.settingsPasswordRow.addEventListener('click', async () => {
   toast(t(ok ? 'profile.password_updated' : 'profile.update_failed'));
 });
 el.settingsSignoutRow.addEventListener('click', signOut);
-el.settingsCurrency.addEventListener('change', () => {
-  state.settings.currency = el.settingsCurrency.value;
-  render();
-  scheduleSave();
-});
+el.settingsCurrency.addEventListener('click', () => openCurrencyMenu(el.settingsCurrency));
 
 if (el.mobileBackToList) {
   el.mobileBackToList.addEventListener('click', () => {
@@ -798,7 +794,7 @@ function renderSettings() {
   if (document.activeElement !== el.settingsRate) {
     el.settingsRate.value = state.settings.hourlyRate ? String(state.settings.hourlyRate) : '';
   }
-  el.settingsCurrency.value = state.settings.currency;
+  renderCurrency();
 
   renderTagsSettings();
 }
@@ -2797,7 +2793,7 @@ function renderFooter() {
   if (document.activeElement !== el.defaultRate) {
     el.defaultRate.value = state.settings.hourlyRate ? String(state.settings.hourlyRate) : '';
   }
-  el.currency.value = state.settings.currency;
+  renderCurrency();
   const tasks = visibleTasks();
   el.projectEarned.textContent = tasks.length
     ? t('project.summary', { time: fmtDur(projectMs(state.ui.projectId)), money: fmtMoney(projectMoney(state.ui.projectId)) })
@@ -4382,11 +4378,7 @@ el.defaultRate.addEventListener('input', () => {
   renderStats();
   scheduleSave();
 });
-el.currency.addEventListener('change', () => {
-  state.settings.currency = el.currency.value;
-  render();
-  scheduleSave();
-});
+el.currency.addEventListener('click', () => openCurrencyMenu(el.currency));
 
 el.title.addEventListener('input', () => {
   const task = getTask(selectedId);
@@ -4435,18 +4427,29 @@ document.addEventListener('keydown', (e) => {
 // Старт
 // ---------------------------------------------------------------------------
 
-function buildCurrencyOptions() {
-  for (const select of [el.currency, el.settingsCurrency]) {
-    const cur = select.value;
-    select.innerHTML = '';
-    for (const [code, sym] of Object.entries(CURRENCIES)) {
-      const o = document.createElement('option');
-      o.value = code;
-      o.textContent = `${code} ${sym}`;
-      select.appendChild(o);
-    }
-    select.title = t('currency.title');
-    if (cur) select.value = cur;
+const currencyLabel = (code) => `${code} ${CURRENCIES[code] || ''}`.trim();
+
+/** Валюта выбирается своим списком, как проект, статус, версия и
+ *  повторение. Системный <select> был здесь последним: он не умеет ни
+ *  нашей темы, ни наших шрифтов, а на macOS рисуется вовсе по-своему. */
+function openCurrencyMenu(anchor) {
+  openMenu(anchor, Object.keys(CURRENCIES).map((code) => ({
+    label: currencyLabel(code),
+    selected: code === state.settings.currency,
+    onClick: () => {
+      state.settings.currency = code;
+      render();
+      scheduleSave();
+    },
+  })));
+}
+
+/** Обе кнопки показывают одно и то же — валюта в приложении одна. */
+function renderCurrency() {
+  const label = currencyLabel(state.settings.currency);
+  for (const btn of [el.currency, el.settingsCurrency]) {
+    btn.textContent = label;
+    btn.title = t('currency.title');
   }
 }
 
@@ -4468,7 +4471,7 @@ function migrate() {
 async function init() {
   setupEditor();
   setupCarousels();
-  buildCurrencyOptions();
+  renderCurrency();
   buildSwatches();
 
   try {
@@ -4483,7 +4486,7 @@ async function init() {
   el.langLabel.textContent = LANG_NAMES[state.settings.lang] || state.settings.lang;
   applyStaticTranslations();
   applyTheme();
-  buildCurrencyOptions();
+  renderCurrency();
   renderAccountBtn();
   recoverActiveTimer();
   state.ui.view = 'home';
