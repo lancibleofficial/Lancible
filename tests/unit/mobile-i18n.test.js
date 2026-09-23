@@ -87,3 +87,27 @@ test('то, что взято у десктопа, взято дословно',
   }
   assert.deepEqual(differ, [], `формулировки разошлись:\n  ${differ.join('\n  ')}`);
 });
+
+test('каждый ключ, который экраны просят у словаря, в нём есть', () => {
+  // Пропущенный ключ не роняет приложение: t() возвращает сам ключ, и на
+  // экране появляется «task.status_label» вместо «Статус». Поймать это
+  // руками можно только открыв ровно тот экран на ровно том языке.
+  const dirs = ['screens', 'components', 'lib'];
+  const missing = [];
+  for (const dir of dirs) {
+    const base = path.join(__dirname, '..', '..', 'mobile', 'src', dir);
+    const walk = (p) => {
+      for (const name of fs.readdirSync(p)) {
+        const full = path.join(p, name);
+        if (fs.statSync(full).isDirectory()) { walk(full); continue; }
+        if (!name.endsWith('.js')) continue;
+        const src = fs.readFileSync(full, 'utf8');
+        for (const m of src.matchAll(/\bt\(\s*(?:lang|LANG|langCode)\s*,\s*'([a-z0-9_.]+)'/g)) {
+          if (T.ru[m[1]] === undefined) missing.push(`${dir}/${name}: ${m[1]}`);
+        }
+      }
+    };
+    walk(base);
+  }
+  assert.deepEqual([...new Set(missing)], [], `ключей нет в словаре:\n  ${[...new Set(missing)].join('\n  ')}`);
+});

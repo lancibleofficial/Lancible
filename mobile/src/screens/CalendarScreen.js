@@ -14,6 +14,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, spacing, radius, fontSize, tabBarClearance } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
+import ScheduleView from './ScheduleView';
 
 const WEEKDAY_KEYS = ['weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat', 'weekday.sun'];
 const now = new Date();
@@ -90,7 +91,9 @@ export default function CalendarScreen({ navigation }) {
   const openProject = useAppStore((s) => s.openProject);
   const showToast = useAppStore((s) => s.showToast);
 
-  const [mode, setMode] = useState('month');
+  // 'schedule' — часовая сетка (ScheduleView), остальные режимы — прежний
+  // календарь итогов: месяц, неделя и день с разбивкой по записям.
+  const [mode, setMode] = useState('schedule');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [weekStart, setWeekStart] = useState(mondayOf(now));
@@ -330,6 +333,22 @@ export default function CalendarScreen({ navigation }) {
     );
   }
 
+  // Расписание — совсем другая раскладка, и вплетать часовую сетку в этот
+  // FlatList значило бы держать два экрана в одном. Все хуки выше уже
+  // отработали, так что ранний возврат здесь безопасен.
+  if (mode === 'schedule') {
+    return (
+      <ScheduleView
+        onExit={() => setMode('month')}
+        navigate={(taskId) => {
+          const task = tasks.find((x) => x.id === taskId);
+          if (!task) return;
+          navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
+        }}
+      />
+    );
+  }
+
   const listData = mode === 'day' ? [] : periodOn ? [] : daySessions;
 
   return (
@@ -342,9 +361,9 @@ export default function CalendarScreen({ navigation }) {
       ListHeaderComponent={
         <View>
           <View style={styles.modeRow}>
-            {['month', 'week', 'day'].map((m) => (
+            {['schedule', 'month', 'week', 'day'].map((m) => (
               <Pressable key={m} onPress={() => setMode(m)} style={[styles.modeTab, mode === m && styles.modeTabActive]}>
-                <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>{t(lang, `calendar.${m}`)}</Text>
+                <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>{t(lang, m === 'schedule' ? 'agenda.schedule' : `calendar.${m}`)}</Text>
               </Pressable>
             ))}
           </View>

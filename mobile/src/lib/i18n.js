@@ -9,6 +9,7 @@ export const LANG_NAMES = { ru: 'Русский', en: 'English', uk: 'Украї
 
 export const T = {
   ru: {
+    'task.status_label': 'Статус',
     // --- 0.3.0: статусы, версии, повторения, календарь ---
     'agenda.all_day': 'Весь день',
     'agenda.calendars': 'Мои проекты',
@@ -247,6 +248,7 @@ export const T = {
     'plural.task': ['задача', 'задачи', 'задач'],
   },
   en: {
+    'task.status_label': 'Status',
     // --- 0.3.0: статусы, версии, повторения, календарь ---
     'agenda.all_day': 'All day',
     'agenda.calendars': 'My projects',
@@ -485,6 +487,7 @@ export const T = {
     'plural.task': ['task', 'tasks', 'tasks'],
   },
   uk: {
+    'task.status_label': 'Статус',
     // --- 0.3.0: статусы, версии, повторения, календарь ---
     'agenda.all_day': 'Увесь день',
     'agenda.calendars': 'Мої проекти',
@@ -723,6 +726,7 @@ export const T = {
     'plural.task': ['завдання', 'завдання', 'завдань'],
   },
   kk: {
+    'task.status_label': 'Күй',
     // --- 0.3.0: статусы, версии, повторения, календарь ---
     'agenda.all_day': 'Күні бойы',
     'agenda.calendars': 'Менің жобаларым',
