@@ -249,7 +249,7 @@ test('растягивание за нижний край меняет длит�
   expect(after.totalHours, 'сумма по задаче догоняет').toBe(after.hours);
 });
 
-test('клик по блоку без протягивания открывает окно правки записи', async ({ page }) => {
+test('клик по блоку без протягивания открывает задачу, а не двигает её', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => {
     const ev = [...document.querySelectorAll('.ag-ev')].find((e) => e.querySelector('.ag-ev-name').textContent === 'Первый экран');
@@ -262,7 +262,7 @@ test('клик по блоку без протягивания открывае�
     fire('pointerdown', ev);
     fire('pointerup');
   });
-  await expect(page.locator('#sdlg-backdrop')).toBeVisible();
+  await expect(page.locator('#tmdlg-backdrop')).toBeVisible();
 });
 
 test('проекты слева работают как календари: галочка прячет их записи', async ({ page }) => {
@@ -439,4 +439,43 @@ test('сетка нарисована: часовые линии и получа
     expect(m.colBorder, `граница столбца, тема ${theme}`).toMatchObject({ style: 'solid', width: '1px' });
     expect(m.perColumn, 'линия каждые полчаса, кроме самой полуночи').toBe(47);
   }
+});
+
+test('шапка дней и строка «весь день» кончаются там же, где сетка', async ({ page }) => {
+  // Сетка лежит в прокручиваемой области и теряет ширину её полосы, а шапка
+  // и строка «весь день» — нет. Расхождение копилось по столбцам: к
+  // воскресенью набегало девять пикселей, и границы уезжали от линий.
+  await seed(page);
+  const m = await page.evaluate(() => {
+    // Без округления: столбцы встают на дробные пиксели, и округление каждого
+    // края по отдельности само по себе даёт разницу в пиксель-другой.
+    const left = (sel) => [...document.querySelectorAll(sel)].map((n) => n.getBoundingClientRect().left);
+    const right = (sel) => document.querySelector(sel).getBoundingClientRect().right;
+    const cols = left('.ag-col');
+    return {
+      allday: left('.ag-allday-cell').map((v, i) => v - cols[i]),
+      names: left('.ag-dayname').map((v, i) => v - cols[i]),
+      rightEdge: right('.ag-allday') - right('#ag-cols'),
+      bar: document.getElementById('ag-scroll').offsetWidth - document.getElementById('ag-scroll').clientWidth,
+      reserved: getComputedStyle(document.getElementById('ag-time')).getPropertyValue('--ag-sb').trim(),
+    };
+  });
+  // В headless полосы прокрутки нет вовсе (она накладная), поэтому сперва
+  // проверяем сам запас: сколько намерили — столько и отложили.
+  expect(m.reserved).toBe(`${m.bar}px`);
+  // Полоса прокрутки давала расхождение 0, 1, 3, 4, 6, 7, 9 — полпикселя
+  // допуска отличает это от дробной раскладки.
+  const off = Math.max(...m.allday.map(Math.abs), ...m.names.map(Math.abs), Math.abs(m.rightEdge));
+  expect(off, `расхождение: весь день ${m.allday}, шапка ${m.names}, край ${m.rightEdge}`).toBeLessThan(0.5);
+
+  // А теперь подставим полосу руками: обе верхние строки обязаны сузиться
+  // ровно на неё. Без этого проверка выше ничего не стоит на машине, где
+  // полоса накладная и всегда нулевая.
+  const forced = await page.evaluate(() => {
+    document.getElementById('ag-time').style.setProperty('--ag-sb', '12px');
+    const right = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().right);
+    return { names: right('.ag-daynames'), allday: right('.ag-allday'), cols: right('#ag-cols') };
+  });
+  expect(forced.cols - forced.names, 'шапка дней учитывает запас').toBe(12);
+  expect(forced.cols - forced.allday, 'строка «весь день» тоже').toBe(12);
 });

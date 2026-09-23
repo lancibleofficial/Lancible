@@ -193,6 +193,13 @@ const el = {
   emptyState: $('empty-state'), detail: $('task-detail'),
   title: $('task-title'), pinTaskBtn: $('pin-task-btn'),
   taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), tabSettings: $('tab-settings'), tabHistory: $('tab-history'),
+  // Узел параметров задачи ездит между вкладкой и модалкой с календаря.
+  taskParams: document.querySelector('#tab-settings .task-params'),
+  tmdlgBackdrop: $('tmdlg-backdrop'), tmdlgDot: $('tmdlg-dot'), tmdlgTitle: $('tmdlg-title'),
+  tmdlgProj: $('tmdlg-proj'), tmdlgTot: $('tmdlg-tot'), tmdlgEntry: $('tmdlg-entry'),
+  tmdlgDate: $('tmdlg-date'), tmdlgStart: $('tmdlg-start'), tmdlgEnd: $('tmdlg-end'),
+  tmdlgDur: $('tmdlg-dur'), tmdlgDel: $('tmdlg-del'), tmdlgParams: $('tmdlg-params'),
+  tmdlgOpen: $('tmdlg-open'), tmdlgDone: $('tmdlg-done'),
   timerDisplay: $('timer-display'), timerSub: $('timer-sub'), timerBtn: $('timer-btn'),
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
@@ -455,7 +462,9 @@ function toast(message) {
 
 const anyDialogOpen = () =>
   !el.modalBackdrop.hidden || !el.pdlgBackdrop.hidden || !el.sdlgBackdrop.hidden ||
-  !el.confirmBackdrop.hidden || !el.searchPanel.hidden || !el.expdlgBackdrop.hidden;
+  !el.confirmBackdrop.hidden || !el.searchPanel.hidden || !el.expdlgBackdrop.hidden ||
+  !el.stdlgBackdrop.hidden || !el.tagdlgBackdrop.hidden || !el.rpdlgBackdrop.hidden ||
+  !el.tmdlgBackdrop.hidden;
 
 // ---------------------------------------------------------------------------
 // Диалог подтверждения (замена системного confirm())
@@ -1310,6 +1319,10 @@ function render() {
   // а страница «Календарь» — про расписание.
   else if (v === 'stats') { renderStatsPage(); renderCalendar(); }
   else if (v === 'settings') renderSettings();
+
+  // Модалка задачи живёт поверх любой страницы, и общий render() про неё
+  // сам не знает: без этой строки статус, поменянный в ней же, не обновлялся.
+  if (!el.tmdlgBackdrop.hidden) renderTaskModal();
 }
 
 function openView(view) {
@@ -2184,6 +2197,12 @@ if (typeof ResizeObserver !== 'undefined' && el.boardCols) {
   }).observe(el.boardCols);
 }
 if (el.boardCols) el.boardCols.addEventListener('scroll', syncLaneOffset, { passive: true });
+
+// Полоса прокрутки у календарной сетки появляется и пропадает вместе с
+// размером окна — ловим это тем же наблюдателем, что и доску.
+if (typeof ResizeObserver !== 'undefined' && el.agScroll) {
+  new ResizeObserver(() => syncAgendaScrollbar()).observe(el.agScroll);
+}
 
 /** Свёрнутость дорожки живёт в ui, а не в данных: это способ смотреть, и на
  *  второе устройство он уезжать не должен — как и выбор проекта на доске. */
@@ -3462,16 +3481,41 @@ function openSessionDialog(task, index) {
   updateSdlgDur();
   el.sdlgBackdrop.hidden = false;
 }
-function sdlgTimes() {
-  const dparts = (sdlg.date || '').split('-').map(Number);
-  const sp = (sdlg.start || '').split(':').map(Number);
-  const ep = (sdlg.end || '').split(':').map(Number);
+/** Дата и два времени — в отрезок. Конец не позже начала значит «через
+ *  полночь»: ночная запись иначе схлопывалась бы в ноль. Считают этим и
+ *  окно правки записи, и модалка задачи с календаря. */
+function spanFromParts(dateKey, startHm, endHm) {
+  const dparts = (dateKey || '').split('-').map(Number);
+  const sp = (startHm || '').split(':').map(Number);
+  const ep = (endHm || '').split(':').map(Number);
   if (dparts.length !== 3 || sp.length < 2 || ep.length < 2 || dparts.some(Number.isNaN)) return null;
   const start = new Date(dparts[0], dparts[1] - 1, dparts[2], sp[0], sp[1]);
   let end = new Date(dparts[0], dparts[1] - 1, dparts[2], ep[0], ep[1]);
   if (end <= start) end = new Date(end.getTime() + 24 * 3_600_000);
   return { start, end, ms: end - start };
 }
+
+/** Записывает отрезок в задачу: index — правка записи, null — новая.
+ *  Своя ставка записи переживает правку: её ставили осознанно. */
+function applySessionEdit(task, index, span) {
+  const entry = {
+    start: span.start.toISOString(), end: span.end.toISOString(), ms: span.ms,
+    rate: effectiveRate(task), manual: true,
+  };
+  if (index != null && task.sessions && task.sessions[index]) {
+    const old = task.sessions[index];
+    if (Number.isFinite(Number(old.rate))) entry.rate = Number(old.rate);
+    task.totalMs = Math.max(0, (task.totalMs || 0) - old.ms + span.ms);
+    task.sessions[index] = entry;
+  } else {
+    task.sessions = task.sessions || [];
+    task.sessions.push(entry);
+    task.totalMs = (task.totalMs || 0) + span.ms;
+  }
+  task.updatedAt = new Date().toISOString();
+}
+
+function sdlgTimes() { return spanFromParts(sdlg.date, sdlg.start, sdlg.end); }
 function updateSdlgDur() {
   const tm = sdlgTimes();
   el.sdlgDur.textContent = tm ? t('sdlg.duration', { time: fmtClock(tm.ms) }) : t('sdlg.check_datetime');
@@ -3480,19 +3524,7 @@ function closeSessionDialog() { el.sdlgBackdrop.hidden = true; closeDatePicker()
 function saveSessionDialog() {
   const tm = sdlgTimes();
   if (!tm || tm.ms < 60_000) { toast(t('toast.invalid_interval')); return; }
-  const task = sdlg.task;
-  const entry = { start: tm.start.toISOString(), end: tm.end.toISOString(), ms: tm.ms, rate: effectiveRate(task), manual: true };
-  if (sdlg.index != null && task.sessions[sdlg.index]) {
-    const old = task.sessions[sdlg.index];
-    if (Number.isFinite(Number(old.rate))) entry.rate = Number(old.rate);
-    task.totalMs = Math.max(0, (task.totalMs || 0) - old.ms + tm.ms);
-    task.sessions[sdlg.index] = entry;
-  } else {
-    task.sessions = task.sessions || [];
-    task.sessions.push(entry);
-    task.totalMs = (task.totalMs || 0) + tm.ms;
-  }
-  task.updatedAt = new Date().toISOString();
+  applySessionEdit(sdlg.task, sdlg.index, tm);
   closeSessionDialog();
   render();
   scheduleSave();
@@ -4384,6 +4416,7 @@ document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (e.key === 'Escape' && dp.open) { closeDatePicker(); return; }
   if (e.key === 'Escape' && tp.open) { closeTimePicker(); return; }
+  if (e.key === 'Escape' && !el.tmdlgBackdrop.hidden) { closeTaskModal(); return; }
   if ((e.ctrlKey || e.metaKey) && k === 'f') {
     e.preventDefault();
     el.searchInput.focus();
@@ -4911,7 +4944,7 @@ function renderAgendaPage() {
   el.agTime.hidden = !timeMode;
   el.agMonth.hidden = agenda.mode !== 'month';
   el.agList.hidden = agenda.mode !== 'agenda';
-  if (timeMode) renderAgendaTime();
+  if (timeMode) { renderAgendaTime(); syncAgendaScrollbar(); }
   else if (agenda.mode === 'month') renderAgendaMonth();
   else renderAgendaList();
 }
@@ -4940,6 +4973,19 @@ function renderAgendaHead() {
   el.agTotal.textContent = ms ? fmtDur(ms) : '';
 }
 
+/** Сетка живёт в прокручиваемой области и теряет ширину её полосы, а шапка
+ *  дней и строка «весь день» — нет. Из-за этого их границы расходились с
+ *  линиями сетки тем сильнее, чем правее столбец: к воскресенью набегало
+ *  девять пикселей. Меряем полосу и резервируем ровно столько же.
+ *
+ *  Ширина полосы не константа: её задаёт система, а в вебе она ещё и
+ *  пропадает, когда сетка целиком помещается в окно. */
+function syncAgendaScrollbar() {
+  const box = el.agScroll;
+  if (!box) return;
+  const next = Math.max(0, box.offsetWidth - box.clientWidth) + 'px';
+  if (el.agTime.style.getPropertyValue('--ag-sb') !== next) el.agTime.style.setProperty('--ag-sb', next);
+}
 function renderAgendaSide() {
   const m = new Date(agenda.miniMonth);
   el.agMiniTitle.textContent = monthLabel(m.getFullYear(), m.getMonth());
@@ -5017,7 +5063,7 @@ function renderAgendaTime() {
       chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
       chip.title = `${t('agenda.deadline')} · ${fmtTime(dl.at)}`;
       chip.textContent = (dl.ghost ? '↻ ' : '') + (task ? (task.title || t('task.no_name')) : '');
-      chip.addEventListener('click', () => { openProject(dl.projectId); selectTask(dl.taskId); });
+      chip.addEventListener('click', () => openTaskModal(getTask(dl.taskId), null));
       cell.appendChild(chip);
     }
     el.agAllday.appendChild(cell);
@@ -5144,7 +5190,7 @@ function renderAgendaMonth() {
       chip.className = 'ag-mchip dl' + (dl.done ? ' done' : '') + (dl.ghost ? ' ghost' : '');
       chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
       chip.textContent = task ? (task.title || t('task.no_name')) : '';
-      chip.addEventListener('click', () => { openProject(dl.projectId); selectTask(dl.taskId); });
+      chip.addEventListener('click', () => openTaskModal(getTask(dl.taskId), null));
       cell.appendChild(chip);
     }
     const daySegs = segments.filter((s) => s.dayIndex === i);
@@ -5156,7 +5202,7 @@ function renderAgendaMonth() {
       chip.style.setProperty('--pc', agendaProjectColor(seg.projectId));
       chip.innerHTML = `<span class="ag-mchip-time">${fmtTime(seg.start).slice(0, 5)}</span>`
         + `<span class="ag-mchip-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`;
-      chip.addEventListener('click', () => { if (task) openSessionDialog(task, seg.index); });
+      chip.addEventListener('click', () => { if (task) openTaskModal(task, seg.index); });
       cell.appendChild(chip);
     }
     if (daySegs.length > 3) {
@@ -5213,14 +5259,14 @@ function renderAgendaList() {
         line.innerHTML = `<span class="ag-list-time">${fmtTime(row.dl.at).slice(0, 5)}</span>`
           + `<span class="ag-list-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`
           + `<span class="ag-list-tag">${escapeHtml(t('agenda.deadline'))}</span>`;
-        line.addEventListener('click', () => { openProject(row.dl.projectId); selectTask(row.dl.taskId); });
+        line.addEventListener('click', () => openTaskModal(getTask(row.dl.taskId), null));
       } else {
         const task = getTask(row.seg.taskId);
         line.style.setProperty('--pc', agendaProjectColor(row.seg.projectId));
         line.innerHTML = `<span class="ag-list-time">${fmtTime(row.seg.start).slice(0, 5)}–${fmtTime(row.seg.end).slice(0, 5)}</span>`
           + `<span class="ag-list-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`
           + `<span class="ag-list-dur">${fmtDur(row.seg.ms)}</span>`;
-        line.addEventListener('click', () => { if (task) openSessionDialog(task, row.seg.index); });
+        line.addEventListener('click', () => { if (task) openTaskModal(task, row.seg.index); });
       }
       group.appendChild(line);
     }
@@ -5355,7 +5401,7 @@ function agendaEndDrag(e) {
   if (!task) { renderAgendaPage(); return; }
   if (!moved) {
     // Клик без протягивания — это открыть запись, а не подвинуть её.
-    openSessionDialog(task, agDrag.index);
+    openTaskModal(task, agDrag.index);
     renderAgendaPage();
     return;
   }
@@ -5499,6 +5545,137 @@ function openAgendaCreate(e, span, onTask) {
   }, 0);
 }
 
+// --- Задача с календаря -----------------------------------------------------
+
+/** Настройки задачи в модалке не написаны заново: сюда на время переезжает
+ *  тот же узел .task-params, что живёт во вкладке задачи. Значит совпадение
+ *  окна и вкладки не нужно поддерживать — оно устроено так по построению, а
+ *  все обработчики (статус, теги, ставка, срок, повторение) работают как
+ *  были: они берут задачу из selectedId, который мы и подменяем. */
+const tmdlg = { taskId: null, index: null, date: null, start: null, end: null };
+
+function openTaskModal(task, index) {
+  if (!task) return;
+  closeMenu();
+  tmdlg.taskId = task.id;
+  tmdlg.index = index != null ? index : null;
+  selectedId = task.id;
+  el.tmdlgParams.appendChild(el.taskParams);
+
+  const s = tmdlg.index != null ? (task.sessions || [])[tmdlg.index] : null;
+  el.tmdlgEntry.hidden = !s;
+  if (s) {
+    const start = new Date(s.start);
+    const end = s.end ? new Date(s.end) : new Date();
+    tmdlg.date = dayKey(start);
+    tmdlg.start = `${pad2(start.getHours())}:${pad2(start.getMinutes())}`;
+    tmdlg.end = `${pad2(end.getHours())}:${pad2(end.getMinutes())}`;
+  }
+  renderTaskModal();
+  el.tmdlgBackdrop.hidden = false;
+}
+
+function closeTaskModal() {
+  if (el.tmdlgBackdrop.hidden) return;
+  el.tmdlgBackdrop.hidden = true;
+  // Узел возвращается во вкладку задачи. Не вернуть — и страница задачи
+  // останется без параметров до перезагрузки.
+  el.tabSettings.appendChild(el.taskParams);
+  tmdlg.taskId = null;
+  closeDatePicker();
+  closeTimePicker();
+}
+
+const tmdlgTimes = () => spanFromParts(tmdlg.date, tmdlg.start, tmdlg.end);
+
+function renderTaskModal() {
+  const task = getTask(tmdlg.taskId);
+  if (!task) { closeTaskModal(); return; }
+
+  if (document.activeElement !== el.tmdlgTitle) el.tmdlgTitle.value = task.title || '';
+  const project = getProject(task.projectId);
+  el.tmdlgDot.style.setProperty('--pc', agendaProjectColor(task.projectId));
+  el.tmdlgProj.textContent = project ? project.name : '';
+  el.tmdlgTot.textContent = `${fmtDur(taskElapsedMs(task))} · ${fmtMoney(earnedOf(task))}`;
+
+  if (!el.tmdlgEntry.hidden) {
+    el.tmdlgDate.textContent = fmtDpBtn(tmdlg.date);
+    el.tmdlgStart.textContent = tmdlg.start;
+    el.tmdlgEnd.textContent = tmdlg.end;
+    const span = tmdlgTimes();
+    el.tmdlgDur.textContent = span ? fmtDur(span.ms) : t('sdlg.check_datetime');
+  }
+
+  // Те же отрисовщики, что у вкладки задачи. renderDetail() сюда не годится:
+  // он требует, чтобы задача была из открытого проекта, а с календаря она
+  // может быть из любого.
+  renderTaskStatus(task);
+  renderTaskVersion(task);
+  renderTaskRepeat(task);
+  renderTaskTags(task);
+  renderMoney(task);
+  renderDue(task);
+}
+
+/** Правка отрезка сохраняется сразу, без кнопки: слишком короткий просто не
+ *  записывается, и об этом говорит подпись длительности. */
+function commitTmdlgEntry() {
+  const task = getTask(tmdlg.taskId);
+  const span = tmdlgTimes();
+  renderTaskModal();
+  if (!task || tmdlg.index == null || !span || span.ms < 60_000) return;
+  applySessionEdit(task, tmdlg.index, span);
+  render();
+  scheduleSave();
+}
+
+el.tmdlgDate.addEventListener('click', () => openDatePicker(el.tmdlgDate, tmdlg.date, (key) => {
+  tmdlg.date = key; commitTmdlgEntry();
+}));
+el.tmdlgStart.addEventListener('click', () => openTimePicker(el.tmdlgStart, tmdlg.start, (val) => {
+  tmdlg.start = val; commitTmdlgEntry();
+}));
+el.tmdlgEnd.addEventListener('click', () => openTimePicker(el.tmdlgEnd, tmdlg.end, (val) => {
+  tmdlg.end = val; commitTmdlgEntry();
+}));
+
+el.tmdlgTitle.addEventListener('input', () => {
+  const task = getTask(tmdlg.taskId);
+  if (!task) return;
+  task.title = el.tmdlgTitle.value;
+  task.updatedAt = new Date().toISOString();
+  render();
+  scheduleSave();
+});
+
+el.tmdlgDel.addEventListener('click', () => {
+  const task = getTask(tmdlg.taskId);
+  if (!task || tmdlg.index == null) return;
+  const s = (task.sessions || [])[tmdlg.index];
+  if (!s) return;
+  task.totalMs = Math.max(0, (task.totalMs || 0) - s.ms);
+  task.sessions.splice(tmdlg.index, 1);
+  task.updatedAt = new Date().toISOString();
+  // Записи больше нет — править нечего, а сама задача остаётся открытой.
+  tmdlg.index = null;
+  el.tmdlgEntry.hidden = true;
+  renderTaskModal();
+  render();
+  scheduleSave();
+});
+
+el.tmdlgOpen.addEventListener('click', () => {
+  const id = tmdlg.taskId;
+  closeTaskModal();
+  const task = getTask(id);
+  if (!task) return;
+  openProject(task.projectId);
+  selectTask(task.id);
+});
+
+el.tmdlgDone.addEventListener('click', closeTaskModal);
+el.tmdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.tmdlgBackdrop) closeTaskModal(); });
+
 // --- Управление -------------------------------------------------------------
 
 function agendaGo(dir) {
@@ -5552,6 +5729,7 @@ el.agCreate.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => {
   if (state.ui.view !== 'calendar') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (anyDialogOpen()) return;
   const node = document.activeElement;
   if (node && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.isContentEditable)) return;
   const key = e.key.toLowerCase();

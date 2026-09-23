@@ -61,6 +61,11 @@
   --nav-active-bg: color-mix(in srgb, var(--accent) 15%, transparent);
 
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  /* Всплывающее поднимается тенью, а не заливкой: меню вызывается поверх
+     окна того же цвета, и на светлой теме одной рамки не хватало — меню
+     сливалось с окном в одно серое пятно. */
+  --shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 16px 44px rgba(0, 0, 0, 0.5);
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --nav-w: 208px;
   --nav-w-collapsed: 56px;
@@ -80,7 +85,7 @@
     --bg: #ffffff;
     --panel: #f6f7f9;
     --panel-2: #eceef2;
-    --board-col: #e6e9ef;
+    --board-col: #eef0f5;
     --tag-ink: 34%;
     --border: #d9dee6;
     --border-soft: #e4e8ee;
@@ -98,6 +103,8 @@
     --tab-active-bg: #ffffff;
     --nav-active-bg: color-mix(in srgb, var(--accent) 34%, transparent);
     --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
+    --shadow-pop: 0 8px 24px rgba(16, 20, 26, 0.16);
+    --shadow-modal: 0 18px 48px rgba(16, 20, 26, 0.20);
   }
 }
 :root[data-theme="light"] {
@@ -105,7 +112,7 @@
   --bg: #ffffff;
   --panel: #f6f7f9;
   --panel-2: #eceef2;
-  --board-col: #e6e9ef;
+  --board-col: #eef0f5;
   --tag-ink: 34%;
   --border: #d9dee6;
   --border-soft: #e4e8ee;
@@ -123,6 +130,8 @@
   --tab-active-bg: #ffffff;
   --nav-active-bg: color-mix(in srgb, var(--accent) 34%, transparent);
   --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
+  --shadow-pop: 0 8px 24px rgba(16, 20, 26, 0.16);
+  --shadow-modal: 0 18px 48px rgba(16, 20, 26, 0.20);
 }
 
 
@@ -429,7 +438,7 @@ body.nav-collapsed .nav-item .nav-label { opacity: 0; }
   background: var(--panel);
   border: 1px solid var(--border-strong);
   border-radius: 12px;
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-modal);
   z-index: 80;
   display: flex;
   flex-direction: column;
@@ -546,7 +555,9 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 #home-side {
   min-height: 0;
   border-left: 1px solid var(--border);
-  background: var(--panel);
+  /* Правые панели — продолжение страницы, а не отдельная поверхность:
+     серой в светлой теме остаётся только левая колонка. */
+  background: var(--bg);
   padding: 16px 16px 20px;
   overflow-y: auto;
   display: flex;
@@ -1080,6 +1091,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   background: var(--panel);
   border: 1px solid var(--border-strong);
   border-radius: 9px;
+  box-shadow: var(--shadow-pop);
   padding: 5px;
   animation: popIn 0.12s var(--ease);
 }
@@ -1095,7 +1107,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-item .ctx-check { color: var(--accent); flex: none; }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
-#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #expdlg-backdrop, #stdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop {
+#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #stdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
@@ -1108,6 +1120,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
+  box-shadow: var(--shadow-modal);
   padding: 18px;
   width: min(360px, 90vw);
   animation: popIn 0.16s var(--ease);
@@ -1739,7 +1752,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .cal-day {
   border-left: 1px solid var(--border);
-  background: var(--panel);
+  background: var(--bg);
   padding: 18px 16px;
   overflow-y: auto;
   display: flex;
@@ -1867,7 +1880,7 @@ body.platform-web .tb-account {
   background: var(--panel);
   border: 1px solid var(--border-strong);
   border-radius: 12px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-modal);
   z-index: 90;
   display: flex;
   flex-direction: column;
@@ -2331,7 +2344,7 @@ body.platform-web .tb-account {
   position: fixed; z-index: 130;
   width: 232px; max-height: 300px; display: flex; flex-direction: column;
   background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4); overflow: hidden;
+  box-shadow: var(--shadow-pop); overflow: hidden;
 }
 .tag-pop-search {
   border: none; border-bottom: 1px solid var(--border); background: none;
@@ -2355,6 +2368,50 @@ body.platform-web .tb-account {
 /* Воздух между полосой вкладок и содержимым вкладки настроек: карточка
    параметров начиналась вплотную под ними. */
 #tab-settings { padding-top: 14px; }
+
+
+/* ---------- Задача, открытая с календаря ----------
+   Верх окна — то, что нельзя поменять в параметрах: название, проект, итог.
+   Ниже — запись, по которой щёлкнули, и следом переехавший сюда блок
+   .task-params из вкладки задачи. */
+.tmdlg { display: flex; flex-direction: column; gap: 10px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.tmdlg-head { display: flex; align-items: center; gap: 9px; }
+.tmdlg-dot { flex: none; width: 10px; height: 10px; border-radius: 3px; background: var(--pc, var(--accent)); }
+#tmdlg-title {
+  flex: 1; min-width: 0;
+  border: none; background: none; color: var(--text);
+  font-family: var(--font-display); font-size: 18px; font-weight: 400;
+  padding: 2px 0; outline: none;
+  border-bottom: 1px solid transparent;
+}
+#tmdlg-title:focus { border-bottom-color: var(--border); }
+.tmdlg-sub {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin: -4px 0 0 19px; font-size: 12px; color: var(--text-dim);
+}
+.tmdlg-tot { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* Строка записи: та же тройка кнопок, что в окне правки времени, но править
+   можно не выходя из задачи. */
+.tmdlg-entry {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 9px 11px;
+  background: var(--panel-2); border-radius: 9px;
+}
+.tmdlg-entry-label {
+  flex: none; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--text-faint);
+}
+.tmdlg-dash { color: var(--text-dim); }
+/* Три кнопки, подпись и длительность должны помещаться в одну строку: с
+   общей минимальной шириной .dp-btn в 116px строка переносилась пополам. */
+.tmdlg-entry .dp-btn { min-width: 0; padding: 5px 8px; }
+.tmdlg-dur { margin-left: auto; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.tmdlg-entry .icon-btn { flex: none; }
+
+/* .task-params приехал сюда целиком — ему нужен только сброс внешних отступов
+   вкладки, всё остальное у него своё. */
+.tmdlg-params > .task-params { margin: 0; }
 
 /* ---------- Версии ---------- */
 /* Версия принадлежит проекту, а не всему приложению, как тег. На доске версии
@@ -2624,12 +2681,16 @@ body.platform-web .tb-account {
 .ag-modes button.on { background: var(--tab-active-bg); color: var(--text); }
 
 /* Часовая сетка */
-.ag-time { flex: 1; min-height: 0; display: flex; flex-direction: column; --ag-gutter: 54px; --ag-h: 1200px; }
+.ag-time { flex: 1; min-height: 0; display: flex; flex-direction: column; --ag-gutter: 54px; --ag-h: 1200px; --ag-sb: 0px; }
+/* --ag-sb — ширина полосы прокрутки у сетки, её меряет syncAgendaScrollbar.
+   Шапка дней и строка «весь день» лежат вне прокрутки, и без этого запаса
+   их границы уезжали вправо относительно линий сетки. */
 .ag-daynames {
   flex: none;
   display: grid;
-  grid-template-columns: repeat(var(--ag-days, 7), 1fr);
+  grid-template-columns: repeat(var(--ag-days, 7), minmax(0, 1fr));
   margin-left: var(--ag-gutter);
+  margin-right: var(--ag-sb);
 }
 .ag-dayname {
   border: none; background: none; cursor: pointer;
@@ -2647,22 +2708,35 @@ body.platform-web .tb-account {
 .ag-dayname.today .ag-dnum { background: var(--accent); color: #10141a; }
 .ag-dayname.today .ag-dow { color: var(--accent); }
 
+/* Раскладка ровно та же, что у шапки дней: отступ слева плюс сетка на всю
+   оставшуюся ширину. Флексом (подпись — фиксированная колонка, ячейки —
+   гибкая) колонки вставали на дробный пиксель мимо линий сетки: до двух
+   пикселей в середине недели. */
 .ag-allday-row {
   flex: none;
-  display: flex;
-  align-items: stretch;
+  position: relative;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   max-height: 88px;
   overflow-y: auto;
+  padding-right: var(--ag-sb);
 }
 .ag-allday-label {
-  flex: none; width: var(--ag-gutter);
+  position: absolute; left: 0; top: 0; width: var(--ag-gutter);
   padding: 5px 8px 0 0; text-align: right;
   font-size: 10px; color: var(--text-faint);
 }
-.ag-allday { flex: 1; display: grid; grid-template-columns: repeat(var(--ag-days, 7), 1fr); }
-.ag-allday-cell { display: flex; flex-direction: column; gap: 2px; padding: 4px 3px; border-left: 1px solid var(--border-soft); min-height: 26px; }
+.ag-allday {
+  display: grid;
+  grid-template-columns: repeat(var(--ag-days, 7), minmax(0, 1fr));
+  margin-left: var(--ag-gutter);
+  min-height: 26px;
+}
+.ag-allday-cell {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 4px 3px; border-left: 1px solid var(--border-soft);
+  min-height: 26px; min-width: 0;
+}
 .ag-dl {
   border: none; border-radius: 5px; cursor: pointer;
   padding: 2px 6px; text-align: left;
@@ -2685,7 +2759,7 @@ body.platform-web .tb-account {
 }
 .ag-cols {
   flex: 1; height: var(--ag-h);
-  display: grid; grid-template-columns: repeat(var(--ag-days, 7), 1fr);
+  display: grid; grid-template-columns: repeat(var(--ag-days, 7), minmax(0, 1fr));
   position: relative;
   /* Протягивание по сетке не должно выделять текст под курсором. */
   user-select: none;

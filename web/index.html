@@ -732,6 +732,41 @@
     </div>
   </div>
 
+  <!-- Задача, открытая с календаря. Настройки не дублируются: сюда на время
+       переезжает тот же узел .task-params, что живёт во вкладке задачи, —
+       значит и обработчики, и отрисовка остаются одни на всех. -->
+  <div id="tmdlg-backdrop" hidden>
+    <div class="modal modal-lg tmdlg">
+      <div class="tmdlg-head">
+        <span class="tmdlg-dot" id="tmdlg-dot"></span>
+        <input id="tmdlg-title" type="text" autocomplete="off" data-i18n-placeholder="task.no_name" placeholder="Без названия" />
+      </div>
+      <div class="tmdlg-sub">
+        <span id="tmdlg-proj"></span>
+        <span class="tmdlg-tot" id="tmdlg-tot"></span>
+      </div>
+
+      <div class="tmdlg-entry" id="tmdlg-entry" hidden>
+        <span class="tmdlg-entry-label" data-i18n="agenda.entry">Запись</span>
+        <button type="button" class="dp-btn" id="tmdlg-date"></button>
+        <button type="button" class="dp-btn" id="tmdlg-start"></button>
+        <span class="tmdlg-dash">–</span>
+        <button type="button" class="dp-btn" id="tmdlg-end"></button>
+        <span class="tmdlg-dur" id="tmdlg-dur"></span>
+        <button type="button" class="icon-btn icon-btn-danger" id="tmdlg-del" data-i18n-title="agenda.delete_entry" title="Удалить запись">
+          <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
+        </button>
+      </div>
+
+      <div class="tmdlg-params" id="tmdlg-params"></div>
+
+      <div class="modal-buttons">
+        <button id="tmdlg-open" data-i18n="agenda.open_task">Открыть задачу</button>
+        <button id="tmdlg-done" class="primary" data-i18n="common.done">Готово</button>
+      </div>
+    </div>
+  </div>
+
   <div id="rpdlg-backdrop" hidden>
     <div class="modal modal-lg rpdlg">
       <div class="modal-title" data-i18n="repeat.dialog_title">Повторение задачи</div>

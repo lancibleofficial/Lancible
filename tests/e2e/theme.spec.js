@@ -90,3 +90,38 @@ test('текст набран Gravity, а лого и крупные числа 
   expect(f.loaded.some((x) => x.startsWith('Gravity')), `загружено: ${f.loaded}`).toBe(true);
   expect(f.loaded.some((x) => x.startsWith('Basique Pro')), `загружено: ${f.loaded}`).toBe(true);
 });
+
+test('серой остаётся только левая панель, правые — цвета страницы', async ({ page }) => {
+  await open(page, 'light');
+  const got = await page.evaluate(() => {
+    const bg = (sel) => getComputedStyle(document.querySelector(sel)).backgroundColor;
+    state.projects.push({
+      id: uid(), name: 'П', color: '#87ff65', description: '',
+      pinnedAt: null, createdAt: new Date().toISOString(), tagIds: [],
+    });
+    state.ui.view = 'home';
+    render();
+    const home = bg('#home-side');
+    state.ui.view = 'stats';
+    render();
+    return { page: bg('body'), rail: bg('#navrail'), home, stats: bg('.cal-day') };
+  });
+  expect(got.home, 'правая панель обзора').toBe(got.page);
+  expect(got.stats, 'правая панель статистики').toBe(got.page);
+  expect(got.rail, 'а левая всё-таки серая').not.toBe(got.page);
+});
+
+test('всплывающее меню поднято тенью над тем, из чего вызвано', async ({ page }) => {
+  // Меню вызывается поверх окна того же цвета. На светлой теме одной рамки не
+  // хватало: меню сливалось с окном, и выглядело это как «дропдаун не работает».
+  for (const theme of ['light', 'dark']) {
+    await open(page, theme);
+    const shadow = await page.evaluate(() => {
+      openMenu(document.querySelector('.nav-item'), [{ label: 'раз', onClick: () => {} }]);
+      const m = getComputedStyle(document.getElementById('ctx-menu'));
+      return { box: m.boxShadow, z: m.zIndex };
+    });
+    expect(shadow.box, `тема ${theme}: тень у меню`).not.toBe('none');
+    expect(shadow.z, 'меню — верхний слой').toBe('140');
+  }
+});
