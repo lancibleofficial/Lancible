@@ -84,18 +84,37 @@ test('календарь живёт внутри «Статистики», от�
   await expect(page.locator('#stats-view #cal-days')).toBeVisible();
 });
 
-test('правая панель стоит справа от сетки, а не под ней', async ({ page }) => {
+test('правая панель — колонка во всю высоту, карточки рядом с ней', async ({ page }) => {
   // Календарь переезжал целиком, и на переезде легко потерять закрывающий
-  // тег: панель тогда оказывается внутри сетки и уезжает вниз.
+  // тег: панель тогда оказывается внутри сетки и уезжает вниз. А шапка
+  // статистики должна жить в левой колонке — над всей сеткой она отжимала
+  // панель вниз, и та начиналась где-то посередине экрана.
   await seed(page);
+  await page.waitForTimeout(200);
   const m = await page.evaluate(() => {
     const r = (sel) => {
       const b = document.querySelector(sel).getBoundingClientRect();
-      return { left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top) };
+      return {
+        left: Math.round(b.left), right: Math.round(b.right),
+        top: Math.round(b.top), bottom: Math.round(b.bottom),
+      };
     };
-    return { main: r('#stats-view .cal-main'), aside: r('#stats-view .cal-day') };
+    return {
+      view: r('#stats-view'),
+      main: r('#stats-view .cal-main'),
+      aside: r('#stats-view .cal-day'),
+      cards: r('#stats-view .stat-cards'),
+      days: r('#stats-view #cal-days'),
+    };
   });
+
   expect(m.aside.left, 'панель должна начинаться правее сетки').toBeGreaterThanOrEqual(m.main.right - 2);
+  expect(m.aside.top, 'панель должна начинаться у шапки').toBe(m.view.top);
+  expect(m.aside.bottom, 'панель должна доходить до низа окна').toBe(m.view.bottom);
+  expect(m.cards.right, 'карточки не должны залезать на панель').toBeLessThanOrEqual(m.aside.left);
+  // Карточки и календарь — одна колонка, поэтому края у них общие.
+  expect(m.cards.left).toBe(m.days.left);
+  expect(Math.abs(m.cards.right - m.days.right)).toBeLessThanOrEqual(2);
 });
 
 test('четыре карточки считают то же, что и данные', async ({ page }) => {
