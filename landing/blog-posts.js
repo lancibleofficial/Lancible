@@ -25,6 +25,29 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-09-23',
+    tag: 'feature',
+    version: '0.3.0',
+    title: {
+      ru: 'Календарь, повторяющиеся задачи, версии на доске и светлая тема заново',
+      en: 'A calendar, repeating tasks, versions on the board and a rebuilt light theme',
+    },
+    body: {
+      ru: [
+        'У Lancible появился календарь — отдельная страница с часовой сеткой, как в привычных календарях. Записи времени и дедлайны лежат на ней блоками: зону можно выделить мышью и завести задачу прямо там, блок — перетащить на другой день или растянуть за нижний край, и время в задаче пересчитается само. Проекты слева работают как календари: галочка прячет их записи с сетки. Режимов пять — день, четыре дня, неделя, месяц и расписание списком, — и переключаются они цифрами и буквами с клавиатуры.',
+        'Задачи научились повторяться: каждые N дней, недель, месяцев или лет, по выбранным дням недели, по числу месяца или по дню недели в нём — «каждый второй вторник». Серию можно оборвать после N повторений или по дате. Закрыли задачу — она возвращается со следующим сроком; если попросить, прежняя останется в списке выполненной, со своим временем. Будущие повторения видно на календаре призраками.',
+        'На доске появились версии: дорожка на версию, внутри — привычные столбцы статусов. Версию можно отметить выпущенной с датой, перетащить задачу между дорожками и отобрать задачи по версии — в списке, в статистике и в выгрузке. Статистика и календарь съехались в одну страницу: сверху четыре показателя, под ними календарь месяца, справа — день по проектам.',
+        'Светлая тема переделана: страница и шапка стали белыми, серым помечена только левая панель. Тексты набраны Gravity, а Basique Pro остался фирменной нотой на логотипе, заголовках и крупных числах. Заодно починилась сетка календаря, которой из-за пропущенного цвета в палитре не было видно вовсе.',
+      ],
+      en: [
+        'Lancible now has a calendar — its own page with an hour grid, the kind you are used to. Time entries and deadlines sit on it as blocks: drag out an area and a task starts right there, drag a block to another day or pull its bottom edge, and the task’s time recalculates itself. Projects on the left work as calendars: a checkbox hides their entries. There are five views — day, four days, week, month and a schedule list — and they switch from the keyboard.',
+        'Tasks can repeat: every N days, weeks, months or years, on chosen weekdays, on a day of the month or on a weekday within it — “every second Tuesday”. A series can end after N times or on a date. Close a task and it comes back with the next due date; ask for it and the finished one stays in the list with its own time. Upcoming repeats show on the calendar as ghosts.',
+        'The board gained versions: a lane per version, with the usual status columns inside. A version can be marked released with a date, tasks drag between lanes, and you can filter by version — in the list, in the statistics and in the export. Statistics and the calendar merged into one page: four figures on top, the month calendar below, and the day broken down by project on the right.',
+        'The light theme is rebuilt: page and header are white now, and only the left panel is grey. Text is set in Gravity, while Basique Pro stays as the signature on the logo, headings and large numbers. The calendar grid got fixed along the way — a colour missing from the palette had been hiding it entirely.',
+      ],
+    },
+  },
+  {
     date: '2026-09-20',
     tag: 'improvement',
     version: '0.2.2 · mobile 1.1.1',
