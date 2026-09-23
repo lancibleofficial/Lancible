@@ -211,6 +211,34 @@ test('фильтр версии в списке задач отбирает и �
   await expect(page.locator('#task-list .task-item')).toHaveCount(3);
 });
 
+test('выбор версии стоит своей строкой и не сжимает пилюли статуса', async ({ page }) => {
+  // Боковая панель узкая: втроём с «Все / В работе / Готово» кнопка версии
+  // сжимала их так, что «В работе» переносилось на две строки.
+  await seed(page);
+  await page.evaluate(() => { openProject(state.projects[0].id); });
+  await expect(page.locator('#tf-version')).toBeVisible();
+  await page.waitForTimeout(150);
+
+  const m = await page.evaluate(() => {
+    const r = (sel) => {
+      const b = document.querySelector(sel).getBoundingClientRect();
+      return { left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top), bottom: Math.round(b.bottom), w: Math.round(b.width) };
+    };
+    return {
+      row: r('.task-filter'),
+      status: r('.tf-status'),
+      version: r('#tf-version'),
+      pills: [...document.querySelectorAll('.tf-status button')].map((b) => Math.round(b.getBoundingClientRect().height)),
+    };
+  });
+
+  expect(m.version.top, 'версия должна быть под пилюлями, а не рядом').toBeGreaterThanOrEqual(m.status.bottom);
+  expect(Math.abs(m.version.w - m.status.w), 'обе строки одной ширины').toBeLessThanOrEqual(1);
+  expect(m.version.right, 'кнопка не должна вылезать за ряд').toBeLessThanOrEqual(m.row.right);
+  expect(new Set(m.pills).size, 'пилюли должны быть одной высоты').toBe(1);
+  expect(m.pills[0], 'текст в пилюлях не должен переноситься').toBeLessThanOrEqual(26);
+});
+
 test('имя выгрузки называет фильтр, а сама выгрузка урезана', async ({ page }) => {
   // Иначе полную выгрузку не отличить от урезанной ни по имени, ни по виду.
   await seed(page);
