@@ -733,42 +733,63 @@
   </div>
 
   <div id="rpdlg-backdrop" hidden>
-    <div class="modal">
+    <div class="modal modal-lg rpdlg">
       <div class="modal-title" data-i18n="repeat.dialog_title">Повторение задачи</div>
-      <div class="rp-row">
-        <span class="rp-label" data-i18n="repeat.every">Повторять каждые</span>
+
+      <div class="rp-seg rp-seg-4" id="rp-freq-seg">
+        <button type="button" data-freq="day" data-i18n="calendar.day">День</button>
+        <button type="button" data-freq="week" data-i18n="calendar.week">Неделя</button>
+        <button type="button" data-freq="month" data-i18n="calendar.month">Месяц</button>
+        <button type="button" data-freq="year" data-i18n="repeat.freq_year">Год</button>
+      </div>
+
+      <div class="rp-line">
+        <span data-i18n="repeat.every">Повторять каждые</span>
         <input id="rp-every" class="rp-num" type="text" inputmode="numeric" autocomplete="off" />
-        <button type="button" class="dp-btn" id="rp-freq"></button>
+        <span class="rp-unit" id="rp-unit"></span>
       </div>
-      <div class="rp-row" id="rp-days-row" hidden>
-        <span class="rp-label" data-i18n="repeat.on_days">В дни</span>
-        <div class="rp-days" id="rp-days"></div>
+
+      <div class="rp-days" id="rp-days" hidden></div>
+
+      <div class="rp-seg rp-seg-2" id="rp-month-seg" hidden>
+        <button type="button" data-mode="day" data-i18n="repeat.month_mode_day">По числу месяца</button>
+        <button type="button" data-mode="weekday" data-i18n="repeat.month_mode_weekday">По дню недели</button>
       </div>
-      <div class="rp-row" id="rp-month-row" hidden>
-        <span class="rp-label" data-i18n="repeat.month_mode_day">По числу месяца</span>
-        <button type="button" class="dp-btn" id="rp-month-mode"></button>
+
+      <div class="rp-field">
+        <span class="rp-field-label" data-i18n="repeat.from_label">Отсчёт</span>
+        <div class="rp-seg rp-seg-2" id="rp-from-seg">
+          <button type="button" data-from="schedule" data-i18n="repeat.from_schedule">По расписанию</button>
+          <button type="button" data-from="done" data-i18n="repeat.from_done">От дня закрытия</button>
+        </div>
       </div>
-      <div class="rp-row">
-        <span class="rp-label" data-i18n="repeat.from_label">Отсчёт</span>
-        <button type="button" class="dp-btn" id="rp-from"></button>
-      </div>
-      <div class="rp-row">
-        <span class="rp-label" data-i18n="repeat.ends_label">Окончание</span>
-        <button type="button" class="dp-btn" id="rp-ends"></button>
-        <span class="rp-after" id="rp-after" hidden>
+
+      <div class="rp-field">
+        <span class="rp-field-label" data-i18n="repeat.ends_label">Окончание</span>
+        <div class="rp-seg rp-seg-3" id="rp-ends-seg">
+          <button type="button" data-ends="never" data-i18n="repeat.ends_never">Никогда</button>
+          <button type="button" data-ends="after" data-i18n="repeat.ends_after">После</button>
+          <button type="button" data-ends="on" data-i18n="repeat.ends_on">До даты</button>
+        </div>
+        <div class="rp-ends-extra" id="rp-after" hidden>
           <input id="rp-count" class="rp-num" type="text" inputmode="numeric" autocomplete="off" />
           <span class="rp-unit" data-i18n="repeat.ends_times">раз</span>
-        </span>
-        <button type="button" class="dp-btn" id="rp-until" hidden></button>
+        </div>
+        <div class="rp-ends-extra" id="rp-until-row" hidden>
+          <button type="button" class="dp-btn" id="rp-until"></button>
+        </div>
       </div>
-      <label class="rp-check">
-        <input type="checkbox" id="rp-history" />
-        <span class="rp-check-text">
+
+      <button type="button" id="rp-history" class="switch rp-switch" aria-pressed="false">
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+        <span class="rp-switch-text">
           <span data-i18n="repeat.keep_history">Оставлять выполненные копии</span>
-          <span class="rp-hint muted" data-i18n="repeat.keep_history_hint">Каждый раз в списке останется завершённая задача со своим временем</span>
+          <span class="rp-hint" data-i18n="repeat.keep_history_hint">Каждый раз в списке останется завершённая задача со своим временем</span>
         </span>
-      </label>
-      <div class="rp-preview" id="rp-preview"></div>
+      </button>
+
+      <div class="rp-summary" id="rp-preview"></div>
+
       <div class="modal-buttons">
         <button id="rpdlg-off" data-i18n="repeat.none">Не повторяется</button>
         <button id="rpdlg-cancel" data-i18n="common.cancel">Отмена</button>

@@ -184,15 +184,15 @@ test('окно тонкой настройки собирает правило �
   await page.locator('.rp-day', { hasText: 'Чт' }).click();
   await expect(page.locator('.rp-day.on')).toHaveCount(2);
 
-  await page.locator('#rp-ends').click();
-  await page.locator('#ctx-menu .ctx-item', { hasText: 'После' }).click();
+  await page.locator('#rp-ends-seg button[data-ends="after"]').click();
   await expect(page.locator('#rp-count')).toBeVisible();
   await page.locator('#rp-count').fill('4');
 
-  await page.locator('#rp-history').check();
-  // Живой просмотр: без него «каждый второй вторник» проверить нечем.
+  await page.locator('#rp-history').click();
+  await expect(page.locator('#rp-history')).toHaveAttribute('aria-pressed', 'true');
+  // Сводка: без неё «каждый второй вторник» проверить нечем.
   await expect(page.locator('#rp-preview')).toContainText('Каждые 2 нед.');
-  await expect(page.locator('.rp-preview-dates')).toBeVisible();
+  await expect(page.locator('.rp-summary-dates')).toBeVisible();
 
   await page.locator('#rpdlg-save').click();
   await expect(page.locator('#rpdlg-backdrop')).toBeHidden();

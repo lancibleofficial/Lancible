@@ -211,10 +211,10 @@ const el = {
   taskStatus: $('task-status'), taskStatusDot: $('task-status-dot'),
   taskVersion: $('task-version'), taskVersionRow: $('task-version-row'),
   repeatRow: $('repeat-row'), taskRepeat: $('task-repeat'), repeatNext: $('repeat-next'),
-  rpdlgBackdrop: $('rpdlg-backdrop'), rpEvery: $('rp-every'), rpFreq: $('rp-freq'),
-  rpDaysRow: $('rp-days-row'), rpDays: $('rp-days'), rpMonthRow: $('rp-month-row'),
-  rpMonthMode: $('rp-month-mode'), rpFrom: $('rp-from'), rpEnds: $('rp-ends'),
-  rpCount: $('rp-count'), rpAfter: $('rp-after'), rpUntil: $('rp-until'),
+  rpdlgBackdrop: $('rpdlg-backdrop'), rpEvery: $('rp-every'), rpUnit: $('rp-unit'),
+  rpFreqSeg: $('rp-freq-seg'), rpDays: $('rp-days'), rpMonthSeg: $('rp-month-seg'),
+  rpFromSeg: $('rp-from-seg'), rpEndsSeg: $('rp-ends-seg'),
+  rpAfter: $('rp-after'), rpCount: $('rp-count'), rpUntilRow: $('rp-until-row'), rpUntil: $('rp-until'),
   rpHistory: $('rp-history'), rpPreview: $('rp-preview'),
   rpdlgOff: $('rpdlg-off'), rpdlgCancel: $('rpdlg-cancel'), rpdlgSave: $('rpdlg-save'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
@@ -5598,12 +5598,20 @@ function closeRepeatDialog() {
   closeDatePicker();
 }
 
+/** Отмечает выбранную кнопку в сегментной группе — тем же приёмом, что у
+ *  режимов календаря и фильтра задач. */
+function markSegment(group, attr, value) {
+  group.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset[attr] === value));
+}
+
 function renderRepeatDialog() {
   const r = rpdlg.rule;
-  if (document.activeElement !== el.rpEvery) el.rpEvery.value = String(r.every);
-  el.rpFreq.textContent = t(REPEAT_UNIT_KEY[r.freq]);
 
-  el.rpDaysRow.hidden = r.freq !== 'week';
+  markSegment(el.rpFreqSeg, 'freq', r.freq);
+  if (document.activeElement !== el.rpEvery) el.rpEvery.value = String(r.every);
+  el.rpUnit.textContent = t(REPEAT_UNIT_KEY[r.freq]);
+
+  el.rpDays.hidden = r.freq !== 'week';
   if (r.freq === 'week') {
     el.rpDays.innerHTML = '';
     // Неделя начинается с понедельника — как во всём приложении.
@@ -5614,32 +5622,36 @@ function renderRepeatDialog() {
       b.dataset.day = String(d);
       b.textContent = weekdayName(d);
       b.addEventListener('click', () => {
-        r.weekdays = r.weekdays.includes(d) ? r.weekdays.filter((x) => x !== d) : [...r.weekdays, d].sort((a, b2) => a - b2);
+        r.weekdays = r.weekdays.includes(d)
+          ? r.weekdays.filter((x) => x !== d)
+          : [...r.weekdays, d].sort((a, b2) => a - b2);
         renderRepeatDialog();
       });
       el.rpDays.appendChild(b);
     }
   }
 
-  el.rpMonthRow.hidden = r.freq !== 'month';
-  el.rpMonthMode.textContent = t(r.monthMode === 'weekday' ? 'repeat.month_mode_weekday' : 'repeat.month_mode_day');
-  el.rpFrom.textContent = t(r.from === 'done' ? 'repeat.from_done' : 'repeat.from_schedule');
+  el.rpMonthSeg.hidden = r.freq !== 'month';
+  markSegment(el.rpMonthSeg, 'mode', r.monthMode);
+  markSegment(el.rpFromSeg, 'from', r.from);
+  markSegment(el.rpEndsSeg, 'ends', r.ends.kind);
 
-  const ends = r.ends.kind;
-  el.rpEnds.textContent = t(ends === 'after' ? 'repeat.ends_after' : ends === 'on' ? 'repeat.ends_on' : 'repeat.ends_never');
-  el.rpAfter.hidden = ends !== 'after';
-  el.rpUntil.hidden = ends !== 'on';
-  if (ends === 'after' && document.activeElement !== el.rpCount) el.rpCount.value = String(r.ends.count);
-  if (ends === 'on') el.rpUntil.textContent = r.ends.at ? fmtDpBtn(r.ends.at) : fmtDpBtn(dayKey(new Date()));
+  el.rpAfter.hidden = r.ends.kind !== 'after';
+  el.rpUntilRow.hidden = r.ends.kind !== 'on';
+  if (r.ends.kind === 'after' && document.activeElement !== el.rpCount) el.rpCount.value = String(r.ends.count);
+  if (r.ends.kind === 'on') el.rpUntil.textContent = fmtDpBtn(r.ends.at || dayKey(new Date()));
 
-  el.rpHistory.checked = !!r.keepHistory;
+  el.rpHistory.classList.toggle('on', !!r.keepHistory);
+  el.rpHistory.setAttribute('aria-pressed', String(!!r.keepHistory));
 
-  // Живой просмотр: правило словами и ближайшие сроки — иначе «третий
-  // вторник каждого второго месяца» проверить нечем.
+  // Сводка: правило словами и ближайшие сроки. Без неё «каждый второй
+  // вторник месяца» проверить нечем — приходится закрывать окно и смотреть.
   const base = rpdlg.task && rpdlg.task.dueAt ? new Date(rpdlg.task.dueAt).getTime() : Date.now();
   const soon = Core.upcomingDue(r, base, base + (400 * 86400000), 3);
-  el.rpPreview.innerHTML = `<b>${escapeHtml(repeatLabel(r))}</b>`
-    + (soon.length ? `<span class="rp-preview-dates">${soon.map((ms) => escapeHtml(fmtDateShort(ms))).join(' · ')}</span>` : '');
+  el.rpPreview.innerHTML = '<span class="rp-summary-mark">↻</span>'
+    + `<span class="rp-summary-main"><b>${escapeHtml(repeatLabel(r))}</b>`
+    + (soon.length ? `<span class="rp-summary-dates">${soon.map((ms) => escapeHtml(fmtDateShort(ms))).join(' · ')}</span>` : '')
+    + '</span>';
   applyStaticTranslations();
 }
 
@@ -5653,37 +5665,32 @@ el.rpCount.addEventListener('input', () => {
   rpdlg.rule.ends.count = Number.isFinite(n) && n > 0 ? Math.min(999, n) : 1;
   renderRepeatDialog();
 });
-el.rpFreq.addEventListener('click', () => {
-  openMenu(el.rpFreq, Core.REPEAT_FREQS.map((f) => ({
-    label: t(REPEAT_PRESET_KEY[f]),
-    selected: rpdlg.rule.freq === f,
-    onClick: () => { rpdlg.rule.freq = f; renderRepeatDialog(); },
-  })));
+el.rpFreqSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-freq]');
+  if (!b) return;
+  rpdlg.rule.freq = b.dataset.freq;
+  renderRepeatDialog();
 });
-el.rpMonthMode.addEventListener('click', () => {
-  openMenu(el.rpMonthMode, ['day', 'weekday'].map((m) => ({
-    label: t(m === 'weekday' ? 'repeat.month_mode_weekday' : 'repeat.month_mode_day'),
-    selected: rpdlg.rule.monthMode === m,
-    onClick: () => { rpdlg.rule.monthMode = m; renderRepeatDialog(); },
-  })));
+el.rpMonthSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-mode]');
+  if (!b) return;
+  rpdlg.rule.monthMode = b.dataset.mode;
+  renderRepeatDialog();
 });
-el.rpFrom.addEventListener('click', () => {
-  openMenu(el.rpFrom, ['schedule', 'done'].map((f) => ({
-    label: t(f === 'done' ? 'repeat.from_done' : 'repeat.from_schedule'),
-    selected: rpdlg.rule.from === f,
-    onClick: () => { rpdlg.rule.from = f; renderRepeatDialog(); },
-  })));
+el.rpFromSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-from]');
+  if (!b) return;
+  rpdlg.rule.from = b.dataset.from;
+  renderRepeatDialog();
 });
-el.rpEnds.addEventListener('click', () => {
-  openMenu(el.rpEnds, ['never', 'after', 'on'].map((k) => ({
-    label: t(k === 'after' ? 'repeat.ends_after' : k === 'on' ? 'repeat.ends_on' : 'repeat.ends_never'),
-    selected: rpdlg.rule.ends.kind === k,
-    onClick: () => {
-      rpdlg.rule.ends.kind = k;
-      if (k === 'on' && !rpdlg.rule.ends.at) rpdlg.rule.ends.at = dayKey(new Date(Date.now() + (90 * 86400000)));
-      renderRepeatDialog();
-    },
-  })));
+el.rpEndsSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-ends]');
+  if (!b) return;
+  rpdlg.rule.ends.kind = b.dataset.ends;
+  if (b.dataset.ends === 'on' && !rpdlg.rule.ends.at) {
+    rpdlg.rule.ends.at = dayKey(new Date(Date.now() + (90 * 86400000)));
+  }
+  renderRepeatDialog();
 });
 el.rpUntil.addEventListener('click', () => {
   openDatePicker(el.rpUntil, rpdlg.rule.ends.at || dayKey(new Date()), (key) => {
@@ -5691,7 +5698,10 @@ el.rpUntil.addEventListener('click', () => {
     renderRepeatDialog();
   });
 });
-el.rpHistory.addEventListener('change', () => { rpdlg.rule.keepHistory = el.rpHistory.checked; });
+el.rpHistory.addEventListener('click', () => {
+  rpdlg.rule.keepHistory = !rpdlg.rule.keepHistory;
+  renderRepeatDialog();
+});
 el.rpdlgCancel.addEventListener('click', closeRepeatDialog);
 el.rpdlgOff.addEventListener('click', () => { const task = rpdlg.task; closeRepeatDialog(); setTaskRepeat(task, null); });
 el.rpdlgSave.addEventListener('click', () => {
@@ -5703,6 +5713,7 @@ el.rpdlgSave.addEventListener('click', () => {
   setTaskRepeat(task, rule);
 });
 el.rpdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.rpdlgBackdrop) closeRepeatDialog(); });
+
 
 // --- Что происходит при закрытии задачи -------------------------------------
 
