@@ -153,7 +153,7 @@ const el = {
 
   homeView: $('home-view'), projectView: $('project-view'), calendarView: $('calendar-view'),
   agTime: $('ag-time'), agMonth: $('ag-month'), agList: $('ag-list'),
-  agDaynames: $('ag-daynames'), agAllday: $('ag-allday'), agGutter: $('ag-gutter'),
+  agDaynames: $('ag-daynames'), agAllday: $('ag-allday'), agAlldayRow: $('ag-allday-row'), agGutter: $('ag-gutter'),
   agCols: $('ag-cols'), agScroll: $('ag-scroll'), agTitle: $('ag-title'), agTotal: $('ag-total'),
   agModes: $('ag-modes'), agToday: $('ag-today'), agPrev: $('ag-prev'), agNext: $('ag-next'),
   agMiniTitle: $('ag-mini-title'), agMiniDays: $('ag-mini-days'),
@@ -199,7 +199,8 @@ const el = {
   tmdlgProj: $('tmdlg-proj'), tmdlgTot: $('tmdlg-tot'), tmdlgEntry: $('tmdlg-entry'),
   tmdlgDate: $('tmdlg-date'), tmdlgStart: $('tmdlg-start'), tmdlgEnd: $('tmdlg-end'),
   tmdlgDur: $('tmdlg-dur'), tmdlgDel: $('tmdlg-del'), tmdlgParams: $('tmdlg-params'),
-  tmdlgOpen: $('tmdlg-open'), tmdlgDone: $('tmdlg-done'),
+  tmdlgOpen: $('tmdlg-open'), tmdlgDone: $('tmdlg-done'), tmdlgKicker: $('tmdlg-kicker'),
+  tmdlgFound: $('tmdlg-found'), tmdlgFoundList: $('tmdlg-found-list'),
   timerDisplay: $('timer-display'), timerSub: $('timer-sub'), timerBtn: $('timer-btn'),
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
@@ -4408,7 +4409,7 @@ document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (e.key === 'Escape' && dp.open) { closeDatePicker(); return; }
   if (e.key === 'Escape' && tp.open) { closeTimePicker(); return; }
-  if (e.key === 'Escape' && !el.tmdlgBackdrop.hidden) { closeTaskModal(); return; }
+  if (e.key === 'Escape' && !el.tmdlgBackdrop.hidden) { closeTaskModal(true); return; }
   if ((e.ctrlKey || e.metaKey) && k === 'f') {
     e.preventDefault();
     el.searchInput.focus();
@@ -4986,8 +4987,17 @@ function renderAgendaHead() {
 function syncAgendaScrollbar() {
   const box = el.agScroll;
   if (!box) return;
-  const next = Math.max(0, box.offsetWidth - box.clientWidth) + 'px';
-  if (el.agTime.style.getPropertyValue('--ag-sb') !== next) el.agTime.style.setProperty('--ag-sb', next);
+  const grid = Math.max(0, box.offsetWidth - box.clientWidth);
+  // У строки «весь день» бывает своя полоса: дедлайнов на день больше, чем
+  // в неё помещается. Тогда её содержимое и так уже сетки, и запас нужен
+  // меньший — иначе вычтем полосу дважды и колонки уедут влево.
+  const row = el.agAlldayRow ? Math.max(0, el.agAlldayRow.offsetWidth - el.agAlldayRow.clientWidth) : 0;
+  const put = (name, px) => {
+    const next = px + 'px';
+    if (el.agTime.style.getPropertyValue(name) !== next) el.agTime.style.setProperty(name, next);
+  };
+  put('--ag-sb', grid);
+  put('--ag-sb-row', Math.max(0, grid - row));
 }
 function renderAgendaSide() {
   const m = new Date(agenda.miniMonth);
@@ -5389,13 +5399,7 @@ function agendaEndDrag(e) {
     let { start, end } = agDrag;
     // Простой щелчок по пустому месту — час с этой отметки, как в Google.
     if (!moved || end - start < AG_MIN_MIN * 60000) end = start + 3_600_000;
-    const span = Core.clampSpan(agDrag.dayStart, start, end, AG_MIN_MIN);
-    openAgendaCreate(e, span, (task) => {
-      addSessionSpan(task, span.start, span.end);
-      render();
-      scheduleSave();
-      toast(t('agenda.new_entry'));
-    });
+    openAgendaDraft(Core.clampSpan(agDrag.dayStart, start, end, AG_MIN_MIN));
     return;
   }
 
@@ -5445,107 +5449,16 @@ function agendaDefaultProject() {
   return (shown || state.projects[0]).id;
 }
 
-/** Окно новой записи — как в Google Calendar: сверху название и проект,
- *  создать можно сразу. Ниже — существующие задачи, отобранные по тому же
- *  набранному тексту: то же время можно дописать к уже заведённой, не
- *  открывая второго окна. Вид взят у пикера тегов — это тот же приём
- *  «набери или выбери», и заводить под него второй стиль незачем. */
-function openAgendaCreate(e, span, onTask) {
-  document.querySelectorAll('.tag-pop').forEach((n) => n.remove());
+/** Новая запись. Черновик задачи заводится сразу: только так окно может
+ *  показать все её настройки — они работают с настоящей задачей из state,
+ *  а не с выдуманной заготовкой. «Отмена» убирает черновик целиком. */
+function openAgendaDraft(span) {
   if (!state.projects.length) { toast(t('agenda.no_projects')); return; }
-  let projectId = agendaDefaultProject();
-
-  const day = new Date(span.start).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
-  const pop = document.createElement('div');
-  pop.className = 'tag-pop ag-pick';
-  pop.innerHTML = `<div class="ag-pick-head">${escapeHtml(t('agenda.create_title'))}</div>`
-    + `<div class="ag-pick-when">${escapeHtml(day)} · ${fmtTime(span.start).slice(0, 5)} – ${fmtTime(span.end).slice(0, 5)}</div>`
-    + `<input class="ag-pick-name" type="text" placeholder="${escapeHtml(t('agenda.task_name_ph'))}" />`
-    + '<div class="ag-pick-row">'
-    + '<button type="button" class="dp-btn ag-pick-proj"></button>'
-    + `<button type="button" class="btn-accent ag-pick-go">${escapeHtml(t('agenda.create_btn'))}</button>`
-    + '</div>'
-    + `<div class="ag-pick-or">${escapeHtml(t('agenda.or_existing'))}</div>`
-    + '<div class="tag-pop-list"></div>';
-
-  const input = pop.querySelector('.ag-pick-name');
-  const projBtn = pop.querySelector('.ag-pick-proj');
-  const orLabel = pop.querySelector('.ag-pick-or');
-  const list = pop.querySelector('.tag-pop-list');
-
-  const close = () => {
-    pop.remove();
-    document.removeEventListener('pointerdown', away, true);
-    document.removeEventListener('keydown', onKey, true);
-  };
-  // Выпадающий список проектов живёт вне окна (он общий, #ctx-menu), и щелчок
-  // по нему не должен считаться щелчком «мимо».
-  const away = (ev) => { if (!pop.contains(ev.target) && !el.ctxMenu.contains(ev.target)) close(); };
-  const onKey = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } };
-
-  const pick = (task) => {
-    agenda.lastProjectId = task.projectId;
-    // Проект мог быть снят галочкой слева. Тогда запись не появилась бы на
-    // сетке, и дело выглядело бы как «ничего не произошло» — неважно,
-    // завели мы задачу или дописали время к старой.
-    agenda.hidden.delete(task.projectId);
-    close();
-    onTask(task);
-  };
-
-  const drawProj = () => {
-    const p = getProject(projectId);
-    projBtn.innerHTML = `<span class="ag-pick-dot" style="--pc:${escapeHtml(agendaProjectColor(projectId))}"></span>`
-      + `<span class="ag-pick-pname">${escapeHtml(p ? p.name : '')}</span>`
-      + icon('chev');
-  };
-  projBtn.addEventListener('click', () => openMenu(projBtn, state.projects.map((p) => ({
-    label: p.name,
-    selected: p.id === projectId,
-    onClick: () => { projectId = p.id; drawProj(); input.focus(); },
-  }))));
-
-  const create = () => {
-    const title = input.value.trim();
-    if (!title) { input.focus(); return; }
-    pick(newTaskOnAgenda(projectId, title));
-  };
-  pop.querySelector('.ag-pick-go').addEventListener('click', create);
-
-  const all = state.tasks.slice().sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
-  const drawList = () => {
-    const q = input.value.trim().toLowerCase();
-    // Без запроса — последние тронутые: обычно время дописывают к тому, чем
-    // только что занимались.
-    const items = all.filter((t2) => !q || (t2.title || '').toLowerCase().includes(q)).slice(0, 12);
-    orLabel.hidden = !items.length;
-    list.hidden = !items.length;
-    list.innerHTML = '';
-    for (const task of items) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'tag-pop-item';
-      b.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(agendaProjectColor(task.projectId))}"></span>`
-        + `<span class="tag-pop-name">${escapeHtml(task.title || t('task.no_name'))}</span>`;
-      b.addEventListener('click', () => pick(task));
-      list.appendChild(b);
-    }
-  };
-  input.addEventListener('input', drawList);
-  input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); create(); } });
-
-  drawProj();
-  drawList();
-  document.body.appendChild(pop);
-  const x = Math.min(Math.max(8, (e && e.clientX ? e.clientX : innerWidth / 2) - 20), innerWidth - pop.offsetWidth - 8);
-  const y = Math.min(Math.max(8, (e && e.clientY ? e.clientY : innerHeight / 3)), innerHeight - pop.offsetHeight - 8);
-  pop.style.left = `${Math.round(x)}px`;
-  pop.style.top = `${Math.round(y)}px`;
-  setTimeout(() => {
-    document.addEventListener('pointerdown', away, true);
-    document.addEventListener('keydown', onKey, true);
-    input.focus();
-  }, 0);
+  const task = newTaskOnAgenda(agendaDefaultProject(), '');
+  addSessionSpan(task, span.start, span.end);
+  agenda.hidden.delete(task.projectId);
+  render();
+  openTaskModal(task, 0, { fresh: true });
 }
 
 // --- Задача с календаря -----------------------------------------------------
@@ -5555,12 +5468,13 @@ function openAgendaCreate(e, span, onTask) {
  *  окна и вкладки не нужно поддерживать — оно устроено так по построению, а
  *  все обработчики (статус, теги, ставка, срок, повторение) работают как
  *  были: они берут задачу из selectedId, который мы и подменяем. */
-const tmdlg = { taskId: null, index: null, date: null, start: null, end: null };
+const tmdlg = { taskId: null, index: null, date: null, start: null, end: null, fresh: false };
 
-function openTaskModal(task, index) {
+function openTaskModal(task, index, opts) {
   if (!task) return;
   closeMenu();
   tmdlg.taskId = task.id;
+  tmdlg.fresh = !!(opts && opts.fresh);
   tmdlg.index = index != null ? index : null;
   selectedId = task.id;
   el.tmdlgParams.appendChild(el.taskParams);
@@ -5576,17 +5490,28 @@ function openTaskModal(task, index) {
   }
   renderTaskModal();
   el.tmdlgBackdrop.hidden = false;
+  if (tmdlg.fresh) el.tmdlgTitle.focus();
 }
 
-function closeTaskModal() {
+/** discard — только для черновика: закрыть, не оставив задачи. Готовую
+ *  задачу окно не удаляет никогда, чем бы его ни закрыли. */
+function closeTaskModal(discard) {
   if (el.tmdlgBackdrop.hidden) return;
+  const draftId = tmdlg.fresh && discard ? tmdlg.taskId : null;
   el.tmdlgBackdrop.hidden = true;
   // Узел возвращается во вкладку задачи. Не вернуть — и страница задачи
   // останется без параметров до перезагрузки.
   el.tabSettings.appendChild(el.taskParams);
   tmdlg.taskId = null;
+  tmdlg.fresh = false;
   closeDatePicker();
   closeTimePicker();
+  if (draftId) {
+    state.tasks = state.tasks.filter((x) => x.id !== draftId);
+    if (selectedId === draftId) selectedId = null;
+    render();
+    scheduleSave();
+  }
 }
 
 const tmdlgTimes = () => spanFromParts(tmdlg.date, tmdlg.start, tmdlg.end);
@@ -5596,10 +5521,18 @@ function renderTaskModal() {
   if (!task) { closeTaskModal(); return; }
 
   if (document.activeElement !== el.tmdlgTitle) el.tmdlgTitle.value = task.title || '';
+  el.tmdlgTitle.placeholder = t(tmdlg.fresh ? 'agenda.task_name_ph' : 'task.no_name');
+  el.tmdlgKicker.hidden = !tmdlg.fresh;
   const project = getProject(task.projectId);
   el.tmdlgDot.style.setProperty('--pc', agendaProjectColor(task.projectId));
   el.tmdlgProj.textContent = project ? project.name : '';
+  // Проект меняют только у черновика: у заведённой задачи за ним тянутся
+  // её статус и версия, и переезд был бы не переключателем, а переносом.
+  el.tmdlgProj.disabled = !tmdlg.fresh;
   el.tmdlgTot.textContent = `${fmtDur(taskElapsedMs(task))} · ${fmtMoney(earnedOf(task))}`;
+  el.tmdlgOpen.textContent = t(tmdlg.fresh ? 'common.cancel' : 'agenda.open_task');
+  el.tmdlgDone.textContent = t(tmdlg.fresh ? 'agenda.create_btn' : 'common.done');
+  renderTmdlgFound();
 
   if (!el.tmdlgEntry.hidden) {
     el.tmdlgDate.textContent = fmtDpBtn(tmdlg.date);
@@ -5618,6 +5551,44 @@ function renderTaskModal() {
   renderTaskTags(task);
   renderMoney(task);
   renderDue(task);
+}
+
+/** Пока имя набирается, под ним показываются подходящие существующие
+ *  задачи: то же время можно дописать к уже заведённой, не открывая
+ *  второго окна. Вид взят у пикера тегов — это тот же приём «набери или
+ *  выбери», и заводить под него второй стиль незачем. */
+function renderTmdlgFound() {
+  const q = tmdlg.fresh ? el.tmdlgTitle.value.trim().toLowerCase() : '';
+  const items = q
+    ? state.tasks
+      .filter((t2) => t2.id !== tmdlg.taskId && (t2.title || '').toLowerCase().includes(q))
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+      .slice(0, 5)
+    : [];
+  el.tmdlgFound.hidden = !items.length;
+  el.tmdlgFoundList.innerHTML = '';
+  for (const task of items) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tag-pop-item';
+    b.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(agendaProjectColor(task.projectId))}"></span>`
+      + `<span class="tag-pop-name">${escapeHtml(task.title || t('task.no_name'))}</span>`;
+    b.addEventListener('click', () => attachToExisting(task));
+    el.tmdlgFoundList.appendChild(b);
+  }
+}
+
+/** Время уходит к выбранной задаче, а черновик исчезает. */
+function attachToExisting(task) {
+  const span = tmdlgTimes();
+  closeTaskModal(true);
+  if (!task || !span) return;
+  addSessionSpan(task, span.start.getTime(), span.end.getTime());
+  agenda.lastProjectId = task.projectId;
+  agenda.hidden.delete(task.projectId);
+  render();
+  scheduleSave();
+  toast(t('agenda.new_entry'));
 }
 
 /** Правка отрезка сохраняется сразу, без кнопки: слишком короткий просто не
@@ -5648,7 +5619,31 @@ el.tmdlgTitle.addEventListener('input', () => {
   task.title = el.tmdlgTitle.value;
   task.updatedAt = new Date().toISOString();
   render();
+  renderTmdlgFound();
   scheduleSave();
+});
+el.tmdlgTitle.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && tmdlg.fresh) { e.preventDefault(); closeTaskModal(false); }
+});
+
+el.tmdlgProj.addEventListener('click', () => {
+  const task = getTask(tmdlg.taskId);
+  if (!task || !tmdlg.fresh) return;
+  openMenu(el.tmdlgProj, state.projects.map((p) => ({
+    label: p.name,
+    selected: p.id === task.projectId,
+    onClick: () => {
+      // Статусы и версии у проектов свои, прежние ссылки теряют смысл.
+      task.projectId = p.id;
+      task.statusId = defaultStatusId(p.id, false);
+      task.versionId = null;
+      task.updatedAt = new Date().toISOString();
+      agenda.lastProjectId = p.id;
+      agenda.hidden.delete(p.id);
+      render();
+      el.tmdlgTitle.focus();
+    },
+  })));
 });
 
 el.tmdlgDel.addEventListener('click', () => {
@@ -5668,16 +5663,18 @@ el.tmdlgDel.addEventListener('click', () => {
 });
 
 el.tmdlgOpen.addEventListener('click', () => {
+  // У черновика эта кнопка — «Отмена».
+  if (tmdlg.fresh) { closeTaskModal(true); return; }
   const id = tmdlg.taskId;
-  closeTaskModal();
+  closeTaskModal(false);
   const task = getTask(id);
   if (!task) return;
   openProject(task.projectId);
   selectTask(task.id);
 });
 
-el.tmdlgDone.addEventListener('click', closeTaskModal);
-el.tmdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.tmdlgBackdrop) closeTaskModal(); });
+el.tmdlgDone.addEventListener('click', () => closeTaskModal(false));
+el.tmdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.tmdlgBackdrop) closeTaskModal(true); });
 
 // --- Управление -------------------------------------------------------------
 
@@ -5717,13 +5714,7 @@ el.agCreate.addEventListener('click', (e) => {
   // Час с ближайшей четверти: начинать запись с «сейчас» удобнее, чем с
   // произвольного места сетки.
   const start = Core.snapMinutes(Date.now(), AG_SNAP_MIN);
-  const span = { start, end: start + 3_600_000 };
-  openAgendaCreate(e, span, (task) => {
-    addSessionSpan(task, span.start, span.end);
-    render();
-    scheduleSave();
-    toast(t('agenda.new_entry'));
-  });
+  openAgendaDraft({ start, end: start + 3_600_000 });
 });
 
 // Горячие клавиши как в Google: режимы цифрами и буквами, T — сегодня,

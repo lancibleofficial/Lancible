@@ -412,7 +412,7 @@
 
             <div class="ag-time" id="ag-time">
               <div class="ag-daynames" id="ag-daynames"></div>
-              <div class="ag-allday-row">
+              <div class="ag-allday-row" id="ag-allday-row">
                 <span class="ag-allday-label" data-i18n="agenda.all_day">Весь день</span>
                 <div class="ag-allday" id="ag-allday"></div>
               </div>
@@ -737,13 +737,19 @@
        значит и обработчики, и отрисовка остаются одни на всех. -->
   <div id="tmdlg-backdrop" hidden>
     <div class="modal modal-lg tmdlg">
+      <div class="tmdlg-kicker" id="tmdlg-kicker" data-i18n="agenda.create_title" hidden>Создать задачу</div>
       <div class="tmdlg-head">
         <span class="tmdlg-dot" id="tmdlg-dot"></span>
         <input id="tmdlg-title" type="text" autocomplete="off" data-i18n-placeholder="task.no_name" placeholder="Без названия" />
       </div>
       <div class="tmdlg-sub">
-        <span id="tmdlg-proj"></span>
+        <button type="button" class="dp-btn tmdlg-proj" id="tmdlg-proj"></button>
         <span class="tmdlg-tot" id="tmdlg-tot"></span>
+      </div>
+
+      <div class="tmdlg-found" id="tmdlg-found" hidden>
+        <div class="tmdlg-found-label" data-i18n="agenda.or_existing">Или добавить время к задаче</div>
+        <div class="tag-pop-list" id="tmdlg-found-list"></div>
       </div>
 
       <div class="tmdlg-entry" id="tmdlg-entry" hidden>

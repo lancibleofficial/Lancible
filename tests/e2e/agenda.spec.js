@@ -178,35 +178,6 @@ test('черта «сейчас» стоит в сегодняшнем стол�
   expect(Math.abs(m.fraction - m.expected) * 1440, 'расхождение больше минуты').toBeLessThan(1.5);
 });
 
-test('протягивание по пустому месту заводит запись для выбранной задачи', async ({ page }) => {
-  await seed(page);
-  const before = await page.evaluate(() => state.tasks.reduce((a, t) => a + t.sessions.length, 0));
-
-  await drag(page, { day: 1, h: 9 }, { day: 1, h: 11, m: 30 });
-  await expect(page.locator('.ag-pick')).toBeVisible();
-  await page.locator('.ag-pick .tag-pop-item', { hasText: 'API отчётов' }).click();
-
-  const after = await page.evaluate(() => state.tasks.reduce((a, t) => a + t.sessions.length, 0));
-  expect(after).toBe(before + 1);
-
-  const made = await page.evaluate(() => {
-    const task = state.tasks.find((t) => t.title === 'API отчётов');
-    const s = task.sessions.find((x) => x.manual);
-    const d = new Date(s.start);
-    return {
-      time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
-      hours: s.ms / 3600000,
-      rate: s.rate,
-      totalHours: task.totalMs / 3600000,
-    };
-  });
-  expect(made.time).toBe('09:00');
-  expect(made.hours).toBe(2.5);
-  // Ставка запоминается такой, какая сейчас — ровно как в окне правки записи.
-  expect(made.rate).toBe(2000);
-  expect(made.totalHours).toBe(1 + 2.5);
-});
-
 test('перенос блока меняет день и время, но не длительность и не происхождение', async ({ page }) => {
   await seed(page);
   const before = await sessionOf(page, 'Первый экран');
@@ -333,31 +304,42 @@ test('мини-календарь перелистывается и уводит
   await expect(page.locator('#ag-mini-title')).toHaveText(title);
 });
 
-test('выделенная зона открывает окно «Создать задачу», а не выбор задачи', async ({ page }) => {
+test('выделенная зона открывает окно создания со всеми настройками', async ({ page }) => {
+  // Черновик заводится сразу, чтобы окно могло показать настоящие настройки
+  // задачи. Пока окно открыто, задача уже есть — и её блок виден на сетке.
   await seed(page);
+  const before = await page.evaluate(() => state.tasks.length);
   await drag(page, { day: 2, h: 9 }, { day: 2, h: 10, m: 30 });
 
-  const pop = page.locator('.ag-pick');
-  await expect(pop).toBeVisible();
-  await expect(pop.locator('.ag-pick-head')).toHaveText('Создать задачу');
-  // Время выделенной зоны — прямо в окне: иначе не проверить, туда ли попал.
-  await expect(pop.locator('.ag-pick-when')).toContainText('09:00 – 10:30');
-  await expect(pop.locator('.ag-pick-name')).toBeFocused();
-  // Существующие задачи никуда не делись, они просто ушли под разделитель.
-  await expect(pop.locator('.ag-pick-or')).toBeVisible();
-  await expect(pop.locator('.tag-pop-item').first()).toBeVisible();
+  const dlg = page.locator('#tmdlg-backdrop');
+  await expect(dlg).toBeVisible();
+  await expect(page.locator('#tmdlg-kicker')).toHaveText('Создать задачу');
+  await expect(page.locator('#tmdlg-title')).toBeFocused();
+  await expect(page.locator('#tmdlg-title')).toHaveAttribute('placeholder', 'Название задачи');
+  await expect(page.locator('#tmdlg-start')).toHaveText('09:00');
+  await expect(page.locator('#tmdlg-end')).toHaveText('10:30');
+  await expect(page.locator('#tmdlg-open')).toHaveText('Отмена');
+  await expect(page.locator('#tmdlg-done')).toHaveText('Создать');
+  // Настройки — те же, что во вкладке задачи: узел переехал сюда целиком.
+  await expect(page.locator('#tmdlg-params #task-status')).toBeVisible();
+  await expect(page.locator('#tmdlg-params #task-tags-add')).toBeVisible();
+  await expect(page.locator('#tmdlg-params #task-rate')).toBeVisible();
+  await expect(page.locator('#tmdlg-params #due-date-btn')).toBeVisible();
+  expect(await page.evaluate(() => state.tasks.length), 'черновик уже в списке').toBe(before + 1);
 
-  await pop.locator('.ag-pick-name').fill('Созвон с командой');
-  await pop.locator('.ag-pick-go').click();
-  await expect(pop).toBeHidden();
+  await page.locator('#tmdlg-title').fill('Созвон с командой');
+  // Статус ставится прямо здесь, до создания.
+  await page.locator('#tmdlg-params #task-status').click();
+  await page.locator('#ctx-menu .ctx-item', { hasText: 'In progress' }).click();
+  await page.locator('#tmdlg-done').click();
+  await expect(dlg).toBeHidden();
 
   const made = await page.evaluate(() => {
     const task = state.tasks.find((t) => t.title === 'Созвон с командой');
     const s = task.sessions[0];
     const d = new Date(s.start);
     return {
-      project: state.projects.find((p) => p.id === task.projectId).name,
-      status: state.statuses.find((x) => x.id === task.statusId).kind,
+      status: state.statuses.find((x) => x.id === task.statusId).name,
       hours: s.ms / 3600000,
       manual: !!s.manual,
       time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
@@ -367,34 +349,81 @@ test('выделенная зона открывает окно «Создать
   expect(made.time).toBe('09:00');
   expect(made.hours).toBe(1.5);
   expect(made.manual, 'запись заведена руками, а не таймером').toBe(true);
-  expect(made.status, 'новая задача встаёт в начало доски').toBe('todo');
+  expect(made.status, 'статус из окна сохранился').toBe('In progress');
   expect(made.onGrid, 'запись сразу видна на сетке').toContain('Созвон с командой');
+});
+
+test('«Отмена» убирает черновик, будто его и не было', async ({ page }) => {
+  await seed(page);
+  const before = await page.evaluate(() => state.tasks.length);
+  await drag(page, { day: 2, h: 9 }, { day: 2, h: 10, m: 30 });
+  await page.locator('#tmdlg-title').fill('Передумал');
+  await page.locator('#tmdlg-open').click();
+
+  await expect(page.locator('#tmdlg-backdrop')).toBeHidden();
+  expect(await page.evaluate(() => state.tasks.length)).toBe(before);
+  await expect(page.locator('.ag-ev-name', { hasText: 'Передумал' })).toHaveCount(0);
+  // И узел настроек всё равно вернулся во вкладку задачи.
+  await expect(page.locator('#tab-settings .task-params')).toBeAttached();
 });
 
 test('проект выбирается в самом окне и запоминается до следующего раза', async ({ page }) => {
   await seed(page);
   await drag(page, { day: 2, h: 9 }, { day: 2, h: 10 });
-  const pop = page.locator('.ag-pick');
 
-  await pop.locator('.ag-pick-proj').click();
-  // Список проектов — общий #ctx-menu, он живёт вне окна. Щелчок по нему не
-  // должен считаться щелчком «мимо» и закрывать окно.
+  await page.locator('#tmdlg-proj').click();
+  // Список проектов — общий #ctx-menu, он живёт вне окна и рисуется поверх.
   await expect(page.locator('#ctx-menu')).toBeVisible();
-  await expect(pop).toBeVisible();
+  await expect(page.locator('#tmdlg-backdrop')).toBeVisible();
   await page.locator('#ctx-menu .ctx-item', { hasText: 'Лендинг' }).click();
-  await expect(pop).toBeVisible();
-  await expect(pop.locator('.ag-pick-pname')).toHaveText('Лендинг');
+  await expect(page.locator('#tmdlg-proj')).toHaveText('Лендинг');
 
-  await pop.locator('.ag-pick-name').fill('Правки текста');
-  await pop.locator('.ag-pick-name').press('Enter');
+  await page.locator('#tmdlg-title').fill('Правки текста');
+  await page.locator('#tmdlg-title').press('Enter');
   expect(await page.evaluate(() => {
     const task = state.tasks.find((t) => t.title === 'Правки текста');
-    return state.projects.find((p) => p.id === task.projectId).name;
-  })).toBe('Лендинг');
+    return {
+      project: state.projects.find((p) => p.id === task.projectId).name,
+      status: state.statuses.find((x) => x.id === task.statusId).projectId === task.projectId,
+    };
+  })).toEqual({ project: 'Лендинг', status: true });
 
   // Второе окно открывается уже с этим проектом.
   await drag(page, { day: 3, h: 9 }, { day: 3, h: 10 });
-  await expect(page.locator('.ag-pick .ag-pick-pname')).toHaveText('Лендинг');
+  await expect(page.locator('#tmdlg-proj')).toHaveText('Лендинг');
+});
+
+test('набранное имя показывает подходящие задачи, и время уходит к выбранной', async ({ page }) => {
+  await seed(page);
+  const before = await page.evaluate(() => ({
+    tasks: state.tasks.length,
+    hours: state.tasks.find((t) => t.title === 'API отчётов').totalMs / 3600000,
+  }));
+
+  await drag(page, { day: 2, h: 9 }, { day: 2, h: 10 });
+  await page.locator('#tmdlg-title').fill('API');
+  await expect(page.locator('#tmdlg-found')).toBeVisible();
+  await page.locator('#tmdlg-found-list .tag-pop-item', { hasText: 'API отчётов' }).click();
+
+  await expect(page.locator('#tmdlg-backdrop')).toBeHidden();
+  const after = await page.evaluate(() => {
+    const task = state.tasks.find((t) => t.title === 'API отчётов');
+    const manual = task.sessions.find((x) => x.manual);
+    const d = new Date(manual.start);
+    return {
+      tasks: state.tasks.length,
+      hours: task.totalMs / 3600000,
+      entries: task.sessions.length,
+      time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+      rate: manual.rate,
+    };
+  });
+  expect(after.tasks, 'новой задачи не завелось, черновик убран').toBe(before.tasks);
+  expect(after.hours - before.hours, 'час ушёл к существующей задаче').toBe(1);
+  expect(after.entries).toBe(2);
+  expect(after.time, 'время взято из выделенной зоны').toBe('09:00');
+  // Ставка запоминается такой, какая сейчас — ровно как в окне правки записи.
+  expect(after.rate).toBe(2000);
 });
 
 test('запись в спрятанном проекте снова показывает его на сетке', async ({ page }) => {
@@ -404,11 +433,10 @@ test('запись в спрятанном проекте снова показ�
   await expect(page.locator('.ag-proj.off')).toHaveCount(1);
 
   await drag(page, { day: 2, h: 13 }, { day: 2, h: 14 });
-  const pop = page.locator('.ag-pick');
-  await pop.locator('.ag-pick-proj').click();
+  await page.locator('#tmdlg-proj').click();
   await page.locator('#ctx-menu .ctx-item', { hasText: 'Лендинг' }).click();
-  await pop.locator('.ag-pick-name').fill('Смета');
-  await pop.locator('.ag-pick-go').click();
+  await page.locator('#tmdlg-title').fill('Смета');
+  await page.locator('#tmdlg-done').click();
 
   await expect(page.locator('.ag-proj.off')).toHaveCount(0);
   await expect(page.locator('.ag-ev-name', { hasText: 'Смета' })).toBeVisible();
@@ -472,10 +500,37 @@ test('шапка дней и строка «весь день» кончаютс
   // ровно на неё. Без этого проверка выше ничего не стоит на машине, где
   // полоса накладная и всегда нулевая.
   const forced = await page.evaluate(() => {
-    document.getElementById('ag-time').style.setProperty('--ag-sb', '12px');
+    const time = document.getElementById('ag-time');
+    time.style.setProperty('--ag-sb', '12px');
+    // У строки «весь день» запас свой: когда у неё есть собственная полоса,
+    // её содержимое и так уже сетки, и вычитать полосу дважды нельзя.
+    time.style.setProperty('--ag-sb-row', '12px');
     const right = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().right);
     return { names: right('.ag-daynames'), allday: right('.ag-allday'), cols: right('#ag-cols') };
   });
   expect(forced.cols - forced.names, 'шапка дней учитывает запас').toBe(12);
   expect(forced.cols - forced.allday, 'строка «весь день» тоже').toBe(12);
+});
+
+test('пустая строка «весь день» не обзаводится полосой прокрутки', async ({ page }) => {
+  // Подпись «Весь день» в две строки выше пустого ряда ячеек. Пока она была
+  // position: absolute, ряд под неё не растягивался, подпись вылезала за край
+  // — и строка получала собственную полосу прокрутки на пустом месте. Та
+  // съедала ещё десять пикселей, и колонки уезжали от линий сетки.
+  await seed(page);
+  const m = await page.evaluate(() => {
+    // Дедлайнов быть не должно: проверяем именно пустую строку.
+    for (const task of state.tasks) task.dueAt = null;
+    render();
+    const row = document.getElementById('ag-allday-row');
+    const label = document.querySelector('.ag-allday-label').getBoundingClientRect();
+    return {
+      overflow: row.scrollHeight - row.clientHeight,
+      chips: document.querySelectorAll('.ag-dl').length,
+      labelFits: label.bottom <= row.getBoundingClientRect().bottom + 0.5,
+    };
+  });
+  expect(m.chips, 'дедлайнов в строке нет').toBe(0);
+  expect(m.overflow, 'прокручивать нечего').toBeLessThanOrEqual(0);
+  expect(m.labelFits, 'подпись помещается в строку').toBe(true);
 });
