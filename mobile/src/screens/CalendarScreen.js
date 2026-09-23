@@ -12,7 +12,8 @@ import { runExport } from '../lib/exportRunner';
 import Icon from '../components/Icon';
 import PrimaryButton from '../components/PrimaryButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors, spacing, radius, fontSize, tabBarClearance } from '../theme';
+import { useColors, spacing, radius, fontSize } from '../theme';
+import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t, LOCALE_MAP } from '../lib/i18n';
 import ScheduleView from './ScheduleView';
 
@@ -82,7 +83,7 @@ export default function CalendarScreen({ navigation }) {
   // используется везде, где раньше был просто pageWidth для позиционирования
   // (translateX/пороги жеста), сама ширина панели (pageWidth) не меняется.
   const step = pageWidth + PANEL_GAP;
-  const styles = makeStyles(colors, cellSize, insets);
+  const styles = makeStyles(colors, cellSize, insets, useBottomClearance());
   const tasks = useAppStore((s) => s.tasks);
   const projects = useAppStore((s) => s.projects);
   const hourlyRate = useAppStore((s) => s.settings.hourlyRate);
@@ -475,9 +476,9 @@ export default function CalendarScreen({ navigation }) {
   );
 }
 
-const makeStyles = (colors, cellSize, insets) => StyleSheet.create({
+const makeStyles = (colors, cellSize, insets, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: insets.bottom + tabBarClearance },
+  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: insets.bottom + clearance },
   modeRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4, marginBottom: spacing.md },
   modeTab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
   modeTabActive: { backgroundColor: colors.tabActiveBg },

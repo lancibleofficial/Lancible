@@ -16,7 +16,8 @@ import Logo from '../components/Logo';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useTicker } from '../hooks/useTicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors, spacing, radius, fontSize, tabBarClearance } from '../theme';
+import { useColors, spacing, radius, fontSize } from '../theme';
+import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t } from '../lib/i18n';
 
 const byPinned = (a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt);
@@ -27,7 +28,7 @@ const HEADER_REST = { id: '__header_rest__' };
 export default function HomeScreen({ navigation, route }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const styles = makeStyles(colors, insets);
+  const styles = makeStyles(colors, insets, useBottomClearance());
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
   const activeTimer = useAppStore((s) => s.activeTimer);
@@ -245,9 +246,9 @@ function SearchTaskRow({ task, projects, activeTimer, lang, styles, colors, onPr
   );
 }
 
-const makeStyles = (colors, insets) => StyleSheet.create({
+const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  listContent: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
+  listContent: { padding: spacing.lg, paddingBottom: insets.bottom + clearance },
   headerIconBtnLast: { paddingLeft: spacing.sm },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
   todayGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },

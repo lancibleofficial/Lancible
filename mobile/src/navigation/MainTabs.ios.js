@@ -1,13 +1,16 @@
-import { View, Pressable, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeStack from './HomeStack';
 import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
+import BoardScreen from '../screens/BoardScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import Icon from '../components/Icon';
 import NotifButton from '../components/NotifButton';
 import AppHeader from '../components/AppHeader';
+import TimerMiniPlayer from '../components/TimerMiniPlayer';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
 import { useColors, spacing } from '../theme';
@@ -25,15 +28,6 @@ import { useColors, spacing } from '../theme';
 // - Icons are the app's own Icon.js glyphs rasterised to PNG template
 //   images (assets/tabs/, 24pt @1x/2x/3x) so the bar matches the rest of
 //   the app instead of stock SF Symbols. iOS tints them itself.
-// - "Create" uses the system `search` slot on iOS 26 only: there UIKit
-//   renders that slot as the detached round glass button to the right of
-//   the bar (the only detached-button placement the platform offers). Its
-//   glass body cannot be coloured -- only the glyph can, so the "+" is
-//   tinted accent via the per-item inactive tint (it is never actually
-//   selected: selection is disabled and tapping it opens the
-//   create-project sheet instead). On iOS 18 and below a system item keeps
-//   its built-in magnifier image/title regardless of overrides, so there
-//   "Create" stays an ordinary custom tab in the row.
 // - Below iOS 26 the bar is made opaque in the app's panel colour with no
 //   blur material, matching the Android bar; the default translucent
 //   system material followed the device appearance rather than the app
@@ -42,18 +36,32 @@ import { useColors, spacing } from '../theme';
 // - The selected tab's label and icon share one tint on iOS (UITabBar's
 //   tintColor covers both); they cannot be split into black text + green
 //   icon natively.
+//
+// Мини-плеер таймера размещён двумя разными способами, и вот почему.
+// Установленные @react-navigation/bottom-tabs 7.19.1 и react-native-screens
+// 4.26.2 умеют нативный bottomAccessory (screenOptions -> Tabs.Host ios), но
+// сам react-native-screens отдаёт его в UIKit только под флагом
+// isIOS26OrHigher — на iOS 25 и ниже аксессуар просто не рисуется, молча.
+// Поэтому: на iOS 26+ плеер отдан нативному таббару (UIKit сам кладёт его
+// над панелью и сам ведёт при сворачивании), а ниже — своя полоса поверх,
+// через проп `layout` навигатора: только там есть и state с descriptors
+// (чтобы прятать плеер там же, где прячется таббар), и место снаружи
+// нативного контейнера.
 const Tab = createNativeBottomTabNavigator();
 
 const HEADER_ICON_SIZE = 20;
 const IOS_MAJOR = parseInt(String(Platform.Version), 10) || 0;
 const HAS_LIQUID_GLASS = IOS_MAJOR >= 26;
+// Высота UITabBar в компактной раскладке — та же константа, на которой
+// стоит и JS-таббар самой react-navigation. Нужна только фолбэку.
+const UIKIT_TAB_BAR_H = 49;
 
 const TAB_ICONS = {
   home: require('../../assets/tabs/home.png'),
-  chart: require('../../assets/tabs/chart.png'),
-  plus: require('../../assets/tabs/plus.png'),
+  board: require('../../assets/tabs/board.png'),
   calendar: require('../../assets/tabs/calendar.png'),
-  settings: require('../../assets/tabs/settings.png'),
+  chart: require('../../assets/tabs/chart.png'),
+  menu: require('../../assets/tabs/menu.png'),
 };
 
 function SearchHeaderButton({ navigation, colors }) {
@@ -72,6 +80,31 @@ function tabIcon(name) {
   return { type: 'image', source: TAB_ICONS[name] };
 }
 
+function openTask(navigation, taskId) {
+  navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
+}
+
+/** Фолбэк для iOS ниже 26: полоса плеера абсолютом над таббаром. Прячется
+ *  вместе с таббаром — признак тот же, что и у MainTabBar.js на Android. */
+function LegacyMiniPlayerLayout({ state, navigation, descriptors, children }) {
+  const insets = useSafeAreaInsets();
+  const focused = descriptors[state.routes[state.index].key];
+  const barHidden = !!(focused && focused.options.tabBarStyle && focused.options.tabBarStyle.display === 'none');
+  return (
+    <View style={styles.host}>
+      {children}
+      {barHidden ? null : (
+        <View
+          style={[styles.legacy, { bottom: UIKIT_TAB_BAR_H + insets.bottom + spacing.sm }]}
+          pointerEvents="box-none"
+        >
+          <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
@@ -84,6 +117,7 @@ export default function MainTabs() {
 
   return (
     <Tab.Navigator
+      layout={HAS_LIQUID_GLASS ? undefined : LegacyMiniPlayerLayout}
       screenOptions={({ navigation }) => ({
         header: (props) => <AppHeader {...props} />,
         headerRight: () => (
@@ -97,20 +131,47 @@ export default function MainTabs() {
         tabBarLabelStyle: { fontFamily: 'Gravity-Book', fontSize: 11 },
         tabBarStyle: legacyTabBarStyle,
         tabBarBlurEffect: HAS_LIQUID_GLASS ? undefined : 'none',
+        // UIKit рисует аксессуар дважды — для развёрнутого таббара и для
+        // свёрнутого — и держит на экране тот, который сейчас подходит.
+        // Нам это ничего не стоит: всё состояние плеера лежит в сторе, а не
+        // внутри компонента, так что обе копии показывают одно и то же.
+        bottomAccessory: HAS_LIQUID_GLASS
+          ? () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />
+          : undefined,
       })}
     >
       <Tab.Screen
         name="Home"
         component={HomeStack}
-        options={({ route }) => ({
-          headerShown: false,
-          tabBarLabel: t(lang, 'nav.home'),
-          tabBarIcon: tabIcon('home'),
+        options={({ route, navigation }) => {
           // Same nested-route hide as Android -- see the detailed comment in
           // MainTabs.android.js for why this has to be recomputed here
           // rather than left to the nested stack.
-          tabBarStyle: ['Project', 'TaskDetail'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : legacyTabBarStyle,
-        })}
+          const barHidden = ['Project', 'TaskDetail'].includes(getFocusedRouteNameFromRoute(route));
+          return {
+            headerShown: false,
+            tabBarLabel: t(lang, 'nav.home'),
+            tabBarIcon: tabIcon('home'),
+            tabBarStyle: barHidden ? { display: 'none' } : legacyTabBarStyle,
+            // Аксессуар приходит из screenOptions и пережил бы спрятанный
+            // таббар: на странице задачи у таймера уже есть свой счётчик,
+            // второй под ним не нужен. Значение затирается так же, как
+            // tabBarStyle выше, — своим на уровне экрана.
+            bottomAccessory: barHidden || !HAS_LIQUID_GLASS
+              ? undefined
+              : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
+          };
+        }}
+      />
+      <Tab.Screen
+        name="Board"
+        component={BoardScreen}
+        options={{ title: t(lang, 'nav.board'), tabBarLabel: t(lang, 'nav.board'), tabBarIcon: tabIcon('board') }}
+      />
+      <Tab.Screen
+        name="Calendar"
+        component={CalendarScreen}
+        options={{ title: t(lang, 'nav.calendar'), tabBarLabel: t(lang, 'nav.calendar'), tabBarIcon: tabIcon('calendar') }}
       />
       <Tab.Screen
         name="Stats"
@@ -118,30 +179,15 @@ export default function MainTabs() {
         options={{ title: t(lang, 'nav.stats'), tabBarLabel: t(lang, 'nav.stats'), tabBarIcon: tabIcon('chart') }}
       />
       <Tab.Screen
-        name="Create"
-        component={HomeStack}
-        listeners={({ navigation }) => ({
-          tabPress: () => navigation.navigate('Home', { screen: 'HomeMain', params: { openCreate: true } }),
-        })}
-        options={{
-          headerShown: false,
-          tabBarSystemItem: HAS_LIQUID_GLASS ? 'search' : undefined,
-          tabBarLabel: t(lang, 'nav.create'),
-          tabBarIcon: tabIcon('plus'),
-          tabBarInactiveTintColor: colors.accent,
-          tabBarSelectionEnabled: false,
-        }}
-      />
-      <Tab.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{ title: t(lang, 'home.calendar_link'), tabBarLabel: t(lang, 'home.calendar_link'), tabBarIcon: tabIcon('calendar') }}
-      />
-      <Tab.Screen
-        name="Settings"
+        name="Menu"
         component={SettingsScreen}
-        options={{ title: t(lang, 'settings.title'), tabBarLabel: t(lang, 'settings.title'), tabBarIcon: tabIcon('settings') }}
+        options={{ title: t(lang, 'nav.menu'), tabBarLabel: t(lang, 'nav.menu'), tabBarIcon: tabIcon('menu') }}
       />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  host: { flex: 1 },
+  legacy: { position: 'absolute', left: 0, right: 0 },
+});

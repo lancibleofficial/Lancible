@@ -16,7 +16,8 @@ import Text from '../components/AppText';
 import Icon from '../components/Icon';
 import Agenda from '../core/agenda.js';
 import { useAppStore, getProject } from '../store/useAppStore';
-import { useColors, spacing, radius, fontSize, tabBarClearance } from '../theme';
+import { useColors, spacing, radius, fontSize } from '../theme';
+import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 const HOUR_H = 52;
@@ -37,6 +38,7 @@ export default function ScheduleView({ onExit, navigate }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const clearance = useBottomClearance();
   const scrollRef = useRef(null);
   const openedRef = useRef(false);
 
@@ -171,7 +173,7 @@ export default function ScheduleView({ onExit, navigate }) {
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={{ height: GRID_H + tabBarClearance }}
+        contentContainerStyle={{ height: GRID_H + clearance }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.grid}>

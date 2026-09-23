@@ -363,6 +363,12 @@ export const useAppStore = create(
       backHome() {
         set((s) => ({ ui: { ...s.ui, view: 'home' } }));
       },
+      // Какой проект показывает вкладка «Доска». Живёт в ui, потому что это
+      // именно состояние экрана, а не данные: пользователь открывает доску
+      // и ожидает увидеть тот проект, на котором закончил.
+      setBoardProject(id) {
+        set((s) => ({ ui: { ...s.ui, boardProjectId: id } }));
+      },
 
       // --- настройки ---
       setSettings(patch) {

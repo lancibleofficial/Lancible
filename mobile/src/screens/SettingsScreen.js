@@ -22,7 +22,8 @@ import { setSyncEnabled } from '../lib/sync';
 import { permissionStatus, ensurePermission } from '../lib/notifications';
 import { checkForUpdate, downloadAndInstall } from '../lib/updateCheck';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors, useThemeMode, spacing, radius, fontSize, tabBarClearance } from '../theme';
+import { useColors, useThemeMode, spacing, radius, fontSize } from '../theme';
+import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t, LANG_NAMES } from '../lib/i18n';
 
 // Лендинг: главная и страница блога. Тот же адрес, что и в десктопной версии.
@@ -32,7 +33,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [notifPerm, setNotifPerm] = useState('ask');
-  const styles = makeStyles(colors, insets);
+  const styles = makeStyles(colors, insets, useBottomClearance());
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const settings = useAppStore((s) => s.settings);
@@ -163,6 +164,7 @@ export default function SettingsScreen() {
         </Pressable>
       ) : null}
 
+      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_account')}</Text>
       {authStatus === 'signedIn' ? (
         <Pressable style={styles.profileCard} onPress={onOpenProfile}>
           <View style={styles.profileCardTop}>
@@ -197,6 +199,35 @@ export default function SettingsScreen() {
           icon="sun"
           label={t(settings.lang, 'settings.theme_label')}
           right={<ThemeSwitch value={resolvedMode === 'dark'} onValueChange={onToggleTheme} />}
+          last
+        />
+      </SettingsCard>
+
+      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_work')}</Text>
+      <SettingsCard>
+        <SettingsRow icon="wallet" label={t(settings.lang, 'settings.rate_label')} value={fmtMoney(settings.hourlyRate || 0, settings.lang, settings.currency)} onPress={onOpenRate} />
+        <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
+      </SettingsCard>
+
+      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_tags')}</Text>
+      <SettingsCard>
+        {tags.length ? tags.map((tag) => (
+          <SettingsRow
+            key={tag.id}
+            icon="pin"
+            label={tag.name}
+            value={tagUsageLabel(tag.id)}
+            onPress={() => openSheet(<TagEditSheet tag={tag} />)}
+          />
+        )) : (
+          <View style={styles.tagsHint}>
+            <Text style={styles.tagsHintText}>{t(settings.lang, 'tag.empty_hint')}</Text>
+          </View>
+        )}
+        <SettingsRow
+          icon="plus"
+          label={t(settings.lang, 'tag.add')}
+          onPress={() => openSheet(<TagEditSheet />)}
           last
         />
       </SettingsCard>
@@ -247,35 +278,6 @@ export default function SettingsScreen() {
         />
       </SettingsCard>
 
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_work')}</Text>
-      <SettingsCard>
-        <SettingsRow icon="wallet" label={t(settings.lang, 'settings.rate_label')} value={fmtMoney(settings.hourlyRate || 0, settings.lang, settings.currency)} onPress={onOpenRate} />
-        <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
-      </SettingsCard>
-
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_tags')}</Text>
-      <SettingsCard>
-        {tags.length ? tags.map((tag) => (
-          <SettingsRow
-            key={tag.id}
-            icon="pin"
-            label={tag.name}
-            value={tagUsageLabel(tag.id)}
-            onPress={() => openSheet(<TagEditSheet tag={tag} />)}
-          />
-        )) : (
-          <View style={styles.tagsHint}>
-            <Text style={styles.tagsHintText}>{t(settings.lang, 'tag.empty_hint')}</Text>
-          </View>
-        )}
-        <SettingsRow
-          icon="plus"
-          label={t(settings.lang, 'tag.add')}
-          onPress={() => openSheet(<TagEditSheet />)}
-          last
-        />
-      </SettingsCard>
-
       <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_about')}</Text>
       <SettingsCard>
         <SettingsRow icon="link" label={t(settings.lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
@@ -287,9 +289,9 @@ export default function SettingsScreen() {
   );
 }
 
-const makeStyles = (colors, insets) => StyleSheet.create({
+const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance, gap: spacing.md },
+  content: { padding: spacing.lg, paddingBottom: insets.bottom + clearance, gap: spacing.md },
   profileCard: {
     gap: spacing.md,
     backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg,

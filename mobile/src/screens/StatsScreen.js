@@ -12,13 +12,14 @@ import StatCard from '../components/StatCard';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors, spacing, radius, fontSize, tabBarClearance } from '../theme';
+import { useColors, spacing, radius, fontSize } from '../theme';
+import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t } from '../lib/i18n';
 
 export default function StatsScreen({ navigation }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const styles = makeStyles(colors, insets);
+  const styles = makeStyles(colors, insets, useBottomClearance());
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
   const activeTimer = useAppStore((s) => s.activeTimer);
@@ -132,9 +133,9 @@ export default function StatsScreen({ navigation }) {
   );
 }
 
-const makeStyles = (colors, insets) => StyleSheet.create({
+const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: insets.bottom + tabBarClearance },
+  content: { padding: spacing.lg, paddingBottom: insets.bottom + clearance },
   grid: { flexDirection: 'row', gap: spacing.sm },
   exportRow: { flexDirection: 'row', gap: spacing.sm },
   exportRowBtn: { flex: 1, width: undefined },

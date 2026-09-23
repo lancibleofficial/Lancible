@@ -16,7 +16,8 @@ import { orderedStatuses } from '../lib/statuses';
 import Versions from '../core/versions.js';
 import { fmtDur, fmtMoney, earnedOf, taskElapsedMs } from '../lib/format';
 import { openSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, tabBarClearance } from '../theme';
+import { useColors, spacing, radius, fontSize } from '../theme';
+import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t } from '../lib/i18n';
 
 export default function BoardScreen({ route, navigation }) {
@@ -25,10 +26,15 @@ export default function BoardScreen({ route, navigation }) {
   // Столбец чуть уже половины экрана: так видно, что справа есть следующий, и
   // доска читается как лента, а не как одна колонка.
   const columnWidth = Math.round(Math.min(280, width * 0.62));
-  const styles = useMemo(() => makeStyles(colors, columnWidth), [colors, columnWidth]);
+  const clearance = useBottomClearance();
+  const styles = useMemo(
+    () => makeStyles(colors, columnWidth, clearance),
+    [colors, columnWidth, clearance],
+  );
 
-  const { projectId } = route.params;
   const projects = useAppStore((s) => s.projects);
+  const boardProjectId = useAppStore((s) => s.ui.boardProjectId);
+  const setBoardProject = useAppStore((s) => s.setBoardProject);
   const tasks = useAppStore((s) => s.tasks);
   const statuses = useAppStore((s) => s.statuses);
   const versions = useAppStore((s) => s.versions);
@@ -39,7 +45,14 @@ export default function BoardScreen({ route, navigation }) {
   const setTaskStatus = useAppStore((s) => s.setTaskStatus);
   const setTaskVersion = useAppStore((s) => s.setTaskVersion);
 
-  const project = getProject(projects, projectId);
+  // Экран живёт в двух местах сразу: вкладкой таббара и страницей внутри
+  // проекта. Проект приходит параметром только со страницы проекта — у
+  // вкладки его неоткуда взять, поэтому она помнит выбранный в ui и
+  // показывает переключатель, а первый раз открывается на первом проекте.
+  const fromProject = !!(route.params && route.params.projectId);
+  const chosen = fromProject ? route.params.projectId : boardProjectId;
+  const project = getProject(projects, chosen) || (fromProject ? null : projects[0]);
+  const projectId = project ? project.id : null;
   const columns = orderedStatuses(statuses, projectId);
   const own = useMemo(() => tasks.filter((task) => task.projectId === projectId), [tasks, projectId]);
   const lanes = useMemo(
@@ -48,8 +61,38 @@ export default function BoardScreen({ route, navigation }) {
   );
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: project ? project.name : '' });
-  }, [navigation, project]);
+    // У вкладки заголовок свой («Доска») и меняться не должен: какой
+    // проект открыт, видно по переключателю под шапкой.
+    if (fromProject) navigation.setOptions({ title: project ? project.name : '' });
+  }, [navigation, project, fromProject]);
+
+  // Со страницы проекта задача открывается в том же стеке; из вкладки —
+  // в стеке «Главной», где TaskDetail и живёт.
+  function openTask(taskId) {
+    if (fromProject) navigation.navigate('TaskDetail', { taskId });
+    else navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
+  }
+
+  function pickProject() {
+    openSheet(
+      <PickerSheet
+        title={t(LANG, 'board.pick_project')}
+        value={projectId || ''}
+        options={projects.map((p) => ({ value: p.id, label: p.name }))}
+        onSelect={(id) => setBoardProject(id)}
+      />,
+    );
+  }
+
+  // Шапка вкладки: какой проект показан и чем его сменить. На странице
+  // проекта её нет — там это и так заголовок экрана.
+  const picker = fromProject ? null : (
+    <Pressable style={styles.picker} onPress={pickProject} hitSlop={6}>
+      <View style={[styles.dot, { backgroundColor: project ? project.color : colors.textFaint }]} />
+      <Text style={styles.pickerName} numberOfLines={1}>{project ? project.name : ''}</Text>
+      <Icon name="chevron-down" size={12} color={colors.textDim} />
+    </Pressable>
+  );
 
   function onMove(task) {
     openSheet(
@@ -76,11 +119,19 @@ export default function BoardScreen({ route, navigation }) {
     );
   }
 
-  if (!project) return null;
+  // Проектов нет вовсе — показывать нечего и выбирать не из чего.
+  if (!project) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.empty}>{t(LANG, fromProject ? 'board.empty' : 'home.empty')}</Text>
+      </View>
+    );
+  }
 
   if (!columns.length) {
     return (
       <View style={styles.container}>
+        {picker}
         <Text style={styles.empty}>{t(LANG, 'board.empty')}</Text>
       </View>
     );
@@ -112,7 +163,7 @@ export default function BoardScreen({ route, navigation }) {
                 <Pressable
                   key={task.id}
                   style={[styles.card, { borderLeftColor: col.color }]}
-                  onPress={() => navigation.navigate('TaskDetail', { taskId: task.id })}
+                  onPress={() => openTask(task.id)}
                   onLongPress={() => onMove(task)}
                   delayLongPress={300}
                 >
@@ -139,36 +190,49 @@ export default function BoardScreen({ route, navigation }) {
   const hasLanes = lanes.length > 1 || (lanes.length === 1 && lanes[0].version);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.page}>
-      {hasLanes
-        ? lanes.map((lane) => (
-          <View key={lane.version ? lane.version.id : 'none'} style={styles.lane}>
-            <Pressable
-              style={styles.laneHead}
-              onLongPress={() => (lane.tasks[0] ? onMoveVersion(lane.tasks[0]) : null)}
-            >
-              <Text style={styles.laneName} numberOfLines={1}>
-                {lane.version ? lane.version.name : t(LANG, 'version.none')}
-              </Text>
-              {lane.version && lane.version.releasedAt ? (
-                <Text style={styles.laneReleased}>
-                  {new Date(lane.version.releasedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+    <View style={styles.container}>
+      {picker}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
+        {hasLanes
+          ? lanes.map((lane) => (
+            <View key={lane.version ? lane.version.id : 'none'} style={styles.lane}>
+              <Pressable
+                style={styles.laneHead}
+                onLongPress={() => (lane.tasks[0] ? onMoveVersion(lane.tasks[0]) : null)}
+              >
+                <Text style={styles.laneName} numberOfLines={1}>
+                  {lane.version ? lane.version.name : t(LANG, 'version.none')}
                 </Text>
-              ) : null}
-              <Text style={styles.laneCount}>{lane.tasks.length}</Text>
-            </Pressable>
-            {renderColumns(lane.tasks)}
-          </View>
-        ))
-        : renderColumns(own)}
-    </ScrollView>
+                {lane.version && lane.version.releasedAt ? (
+                  <Text style={styles.laneReleased}>
+                    {new Date(lane.version.releasedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                  </Text>
+                ) : null}
+                <Text style={styles.laneCount}>{lane.tasks.length}</Text>
+              </Pressable>
+              {renderColumns(lane.tasks)}
+            </View>
+          ))
+          : renderColumns(own)}
+      </ScrollView>
+    </View>
   );
 }
 
-const makeStyles = (colors, columnWidth) => StyleSheet.create({
+const makeStyles = (colors, columnWidth, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  page: { paddingVertical: spacing.md, paddingBottom: tabBarClearance + spacing.xl, gap: spacing.lg },
+  scroll: { flex: 1 },
+  page: { paddingVertical: spacing.md, paddingBottom: clearance + spacing.xl, gap: spacing.lg },
   empty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.xl },
+
+  picker: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    marginHorizontal: spacing.lg, marginTop: spacing.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    backgroundColor: colors.panel, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  pickerName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
 
   lane: { gap: spacing.sm },
   laneHead: {

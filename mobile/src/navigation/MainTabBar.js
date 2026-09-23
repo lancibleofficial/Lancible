@@ -2,20 +2,19 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import TimerMiniPlayer from '../components/TimerMiniPlayer';
+import { useColors, spacing, fontSize } from '../theme';
 
-const ICON_NAMES = { Home: 'home', Stats: 'chart', Calendar: 'calendar', Settings: 'settings' };
-const CENTER_BTN_SIZE = 60;
-const CENTER_BTN_LIFT = 22;
+const ICON_NAMES = { Home: 'home', Board: 'board', Calendar: 'calendar', Stats: 'chart', Menu: 'menu' };
 
-// Обычный нативный таббар с подписями под иконками; единственная кастомная
-// деталь — квадратная со скруглением кнопка "+" по центру, чуть выпирающая
-// над панелью (отрицательный marginTop поднимает её верхнюю часть над
-// верхним краем бара — сам бар от этого не режет её, overflow не задан).
-// Скрывается на экране задачи (TaskDetail ставит tabBarStyle:{display:'none'}
-// через setOptions) — этот флаг React Navigation сама прокидывает наверх из
-// вложенного стека в descriptors фокусной вкладки, независимо от того,
-// штатный это рендер таббара или кастомный, как здесь.
+// Обычный таббар: пять равных табов с подписями под иконками. Выпирающей
+// кнопки «+» по центру больше нет — создание переехало в шапку.
+//
+// Скрывается на экране задачи и проекта (там tabBarStyle:{display:'none'}) —
+// этот флаг React Navigation сама прокидывает наверх из вложенного стека в
+// descriptors фокусной вкладки, независимо от того, штатный это рендер
+// таббара или кастомный, как здесь. Вместе с баром прячется и мини-плеер:
+// он часть этой же панели.
 export default function MainTabBar({ state, navigation, descriptors }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -27,39 +26,38 @@ export default function MainTabBar({ state, navigation, descriptors }) {
     return null;
   }
 
-  function onCreatePress() {
-    navigation.navigate('Home', { screen: 'HomeMain', params: { openCreate: true } });
-  }
-
-  function renderTab(index) {
-    const route = state.routes[index];
-    const isFocused = state.index === index;
-    const color = isFocused ? colors.accent : colors.textDim;
-    const label = descriptors[route.key].options.tabBarLabel ?? route.name;
-    return (
-      <Pressable key={route.key} onPress={() => navigation.navigate(route.name)} style={styles.tabItem}>
-        <Icon name={ICON_NAMES[route.name]} size={20} color={color} />
-        <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>{label}</Text>
-      </Pressable>
-    );
-  }
-
   return (
-    <View style={styles.bar}>
-      {renderTab(0)}
-      {renderTab(1)}
-      <View style={styles.centerSlot}>
-        <Pressable style={styles.centerBtn} onPress={onCreatePress}>
-          <Icon name="plus" size={26} color={colors.accentText} />
-        </Pressable>
+    <View style={styles.wrap} pointerEvents="box-none">
+      <TimerMiniPlayer
+        onOpen={(taskId) => navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } })}
+      />
+      <View style={styles.bar}>
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const color = isFocused ? colors.accent : colors.textDim;
+          const label = descriptors[route.key].options.tabBarLabel ?? route.name;
+          return (
+            <Pressable
+              key={route.key}
+              onPress={() => navigation.navigate(route.name)}
+              style={styles.tabItem}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+            >
+              <Icon name={ICON_NAMES[route.name]} size={20} color={color} />
+              <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>{label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
-      {renderTab(2)}
-      {renderTab(3)}
     </View>
   );
 }
 
 const makeStyles = (colors, insets) => StyleSheet.create({
+  // Обёртка ничем не залита: под мини-плеером должен просвечивать контент,
+  // иначе полоса выглядела бы вторым баром, а не карточкой над ним.
+  wrap: { gap: spacing.sm },
   bar: {
     flexDirection: 'row', alignItems: 'flex-end',
     backgroundColor: colors.panel,
@@ -68,11 +66,4 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 2, paddingBottom: spacing.sm },
   tabLabel: { fontSize: 10, fontWeight: '600' },
-  centerSlot: { flex: 1, alignItems: 'center' },
-  centerBtn: {
-    width: CENTER_BTN_SIZE, height: CENTER_BTN_SIZE, borderRadius: radius.lg,
-    marginTop: -CENTER_BTN_LIFT,
-    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
-    elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 },
-  },
 });

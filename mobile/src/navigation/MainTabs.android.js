@@ -5,6 +5,7 @@ import HomeStack from './HomeStack';
 import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import BoardScreen from '../screens/BoardScreen';
 import Icon from '../components/Icon';
 import NotifButton from '../components/NotifButton';
 import AppHeader from '../components/AppHeader';
@@ -66,9 +67,10 @@ export default function MainTabs() {
           tabBarStyle: ['Project', 'TaskDetail'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
         })}
       />
+      <Tab.Screen name="Board" component={BoardScreen} options={{ title: t(lang, 'nav.board'), tabBarLabel: t(lang, 'nav.board') }} />
+      <Tab.Screen name="Calendar" component={CalendarScreen} options={{ title: t(lang, 'nav.calendar'), tabBarLabel: t(lang, 'nav.calendar') }} />
       <Tab.Screen name="Stats" component={StatsScreen} options={{ title: t(lang, 'nav.stats'), tabBarLabel: t(lang, 'nav.stats') }} />
-      <Tab.Screen name="Calendar" component={CalendarScreen} options={{ title: t(lang, 'home.calendar_link'), tabBarLabel: t(lang, 'home.calendar_link') }} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: t(lang, 'settings.title'), tabBarLabel: t(lang, 'settings.title') }} />
+      <Tab.Screen name="Menu" component={SettingsScreen} options={{ title: t(lang, 'nav.menu'), tabBarLabel: t(lang, 'nav.menu') }} />
     </Tab.Navigator>
   );
 }
