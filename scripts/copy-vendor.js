@@ -16,7 +16,9 @@ const quill = [
   [path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'supabase.js'],
 ];
 
-// Basique Pro: Basique_4=Thin(100) 3=Light(300) 2=Regular(400) 1=Bold(700) (без Black) → берём woff2.
+// Имена в личной папке font/ свои: Basique_4=Thin(100) 3=Light(300)
+// 2=Regular(400) 1=Bold(700), Basique=Black(900). Gravity туда кладётся
+// в .otf, и её .woff2 берутся только из assets/fonts.
 const fonts = [
   ['Basique_3.woff2', 'Basique-Light.woff2'],
   ['Basique_2.woff2', 'Basique-Regular.woff2'],
@@ -32,21 +34,27 @@ try {
   }
 
   const fontSrc = path.join(root, 'font');
-  const committedFonts = path.join(root, 'assets', 'fonts'); // .woff2 в гите — на случай, если font/ нет (свежий клон)
+  const committedFonts = path.join(root, 'assets', 'fonts'); // .woff2 в гите — есть всегда
+  // Сначала закоммиченные .woff2 целиком: они покрывают и Basique, и Gravity.
+  let copied = 0;
+  if (fs.existsSync(committedFonts)) {
+    for (const name of fs.readdirSync(committedFonts).filter((n) => n.endsWith('.woff2'))) {
+      fs.copyFileSync(path.join(committedFonts, name), path.join(fontDest, name));
+      copied += 1;
+    }
+  }
+  // Поверх — личная папка font/, если она есть: там исходники Basique Pro
+  // под своими именами, и они главнее копии в гите.
   if (fs.existsSync(fontSrc)) {
     for (const [from, name] of fonts) {
       const p = path.join(fontSrc, from);
       if (fs.existsSync(p)) fs.copyFileSync(p, path.join(fontDest, name));
     }
-    console.log('[copy-vendor] Quill + шрифт Basique Pro скопированы в', dest);
-  } else if (fs.existsSync(committedFonts)) {
-    for (const [, name] of fonts) {
-      const p = path.join(committedFonts, name);
-      if (fs.existsSync(p)) fs.copyFileSync(p, path.join(fontDest, name));
-    }
-    console.log('[copy-vendor] Quill + шрифт Basique Pro (из assets/fonts) скопированы в', dest);
+  }
+  if (copied) {
+    console.log(`[copy-vendor] Quill + шрифты (${copied} начертаний) скопированы в`, dest);
   } else {
-    console.warn('[copy-vendor] Папка font/ не найдена — шрифт не скопирован, интерфейс на системном шрифте.');
+    console.warn('[copy-vendor] Шрифты не найдены — интерфейс на системном шрифте.');
   }
 } catch (err) {
   console.error('[copy-vendor] Ошибка копирования:', err.message);

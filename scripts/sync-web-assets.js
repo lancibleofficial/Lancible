@@ -46,11 +46,12 @@ try {
     path.join(vendorDest, 'supabase.js'),
   );
 
-  // Шрифт — закоммиченные .woff2 в assets/fonts (не локальная папка font/,
-  // которой на Vercel/у контрибьюторов может не быть).
-  const fontNames = ['Basique-Light.woff2', 'Basique-Regular.woff2', 'Basique-Bold.woff2', 'Basique-Black.woff2'];
-  for (const name of fontNames) {
-    fs.copyFileSync(path.join(root, 'assets', 'fonts', name), path.join(fontDest, name));
+  // Шрифты — закоммиченные .woff2 в assets/fonts (не локальная папка font/,
+  // которой на Vercel/у контрибьюторов может не быть). Берём папку целиком:
+  // добавили начертание — оно уезжает в веб само, править список не нужно.
+  const fontSrc = path.join(root, 'assets', 'fonts');
+  for (const name of fs.readdirSync(fontSrc).filter((n) => n.endsWith('.woff2'))) {
+    fs.copyFileSync(path.join(fontSrc, name), path.join(fontDest, name));
   }
 
   console.log('[sync-web-assets] app.js/styles.css/xlsx.js/core/vendor скопированы в', webDir);

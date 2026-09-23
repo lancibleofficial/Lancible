@@ -1,4 +1,20 @@
-﻿/* ---------- Шрифт: Basique Pro ---------- */
+﻿/* ---------- Шрифты ----------
+   Gravity набирает интерфейс, Basique Pro остаётся фирменной нотой на
+   крупном: лого, заголовки страниц, крупные числа (--font-display ниже).
+
+   У Gravity нет 500 и 600 — есть Light(300), Book(350), Regular(400),
+   Bold(700). Объявляем их ступенями 300/400/500/700, чтобы привычная в
+   разметке лесенка работала: 500 заметно плотнее 400, но ещё не жирный.
+   Курсив — к трём ступеням из четырёх: 500 курсивом в приложении нигде не
+   набирается, и лишний файл незачем возить. */
+
+@font-face { font-family: 'Gravity'; src: url('vendor/fonts/Gravity-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Gravity'; src: url('vendor/fonts/Gravity-LightItalic.woff2') format('woff2'); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Gravity'; src: url('vendor/fonts/Gravity-Book.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Gravity'; src: url('vendor/fonts/Gravity-BookItalic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Gravity'; src: url('vendor/fonts/Gravity-Regular.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Gravity'; src: url('vendor/fonts/Gravity-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Gravity'; src: url('vendor/fonts/Gravity-BoldItalic.woff2') format('woff2'); font-weight: 700; font-style: italic; font-display: swap; }
 
 @font-face { font-family: 'Basique Pro'; src: url('vendor/fonts/Basique-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Basique Pro'; src: url('vendor/fonts/Basique-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
@@ -10,6 +26,9 @@
 :root {
   color-scheme: dark;
 
+  --font-ui: 'Gravity', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Basique Pro', var(--font-ui);
+
   --bg: #2a2b2e;
   --panel: #313236;
   --panel-2: #3b3c42;
@@ -20,10 +39,14 @@
   /* Доля цвета тега в надписи на бейдже — см. .tag-chip. */
   --tag-ink: 62%;
   --border: #4a4b53;
+  /* Внутренняя линейка: сетка календаря, разделители внутри карточек.
+     Тише --border — она режет плоскость, а не очерчивает предмет. */
+  --border-soft: #3a3b43;
   --border-strong: #5a5a66;
 
   --text: #ecedef;
   --text-dim: #9a9ba4;
+  --text-faint: #74767f;      /* третья ступень: подписи дней, счётчики */
   --icon: #767b86;            /* монохромные иконки: не текст, не акцент */
 
   --accent: #87ff65;
@@ -34,7 +57,6 @@
   --danger: #ef7a72;
   --running: #aceb98;
 
-  --input-bg: #3b3c42;
   --tab-active-bg: #2a2b2e;
   --nav-active-bg: color-mix(in srgb, var(--accent) 15%, transparent);
 
@@ -55,15 +77,17 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]):not([data-theme="light"]) {
     color-scheme: light;
-    --bg: #e7ecf1;
-    --panel: #ffffff;
-    --panel-2: #dbe2e9;
-    --board-col: #dbe2e9;
+    --bg: #ffffff;
+    --panel: #f6f7f9;
+    --panel-2: #eceef2;
+    --board-col: #e6e9ef;
     --tag-ink: 34%;
-    --border: #c3ccd6;
-    --border-strong: #8a9bb0;
+    --border: #d9dee6;
+    --border-soft: #e4e8ee;
+    --border-strong: #b6bdc8;
     --text: #10141a;
-    --text-dim: #4a5560;
+    --text-dim: #5a626e;
+    --text-faint: #949ba7;
     --icon: #6b7688;
     --accent: #7ae65b;
     --accent-hover: #68c44d;
@@ -71,7 +95,6 @@
     --link: #1c72b0;
     --danger: #d13a2c;
     --running: #68c44d;
-    --input-bg: #ffffff;
     --tab-active-bg: #ffffff;
     --nav-active-bg: color-mix(in srgb, var(--accent) 34%, transparent);
     --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
@@ -79,15 +102,17 @@
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #e7ecf1;
-  --panel: #ffffff;
-  --panel-2: #dbe2e9;
-  --board-col: #dbe2e9;
+  --bg: #ffffff;
+  --panel: #f6f7f9;
+  --panel-2: #eceef2;
+  --board-col: #e6e9ef;
   --tag-ink: 34%;
-  --border: #c3ccd6;
-  --border-strong: #8a9bb0;
+  --border: #d9dee6;
+  --border-soft: #e4e8ee;
+  --border-strong: #b6bdc8;
   --text: #10141a;
-  --text-dim: #4a5560;
+  --text-dim: #5a626e;
+  --text-faint: #949ba7;
   --icon: #6b7688;
   --accent: #7ae65b;
   --accent-hover: #68c44d;
@@ -95,10 +120,29 @@
   --link: #1c72b0;
   --danger: #d13a2c;
   --running: #68c44d;
-  --input-bg: #ffffff;
   --tab-active-bg: #ffffff;
   --nav-active-bg: color-mix(in srgb, var(--accent) 34%, transparent);
   --shadow: 0 2px 12px rgba(16, 20, 26, 0.10);
+}
+
+
+/* ---------- Где остаётся Basique Pro ----------
+   Лого, заголовки страниц и крупные числа. Мелкий текст, подписи и кнопки
+   набираются Gravity: у него ровнее строчные на 11–13px. */
+.tb-logo-text,
+.home-head h1,
+#task-title,
+#cal-title,
+#mini-cal-title,
+.ag-title,
+.sidebar-header h1,
+.history-head h2,
+.modal-title,
+.ph-name,
+.ptile-name,
+.timer-display,
+.stat-card b {
+  font-family: var(--font-display);
 }
 
 * { box-sizing: border-box; }
@@ -132,7 +176,7 @@ input, select, button, textarea { font-family: inherit; }
 
 html, body { margin: 0; height: 100%; overflow: hidden; }
 body {
-  font-family: 'Basique Pro', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   font-size: 14px;
   font-weight: 300;
   color: var(--text);
@@ -227,7 +271,7 @@ body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
   margin: auto 0 auto 16px;
   height: 32px;
   padding: 0 12px;
-  background: var(--input-bg);
+  background: var(--panel-2);
   border: 1px solid var(--border);
   border-radius: 8px;
   -webkit-app-region: no-drag;
@@ -1027,9 +1071,11 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .ctx-menu {
   position: fixed;
-  /* Выше модалок (100) и всплывающих календарей (120): меню вызывается и из
-     диалога статусов, а на слое 90 оно пряталось под его подложкой. */
-  z-index: 130;
+  /* Самый верхний слой: выше модалок (100), всплывающих календарей (120) и
+     окон-пикеров (130). Меню вызывается изнутри них — из диалога статусов, из
+     окна новой записи на календаре, — и на одном слое с пикером оно уходило
+     под него: пикер добавляется в body позже и потому рисуется поверх. */
+  z-index: 140;
   min-width: 190px;
   background: var(--panel);
   border: 1px solid var(--border-strong);
@@ -2648,6 +2694,8 @@ body.platform-web .tb-account {
 .ag-col { position: relative; border-left: 1px solid var(--border-soft); }
 .ag-col.today { background: color-mix(in srgb, var(--accent) 4%, transparent); }
 .ag-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border-soft); pointer-events: none; }
+/* Получасовая тише часовой: она подсказывает шаг, а не размечает час. */
+.ag-line.half { border-top-color: color-mix(in srgb, var(--border-soft) 50%, transparent); }
 
 .ag-ev {
   position: absolute;
@@ -2742,8 +2790,33 @@ body.platform-web .tb-account {
 .ag-empty { padding: 30px 4px; font-size: 13px; }
 
 /* Выбор задачи для новой записи — тот же попап, что у тегов. */
-.ag-pick { width: 280px; }
-.ag-pick-head { padding: 10px 11px 0; font-size: 11px; color: var(--text-faint); }
+/* Окно новой записи. Сверху — то, что заводит задачу: название, проект,
+   кнопка. Ниже, за разделителем, — существующие задачи: их видно, но взгляд
+   на них не падает первым. */
+.ag-pick { width: 300px; max-height: 440px; }
+.ag-pick-head { padding: 11px 12px 0; font-size: 13px; font-weight: 500; color: var(--text); }
+.ag-pick-when {
+  padding: 2px 12px 0; font-size: 11.5px; color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.ag-pick-name {
+  margin: 9px 12px 0;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); font-family: inherit; font-size: 13px; padding: 7px 9px; outline: none;
+  transition: border-color 0.12s var(--ease);
+}
+.ag-pick-name:focus { border-color: var(--accent); }
+.ag-pick-row { display: flex; align-items: center; gap: 8px; padding: 9px 12px 11px; }
+.ag-pick-proj { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.ag-pick-dot { flex: none; width: 8px; height: 8px; border-radius: 3px; background: var(--pc, var(--accent)); }
+.ag-pick-pname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-pick-proj .icon { flex: none; width: 11px; height: 11px; margin-left: auto; color: var(--text-faint); }
+.ag-pick-go { flex: none; padding: 6px 13px; font-size: 12.5px; border-radius: 7px; }
+.ag-pick-or {
+  padding: 9px 12px 5px; border-top: 1px solid var(--border-soft);
+  font-size: 10.5px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-faint);
+}
+.ag-pick .tag-pop-list { padding: 0 8px 8px; }
 
 /* ---------- Повторение задач ---------- */
 /* Строка повторения стоит под сроком — это соседние по смыслу настройки, и

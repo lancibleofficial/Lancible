@@ -5040,10 +5040,12 @@ function renderAgendaTime() {
     col.className = 'ag-col' + (dayKey(new Date(from + i * Core.DAY)) === today ? ' today' : '');
     col.dataset.dayIndex = String(i);
     col.dataset.dayStart = String(from + i * Core.DAY);
-    for (let h = 1; h < 24; h += 1) {
+    // Линии каждые полчаса, а не каждый час: шаг перетаскивания — 15 минут,
+    // и по одним часовым не видно, куда встанет запись.
+    for (let half = 1; half < 48; half += 1) {
       const line = document.createElement('div');
-      line.className = 'ag-line';
-      line.style.top = `${(h / 24) * 100}%`;
+      line.className = 'ag-line' + (half % 2 ? ' half' : '');
+      line.style.top = `${(half / 48) * 100}%`;
       col.appendChild(line);
     }
     for (const seg of Core.layoutOverlaps(segments.filter((s) => s.dayIndex === i))) {
@@ -5339,7 +5341,7 @@ function agendaEndDrag(e) {
     // Простой щелчок по пустому месту — час с этой отметки, как в Google.
     if (!moved || end - start < AG_MIN_MIN * 60000) end = start + 3_600_000;
     const span = Core.clampSpan(agDrag.dayStart, start, end, AG_MIN_MIN);
-    openTaskPicker(e, (task) => {
+    openAgendaCreate(e, span, (task) => {
       addSessionSpan(task, span.start, span.end);
       render();
       scheduleSave();
@@ -5370,16 +5372,56 @@ el.agCols.addEventListener('pointercancel', () => {
   renderAgendaPage();
 });
 
-/** Выбор задачи для новой записи. Вид взят у пикера тегов — это тот же приём
- *  «найди в списке», и заводить под него второй стиль незачем. */
-function openTaskPicker(e, onPick) {
+/** Задача, заведённая прямо с календаря. В отличие от newTask() никуда не
+ *  уводит: мы остаёмся на сетке и должны увидеть на ней новую запись. */
+function newTaskOnAgenda(projectId, title) {
+  const now = new Date().toISOString();
+  const task = {
+    id: uid(), projectId, title, done: false, notes: null,
+    totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
+    statusId: defaultStatusId(projectId, false), tagIds: [], versionId: null, repeat: null, cancelled: false,
+    dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+  };
+  state.tasks.unshift(task);
+  return task;
+}
+
+/** Проект для новой записи: тот, что выбирали в прошлый раз, иначе открытый
+ *  проект, иначе первый видимый. */
+function agendaDefaultProject() {
+  const alive = (id) => id && state.projects.some((p) => p.id === id);
+  if (alive(agenda.lastProjectId)) return agenda.lastProjectId;
+  if (alive(state.ui.projectId)) return state.ui.projectId;
+  const shown = state.projects.find((p) => !agenda.hidden.has(p.id));
+  return (shown || state.projects[0]).id;
+}
+
+/** Окно новой записи — как в Google Calendar: сверху название и проект,
+ *  создать можно сразу. Ниже — существующие задачи, отобранные по тому же
+ *  набранному тексту: то же время можно дописать к уже заведённой, не
+ *  открывая второго окна. Вид взят у пикера тегов — это тот же приём
+ *  «набери или выбери», и заводить под него второй стиль незачем. */
+function openAgendaCreate(e, span, onTask) {
   document.querySelectorAll('.tag-pop').forEach((n) => n.remove());
+  if (!state.projects.length) { toast(t('agenda.no_projects')); return; }
+  let projectId = agendaDefaultProject();
+
+  const day = new Date(span.start).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
   const pop = document.createElement('div');
   pop.className = 'tag-pop ag-pick';
-  pop.innerHTML = `<div class="ag-pick-head">${escapeHtml(t('agenda.pick_task'))}</div>`
-    + `<input class="tag-pop-search" type="text" placeholder="${escapeHtml(t('agenda.search_task'))}" />`
+  pop.innerHTML = `<div class="ag-pick-head">${escapeHtml(t('agenda.create_title'))}</div>`
+    + `<div class="ag-pick-when">${escapeHtml(day)} · ${fmtTime(span.start).slice(0, 5)} – ${fmtTime(span.end).slice(0, 5)}</div>`
+    + `<input class="ag-pick-name" type="text" placeholder="${escapeHtml(t('agenda.task_name_ph'))}" />`
+    + '<div class="ag-pick-row">'
+    + '<button type="button" class="dp-btn ag-pick-proj"></button>'
+    + `<button type="button" class="btn-accent ag-pick-go">${escapeHtml(t('agenda.create_btn'))}</button>`
+    + '</div>'
+    + `<div class="ag-pick-or">${escapeHtml(t('agenda.or_existing'))}</div>`
     + '<div class="tag-pop-list"></div>';
-  const input = pop.querySelector('.tag-pop-search');
+
+  const input = pop.querySelector('.ag-pick-name');
+  const projBtn = pop.querySelector('.ag-pick-proj');
+  const orLabel = pop.querySelector('.ag-pick-or');
   const list = pop.querySelector('.tag-pop-list');
 
   const close = () => {
@@ -5387,37 +5429,64 @@ function openTaskPicker(e, onPick) {
     document.removeEventListener('pointerdown', away, true);
     document.removeEventListener('keydown', onKey, true);
   };
-  const away = (ev) => { if (!pop.contains(ev.target)) close(); };
+  // Выпадающий список проектов живёт вне окна (он общий, #ctx-menu), и щелчок
+  // по нему не должен считаться щелчком «мимо».
+  const away = (ev) => { if (!pop.contains(ev.target) && !el.ctxMenu.contains(ev.target)) close(); };
   const onKey = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } };
 
-  const all = agendaTasks()
-    .slice()
-    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  const pick = (task) => {
+    agenda.lastProjectId = task.projectId;
+    // Проект мог быть снят галочкой слева. Тогда запись не появилась бы на
+    // сетке, и дело выглядело бы как «ничего не произошло» — неважно,
+    // завели мы задачу или дописали время к старой.
+    agenda.hidden.delete(task.projectId);
+    close();
+    onTask(task);
+  };
 
-  const draw = () => {
+  const drawProj = () => {
+    const p = getProject(projectId);
+    projBtn.innerHTML = `<span class="ag-pick-dot" style="--pc:${escapeHtml(agendaProjectColor(projectId))}"></span>`
+      + `<span class="ag-pick-pname">${escapeHtml(p ? p.name : '')}</span>`
+      + icon('chev');
+  };
+  projBtn.addEventListener('click', () => openMenu(projBtn, state.projects.map((p) => ({
+    label: p.name,
+    selected: p.id === projectId,
+    onClick: () => { projectId = p.id; drawProj(); input.focus(); },
+  }))));
+
+  const create = () => {
+    const title = input.value.trim();
+    if (!title) { input.focus(); return; }
+    pick(newTaskOnAgenda(projectId, title));
+  };
+  pop.querySelector('.ag-pick-go').addEventListener('click', create);
+
+  const all = state.tasks.slice().sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  const drawList = () => {
     const q = input.value.trim().toLowerCase();
-    const items = all.filter((t2) => !q || (t2.title || '').toLowerCase().includes(q)).slice(0, 40);
+    // Без запроса — последние тронутые: обычно время дописывают к тому, чем
+    // только что занимались.
+    const items = all.filter((t2) => !q || (t2.title || '').toLowerCase().includes(q)).slice(0, 12);
+    orLabel.hidden = !items.length;
+    list.hidden = !items.length;
     list.innerHTML = '';
-    if (!items.length) {
-      const empty = document.createElement('div');
-      empty.className = 'tag-pop-empty muted';
-      empty.textContent = t('agenda.no_tasks');
-      list.appendChild(empty);
-      return;
-    }
     for (const task of items) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'tag-pop-item';
       b.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(agendaProjectColor(task.projectId))}"></span>`
         + `<span class="tag-pop-name">${escapeHtml(task.title || t('task.no_name'))}</span>`;
-      b.addEventListener('click', () => { close(); onPick(task); });
+      b.addEventListener('click', () => pick(task));
       list.appendChild(b);
     }
   };
-  input.addEventListener('input', draw);
-  draw();
+  input.addEventListener('input', drawList);
+  input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); create(); } });
 
+  drawProj();
+  drawList();
   document.body.appendChild(pop);
   const x = Math.min(Math.max(8, (e && e.clientX ? e.clientX : innerWidth / 2) - 20), innerWidth - pop.offsetWidth - 8);
   const y = Math.min(Math.max(8, (e && e.clientY ? e.clientY : innerHeight / 3)), innerHeight - pop.offsetHeight - 8);
@@ -5468,8 +5537,9 @@ el.agCreate.addEventListener('click', (e) => {
   // Час с ближайшей четверти: начинать запись с «сейчас» удобнее, чем с
   // произвольного места сетки.
   const start = Core.snapMinutes(Date.now(), AG_SNAP_MIN);
-  openTaskPicker(e, (task) => {
-    addSessionSpan(task, start, start + 3_600_000);
+  const span = { start, end: start + 3_600_000 };
+  openAgendaCreate(e, span, (task) => {
+    addSessionSpan(task, span.start, span.end);
     render();
     scheduleSave();
     toast(t('agenda.new_entry'));

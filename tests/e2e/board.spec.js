@@ -111,17 +111,21 @@ test('карточка доски лежит на той же поверхнос
       state.ui.view = 'board';
       renderBoardPage();
       render();
+      const lum = (c) => {
+        const [r, g, b] = c.match(/[\d.]+/g).map(Number);
+        return (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
+      };
       const board = getComputedStyle(document.querySelector('.board-card')).backgroundColor;
+      const column = getComputedStyle(document.querySelector('.board-col')).backgroundColor;
       state.ui.view = 'home';
       render();
       const tile = getComputedStyle(document.querySelector('.ptile')).backgroundColor;
-      const panel = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim();
-      return { board, tile, panel };
+      return { board, tile, lift: lum(board) - lum(column) };
     }, theme);
     expect(got.board, `в теме ${theme} карточка доски отличается от карточки проекта`).toBe(got.tile);
-    if (theme === 'light') {
-      expect(got.board, 'на светлой теме карточка должна быть белой').toBe('rgb(255, 255, 255)');
-    }
+    // Столбец — углубление, карточка лежит поверх него, а не проваливается в
+    // него. Цвета у тем разные, а отношение одно, его и проверяем.
+    expect(got.lift, `в теме ${theme} карточка не светлее столбца`).toBeGreaterThan(5);
   }
 });
 

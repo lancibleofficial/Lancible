@@ -332,3 +332,111 @@ test('мини-календарь перелистывается и уводит
   await page.locator('#ag-mini-prev').click();
   await expect(page.locator('#ag-mini-title')).toHaveText(title);
 });
+
+test('выделенная зона открывает окно «Создать задачу», а не выбор задачи', async ({ page }) => {
+  await seed(page);
+  await drag(page, { day: 2, h: 9 }, { day: 2, h: 10, m: 30 });
+
+  const pop = page.locator('.ag-pick');
+  await expect(pop).toBeVisible();
+  await expect(pop.locator('.ag-pick-head')).toHaveText('Создать задачу');
+  // Время выделенной зоны — прямо в окне: иначе не проверить, туда ли попал.
+  await expect(pop.locator('.ag-pick-when')).toContainText('09:00 – 10:30');
+  await expect(pop.locator('.ag-pick-name')).toBeFocused();
+  // Существующие задачи никуда не делись, они просто ушли под разделитель.
+  await expect(pop.locator('.ag-pick-or')).toBeVisible();
+  await expect(pop.locator('.tag-pop-item').first()).toBeVisible();
+
+  await pop.locator('.ag-pick-name').fill('Созвон с командой');
+  await pop.locator('.ag-pick-go').click();
+  await expect(pop).toBeHidden();
+
+  const made = await page.evaluate(() => {
+    const task = state.tasks.find((t) => t.title === 'Созвон с командой');
+    const s = task.sessions[0];
+    const d = new Date(s.start);
+    return {
+      project: state.projects.find((p) => p.id === task.projectId).name,
+      status: state.statuses.find((x) => x.id === task.statusId).kind,
+      hours: s.ms / 3600000,
+      manual: !!s.manual,
+      time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+      onGrid: [...document.querySelectorAll('.ag-ev-name')].map((n) => n.textContent),
+    };
+  });
+  expect(made.time).toBe('09:00');
+  expect(made.hours).toBe(1.5);
+  expect(made.manual, 'запись заведена руками, а не таймером').toBe(true);
+  expect(made.status, 'новая задача встаёт в начало доски').toBe('todo');
+  expect(made.onGrid, 'запись сразу видна на сетке').toContain('Созвон с командой');
+});
+
+test('проект выбирается в самом окне и запоминается до следующего раза', async ({ page }) => {
+  await seed(page);
+  await drag(page, { day: 2, h: 9 }, { day: 2, h: 10 });
+  const pop = page.locator('.ag-pick');
+
+  await pop.locator('.ag-pick-proj').click();
+  // Список проектов — общий #ctx-menu, он живёт вне окна. Щелчок по нему не
+  // должен считаться щелчком «мимо» и закрывать окно.
+  await expect(page.locator('#ctx-menu')).toBeVisible();
+  await expect(pop).toBeVisible();
+  await page.locator('#ctx-menu .ctx-item', { hasText: 'Лендинг' }).click();
+  await expect(pop).toBeVisible();
+  await expect(pop.locator('.ag-pick-pname')).toHaveText('Лендинг');
+
+  await pop.locator('.ag-pick-name').fill('Правки текста');
+  await pop.locator('.ag-pick-name').press('Enter');
+  expect(await page.evaluate(() => {
+    const task = state.tasks.find((t) => t.title === 'Правки текста');
+    return state.projects.find((p) => p.id === task.projectId).name;
+  })).toBe('Лендинг');
+
+  // Второе окно открывается уже с этим проектом.
+  await drag(page, { day: 3, h: 9 }, { day: 3, h: 10 });
+  await expect(page.locator('.ag-pick .ag-pick-pname')).toHaveText('Лендинг');
+});
+
+test('запись в спрятанном проекте снова показывает его на сетке', async ({ page }) => {
+  // Иначе создание выглядит как «ничего не произошло»: задача есть, а блока нет.
+  const ids = await seed(page);
+  await page.evaluate((pid) => { agenda.hidden.add(pid); render(); }, ids.p2);
+  await expect(page.locator('.ag-proj.off')).toHaveCount(1);
+
+  await drag(page, { day: 2, h: 13 }, { day: 2, h: 14 });
+  const pop = page.locator('.ag-pick');
+  await pop.locator('.ag-pick-proj').click();
+  await page.locator('#ctx-menu .ctx-item', { hasText: 'Лендинг' }).click();
+  await pop.locator('.ag-pick-name').fill('Смета');
+  await pop.locator('.ag-pick-go').click();
+
+  await expect(page.locator('.ag-proj.off')).toHaveCount(0);
+  await expect(page.locator('.ag-ev-name', { hasText: 'Смета' })).toBeVisible();
+});
+
+test('сетка нарисована: часовые линии и получасовые потише', async ({ page }) => {
+  // Линии рисуются цветом --border-soft. Пока такого токена не было в палитре,
+  // border-style падал в none и сетки не было видно совсем — ни в одной теме.
+  await seed(page);
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate((th) => { state.settings.theme = th; applyTheme(); render(); }, theme);
+    const m = await page.evaluate(() => {
+      const one = (sel) => {
+        const s = getComputedStyle(document.querySelector(sel));
+        return { style: s.borderTopStyle, width: s.borderTopWidth, color: s.borderTopColor };
+      };
+      const col = getComputedStyle(document.querySelector('.ag-col'));
+      return {
+        hour: one('.ag-line:not(.half)'),
+        half: one('.ag-line.half'),
+        colBorder: { style: col.borderLeftStyle, width: col.borderLeftWidth },
+        perColumn: document.querySelectorAll('.ag-col:first-child .ag-line').length,
+      };
+    });
+    expect(m.hour, `часовая линия, тема ${theme}`).toMatchObject({ style: 'solid', width: '1px' });
+    expect(m.half.style, `получасовая линия, тема ${theme}`).toBe('solid');
+    expect(m.half.color, 'получасовая должна быть полупрозрачной').not.toBe(m.hour.color);
+    expect(m.colBorder, `граница столбца, тема ${theme}`).toMatchObject({ style: 'solid', width: '1px' });
+    expect(m.perColumn, 'линия каждые полчаса, кроме самой полуночи').toBe(47);
+  }
+});
