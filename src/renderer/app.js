@@ -115,6 +115,7 @@ const ICONS = {
   check: 'M13.6 3.3a1.05 1.05 0 010 1.5l-6.7 6.7a1.05 1.05 0 01-1.5 0L2 8.1a1.05 1.05 0 011.5-1.5l2.65 2.65 5.95-5.95a1.05 1.05 0 011.5 0z',
   pin: 'M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z',
   x: 'M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z',
+  chev: 'M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z',
 };
 const icon = (name) =>
   `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
@@ -4665,12 +4666,15 @@ function filterSuffix(filter) {
 
 // --- Список задач проекта ---
 
+/** Выбор версии стоит под названием проекта — там же, где описание и теги:
+ *  это свойство того, на что смотришь, а не третья пилюля к статусам.
+ *  Шеврон обязателен: без него кнопка читалась подписью, а не выбором. */
 function renderTaskVersionFilter() {
   const pid = state.ui.projectId;
   const has = !!pid && versionsOf(pid).length > 0;
   el.tfVersion.hidden = !has;
   if (!has) return;
-  el.tfVersion.textContent = versionFilterLabel(pid, taskFilter.versionId);
+  el.tfVersion.innerHTML = `<span class="ph-version-name">${escapeHtml(versionFilterLabel(pid, taskFilter.versionId))}</span>${icon('chev')}`;
   el.tfVersion.classList.toggle('on', taskFilter.versionId !== 'all');
 }
 

@@ -211,9 +211,9 @@ test('фильтр версии в списке задач отбирает и �
   await expect(page.locator('#task-list .task-item')).toHaveCount(3);
 });
 
-test('выбор версии стоит своей строкой и не сжимает пилюли статуса', async ({ page }) => {
-  // Боковая панель узкая: втроём с «Все / В работе / Готово» кнопка версии
-  // сжимала их так, что «В работе» переносилось на две строки.
+test('выбор версии стоит под названием проекта и выглядит выбором', async ({ page }) => {
+  // В ряду с пилюлями «Все / В работе / Готово» кнопка сжимала их до
+  // переноса текста, а рамка поля ввода без стрелки читалась подписью.
   await seed(page);
   await page.evaluate(() => { openProject(state.projects[0].id); });
   await expect(page.locator('#tf-version')).toBeVisible();
@@ -222,21 +222,43 @@ test('выбор версии стоит своей строкой и не сж�
   const m = await page.evaluate(() => {
     const r = (sel) => {
       const b = document.querySelector(sel).getBoundingClientRect();
-      return { left: Math.round(b.left), right: Math.round(b.right), top: Math.round(b.top), bottom: Math.round(b.bottom), w: Math.round(b.width) };
+      return { top: Math.round(b.top), bottom: Math.round(b.bottom) };
     };
+    const cs = (sel, prop) => getComputedStyle(document.querySelector(sel)).getPropertyValue(prop);
     return {
-      row: r('.task-filter'),
-      status: r('.tf-status'),
+      name: r('.ph-row'),
       version: r('#tf-version'),
+      filter: r('.task-filter'),
+      border: cs('#tf-version', 'border-style'),
+      background: cs('#tf-version', 'background-color'),
+      color: cs('#tf-version', 'color'),
+      nameColor: cs('.ph-name', 'color'),
       pills: [...document.querySelectorAll('.tf-status button')].map((b) => Math.round(b.getBoundingClientRect().height)),
     };
   });
 
-  expect(m.version.top, 'версия должна быть под пилюлями, а не рядом').toBeGreaterThanOrEqual(m.status.bottom);
-  expect(Math.abs(m.version.w - m.status.w), 'обе строки одной ширины').toBeLessThanOrEqual(1);
-  expect(m.version.right, 'кнопка не должна вылезать за ряд').toBeLessThanOrEqual(m.row.right);
+  expect(m.version.top, 'версия должна быть под названием проекта').toBeGreaterThanOrEqual(m.name.bottom);
+  expect(m.version.bottom, 'и выше пилюль статуса').toBeLessThanOrEqual(m.filter.top);
+  // Ни рамки, ни подложки: это не поле ввода, а подпись, по которой кликают.
+  expect(m.border).toBe('none');
+  expect(m.background).toBe('rgba(0, 0, 0, 0)');
+  expect(m.color, 'версия звучит тише названия проекта').not.toBe(m.nameColor);
+  // Стрелка обязательна — без неё непонятно, что можно переключить.
+  await expect(page.locator('#tf-version svg')).toHaveCount(1);
   expect(new Set(m.pills).size, 'пилюли должны быть одной высоты').toBe(1);
   expect(m.pills[0], 'текст в пилюлях не должен переноситься').toBeLessThanOrEqual(26);
+
+  // Выбранная версия заметнее не рамкой, а весом текста.
+  await page.locator('#tf-version').click();
+  await page.locator('#ctx-menu .ctx-item', { hasText: 'v1.3' }).click();
+  await expect(page.locator('.ph-version-name')).toHaveText('v1.3');
+  const picked = await page.evaluate(() => {
+    const cs = getComputedStyle(document.getElementById('tf-version'));
+    return { color: cs.color, weight: cs.fontWeight, border: cs.borderStyle };
+  });
+  expect(picked.color).toBe(m.nameColor);
+  expect(Number(picked.weight)).toBeGreaterThan(400);
+  expect(picked.border).toBe('none');
 });
 
 test('имя выгрузки называет фильтр, а сама выгрузка урезана', async ({ page }) => {
