@@ -1,5 +1,5 @@
-import { useLayoutEffect, useMemo } from 'react';
-import { View, SectionList, Pressable, StyleSheet } from 'react-native';
+import { useLayoutEffect, useMemo, useState } from 'react';
+import { View, SectionList, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
@@ -14,6 +14,8 @@ import { confirmSheet } from '../lib/dialogs';
 import TaskListItem from '../components/TaskListItem';
 import Icon from '../components/Icon';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
+import VersionsSheet from '../components/VersionsSheet';
+import Versions from '../core/versions.js';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize, buttonHeight } from '../theme';
 import { t } from '../lib/i18n';
@@ -35,9 +37,25 @@ export default function ProjectScreen({ route, navigation }) {
   const setProjectTags = useAppStore((s) => s.setProjectTags);
   const togglePinProject = useAppStore((s) => s.togglePinProject);
   const showToast = useAppStore((s) => s.showToast);
+  const versions = useAppStore((s) => s.versions);
 
   const project = getProject(projects, projectId);
-  const { pinned, rest, done } = useMemo(() => sortedProjectTasks(tasks, projectId), [tasks, projectId]);
+  // Отбор по версии — как на десктопе в списке задач: «все», конкретная
+  // версия или «без версии». Живёт в экране, а не в данных: это способ
+  // смотреть, а не свойство проекта.
+  const [versionFilter, setVersionFilter] = useState('all');
+  const projectVersions = useMemo(
+    () => Versions.versionsOf(versions, projectId),
+    [versions, projectId],
+  );
+  const visibleTasks = useMemo(
+    () => Versions.filterTasks(tasks, versions, { projectId, versionId: versionFilter }),
+    [tasks, versions, projectId, versionFilter],
+  );
+  const { pinned, rest, done } = useMemo(
+    () => sortedProjectTasks(visibleTasks, projectId),
+    [visibleTasks, projectId],
+  );
 
   function onDeleteProject() {
     if (!project) return;
@@ -71,6 +89,12 @@ export default function ProjectScreen({ route, navigation }) {
       title: project ? project.name : '',
       headerRight: () => (
         <View style={styles.headerActions}>
+          <Pressable hitSlop={10} onPress={() => navigation.navigate('Board', { projectId })} style={styles.headerIconBtn}>
+            <Icon name="chart" size={20} color={colors.text} />
+          </Pressable>
+          <Pressable hitSlop={10} onPress={onOpenVersions} style={styles.headerIconBtn}>
+            <Icon name="settings" size={20} color={colors.text} />
+          </Pressable>
           <Pressable hitSlop={10} onPress={() => togglePinProject(projectId)} style={styles.headerIconBtn}>
             <Icon name="pin" size={20} color={project && project.pinnedAt ? colors.accent : colors.text} />
           </Pressable>
@@ -85,6 +109,10 @@ export default function ProjectScreen({ route, navigation }) {
   const projectTags = tagsOf(allTags, project ? project.tagIds : []);
 
 
+
+  function onOpenVersions() {
+    openSheet(<VersionsSheet projectId={projectId} lang={LANG} />);
+  }
 
   function onOpenTags() {
 
@@ -134,6 +162,26 @@ export default function ProjectScreen({ route, navigation }) {
           <Text style={styles.tagsEmpty}>{t(LANG, 'tag.pick')}</Text>
         )}
       </Pressable>
+      {projectVersions.length ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {[
+            { id: 'all', name: t(LANG, 'version.all') },
+            ...projectVersions,
+            { id: 'none', name: t(LANG, 'version.none') },
+          ].map((v) => {
+            const on = versionFilter === v.id;
+            return (
+              <Pressable key={v.id} onPress={() => setVersionFilter(v.id)} style={[styles.chip, on && styles.chipOn]}>
+                <Text style={[styles.chipText, on && styles.chipTextOn]} numberOfLines={1}>{v.name}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      ) : null}
       <SectionList
         style={styles.list}
         sections={sections}
@@ -161,6 +209,15 @@ export default function ProjectScreen({ route, navigation }) {
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  filterRow: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  chip: {
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border,
+    maxWidth: 160,
+  },
+  chipOn: { backgroundColor: colors.accentMuted, borderColor: colors.accent },
+  chipText: { color: colors.textDim, fontSize: fontSize.xs },
+  chipTextOn: { color: colors.text },
   summary: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
   // Белый, как карточки проектов на главной (ProjectListItem) — раньше был
   // panel2, что на этом экране (тоже белый шит поверх bg) выглядело как

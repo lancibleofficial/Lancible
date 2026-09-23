@@ -14,7 +14,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyState, migrate, uid, PALETTE } from '../lib/migrate';
 import { scheduleTaskReminder, cancelTaskReminder, rescheduleAll } from '../lib/notifications';
 import { effectiveRate, earnedOf, taskElapsedMs } from '../lib/format';
-import { seedProjectStatuses, defaultStatusId } from '../lib/statuses';
+import { seedProjectStatuses, defaultStatusId, getStatus } from '../lib/statuses';
+import Repeat from '../core/repeat.js';
+import Versions from '../core/versions.js';
 
 export const useAppStore = create(
   persist(
@@ -160,15 +162,152 @@ export const useAppStore = create(
         const { tasks, settings } = get();
         rescheduleAll(tasks, settings.lang, value);
       },
+      /** Единственное место, где меняется статус задачи. done и cancelled
+       *  следуют за видом статуса: иначе список, доска и статистика
+       *  разойдутся между собой. */
+      setTaskStatus(id, statusId) {
+        const st = getStatus(get().statuses, statusId);
+        if (!st) return;
+        const before = get().tasks.find((t2) => t2.id === id);
+        const wasDone = !!(before && before.done);
+        const now = new Date().toISOString();
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === id ? {
+            ...task,
+            statusId: st.id,
+            done: st.kind === 'done',
+            cancelled: st.kind === 'cancelled',
+            doneAt: st.kind === 'done' ? (task.doneAt || now) : null,
+            updatedAt: now,
+          } : task)),
+        }));
+        get()._afterTaskClosed(id, wasDone);
+      },
+
       toggleTaskDone(id) {
+        const before = get().tasks.find((t2) => t2.id === id);
+        if (!before) return;
+        // Галочка двигает задачу и по доске: иначе список и доска
+        // показывают одно и то же по-разному.
+        const next = defaultStatusId(get().statuses, before.projectId, !before.done);
+        if (next) { get().setTaskStatus(id, next); return; }
         set((s) => ({
           tasks: s.tasks.map((task) =>
             task.id === id ? { ...task, done: !task.done, updatedAt: new Date().toISOString() } : task),
         }));
-        // Выполненной задаче напоминать не о чем, а снятой галочке — снова есть.
+        get()._afterTaskClosed(id, !!before.done);
+      },
+
+      /** Задачу закрыли — если у неё есть правило, она возвращается со
+       *  следующим сроком. С «оставлять копии» прежняя остаётся в списке
+       *  выполненной, со своим временем. Порт afterTaskClosed/rollRepeat
+       *  из src/renderer/app.js. */
+      _afterTaskClosed(id, wasDone) {
         const task = get().tasks.find((t2) => t2.id === id);
+        if (task && !wasDone && task.done && task.repeat) get()._rollRepeat(id);
+        const fresh = get().tasks.find((t2) => t2.id === id);
         const { lang, notifyEnabled } = get().settings;
-        if (task) scheduleTaskReminder(task, lang, notifyEnabled !== false);
+        if (fresh) scheduleTaskReminder(fresh, lang, notifyEnabled !== false);
+      },
+
+      _rollRepeat(id) {
+        const task = get().tasks.find((t2) => t2.id === id);
+        if (!task || !task.dueAt) return;
+        const rule = Repeat.normalizeRepeat(task.repeat);
+        if (!rule) return;
+        const done = { ...rule, done: (rule.done || 0) + 1 };
+        const now = new Date().toISOString();
+        // Серия кончилась — задача просто остаётся закрытой.
+        if (Repeat.repeatFinished(done)) {
+          set((s) => ({ tasks: s.tasks.map((t2) => (t2.id === id ? { ...t2, repeat: done, updatedAt: now } : t2)) }));
+          return;
+        }
+        const base = rule.from === 'completion' ? Date.now() : new Date(task.dueAt).getTime();
+        const next = Repeat.nextDue(done, base);
+        if (!next) return;
+        const openStatus = defaultStatusId(get().statuses, task.projectId, false);
+        const copyId = uid();
+        set((s) => ({
+          tasks: s.tasks.flatMap((t2) => {
+            if (t2.id !== id) return [t2];
+            const reopened = {
+              ...t2,
+              repeat: done,
+              done: false,
+              cancelled: false,
+              doneAt: null,
+              statusId: openStatus || t2.statusId,
+              dueAt: new Date(next).toISOString(),
+              notifiedAt: null,
+              updatedAt: now,
+            };
+            if (!rule.keepHistory) return [reopened];
+            // Копия — это история: своё время, своя запись, без правила.
+            const copy = {
+              ...t2,
+              id: copyId,
+              repeat: null,
+              done: true,
+              doneAt: t2.doneAt || now,
+              pinnedAt: null,
+              remindAt: null,
+              notifiedAt: null,
+              updatedAt: now,
+            };
+            return [{ ...reopened, totalMs: 0, sessions: [] }, copy];
+          }),
+        }));
+      },
+
+      setTaskRepeat(id, rule) {
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === id
+            ? { ...task, repeat: rule ? Repeat.normalizeRepeat(rule) : null, updatedAt: new Date().toISOString() }
+            : task)),
+        }));
+      },
+
+      setTaskVersion(id, versionId) {
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === id
+            ? { ...task, versionId: versionId || null, updatedAt: new Date().toISOString() }
+            : task)),
+        }));
+      },
+
+      // --- версии проекта ---
+      createVersion(projectId, name) {
+        const clean = (name || "").trim();
+        if (!clean) return null;
+        const own = Versions.versionsOf(get().versions, projectId);
+        const version = {
+          id: uid(), projectId, name: clean,
+          order: own.length ? Math.max(...own.map((v) => v.order || 0)) + 1 : 0,
+          releasedAt: null,
+        };
+        set((s) => ({ versions: [...s.versions, version] }));
+        return version;
+      },
+      renameVersion(id, name) {
+        const clean = (name || "").trim();
+        if (!clean) return;
+        set((s) => ({ versions: s.versions.map((v) => (v.id === id ? { ...v, name: clean } : v)) }));
+      },
+      toggleVersionReleased(id) {
+        set((s) => ({
+          versions: s.versions.map((v) => (v.id === id
+            ? { ...v, releasedAt: v.releasedAt ? null : new Date().toISOString() }
+            : v)),
+        }));
+      },
+      deleteVersion(id) {
+        // Версию убрали — задачи остаются, просто без неё.
+        set((s) => ({
+          versions: s.versions.filter((v) => v.id !== id),
+          tasks: s.tasks.map((task) => (task.versionId === id
+            ? { ...task, versionId: null, updatedAt: new Date().toISOString() }
+            : task)),
+        }));
       },
       togglePinTask(id) {
         set((s) => ({

@@ -5,20 +5,28 @@ import TextInput from '../components/AppTextInput';
 import RichTextEditor, { LinkPromptSheet } from '../components/RichTextEditor';
 import EditorToolbar from '../components/EditorToolbar';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
-import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney } from '../lib/format';
+import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney, capFirst } from '../lib/format';
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import DueSheet from '../components/DueSheet';
 import TagPickerSheet from '../components/TagPickerSheet';
+import PickerSheet from '../components/PickerSheet';
+import RepeatSheet from '../components/RepeatSheet';
+import { orderedStatuses, getStatus } from '../lib/statuses';
+import Repeat from '../core/repeat.js';
+import Versions from '../core/versions.js';
 import { TagBadgeRow } from '../components/TagBadge';
 import { tagsOf } from '../lib/tags';
 import { dueShort, remindKey, REMIND_LABEL } from '../lib/due';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
 import { useColors, spacing, radius, fontSize } from '../theme';
-import { t } from '../lib/i18n';
+import { t, LOCALE_MAP } from '../lib/i18n';
+
+// Дни недели в подписи правила: 0 — воскресенье, как в Date.getDay().
+const WEEKDAY_KEY = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat'];
 
 export default function TaskDetailScreen({ route, navigation }) {
   const colors = useColors();
@@ -39,9 +47,33 @@ export default function TaskDetailScreen({ route, navigation }) {
   const startTimer = useAppStore((s) => s.startTimer);
   const stopTimer = useAppStore((s) => s.stopTimer);
   const showToast = useAppStore((s) => s.showToast);
+  const statuses = useAppStore((s) => s.statuses);
+  const versions = useAppStore((s) => s.versions);
+  const setTaskStatus = useAppStore((s) => s.setTaskStatus);
+  const setTaskVersion = useAppStore((s) => s.setTaskVersion);
+  const setTaskRepeat = useAppStore((s) => s.setTaskRepeat);
 
   const task = getTask(tasks, taskId);
   const taskTags = tagsOf(allTags, task ? task.tagIds : []);
+  const status = task ? getStatus(statuses, task.statusId) : null;
+  const projectVersions = task ? Versions.versionsOf(versions, task.projectId) : [];
+  const version = task ? Versions.getVersion(versions, task.versionId) : null;
+  // Правило словами и ближайший срок — чтобы не открывать лист ради
+  // вопроса «а как оно сейчас настроено».
+  const repeatDesc = task ? Repeat.describeRepeat(task.repeat) : null;
+  const repeatSummary = repeatDesc
+    ? capFirst(t(LANG, repeatDesc.key, {
+      ...repeatDesc.vars,
+      days: (repeatDesc.vars.days || []).map((d) => t(LANG, WEEKDAY_KEY[d])).join(', '),
+    }))
+    : '';
+  const repeatNext = (() => {
+    if (!task || !task.repeat || !task.dueAt) return '';
+    const base = new Date(task.dueAt).getTime();
+    const next = Repeat.upcomingDue(task.repeat, base, base + 400 * 86400000, 1)[0];
+    if (!next) return t(LANG, 'repeat.series_done');
+    return t(LANG, 'repeat.next', { date: new Date(next).toLocaleDateString(LOCALE_MAP[LANG] || 'ru-RU', { day: 'numeric', month: 'short' }) });
+  })();
   const isRunning = activeTimer && activeTimer.taskId === taskId;
   useTicker(!!isRunning);
 
@@ -190,6 +222,49 @@ export default function TaskDetailScreen({ route, navigation }) {
     );
   }
 
+  function onOpenStatus() {
+    const own = orderedStatuses(statuses, task.projectId);
+    if (!own.length) return;
+    openSheet(
+      <PickerSheet
+        title={t(LANG, 'task.status_label')}
+        value={task.statusId}
+        options={own.map((s) => ({ value: s.id, label: s.name }))}
+        onSelect={(id) => setTaskStatus(taskId, id)}
+      />,
+    );
+  }
+
+  function onOpenVersion() {
+    const own = Versions.versionsOf(versions, task.projectId);
+    openSheet(
+      <PickerSheet
+        title={t(LANG, 'version.label')}
+        value={task.versionId || ''}
+        options={[
+          { value: '', label: t(LANG, 'version.none') },
+          ...own.map((v) => ({ value: v.id, label: v.name })),
+        ]}
+        onSelect={(id) => setTaskVersion(taskId, id || null)}
+      />,
+    );
+  }
+
+  function onOpenRepeat() {
+    // Повторение считается от дедлайна — предлагать его раньше было бы
+    // обманом: возвращаться задаче некуда.
+    if (!task.dueAt) { showToast(t(LANG, 'repeat.needs_due')); return; }
+    openSheet(
+      <RepeatSheet
+        lang={LANG}
+        dueAt={task.dueAt}
+        rule={task.repeat}
+        onApply={(rule) => setTaskRepeat(taskId, rule)}
+        onClear={() => setTaskRepeat(taskId, null)}
+      />,
+    );
+  }
+
   useEffect(() => () => { clearTimeout(titleTimer.current); clearTimeout(notesTimer.current); }, []);
 
   if (!task) return null;
@@ -325,6 +400,53 @@ export default function TaskDetailScreen({ route, navigation }) {
               )}
               <Icon name="chevron-right" size={14} color={colors.textDim} />
             </Pressable>
+
+            {/* Статус задачи. Он же столбец на доске — менять его можно и
+                отсюда, не открывая доску. */}
+            <Pressable style={styles.dueRow} onPress={onOpenStatus}>
+              <Icon name="check" size={15} color={colors.textDim} />
+              <View style={styles.dueMain}>
+                <Text style={styles.dueLabel}>{t(LANG, 'task.status_label')}</Text>
+              </View>
+              {status ? (
+                <View style={styles.statusValue}>
+                  <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+                  <Text style={styles.dueValue}>{status.name}</Text>
+                </View>
+              ) : (
+                <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
+              )}
+              <Icon name="chevron-right" size={14} color={colors.textDim} />
+            </Pressable>
+
+            {/* Версия принадлежит проекту, поэтому строки нет, пока у него
+                не заведено ни одной. */}
+            {projectVersions.length ? (
+              <Pressable style={styles.dueRow} onPress={onOpenVersion}>
+                <Icon name="pin" size={15} color={colors.textDim} />
+                <View style={styles.dueMain}>
+                  <Text style={styles.dueLabel}>{t(LANG, 'version.label')}</Text>
+                </View>
+                <Text style={version ? styles.dueValue : styles.dueNone}>
+                  {version ? version.name : t(LANG, 'version.none')}
+                </Text>
+                <Icon name="chevron-right" size={14} color={colors.textDim} />
+              </Pressable>
+            ) : null}
+
+            {/* Повторение — последним: оно про будущее задачи, а не про
+                то, чем она является сейчас. */}
+            <Pressable style={styles.dueRow} onPress={onOpenRepeat}>
+              <Icon name="clock" size={15} color={colors.textDim} />
+              <View style={styles.dueMain}>
+                <Text style={styles.dueLabel}>{t(LANG, 'repeat.label')}</Text>
+                {repeatNext ? <Text style={styles.dueRemind}>{repeatNext}</Text> : null}
+              </View>
+              <Text style={task.repeat ? styles.dueValue : styles.dueNone} numberOfLines={1}>
+                {repeatSummary || t(LANG, 'repeat.none')}
+              </Text>
+              <Icon name="chevron-right" size={14} color={colors.textDim} />
+            </Pressable>
           </View>
         ) : (
           <View style={styles.historyScroll}>
@@ -405,6 +527,8 @@ const makeStyles = (colors) => StyleSheet.create({
   // Бейджи выравниваются вправо, как и остальные значения в этих строках,
   // и переносятся: их может быть больше, чем влезает в одну строку.
   tagRowValue: { flex: 1, justifyContent: "flex-end" },
+  statusValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  statusDot: { width: 8, height: 8, borderRadius: 3 },
   dueNone: { color: colors.textDim, fontSize: fontSize.sm },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
