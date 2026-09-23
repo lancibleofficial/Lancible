@@ -167,6 +167,9 @@ export default function ProjectScreen({ route, navigation }) {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
+          // flexGrow: 0 — иначе ScrollView в колонке забирает всё свободное
+          // место, и полоса фишек растягивается на пол-экрана.
+          style={{ flexGrow: 0 }}
         >
           {[
             { id: 'all', name: t(LANG, 'version.all') },
@@ -209,7 +212,9 @@ export default function ProjectScreen({ route, navigation }) {
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  filterRow: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  // alignItems: center обязателен: горизонтальный ScrollView иначе
+  // растягивает детей по высоте, и фишки вытягиваются во весь экран.
+  filterRow: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, alignItems: 'center' },
   chip: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
     borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border,

@@ -12,7 +12,7 @@ import PrimaryButton from './PrimaryButton';
 import Versions from '../core/versions.js';
 import { useAppStore } from '../store/useAppStore';
 import { closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, buttonHeight } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 export default function VersionsSheet({ projectId, lang }) {
@@ -84,6 +84,7 @@ export default function VersionsSheet({ projectId, lang }) {
         <PrimaryButton
           icon="plus"
           disabled={!canAdd}
+          style={styles.addBtn}
           onPress={() => { createVersion(projectId, draft); setDraft(''); }}
         />
       </View>
@@ -105,6 +106,9 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.text, fontSize: fontSize.md,
   },
   nameBad: { borderColor: colors.danger },
+  // PrimaryButton по умолчанию width: 100% — в строке это отнимает всю
+  // ширину у поля. Квадрат по высоте кнопки, как у экспорта в проекте.
+  addBtn: { width: buttonHeight, height: buttonHeight, paddingHorizontal: 0 },
   bad: { color: colors.danger, fontSize: fontSize.xs },
   released: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,

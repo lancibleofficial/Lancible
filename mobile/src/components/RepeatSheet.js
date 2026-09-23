@@ -84,7 +84,9 @@ export default function RepeatSheet({ lang, dueAt, rule: initial, onApply, onCle
         <Pressable style={styles.footerGhost} onPress={() => { onClear(); closeSheet(); }}>
           <Text style={styles.footerGhostText}>{t(lang, 'repeat.none')}</Text>
         </Pressable>
-        <PrimaryButton title={t(lang, 'common.done')} onPress={() => { onApply(rule); closeSheet(); }} style={{ flex: 1 }} />
+        {/* width: auto — у PrimaryButton по умолчанию 100%, и в строке
+            рядом с «Не повторяется» он вытолкнул бы её за край. */}
+        <PrimaryButton title={t(lang, 'common.done')} onPress={() => { onApply(rule); closeSheet(); }} style={styles.footerDone} />
       </View>,
     );
   }, [rule, styles, lang, onApply, onClear]);
@@ -241,7 +243,9 @@ export default function RepeatSheet({ lang, dueAt, rule: initial, onApply, onCle
 
 const makeStyles = (colors) => StyleSheet.create({
   scroll: { maxHeight: 520 },
-  content: { gap: spacing.md, paddingBottom: spacing.md },
+  // Запас снизу: кнопки листа закреплены поверх прокрутки, и без него
+  // сводка упиралась в них нижней строкой.
+  content: { gap: spacing.md, paddingBottom: spacing.xxl },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
 
   seg: {
@@ -309,4 +313,5 @@ const makeStyles = (colors) => StyleSheet.create({
   footer: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   footerGhost: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
   footerGhostText: { color: colors.textDim, fontSize: fontSize.sm },
+  footerDone: { flex: 1, width: 'auto' },
 });

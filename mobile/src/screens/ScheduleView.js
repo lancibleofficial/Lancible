@@ -270,7 +270,9 @@ const makeStyles = (colors) => StyleSheet.create({
   dayName: { alignItems: 'center', paddingBottom: spacing.xs, gap: 2 },
   dow: { color: colors.textFaint, fontSize: 10 },
   dowToday: { color: colors.accent },
-  dnum: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  // Фиксированный квадрат, а не minWidth: иначе двузначное число делает
+  // подложку шире высоты, и кружок сегодняшнего дня превращается в овал.
+  dnum: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   dnumToday: { backgroundColor: colors.accent },
   dnumText: { color: colors.text, fontSize: fontSize.xs, fontWeight: '700' },
   dnumTextToday: { color: colors.accentText },

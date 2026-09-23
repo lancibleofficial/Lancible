@@ -180,7 +180,9 @@ const makeStyles = (colors, columnWidth) => StyleSheet.create({
   laneReleased: { color: colors.textDim, fontSize: fontSize.xs },
   laneCount: { color: colors.textFaint, fontSize: fontSize.xs },
 
-  columns: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+  // alignItems: stretch — столбцы дорожки одной высоты по самому высокому.
+  // По содержимому они получались разной длины, и ряд выглядел рваным.
+  columns: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'stretch' },
   column: {
     width: columnWidth,
     backgroundColor: colors.boardCol, borderRadius: radius.md,
@@ -194,7 +196,7 @@ const makeStyles = (colors, columnWidth) => StyleSheet.create({
   columnName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
   columnCount: { color: colors.textFaint, fontSize: fontSize.xs },
   columnTime: { color: colors.textDim, fontSize: fontSize.xs },
-  columnBody: { paddingHorizontal: spacing.sm, gap: spacing.sm },
+  columnBody: { flex: 1, paddingHorizontal: spacing.sm, gap: spacing.sm },
   columnEmpty: { color: colors.textFaint, fontSize: fontSize.xs, textAlign: 'center', paddingVertical: spacing.md },
 
   // Карточка на ступень светлее столбца — то же правило, что на десктопе.

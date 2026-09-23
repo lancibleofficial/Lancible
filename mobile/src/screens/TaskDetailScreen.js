@@ -423,7 +423,7 @@ export default function TaskDetailScreen({ route, navigation }) {
                 не заведено ни одной. */}
             {projectVersions.length ? (
               <Pressable style={styles.dueRow} onPress={onOpenVersion}>
-                <Icon name="pin" size={15} color={colors.textDim} />
+                <Icon name="list-ordered" size={15} color={colors.textDim} />
                 <View style={styles.dueMain}>
                   <Text style={styles.dueLabel}>{t(LANG, 'version.label')}</Text>
                 </View>
