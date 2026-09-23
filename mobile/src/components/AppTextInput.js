@@ -6,16 +6,16 @@ import { TextInput as RNTextInput, StyleSheet } from 'react-native';
 
 // Сдвиг на ступень вниз — см. AppText.js.
 const FAMILY_BY_WEIGHT = {
-  100: 'BasiquePro-Light', 200: 'BasiquePro-Light', 300: 'BasiquePro-Light',
-  400: 'BasiquePro-Light', normal: 'BasiquePro-Light',
-  500: 'BasiquePro-Light', 600: 'BasiquePro-Regular',
-  700: 'BasiquePro-Regular', bold: 'BasiquePro-Regular',
-  800: 'BasiquePro-Bold', 900: 'BasiquePro-Bold',
+  100: 'Gravity-Light', 200: 'Gravity-Light', 300: 'Gravity-Light',
+  400: 'Gravity-Book', normal: 'Gravity-Book',
+  500: 'Gravity-Regular', 600: 'Gravity-Regular',
+  700: 'Gravity-Bold', bold: 'Gravity-Bold',
+  800: 'Gravity-Bold', 900: 'Gravity-Bold',
 };
 
 const TextInput = forwardRef(({ style, ...props }, ref) => {
   const flat = StyleSheet.flatten(style) || {};
-  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'BasiquePro-Light';
+  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'Gravity-Book';
   return <RNTextInput ref={ref} {...props} style={[style, { fontFamily: family, fontWeight: undefined }]} />;
 });
 

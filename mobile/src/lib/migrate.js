@@ -2,6 +2,9 @@
 // 19-27, 621-623, 3203-3238). Чистая логика — работает над обычным объектом,
 // без обращений к DOM/платформе.
 import { T, t } from './i18n';
+// Напрямую из ядра, а не через lib/statuses.js: тот сам импортирует uid()
+// отсюда, и получилось бы кольцо.
+import { makeProjectStatuses, defaultStatusId } from '../core/status.js';
 
 export const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
 
@@ -29,9 +32,8 @@ export function emptyState() {
     // Теги общие на всё приложение — такие же пользовательские данные, как
     // проекты и задачи, и ездят в синхронизации вместе с ними.
     tags: [],
-    // Статусы и версии мобильное приложение пока не показывает, но обязано
-    // не терять: они приходят с десктопа и должны уехать обратно целыми.
-    // Здесь их только проносят через себя, не трогая содержимое.
+    // Статусы принадлежат проекту и задают столбцы доски. Версии тоже
+    // принадлежат проекту: «в какой выпуск это уезжает».
     statuses: [],
     versions: [],
     activeTimer: null,
@@ -88,6 +90,11 @@ export function migrate(state) {
     if (task.remindOffsetMin === undefined) task.remindOffsetMin = null;
     if (task.remindAt === undefined) task.remindAt = null;
     if (task.notifiedAt === undefined) task.notifiedAt = null;
+    // Версия и правило повторения появились в 0.3.0. У задач, заведённых
+    // прежней сборкой телефона, их просто нет — и это не ошибка.
+    if (task.versionId === undefined) task.versionId = null;
+    if (task.repeat === undefined) task.repeat = null;
+    if (task.cancelled === undefined) task.cancelled = false;
     task.tagIds = keepTags(task.tagIds);
   });
 
@@ -105,6 +112,31 @@ export function migrate(state) {
   const fallback = state.projects[0] ? state.projects[0].id : null;
   for (const task of state.tasks) if (!task.projectId || !known.has(task.projectId)) task.projectId = fallback;
   if (!known.has(state.ui.projectId)) state.ui.projectId = fallback;
+
+  // Статусы: у проекта либо есть свой набор, либо он заводится здесь. Прежняя
+  // сборка телефона не заводила их вовсе — проекты, созданные на нём, до сих
+  // пор чинил десктоп при первой же загрузке. Теперь чинит и телефон, иначе
+  // доске не из чего строиться.
+  for (const project of state.projects) {
+    if (state.statuses.some((s) => s.projectId === project.id)) continue;
+    state.statuses.push(...makeProjectStatuses(
+      project.id,
+      (key) => t(state.settings.lang, `status.default_${key}`),
+      uid,
+    ));
+  }
+  // Статусы исчезнувших проектов не остаются висеть.
+  state.statuses = state.statuses.filter((s) => known.has(s.projectId));
+  state.versions = state.versions.filter((v) => known.has(v.projectId));
+
+  const statusIds = new Set(state.statuses.map((s) => s.id));
+  const versionIds = new Set(state.versions.map((v) => v.id));
+  for (const task of state.tasks) {
+    if (!task.statusId || !statusIds.has(task.statusId)) {
+      task.statusId = defaultStatusId(state.statuses, task.projectId, task.done);
+    }
+    if (task.versionId && !versionIds.has(task.versionId)) task.versionId = null;
+  }
 
   return state;
 }

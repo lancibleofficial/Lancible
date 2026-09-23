@@ -94,7 +94,7 @@ export default function MainTabs() {
         ),
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
-        tabBarLabelStyle: { fontFamily: 'BasiquePro-Regular', fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: 'Gravity-Book', fontSize: 11 },
         tabBarStyle: legacyTabBarStyle,
         tabBarBlurEffect: HAS_LIQUID_GLASS ? undefined : 'none',
       })}

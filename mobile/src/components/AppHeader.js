@@ -2,7 +2,7 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
-import { useColors, spacing, fontSize } from '../theme';
+import { useColors, spacing, fontSize, displayFamily } from '../theme';
 
 // Единый JS-хедер для всех навигаторов (native-stack, табы на обеих
 // платформах) вместо трёх разных нативных: у нативного iOS-хедера
@@ -55,5 +55,6 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   },
   back: { paddingRight: spacing.sm, marginLeft: -4 },
   titleSlot: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  title: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'BasiquePro-Regular' },
+  // Заголовок экрана — фирменная семья, как заголовки страниц на десктопе.
+  title: { color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.regular },
 });

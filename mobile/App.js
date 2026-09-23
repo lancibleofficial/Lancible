@@ -32,6 +32,12 @@ export default function App() {
     'BasiquePro-Regular': require('./assets/fonts/BasiquePro-Regular.ttf'),
     'BasiquePro-Bold': require('./assets/fonts/BasiquePro-Bold.ttf'),
     'BasiquePro-Black': require('./assets/fonts/BasiquePro-Black.ttf'),
+    // Текст набирает Gravity, Basique Pro остаётся на лого, заголовках и
+    // крупных числах — тот же расклад, что на десктопе и в вебе.
+    'Gravity-Light': require('./assets/fonts/Gravity-Light.otf'),
+    'Gravity-Book': require('./assets/fonts/Gravity-Book.otf'),
+    'Gravity-Regular': require('./assets/fonts/Gravity-Regular.otf'),
+    'Gravity-Bold': require('./assets/fonts/Gravity-Bold.otf'),
   });
   const colors = useColors();
   const mode = useThemeMode();

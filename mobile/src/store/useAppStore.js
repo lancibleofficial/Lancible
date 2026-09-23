@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyState, migrate, uid, PALETTE } from '../lib/migrate';
 import { scheduleTaskReminder, cancelTaskReminder, rescheduleAll } from '../lib/notifications';
 import { effectiveRate, earnedOf, taskElapsedMs } from '../lib/format';
+import { seedProjectStatuses, defaultStatusId } from '../lib/statuses';
 
 export const useAppStore = create(
   persist(
@@ -46,7 +47,12 @@ export const useAppStore = create(
           createdAt: now,
           pinnedAt: null,
         };
-        set((s) => ({ projects: [project, ...s.projects] }));
+        // Набор статусов заводится сразу: доска строится из них, и проект
+        // без них был бы пустой доской, а задача — без статуса.
+        set((s) => ({
+          projects: [project, ...s.projects],
+          statuses: [...s.statuses, ...seedProjectStatuses(project.id, s.settings.lang)],
+        }));
         return project;
       },
       updateProject(id, patch) {
@@ -77,10 +83,14 @@ export const useAppStore = create(
           id: uid(), projectId, title: '', done: false, notes: null,
           totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
           dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
-          // Поле заводится здесь, а не только в migrate(): та правит уже
+          // Поля заводятся здесь, а не только в migrate(): та правит уже
           // сохранённые данные при загрузке и до задачи, созданной в этом же
           // запуске, не доберётся.
           tagIds: [],
+          statusId: defaultStatusId(get().statuses, projectId, false),
+          versionId: null,
+          repeat: null,
+          cancelled: false,
         };
         set((s) => ({ tasks: [task, ...s.tasks] }));
         return task;
@@ -223,7 +233,15 @@ export const useAppStore = create(
     {
       name: 'lancible-data',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: (s) => ({ projects: s.projects, tasks: s.tasks, activeTimer: s.activeTimer, ui: s.ui, settings: s.settings }),
+      // Теги, статусы и версии — такие же пользовательские данные, как
+      // проекты и задачи. Без них в этом списке они жили только в памяти:
+      // после перезапуска телефон оставался без статусов и версий до
+      // первой синхронизации, а без учётной записи — навсегда.
+      partialize: (s) => ({
+        projects: s.projects, tasks: s.tasks, tags: s.tags,
+        statuses: s.statuses, versions: s.versions,
+        activeTimer: s.activeTimer, ui: s.ui, settings: s.settings,
+      }),
       onRehydrateStorage: () => () => {
         // Срабатывает асинхронно после чтения AsyncStorage — к этому моменту
         // useAppStore уже точно проинициализирован.

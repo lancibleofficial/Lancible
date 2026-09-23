@@ -31,27 +31,34 @@
 import { Children, forwardRef } from 'react';
 import { Text as RNText, StyleSheet, Platform } from 'react-native';
 
-// Начертания сдвинуты на одну ступень вниз относительно номинального веса
-// (800/900→Black было слишком жирно на глаз, теперь это уровень Bold, и т.д.
-// по цепочке) — по просьбе "уменьшить жирность текста на одно значение
-// ниже" по всему приложению. Ниже Light сдвигать некуда — там потолок.
+// Текст набирает Gravity — у него ровнее строчные на мелком кегле, а
+// телефон это сплошь мелкий кегль. Basique Pro остался фирменной нотой:
+// лого, заголовки экранов, крупные числа (theme.displayFamily).
+//
+// У Gravity четыре начертания: Light, Book, Regular, Bold. Раскладка ниже
+// прежняя по духу — номинальный вес на ступень тише, чтобы текст не
+// выглядел жирным, — но начертаний теперь хватает на всю лесенку.
 const FAMILY_BY_WEIGHT = {
-  100: 'BasiquePro-Light', 200: 'BasiquePro-Light', 300: 'BasiquePro-Light',
-  400: 'BasiquePro-Light', normal: 'BasiquePro-Light',
-  500: 'BasiquePro-Light', 600: 'BasiquePro-Regular',
-  700: 'BasiquePro-Regular', bold: 'BasiquePro-Regular',
-  800: 'BasiquePro-Bold', 900: 'BasiquePro-Bold',
+  100: 'Gravity-Light', 200: 'Gravity-Light', 300: 'Gravity-Light',
+  400: 'Gravity-Book', normal: 'Gravity-Book',
+  500: 'Gravity-Regular', 600: 'Gravity-Regular',
+  700: 'Gravity-Bold', bold: 'Gravity-Bold',
+  800: 'Gravity-Bold', 900: 'Gravity-Bold',
 };
 
-// В Basique Pro нет глифов ₽ ₸ ₴ ₺ (проверено по cmap всех четырёх файлов;
-// $ € £ ¥ есть). Без явного фолбэка iOS сам подставлял для них случайный
-// шрифт с засечками, что выглядело чужеродно рядом с цифрами. Такие символы
+// В Gravity нет глифов ₸ ₴ ₺ (проверено по cmap всех четырёх файлов).
+// Рубль ₽ у неё, в отличие от Basique Pro, есть — и это самый частый символ
+// в приложении, так что подменять его чужим шрифтом больше не нужно.
+//
+// Без явного фолбэка iOS подставляет для недостающих случайный шрифт с
+// засечками, что выглядит чужеродно рядом с цифрами. Такие символы
 // оборачиваются во вложенный Text с системным шрифтом (SF на iOS, Roboto на
 // Android) того же визуального веса — ближайший по духу гротеск из
 // гарантированно доступных.
-const MISSING_GLYPHS = /([₽₸₴₺])/;
+const MISSING_GLYPHS = /([₸₴₺])/;
 const FALLBACK_FAMILY = Platform.select({ ios: 'System', default: 'sans-serif' });
 const FALLBACK_WEIGHT = {
+  'Gravity-Light': '300', 'Gravity-Book': '400', 'Gravity-Regular': '500', 'Gravity-Bold': '700',
   'BasiquePro-Light': '300', 'BasiquePro-Regular': '500', 'BasiquePro-Bold': '700', 'BasiquePro-Black': '900',
 };
 
@@ -67,7 +74,7 @@ function withGlyphFallback(children, family) {
 
 const Text = forwardRef(({ style, children, ...props }, ref) => {
   const flat = StyleSheet.flatten(style) || {};
-  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'BasiquePro-Light';
+  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'Gravity-Book';
   return (
     <RNText ref={ref} {...props} style={[style, { fontFamily: family, fontWeight: undefined, fontStyle: flat.fontStyle === 'italic' ? 'italic' : 'normal' }]}>
       {withGlyphFallback(children, family)}
