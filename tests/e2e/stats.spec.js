@@ -74,14 +74,16 @@ const cards = (page) => page.evaluate(() => ({
   done: document.getElementById('sp-done').textContent.trim(),
 }));
 
-test('календарь живёт внутри «Статистики», отдельного пункта меню нет', async ({ page }) => {
+test('в «Статистике» свой календарь — про деньги и итоги', async ({ page }) => {
+  // Страница «Календарь» появилась отдельно и живёт своей жизнью: она про
+  // расписание. Этот календарь остаётся внутри статистики, рядом с цифрами.
   await seed(page);
   const views = await page.locator('.nav-item[data-view]').evaluateAll((els) => els.map((e) => e.dataset.view));
-  expect(views, 'пункт «Календарь» должен исчезнуть').not.toContain('calendar');
   expect(views).toContain('stats');
-  await expect(page.locator('#calendar-view')).toHaveCount(0);
   await expect(page.locator('#stats-view .cal-grid')).toHaveCount(1);
   await expect(page.locator('#stats-view #cal-days')).toBeVisible();
+  // Сетка расписания — на своей странице, а не здесь.
+  await expect(page.locator('#stats-view #ag-cols')).toHaveCount(0);
 });
 
 test('правая панель — колонка во всю высоту, карточки рядом с ней', async ({ page }) => {

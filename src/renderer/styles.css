@@ -2504,3 +2504,243 @@ body.platform-web .tb-account {
 .cdl-group-tot { margin-left: auto; flex: none; font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .cdl-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .cdl-group.closed .cdl-rows { display: none; }
+
+/* ---------- Календарь-расписание ---------- */
+/* Отдельная страница с часовой сеткой. Слева — мини-календарь и проекты в
+   роли календарей, справа — сетка, на которой записи времени можно заводить
+   протягиванием, двигать и растягивать. */
+#calendar-view { overflow: hidden; }
+.ag-layout { height: 100%; display: grid; grid-template-columns: 232px 1fr; min-height: 0; }
+
+.ag-side {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px 14px;
+  border-right: 1px solid var(--border);
+}
+.ag-create { align-self: flex-start; }
+.ag-mini-head { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.ag-mini-head span { flex: 1; text-align: center; font-size: 12.5px; font-weight: 500; }
+.ag-mini-head .icon-btn { width: 24px; height: 24px; }
+.ag-mini-head .icon { width: 12px; height: 12px; }
+.ag-mini-weekdays, .ag-mini-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+.ag-mini-weekdays span { text-align: center; font-size: 10px; color: var(--text-faint); padding-bottom: 3px; }
+.ag-mini-day {
+  aspect-ratio: 1;
+  border: none; background: none; border-radius: 6px;
+  color: var(--text); font-family: inherit; font-size: 11px; cursor: pointer;
+  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+}
+.ag-mini-day:hover { background: var(--panel-2); }
+.ag-mini-day.out { color: var(--text-faint); }
+/* Подсвечен весь отрезок, который сейчас на сетке, а не один день: так видно,
+   какую неделю или месяц смотришь. */
+.ag-mini-day.sel { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.ag-mini-day.today { color: var(--accent); font-weight: 600; }
+
+.ag-projects { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.ag-proj {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 6px; border-radius: 6px; cursor: pointer;
+  font-size: 12px;
+  transition: background 0.12s var(--ease);
+}
+.ag-proj:hover { background: var(--panel-2); }
+.ag-proj-box {
+  flex: none; width: 14px; height: 14px; border-radius: 4px;
+  background: var(--pc, var(--accent));
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #10141a;
+}
+.ag-proj-box .icon { width: 10px; height: 10px; }
+/* Снятая галочка — пустая рамка цвета проекта: цвет остаётся подсказкой,
+   какой это календарь, даже когда он выключен. */
+.ag-proj.off .ag-proj-box { background: none; border: 1.5px solid var(--pc, var(--accent)); }
+.ag-proj.off .ag-proj-box .icon { display: none; }
+.ag-proj.off .ag-proj-name { color: var(--text-faint); }
+.ag-proj-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ag-main { display: flex; flex-direction: column; min-height: 0; padding: 14px 18px 0; }
+.ag-head { flex: none; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.ag-nav { display: flex; gap: 2px; }
+.ag-title { font-size: 15px; font-weight: 600; }
+.ag-total { color: var(--text-dim); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ag-modes { display: flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+.ag-modes button {
+  border: none; background: none; color: var(--text-dim); font-family: inherit;
+  font-size: 12px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+  transition: background 0.12s var(--ease), color 0.12s var(--ease);
+}
+.ag-modes button:hover { color: var(--text); }
+.ag-modes button.on { background: var(--tab-active-bg); color: var(--text); }
+
+/* Часовая сетка */
+.ag-time { flex: 1; min-height: 0; display: flex; flex-direction: column; --ag-gutter: 54px; --ag-h: 1200px; }
+.ag-daynames {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(var(--ag-days, 7), 1fr);
+  margin-left: var(--ag-gutter);
+}
+.ag-dayname {
+  border: none; background: none; cursor: pointer;
+  display: flex; align-items: baseline; justify-content: center; gap: 6px;
+  padding: 4px 0 8px;
+  color: var(--text-dim); font-family: inherit; font-size: 11px;
+  border-left: 1px solid transparent;
+}
+.ag-dayname:hover .ag-dnum { background: var(--panel-2); }
+.ag-dnum {
+  font-size: 15px; font-weight: 500; color: var(--text);
+  min-width: 26px; height: 26px; line-height: 26px; border-radius: 999px;
+  transition: background 0.12s var(--ease);
+}
+.ag-dayname.today .ag-dnum { background: var(--accent); color: #10141a; }
+.ag-dayname.today .ag-dow { color: var(--accent); }
+
+.ag-allday-row {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  max-height: 88px;
+  overflow-y: auto;
+}
+.ag-allday-label {
+  flex: none; width: var(--ag-gutter);
+  padding: 5px 8px 0 0; text-align: right;
+  font-size: 10px; color: var(--text-faint);
+}
+.ag-allday { flex: 1; display: grid; grid-template-columns: repeat(var(--ag-days, 7), 1fr); }
+.ag-allday-cell { display: flex; flex-direction: column; gap: 2px; padding: 4px 3px; border-left: 1px solid var(--border-soft); min-height: 26px; }
+.ag-dl {
+  border: none; border-radius: 5px; cursor: pointer;
+  padding: 2px 6px; text-align: left;
+  font-family: inherit; font-size: 10.5px; font-weight: 500;
+  color: color-mix(in srgb, var(--pc) var(--tag-ink), var(--text));
+  background: color-mix(in srgb, var(--pc) 20%, transparent);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ag-dl.done { opacity: 0.55; text-decoration: line-through; }
+
+.ag-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; }
+.ag-gutter {
+  flex: none; width: var(--ag-gutter); height: var(--ag-h);
+  display: grid; grid-template-rows: repeat(24, 1fr);
+}
+.ag-hour {
+  font-size: 10px; color: var(--text-faint); text-align: right;
+  padding-right: 8px; transform: translateY(-5px);
+  font-variant-numeric: tabular-nums;
+}
+.ag-cols {
+  flex: 1; height: var(--ag-h);
+  display: grid; grid-template-columns: repeat(var(--ag-days, 7), 1fr);
+  position: relative;
+  /* Протягивание по сетке не должно выделять текст под курсором. */
+  user-select: none;
+  touch-action: none;
+}
+.ag-col { position: relative; border-left: 1px solid var(--border-soft); }
+.ag-col.today { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+.ag-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border-soft); pointer-events: none; }
+
+.ag-ev {
+  position: absolute;
+  border-radius: 6px;
+  padding: 2px 6px 0;
+  overflow: hidden;
+  cursor: grab;
+  color: color-mix(in srgb, var(--pc) var(--tag-ink), var(--text));
+  background: color-mix(in srgb, var(--pc) 22%, var(--panel));
+  border-left: 3px solid var(--pc, var(--accent));
+  font-size: 11px; line-height: 1.3;
+  transition: filter 0.12s var(--ease);
+}
+.ag-ev:hover { filter: brightness(1.08); }
+.ag-ev.dragging { cursor: grabbing; opacity: 0.85; z-index: 3; }
+/* Кусок записи, перешедшей за полночь: срезанный угол говорит, что она
+   продолжается в соседнем дне. */
+.ag-ev.cross { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.ag-ev-time { display: block; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.ag-ev-name { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-ev-grip { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; cursor: ns-resize; }
+.ag-ghost { background: color-mix(in srgb, var(--accent) 26%, var(--panel)); border-left-color: var(--accent); color: var(--text); opacity: 0.9; pointer-events: none; }
+
+.ag-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); pointer-events: none; z-index: 2; }
+.ag-now::before {
+  content: ''; position: absolute; left: -4px; top: -3px;
+  width: 8px; height: 8px; border-radius: 999px; background: var(--danger);
+}
+
+/* Месяц */
+.ag-month { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ag-month-week { display: grid; grid-template-columns: repeat(7, 1fr); }
+.ag-month-dow { text-align: center; padding: 4px 0 8px; font-size: 10.5px; color: var(--text-faint); }
+.ag-month-grid {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: minmax(0, 1fr);
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.ag-month-cell {
+  min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 3px 4px 4px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.ag-month-cell.out { background: color-mix(in srgb, var(--text) 3%, transparent); }
+.ag-month-num {
+  align-self: flex-start; border: none; background: none; cursor: pointer;
+  color: var(--text-dim); font-family: inherit; font-size: 11.5px;
+  min-width: 22px; height: 22px; border-radius: 999px;
+}
+.ag-month-num:hover { background: var(--panel-2); color: var(--text); }
+.ag-month-cell.out .ag-month-num { color: var(--text-faint); }
+.ag-month-cell.today .ag-month-num { background: var(--accent); color: #10141a; font-weight: 600; }
+.ag-mchip {
+  display: flex; align-items: baseline; gap: 5px;
+  border: none; border-radius: 5px; cursor: pointer; text-align: left;
+  padding: 2px 6px;
+  font-family: inherit; font-size: 10.5px;
+  color: color-mix(in srgb, var(--pc) var(--tag-ink), var(--text));
+  background: color-mix(in srgb, var(--pc) 18%, transparent);
+  overflow: hidden;
+}
+.ag-mchip.dl { font-weight: 600; }
+.ag-mchip.done { opacity: 0.55; text-decoration: line-through; }
+.ag-mchip-time { flex: none; font-variant-numeric: tabular-nums; opacity: 0.8; }
+.ag-mchip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-mmore { align-self: flex-start; border: none; background: none; cursor: pointer; color: var(--text-dim); font-family: inherit; font-size: 10.5px; padding: 1px 4px; }
+.ag-mmore:hover { color: var(--text); }
+
+/* Расписание */
+.ag-list { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 24px; }
+.ag-list-day { margin-bottom: 14px; }
+.ag-list-date { font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+.ag-list-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: none; border-radius: 8px; cursor: pointer; text-align: left;
+  padding: 8px 10px; margin-bottom: 4px;
+  background: var(--panel);
+  color: var(--text); font-family: inherit; font-size: 12.5px;
+  border-left: 3px solid var(--pc, var(--accent));
+  transition: background 0.12s var(--ease);
+}
+.ag-list-row:hover { background: var(--panel-2); }
+.ag-list-time { flex: none; min-width: 92px; color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.ag-list-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-list-dur { flex: none; color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+.ag-list-tag { flex: none; font-size: 10.5px; color: color-mix(in srgb, var(--pc) var(--tag-ink), var(--text)); background: color-mix(in srgb, var(--pc) 18%, transparent); border-radius: 5px; padding: 1px 7px; }
+.ag-empty { padding: 30px 4px; font-size: 13px; }
+
+/* Выбор задачи для новой записи — тот же попап, что у тегов. */
+.ag-pick { width: 280px; }
+.ag-pick-head { padding: 10px 11px 0; font-size: 11px; color: var(--text-faint); }

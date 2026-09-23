@@ -151,7 +151,14 @@ const el = {
   topbar: $('topbar'),
   stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
 
-  homeView: $('home-view'), projectView: $('project-view'),
+  homeView: $('home-view'), projectView: $('project-view'), calendarView: $('calendar-view'),
+  agTime: $('ag-time'), agMonth: $('ag-month'), agList: $('ag-list'),
+  agDaynames: $('ag-daynames'), agAllday: $('ag-allday'), agGutter: $('ag-gutter'),
+  agCols: $('ag-cols'), agScroll: $('ag-scroll'), agTitle: $('ag-title'), agTotal: $('ag-total'),
+  agModes: $('ag-modes'), agToday: $('ag-today'), agPrev: $('ag-prev'), agNext: $('ag-next'),
+  agMiniTitle: $('ag-mini-title'), agMiniDays: $('ag-mini-days'),
+  agMiniPrev: $('ag-mini-prev'), agMiniNext: $('ag-mini-next'),
+  agProjects: $('ag-projects'), agCreate: $('ag-create'),
   settingsView: $('settings-view'), settingsProfile: $('settings-profile'),
   settingsLangRow: $('settings-lang-row'), settingsLangValue: $('settings-lang-value'),
   settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
@@ -1277,7 +1284,7 @@ function render() {
     tab.classList.toggle('active', active);
   });
 
-  const views = { home: el.homeView, project: el.projectView, board: el.boardView, stats: el.statsView, settings: el.settingsView };
+  const views = { home: el.homeView, project: el.projectView, board: el.boardView, calendar: el.calendarView, stats: el.statsView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1287,7 +1294,9 @@ function render() {
   if (v === 'home') renderHome();
   else if (v === 'project') { renderProjectHeader(); renderSidebar(); renderDetail(); renderFooter(); }
   else if (v === 'board') renderBoardPage();
-  // Календарь живёт внутри «Статистики»: сначала цифры, следом сетка.
+  else if (v === 'calendar') renderAgendaPage();
+  // В «Статистике» остался прежний календарь: он про деньги и итоги,
+  // а страница «Календарь» — про расписание.
   else if (v === 'stats') { renderStatsPage(); renderCalendar(); }
   else if (v === 'settings') renderSettings();
 }
@@ -1513,7 +1522,7 @@ function renderHomeSide() {
       calState.selected = key;
       if (calState.periodOn) togglePeriod();
       setCalMode('month');
-      openView('stats');
+      openView('calendar');
     });
     el.miniCal.appendChild(c);
   }
@@ -4099,7 +4108,7 @@ el.searchInput.addEventListener('keydown', (e) => {
     items[i].scrollIntoView({ block: 'nearest' });
   }
 });
-el.openCalendarBtn.addEventListener('click', () => openView('stats'));
+el.openCalendarBtn.addEventListener('click', () => openView('calendar'));
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
 el.backHome.addEventListener('click', backHome);
 el.boardStatuses.addEventListener('click', openStatusDialog);
@@ -4807,6 +4816,664 @@ function calGroupNode(g, buildRow) {
   li.appendChild(inner);
   return li;
 }
+
+
+// --- Календарь-расписание ---------------------------------------------------
+// Отдельная страница с часовой сеткой: записи времени блоками, дедлайны
+// полосой «весь день», проекты слева играют роль календарей. Записи можно
+// заводить протягиванием, двигать и растягивать — поэтому здесь же лежат
+// правила, по которым перетаскивание меняет данные.
+//
+// Календарь в «Статистике» остался прежним: он про деньги и итоги, этот —
+// про расписание.
+
+const AG_SNAP_MIN = 15;   // шаг прилипания при перетаскивании
+const AG_MIN_MIN = 15;    // короче этого запись не сделать: её нечем ухватить
+const AG_TIME_MODES = ['day', 'days4', 'week'];
+
+const agenda = {
+  mode: 'week',
+  anchor: Core.startOfDayMs(Date.now()),
+  miniMonth: Core.startOfDayMs(Date.now()),
+  // Скрытые проекты — как галочки календарей в Google. Это способ смотреть,
+  // в данных ему делать нечего.
+  hidden: new Set(),
+  scrolled: false,
+};
+
+const agendaTasks = () => state.tasks.filter((t2) => !agenda.hidden.has(t2.projectId));
+const agendaSpan = () => Core.agendaRange(agenda.mode, agenda.anchor);
+const agendaProjectColor = (projectId) => {
+  const p = getProject(projectId);
+  return p ? (p.color || PALETTE[0]) : PALETTE[0];
+};
+
+/** Переписывает время записи, сохраняя всё остальное: ставку и пометки о
+ *  ручном вводе и восстановлении. Происхождение записи не меняется от того,
+ *  что её подвинули. */
+function setSessionSpan(task, index, startMs, endMs) {
+  const old = task.sessions && task.sessions[index];
+  if (!old) return;
+  const ms = endMs - startMs;
+  task.totalMs = Math.max(0, (task.totalMs || 0) - (old.ms || 0) + ms);
+  task.sessions[index] = Object.assign({}, old, {
+    start: new Date(startMs).toISOString(),
+    end: new Date(endMs).toISOString(),
+    ms,
+  });
+  task.updatedAt = new Date().toISOString();
+}
+
+/** Новая запись, заведённая прямо на сетке. Ставка запоминается такой, какая
+ *  сейчас, — ровно как в окне правки записи. */
+function addSessionSpan(task, startMs, endMs) {
+  const ms = endMs - startMs;
+  task.sessions = task.sessions || [];
+  task.sessions.push({
+    start: new Date(startMs).toISOString(),
+    end: new Date(endMs).toISOString(),
+    ms,
+    rate: effectiveRate(task),
+    manual: true,
+  });
+  task.totalMs = (task.totalMs || 0) + ms;
+  task.updatedAt = new Date().toISOString();
+}
+
+// --- Отрисовка --------------------------------------------------------------
+
+function renderAgendaPage() {
+  renderAgendaSide();
+  renderAgendaHead();
+  const timeMode = AG_TIME_MODES.includes(agenda.mode);
+  el.agTime.hidden = !timeMode;
+  el.agMonth.hidden = agenda.mode !== 'month';
+  el.agList.hidden = agenda.mode !== 'agenda';
+  if (timeMode) renderAgendaTime();
+  else if (agenda.mode === 'month') renderAgendaMonth();
+  else renderAgendaList();
+}
+
+function agendaTitle() {
+  const { from, to } = agendaSpan();
+  const a = new Date(from);
+  const b = new Date(to - 1);
+  if (agenda.mode === 'month') {
+    const d = new Date(agenda.anchor);
+    return monthLabel(d.getFullYear(), d.getMonth());
+  }
+  if (agenda.mode === 'day') {
+    return capFirst(a.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' }));
+  }
+  const left = a.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  const right = b.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  return `${left} – ${right}`;
+}
+
+function renderAgendaHead() {
+  el.agModes.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.mode === agenda.mode));
+  el.agTitle.textContent = agendaTitle();
+  const { from, to } = agendaSpan();
+  const ms = Core.sessionSegments(agendaTasks(), from, to).reduce((a, s) => a + s.ms, 0);
+  el.agTotal.textContent = ms ? fmtDur(ms) : '';
+}
+
+function renderAgendaSide() {
+  const m = new Date(agenda.miniMonth);
+  el.agMiniTitle.textContent = monthLabel(m.getFullYear(), m.getMonth());
+
+  const first = new Date(m.getFullYear(), m.getMonth(), 1).getTime();
+  const gridStart = Core.mondayOfMs(first);
+  const { from, to } = agendaSpan();
+  const today = dayKey(new Date());
+
+  el.agMiniDays.innerHTML = '';
+  for (let i = 0; i < 42; i += 1) {
+    const d = new Date(gridStart + i * Core.DAY);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ag-mini-day';
+    b.classList.toggle('out', d.getMonth() !== m.getMonth());
+    b.classList.toggle('today', dayKey(d) === today);
+    // Подсвечен весь отрезок, который сейчас на сетке, а не один день: так
+    // видно, какую неделю или месяц ты смотришь.
+    b.classList.toggle('sel', d.getTime() >= from && d.getTime() < to);
+    b.textContent = String(d.getDate());
+    b.addEventListener('click', () => {
+      agenda.anchor = Core.startOfDayMs(d);
+      renderAgendaPage();
+    });
+    el.agMiniDays.appendChild(b);
+  }
+
+  el.agProjects.innerHTML = '';
+  for (const p of state.projects) {
+    const li = document.createElement('li');
+    li.className = 'ag-proj' + (agenda.hidden.has(p.id) ? ' off' : '');
+    li.style.setProperty('--pc', p.color || PALETTE[0]);
+    li.innerHTML = `<span class="ag-proj-box">${icon('check')}</span>`
+      + `<span class="ag-proj-name">${escapeHtml(p.name)}</span>`;
+    li.addEventListener('click', () => {
+      if (agenda.hidden.has(p.id)) agenda.hidden.delete(p.id);
+      else agenda.hidden.add(p.id);
+      renderAgendaPage();
+    });
+    el.agProjects.appendChild(li);
+  }
+}
+
+/** Часовая сетка: день, четыре дня или неделя. */
+function renderAgendaTime() {
+  const { from, days } = agendaSpan();
+  const to = from + days * Core.DAY;
+  const tasks = agendaTasks();
+  const today = dayKey(new Date());
+
+  for (const node of [el.agDaynames, el.agAllday, el.agCols]) node.style.setProperty('--ag-days', String(days));
+
+  const deadlines = Core.deadlineItems(tasks, from, to);
+  el.agDaynames.innerHTML = '';
+  el.agAllday.innerHTML = '';
+  for (let i = 0; i < days; i += 1) {
+    const d = new Date(from + i * Core.DAY);
+    const head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'ag-dayname' + (dayKey(d) === today ? ' today' : '');
+    head.innerHTML = `<span class="ag-dow">${escapeHtml(d.toLocaleDateString(locale(), { weekday: 'short' }))}</span>`
+      + `<span class="ag-dnum">${d.getDate()}</span>`;
+    head.addEventListener('click', () => { agenda.anchor = Core.startOfDayMs(d); agenda.mode = 'day'; renderAgendaPage(); });
+    el.agDaynames.appendChild(head);
+
+    const cell = document.createElement('div');
+    cell.className = 'ag-allday-cell';
+    for (const dl of deadlines) {
+      if (dl.dayIndex !== i) continue;
+      const task = getTask(dl.taskId);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ag-dl' + (dl.done ? ' done' : '');
+      chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
+      chip.title = `${t('agenda.deadline')} · ${fmtTime(dl.at)}`;
+      chip.textContent = task ? (task.title || t('task.no_name')) : '';
+      chip.addEventListener('click', () => { openProject(dl.projectId); selectTask(dl.taskId); });
+      cell.appendChild(chip);
+    }
+    el.agAllday.appendChild(cell);
+  }
+
+  el.agGutter.innerHTML = '';
+  for (let h = 0; h < 24; h += 1) {
+    const s = document.createElement('span');
+    s.className = 'ag-hour';
+    // Полночь не подписываем: её метка висела бы над первой линией и
+    // читалась подписью ко всей сетке.
+    s.textContent = h ? `${pad2(h)}:00` : '';
+    el.agGutter.appendChild(s);
+  }
+
+  const segments = Core.sessionSegments(tasks, from, to);
+  el.agCols.innerHTML = '';
+  for (let i = 0; i < days; i += 1) {
+    const col = document.createElement('div');
+    col.className = 'ag-col' + (dayKey(new Date(from + i * Core.DAY)) === today ? ' today' : '');
+    col.dataset.dayIndex = String(i);
+    col.dataset.dayStart = String(from + i * Core.DAY);
+    for (let h = 1; h < 24; h += 1) {
+      const line = document.createElement('div');
+      line.className = 'ag-line';
+      line.style.top = `${(h / 24) * 100}%`;
+      col.appendChild(line);
+    }
+    for (const seg of Core.layoutOverlaps(segments.filter((s) => s.dayIndex === i))) {
+      col.appendChild(agendaBlock(seg));
+    }
+    el.agCols.appendChild(col);
+  }
+
+  renderAgendaNow();
+
+  // При первом показе прокручиваем к утру: иначе сетка открывается на
+  // полуночи, где обычно пусто.
+  if (!agenda.scrolled) {
+    agenda.scrolled = true;
+    el.agScroll.scrollTop = el.agScroll.scrollHeight * (7.5 / 24);
+  }
+}
+
+function agendaBlock(seg) {
+  const task = getTask(seg.taskId);
+  const node = document.createElement('div');
+  node.className = 'ag-ev' + (seg.crossesDay ? ' cross' : '');
+  node.style.setProperty('--pc', agendaProjectColor(seg.projectId));
+  node.style.top = `${Core.dayFraction(seg.start) * 100}%`;
+  node.style.height = `${(seg.ms / Core.DAY) * 100}%`;
+  node.style.left = `calc(${(seg.col / seg.cols) * 100}% + 1px)`;
+  node.style.width = `calc(${(1 / seg.cols) * 100}% - 3px)`;
+  node.dataset.taskId = seg.taskId;
+  node.dataset.index = String(seg.index);
+  node.innerHTML = `<span class="ag-ev-time">${fmtTime(seg.start).slice(0, 5)}–${fmtTime(seg.end).slice(0, 5)}</span>`
+    + `<span class="ag-ev-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`
+    + '<span class="ag-ev-grip" aria-hidden="true"></span>';
+  return node;
+}
+
+/** Красная черта «сейчас» — только в столбце сегодняшнего дня. */
+function renderAgendaNow() {
+  el.agCols.querySelectorAll('.ag-now').forEach((n) => n.remove());
+  if (!AG_TIME_MODES.includes(agenda.mode)) return;
+  const now = Date.now();
+  const { from, days } = agendaSpan();
+  const idx = Math.floor((Core.startOfDayMs(now) - from) / Core.DAY);
+  if (idx < 0 || idx >= days) return;
+  const col = el.agCols.children[idx];
+  if (!col) return;
+  const line = document.createElement('div');
+  line.className = 'ag-now';
+  line.style.top = `${Core.dayFraction(now) * 100}%`;
+  line.title = t('agenda.now');
+  col.appendChild(line);
+}
+
+/** Месяц: клетки с короткими чипами, как в Google. */
+function renderAgendaMonth() {
+  const { from, days } = agendaSpan();
+  const to = from + days * Core.DAY;
+  const tasks = agendaTasks();
+  const today = dayKey(new Date());
+  const cur = new Date(agenda.anchor).getMonth();
+  const segments = Core.sessionSegments(tasks, from, to);
+  const deadlines = Core.deadlineItems(tasks, from, to);
+
+  el.agMonth.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'ag-month-week';
+  for (const key of ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']) {
+    const s = document.createElement('span');
+    s.className = 'ag-month-dow';
+    s.textContent = t(`weekday.${key}`);
+    head.appendChild(s);
+  }
+  el.agMonth.appendChild(head);
+
+  const grid = document.createElement('div');
+  grid.className = 'ag-month-grid';
+  grid.style.setProperty('--ag-weeks', String(days / 7));
+  for (let i = 0; i < days; i += 1) {
+    const d = new Date(from + i * Core.DAY);
+    const cell = document.createElement('div');
+    cell.className = 'ag-month-cell';
+    cell.classList.toggle('out', d.getMonth() !== cur);
+    cell.classList.toggle('today', dayKey(d) === today);
+
+    const num = document.createElement('button');
+    num.type = 'button';
+    num.className = 'ag-month-num';
+    num.textContent = String(d.getDate());
+    num.addEventListener('click', () => { agenda.anchor = Core.startOfDayMs(d); agenda.mode = 'day'; renderAgendaPage(); });
+    cell.appendChild(num);
+
+    for (const dl of deadlines) {
+      if (dl.dayIndex !== i) continue;
+      const task = getTask(dl.taskId);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ag-mchip dl' + (dl.done ? ' done' : '');
+      chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
+      chip.textContent = task ? (task.title || t('task.no_name')) : '';
+      chip.addEventListener('click', () => { openProject(dl.projectId); selectTask(dl.taskId); });
+      cell.appendChild(chip);
+    }
+    const daySegs = segments.filter((s) => s.dayIndex === i);
+    for (const seg of daySegs.slice(0, 3)) {
+      const task = getTask(seg.taskId);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ag-mchip';
+      chip.style.setProperty('--pc', agendaProjectColor(seg.projectId));
+      chip.innerHTML = `<span class="ag-mchip-time">${fmtTime(seg.start).slice(0, 5)}</span>`
+        + `<span class="ag-mchip-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`;
+      chip.addEventListener('click', () => { if (task) openSessionDialog(task, seg.index); });
+      cell.appendChild(chip);
+    }
+    if (daySegs.length > 3) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'ag-mmore';
+      more.textContent = `+${daySegs.length - 3}`;
+      more.addEventListener('click', () => { agenda.anchor = Core.startOfDayMs(d); agenda.mode = 'day'; renderAgendaPage(); });
+      cell.appendChild(more);
+    }
+    grid.appendChild(cell);
+  }
+  el.agMonth.appendChild(grid);
+}
+
+/** Расписание: всё подряд списком, днями — как «Повестка дня» в Google. */
+function renderAgendaList() {
+  const { from, to } = agendaSpan();
+  const tasks = agendaTasks();
+  const segments = Core.sessionSegments(tasks, from, to);
+  const deadlines = Core.deadlineItems(tasks, from, to);
+
+  el.agList.innerHTML = '';
+  const byDay = new Map();
+  const put = (dayIndex, row) => {
+    if (!byDay.has(dayIndex)) byDay.set(dayIndex, []);
+    byDay.get(dayIndex).push(row);
+  };
+  for (const dl of deadlines) put(dl.dayIndex, { kind: 'dl', at: dl.at, dl });
+  for (const seg of segments) put(seg.dayIndex, { kind: 'seg', at: seg.start, seg });
+
+  const keys = [...byDay.keys()].sort((a, b) => a - b);
+  if (!keys.length) {
+    const empty = document.createElement('p');
+    empty.className = 'muted ag-empty';
+    empty.textContent = t('agenda.empty');
+    el.agList.appendChild(empty);
+    return;
+  }
+
+  for (const dayIndex of keys) {
+    const d = new Date(from + dayIndex * Core.DAY);
+    const group = document.createElement('div');
+    group.className = 'ag-list-day';
+    group.innerHTML = `<div class="ag-list-date">${escapeHtml(capFirst(d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'long' })))}</div>`;
+    const rows = byDay.get(dayIndex).sort((a, b) => a.at - b.at);
+    for (const row of rows) {
+      const line = document.createElement('button');
+      line.type = 'button';
+      line.className = 'ag-list-row' + (row.kind === 'dl' ? ' dl' : '');
+      if (row.kind === 'dl') {
+        const task = getTask(row.dl.taskId);
+        line.style.setProperty('--pc', agendaProjectColor(row.dl.projectId));
+        line.innerHTML = `<span class="ag-list-time">${fmtTime(row.dl.at).slice(0, 5)}</span>`
+          + `<span class="ag-list-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`
+          + `<span class="ag-list-tag">${escapeHtml(t('agenda.deadline'))}</span>`;
+        line.addEventListener('click', () => { openProject(row.dl.projectId); selectTask(row.dl.taskId); });
+      } else {
+        const task = getTask(row.seg.taskId);
+        line.style.setProperty('--pc', agendaProjectColor(row.seg.projectId));
+        line.innerHTML = `<span class="ag-list-time">${fmtTime(row.seg.start).slice(0, 5)}–${fmtTime(row.seg.end).slice(0, 5)}</span>`
+          + `<span class="ag-list-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`
+          + `<span class="ag-list-dur">${fmtDur(row.seg.ms)}</span>`;
+        line.addEventListener('click', () => { if (task) openSessionDialog(task, row.seg.index); });
+      }
+      group.appendChild(line);
+    }
+    el.agList.appendChild(group);
+  }
+}
+
+// --- Перетаскивание ---------------------------------------------------------
+
+const agDrag = { kind: null, taskId: null, index: null, dayStart: 0, start: 0, end: 0, grab: 0, node: null, moved: false, pointerId: null };
+
+/** Время под курсором: столбец даёт день, высота — время внутри суток. */
+function agendaPointAt(clientX, clientY) {
+  const rect = el.agCols.getBoundingClientRect();
+  const { from, days } = agendaSpan();
+  const colW = rect.width / days;
+  const dayIndex = Math.max(0, Math.min(days - 1, Math.floor((clientX - rect.left) / colW)));
+  const frac = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+  const dayStart = from + dayIndex * Core.DAY;
+  return { dayIndex, dayStart, ms: dayStart + frac * Core.DAY };
+}
+
+function agendaPaintDrag() {
+  const node = agDrag.node;
+  if (!node) return;
+  const day = Core.startOfDayMs(agDrag.start);
+  node.style.top = `${Core.dayFraction(agDrag.start) * 100}%`;
+  node.style.height = `${((agDrag.end - agDrag.start) / Core.DAY) * 100}%`;
+  const label = node.querySelector('.ag-ev-time');
+  if (label) label.textContent = `${fmtTime(agDrag.start).slice(0, 5)}–${fmtTime(agDrag.end).slice(0, 5)}`;
+  // Блок мог переехать в другой день — тогда он меняет столбец.
+  const { from, days } = agendaSpan();
+  const idx = Math.round((day - from) / Core.DAY);
+  if (idx >= 0 && idx < days && el.agCols.children[idx] && node.parentElement !== el.agCols.children[idx]) {
+    el.agCols.children[idx].appendChild(node);
+  }
+}
+
+el.agCols.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0) return;
+  const point = agendaPointAt(e.clientX, e.clientY);
+  const block = e.target.closest ? e.target.closest('.ag-ev') : null;
+
+  if (block && !block.classList.contains('ag-ghost')) {
+    const task = getTask(block.dataset.taskId);
+    const s = task && task.sessions ? task.sessions[Number(block.dataset.index)] : null;
+    if (!s) return;
+    const a = new Date(s.start).getTime();
+    const b = s.end ? new Date(s.end).getTime() : a + (s.ms || 0);
+    agDrag.kind = e.target.classList.contains('ag-ev-grip') ? 'resize' : 'move';
+    agDrag.taskId = task.id;
+    agDrag.index = Number(block.dataset.index);
+    agDrag.start = a;
+    agDrag.end = b;
+    agDrag.grab = point.ms - a;
+    agDrag.node = block;
+    block.classList.add('dragging');
+  } else {
+    agDrag.kind = 'create';
+    agDrag.dayStart = point.dayStart;
+    agDrag.start = Core.snapMinutes(point.ms, AG_SNAP_MIN);
+    agDrag.end = agDrag.start;
+    const ghost = document.createElement('div');
+    ghost.className = 'ag-ev ag-ghost';
+    ghost.innerHTML = '<span class="ag-ev-time"></span>';
+    const { from } = agendaSpan();
+    const col = el.agCols.children[Math.round((point.dayStart - from) / Core.DAY)];
+    if (!col) { agDrag.kind = null; return; }
+    col.appendChild(ghost);
+    agDrag.node = ghost;
+  }
+
+  agDrag.moved = false;
+  agDrag.pointerId = e.pointerId;
+  el.agCols.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+
+el.agCols.addEventListener('pointermove', (e) => {
+  if (!agDrag.kind) return;
+  const point = agendaPointAt(e.clientX, e.clientY);
+  agDrag.moved = true;
+
+  if (agDrag.kind === 'create') {
+    const edge = Core.snapMinutes(point.ms, AG_SNAP_MIN);
+    const a = Math.min(agDrag.dayStart + Core.DAY, Math.max(agDrag.dayStart, Math.min(edge, agDrag.start)));
+    const b = Math.min(agDrag.dayStart + Core.DAY, Math.max(edge, agDrag.start));
+    agDrag.start = a;
+    agDrag.end = b;
+  } else if (agDrag.kind === 'resize') {
+    const span = Core.clampSpan(Core.startOfDayMs(agDrag.start), agDrag.start, Core.snapMinutes(point.ms, AG_SNAP_MIN), AG_MIN_MIN);
+    agDrag.start = span.start;
+    agDrag.end = span.end;
+  } else {
+    const dur = agDrag.end - agDrag.start;
+    const start = Core.snapMinutes(point.ms - agDrag.grab, AG_SNAP_MIN);
+    const span = Core.clampSpan(point.dayStart, start, start + dur, AG_MIN_MIN);
+    agDrag.start = span.start;
+    agDrag.end = span.end;
+  }
+  agendaPaintDrag();
+});
+
+function agendaEndDrag(e) {
+  if (!agDrag.kind) return;
+  const kind = agDrag.kind;
+  const moved = agDrag.moved;
+  const node = agDrag.node;
+  agDrag.kind = null;
+  if (agDrag.pointerId != null && el.agCols.hasPointerCapture(agDrag.pointerId)) {
+    el.agCols.releasePointerCapture(agDrag.pointerId);
+  }
+  agDrag.pointerId = null;
+
+  if (kind === 'create') {
+    if (node) node.remove();
+    let { start, end } = agDrag;
+    // Простой щелчок по пустому месту — час с этой отметки, как в Google.
+    if (!moved || end - start < AG_MIN_MIN * 60000) end = start + 3_600_000;
+    const span = Core.clampSpan(agDrag.dayStart, start, end, AG_MIN_MIN);
+    openTaskPicker(e, (task) => {
+      addSessionSpan(task, span.start, span.end);
+      render();
+      scheduleSave();
+      toast(t('agenda.new_entry'));
+    });
+    return;
+  }
+
+  const task = getTask(agDrag.taskId);
+  if (node) node.classList.remove('dragging');
+  if (!task) { renderAgendaPage(); return; }
+  if (!moved) {
+    // Клик без протягивания — это открыть запись, а не подвинуть её.
+    openSessionDialog(task, agDrag.index);
+    renderAgendaPage();
+    return;
+  }
+  setSessionSpan(task, agDrag.index, agDrag.start, agDrag.end);
+  render();
+  scheduleSave();
+}
+
+el.agCols.addEventListener('pointerup', agendaEndDrag);
+el.agCols.addEventListener('pointercancel', () => {
+  if (!agDrag.kind) return;
+  if (agDrag.kind === 'create' && agDrag.node) agDrag.node.remove();
+  agDrag.kind = null;
+  renderAgendaPage();
+});
+
+/** Выбор задачи для новой записи. Вид взят у пикера тегов — это тот же приём
+ *  «найди в списке», и заводить под него второй стиль незачем. */
+function openTaskPicker(e, onPick) {
+  document.querySelectorAll('.tag-pop').forEach((n) => n.remove());
+  const pop = document.createElement('div');
+  pop.className = 'tag-pop ag-pick';
+  pop.innerHTML = `<div class="ag-pick-head">${escapeHtml(t('agenda.pick_task'))}</div>`
+    + `<input class="tag-pop-search" type="text" placeholder="${escapeHtml(t('agenda.search_task'))}" />`
+    + '<div class="tag-pop-list"></div>';
+  const input = pop.querySelector('.tag-pop-search');
+  const list = pop.querySelector('.tag-pop-list');
+
+  const close = () => {
+    pop.remove();
+    document.removeEventListener('pointerdown', away, true);
+    document.removeEventListener('keydown', onKey, true);
+  };
+  const away = (ev) => { if (!pop.contains(ev.target)) close(); };
+  const onKey = (ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } };
+
+  const all = agendaTasks()
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+
+  const draw = () => {
+    const q = input.value.trim().toLowerCase();
+    const items = all.filter((t2) => !q || (t2.title || '').toLowerCase().includes(q)).slice(0, 40);
+    list.innerHTML = '';
+    if (!items.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tag-pop-empty muted';
+      empty.textContent = t('agenda.no_tasks');
+      list.appendChild(empty);
+      return;
+    }
+    for (const task of items) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tag-pop-item';
+      b.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(agendaProjectColor(task.projectId))}"></span>`
+        + `<span class="tag-pop-name">${escapeHtml(task.title || t('task.no_name'))}</span>`;
+      b.addEventListener('click', () => { close(); onPick(task); });
+      list.appendChild(b);
+    }
+  };
+  input.addEventListener('input', draw);
+  draw();
+
+  document.body.appendChild(pop);
+  const x = Math.min(Math.max(8, (e && e.clientX ? e.clientX : innerWidth / 2) - 20), innerWidth - pop.offsetWidth - 8);
+  const y = Math.min(Math.max(8, (e && e.clientY ? e.clientY : innerHeight / 3)), innerHeight - pop.offsetHeight - 8);
+  pop.style.left = `${Math.round(x)}px`;
+  pop.style.top = `${Math.round(y)}px`;
+  setTimeout(() => {
+    document.addEventListener('pointerdown', away, true);
+    document.addEventListener('keydown', onKey, true);
+    input.focus();
+  }, 0);
+}
+
+// --- Управление -------------------------------------------------------------
+
+function agendaGo(dir) {
+  agenda.anchor = Core.shiftAnchor(agenda.mode, agenda.anchor, dir);
+  agenda.miniMonth = Core.startOfDayMs(agenda.anchor);
+  renderAgendaPage();
+}
+
+function agendaSetMode(mode) {
+  agenda.mode = mode;
+  renderAgendaPage();
+}
+
+el.agModes.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-mode]');
+  if (b) agendaSetMode(b.dataset.mode);
+});
+el.agPrev.addEventListener('click', () => agendaGo(-1));
+el.agNext.addEventListener('click', () => agendaGo(1));
+el.agToday.addEventListener('click', () => {
+  agenda.anchor = Core.startOfDayMs(Date.now());
+  agenda.miniMonth = agenda.anchor;
+  renderAgendaPage();
+});
+el.agMiniPrev.addEventListener('click', () => {
+  const d = new Date(agenda.miniMonth);
+  agenda.miniMonth = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
+  renderAgendaSide();
+});
+el.agMiniNext.addEventListener('click', () => {
+  const d = new Date(agenda.miniMonth);
+  agenda.miniMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+  renderAgendaSide();
+});
+el.agCreate.addEventListener('click', (e) => {
+  // Час с ближайшей четверти: начинать запись с «сейчас» удобнее, чем с
+  // произвольного места сетки.
+  const start = Core.snapMinutes(Date.now(), AG_SNAP_MIN);
+  openTaskPicker(e, (task) => {
+    addSessionSpan(task, start, start + 3_600_000);
+    render();
+    scheduleSave();
+    toast(t('agenda.new_entry'));
+  });
+});
+
+// Горячие клавиши как в Google: режимы цифрами и буквами, T — сегодня,
+// стрелки — шаг по времени. Работают только на этой странице и не мешают
+// набору текста.
+document.addEventListener('keydown', (e) => {
+  if (state.ui.view !== 'calendar') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const node = document.activeElement;
+  if (node && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.isContentEditable)) return;
+  const key = e.key.toLowerCase();
+  const modes = { 1: 'day', d: 'day', 2: 'week', w: 'week', 3: 'month', m: 'month', 4: 'days4', x: 'days4', 5: 'agenda', a: 'agenda' };
+  if (modes[key]) { e.preventDefault(); agendaSetMode(modes[key]); return; }
+  if (key === 't' || key === 'е') { e.preventDefault(); el.agToday.click(); return; }
+  if (key === 'arrowleft' || key === 'k') { e.preventDefault(); agendaGo(-1); return; }
+  if (key === 'arrowright' || key === 'j') { e.preventDefault(); agendaGo(1); }
+});
+
+// Черта «сейчас» ползёт сама, пока страница открыта.
+setInterval(() => {
+  if (state.ui.view === 'calendar' && AG_TIME_MODES.includes(agenda.mode)) renderAgendaNow();
+}, 60_000);
 
 
 init();

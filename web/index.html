@@ -82,6 +82,10 @@
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h3.4v12H2zm4.3 0h3.4v8H6.3zm4.3 0H14v10h-3.4z"/></svg>
           <span class="nav-label" data-i18n="nav.board">Доска</span>
         </button>
+        <button class="nav-item" data-view="calendar">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
+          <span class="nav-label" data-i18n="nav.calendar">Календарь</span>
+        </button>
         <button class="nav-item" data-view="stats">
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 1.4h1.4v13.2H2zM2 13.2h12v1.4H2zM4.4 9h2v4.6h-2zM7.6 6.2h2v7.4h-2zM10.8 3.4h2v10.2h-2z"/></svg>
           <span class="nav-label" data-i18n="nav.stats">Статистика</span>
@@ -357,6 +361,67 @@
       </div>
 
       <!-- КАЛЕНДАРЬ -->
+      <div id="calendar-view" class="view" hidden>
+        <div class="ag-layout">
+          <aside class="ag-side">
+            <button type="button" id="ag-create" class="btn-accent ag-create">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
+              <span data-i18n="agenda.new_entry">Новая запись</span>
+            </button>
+            <div class="ag-mini">
+              <div class="ag-mini-head">
+                <button type="button" id="ag-mini-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+                <span id="ag-mini-title"></span>
+                <button type="button" id="ag-mini-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+              </div>
+              <div class="ag-mini-weekdays">
+                <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
+              </div>
+              <div class="ag-mini-days" id="ag-mini-days"></div>
+            </div>
+            <div class="ag-cal-list">
+              <div class="row-label" data-i18n="agenda.calendars">Мои проекты</div>
+              <ul class="ag-projects" id="ag-projects"></ul>
+            </div>
+          </aside>
+
+          <div class="ag-main">
+            <div class="ag-head">
+              <button type="button" id="ag-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
+              <div class="ag-nav">
+                <button type="button" id="ag-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+                <button type="button" id="ag-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+              </div>
+              <span class="ag-title" id="ag-title"></span>
+              <span class="spacer"></span>
+              <span class="ag-total" id="ag-total"></span>
+              <div class="ag-modes" id="ag-modes">
+                <button type="button" data-mode="day" data-i18n="calendar.day">День</button>
+                <button type="button" data-mode="days4" data-i18n="agenda.days4">4 дня</button>
+                <button type="button" data-mode="week" class="on" data-i18n="calendar.week">Неделя</button>
+                <button type="button" data-mode="month" data-i18n="calendar.month">Месяц</button>
+                <button type="button" data-mode="agenda" data-i18n="agenda.schedule">Расписание</button>
+              </div>
+            </div>
+
+            <div class="ag-time" id="ag-time">
+              <div class="ag-daynames" id="ag-daynames"></div>
+              <div class="ag-allday-row">
+                <span class="ag-allday-label" data-i18n="agenda.all_day">Весь день</span>
+                <div class="ag-allday" id="ag-allday"></div>
+              </div>
+              <div class="ag-scroll" id="ag-scroll">
+                <div class="ag-gutter" id="ag-gutter"></div>
+                <div class="ag-cols" id="ag-cols"></div>
+              </div>
+            </div>
+
+            <div class="ag-month" id="ag-month" hidden></div>
+            <div class="ag-list" id="ag-list" hidden></div>
+          </div>
+        </div>
+      </div>
+
       <!-- НАСТРОЙКИ -->
       <div id="board-view" class="view" hidden>
         <div class="board-head">
@@ -801,6 +866,7 @@
   <script src="core/status.js"></script>
   <script src="core/tags.js"></script>
   <script src="core/versions.js"></script>
+  <script src="core/agenda.js"></script>
   <script src="core/format.js"></script>
   <script src="core/money.js"></script>
   <script src="core/migrate.js"></script>
