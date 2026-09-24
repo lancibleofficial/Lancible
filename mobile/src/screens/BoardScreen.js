@@ -32,10 +32,11 @@ import PickerSheet from '../components/PickerSheet';
 import QuickTaskSheet from '../components/QuickTaskSheet';
 import TaskMoveSheet from '../components/TaskMoveSheet';
 import PrimaryButton from '../components/PrimaryButton';
+import NewProjectSheet from '../components/NewProjectSheet';
 import { useAppStore, getProject } from '../store/useAppStore';
 import { orderedStatuses } from '../lib/statuses';
 import Versions from '../core/versions.js';
-import { openSheet } from '../store/useSheetStore';
+import { openSheet, closeSheet } from '../store/useSheetStore';
 import { confirmSheet } from '../lib/dialogs';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { useColors, spacing, radius, fontSize } from '../theme';
@@ -178,9 +179,16 @@ export default function BoardScreen({ navigation }) {
       <View style={styles.emptyWrap}>
         <Icon name="board" size={40} color={colors.textFaint} />
         <Text style={styles.emptyText}>{t(lang, 'board.empty')}</Text>
+        {/* Лист создания проекта глобальный — открывается прямо отсюда,
+            без перепрыгивания на Главную и просьбы открыть его там. */}
         <PrimaryButton
           title={t(lang, 'home.new_project_title')}
-          onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openCreate: true } })}
+          onPress={() => openSheet(
+            <NewProjectSheet
+              onCancel={closeSheet}
+              onCreated={(project) => { closeSheet(); setBoardProject(project.id); }}
+            />,
+          )}
         />
       </View>
     );

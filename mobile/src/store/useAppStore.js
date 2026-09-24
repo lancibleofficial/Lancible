@@ -25,17 +25,26 @@ export const useAppStore = create(
       ...emptyState(),
       hasHydrated: false,
       toastMessage: null,
+      toastAction: null,
 
       _runMigration() {
         set((s) => migrate({ ...s }));
         set({ hasHydrated: true });
       },
 
-      showToast(message) {
-        set({ toastMessage: message });
+      /** Тост. Вторым аргументом можно передать действие
+       *  { label, onPress } — тогда рядом с текстом появляется кнопка.
+       *  Действие живёт ровно столько же, сколько сам тост: это
+       *  предложение «пока не поздно», а не постоянная кнопка. */
+      showToast(message, action) {
+        set({ toastMessage: message, toastAction: action || null });
         setTimeout(() => {
-          if (get().toastMessage === message) set({ toastMessage: null });
+          if (get().toastMessage === message) set({ toastMessage: null, toastAction: null });
         }, 2500);
+      },
+
+      hideToast() {
+        set({ toastMessage: null, toastAction: null });
       },
 
       // --- проекты ---
@@ -467,6 +476,18 @@ export const useAppStore = create(
        *  версии». */
       setBoardVersion(projectId, versionId) {
         set((s) => ({ ui: { ...s.ui, boardVersion: { ...s.ui.boardVersion, [projectId]: versionId } } }));
+      },
+      /** В какой проект «+» в шапке Главной кладёт задачу. Подряд их
+       *  обычно заводят в один и тот же, поэтому лист открывается на
+       *  том, где создали прошлую. */
+      setQuickAddProject(id) {
+        set((s) => ({ ui: { ...s.ui, quickAddProjectId: id } }));
+      },
+      /** Подсказка о свайпе показывается один раз за установку — это
+       *  обучение, а не настройка, и синхронизировать его между
+       *  устройствами нечего. */
+      markSwipeHintShown() {
+        set((s) => ({ ui: { ...s.ui, homeSwipeHintShown: true } }));
       },
       /** Свёрнутые ряды версий — тоже по проектам и тоже только на этом
        *  устройстве: это положение экрана, а не данные. */

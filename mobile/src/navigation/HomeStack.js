@@ -23,7 +23,10 @@ export default function HomeStack() {
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      {/* Своя шапка внутри экрана: поле поиска занимает всю ширину и
+          раскрывается в отдельный режим, а общая шапка под такое не
+          гнётся. Остальные экраны стека — с обычной. */}
+      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Project" component={ProjectScreen} />
       <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: '' }} />
     </Stack.Navigator>

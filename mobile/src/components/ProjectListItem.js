@@ -5,7 +5,10 @@ import { fmtDur, fmtMoney } from '../lib/format';
 import Icon from './Icon';
 import { useColors, spacing, radius, fontSize } from '../theme';
 
-export default function ProjectListItem({ project, onPress, onLongPress, onTogglePin }) {
+// Кнопки-пина на карточке нет: закрепление переехало на свайп влево и в
+// меню по долгому нажатию. Здесь от пина осталась только пометка — по ней
+// видно, почему проект стоит наверху списка.
+export default function ProjectListItem({ project, onPress, onLongPress }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const tasks = useAppStore((s) => s.tasks);
@@ -23,7 +26,10 @@ export default function ProjectListItem({ project, onPress, onLongPress, onToggl
     <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <View style={[styles.stripe, { backgroundColor: project.color }]} />
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>{project.name}</Text>
+        <View style={styles.nameRow}>
+          {project.pinnedAt ? <Icon name="pin" size={12} color={colors.textDim} /> : null}
+          <Text style={styles.name} numberOfLines={1}>{project.name}</Text>
+        </View>
         {project.description ? <Text style={styles.desc} numberOfLines={1}>{project.description}</Text> : null}
         <View style={styles.statsRow}>
           <View style={styles.statItem}><Icon name="clock" size={12} color={colors.textDim} /><Text style={styles.stat}>{fmtDur(ms, lang)}</Text></View>
@@ -35,9 +41,6 @@ export default function ProjectListItem({ project, onPress, onLongPress, onToggl
         </View>
       </View>
 
-      <Pressable hitSlop={10} onPress={onTogglePin} style={styles.pinBtn}>
-        <Icon name="pin" size={15} color={project.pinnedAt ? colors.accent : colors.textDim} />
-      </Pressable>
     </Pressable>
   );
 }
@@ -52,13 +55,15 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   pressed: { opacity: 0.8 },
   stripe: { width: 5 },
-  body: { flex: 1, padding: spacing.lg, paddingRight: 40, gap: spacing.xs },
-  name: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  // Правый отступ вернулся к обычному: место под кнопку-пин больше
+  // резервировать не нужно.
+  body: { flex: 1, padding: spacing.lg, gap: spacing.xs },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  name: { flexShrink: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   desc: { color: colors.textDim, fontSize: fontSize.sm },
   statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   stat: { color: colors.textDim, fontSize: fontSize.xs },
   progressTrack: { height: 4, borderRadius: radius.pill, backgroundColor: colors.panel2, marginTop: spacing.sm, overflow: 'hidden' },
   progressFill: { height: '100%' },
-  pinBtn: { position: 'absolute', top: spacing.sm, right: spacing.sm, padding: spacing.xs },
 });

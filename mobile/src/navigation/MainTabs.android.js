@@ -1,4 +1,3 @@
-import { View, Pressable } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import HomeStack from './HomeStack';
@@ -6,51 +5,26 @@ import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import BoardStack from './BoardStack';
-import Icon from '../components/Icon';
-import NotifButton from '../components/NotifButton';
 import AppHeader from '../components/AppHeader';
 import MainTabBar from './MainTabBar';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
-import { useColors, spacing } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
-const HEADER_ICON_SIZE = 20;
-
-// Иконка поиска в хедере — общая для всех табов (кроме Home, у которой
-// своя версия с реально раскрывающимся полем — см. HomeScreen.js). С любой
-// другой вкладки просто переключает на Home и просит её открыть поиск.
-// Правый отступ даёт сам AppHeader (spacing.lg от края экрана).
-function SearchHeaderButton({ navigation, colors }) {
-  return (
-    <Pressable
-      hitSlop={10}
-      style={{ paddingLeft: spacing.sm }}
-      onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openSearch: true } })}
-    >
-      <Icon name="search" size={HEADER_ICON_SIZE} color={colors.text} />
-    </Pressable>
-  );
-}
-
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
-  const colors = useColors();
 
   return (
     <Tab.Navigator
       tabBar={(props) => <MainTabBar {...props} />}
-      screenOptions={({ navigation }) => ({
+      // Поиск и уведомления живут только на Главной, в её собственной
+      // шапке: на доске или в календаре искать проекты незачем, а две
+      // иконки в каждой шапке съедали место у заголовка.
+      screenOptions={{
         header: (props) => <AppHeader {...props} />,
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <SearchHeaderButton navigation={navigation} colors={colors} />
-            <NotifButton />
-          </View>
-        ),
         animation: 'shift',
-      })}
+      }}
     >
       <Tab.Screen
         name="Home"

@@ -1,18 +1,33 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
-import { View, FlatList, Pressable, StyleSheet } from 'react-native';
+// Главная: что сегодня, чем занимался последним и какие есть проекты.
+//
+// Шапка своя, а не навигационная (HomeStack отдаёт этому экрану
+// headerShown: false). Причина простая: поле поиска должно занимать всю
+// ширину и раскрываться в отдельный режим, а навигационная шапка на всех
+// вкладках одна и под такое не гнётся. Логотипа нет — на своём экране
+// приложение себя не представляет, место дороже.
+//
+// Поиск — это режим, а не фильтр списка. Прежняя версия просеивала тот же
+// список проектов и дорисовывала задачи сверху; теперь на время поиска
+// Главная уступает место результатам целиком, а по «Отмена» возвращается
+// как была. Позиция прокрутки при этом сохраняется сама: список Главной не
+// размонтируется, результаты просто накрывают его сверху.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, FlatList, Pressable, StyleSheet, BackHandler, Keyboard } from 'react-native';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
-import { useAppStore, recentTasks, getProject } from '../store/useAppStore';
-import { fmtShort, fmtDur, fmtMoney, taskElapsedMs } from '../lib/format';
+import { useAppStore, recentTasks, getProject, tasksOf } from '../store/useAppStore';
+import { fmtDur, fmtMoney } from '../lib/format';
 import { computeTodayStats } from '../lib/todayStats';
+import { getStatus } from '../lib/statuses';
 import { confirmSheet } from '../lib/dialogs';
 import ProjectListItem from '../components/ProjectListItem';
 import RecentTaskCard from '../components/RecentTaskCard';
 import NewProjectSheet from '../components/NewProjectSheet';
-import StatCard from '../components/StatCard';
+import QuickTaskSheet from '../components/QuickTaskSheet';
+import PrimaryButton from '../components/PrimaryButton';
+import SwipeRow, { closeOpenSwipeRows } from '../components/SwipeRow';
 import Icon from '../components/Icon';
 import NotifButton from '../components/NotifButton';
-import Logo from '../components/Logo';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useTicker } from '../hooks/useTicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,9 +36,11 @@ import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t } from '../lib/i18n';
 
 const byPinned = (a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt);
-const ADD_TILE = { id: '__add__' };
-const HEADER_PINNED = { id: '__header_pinned__' };
-const HEADER_REST = { id: '__header_rest__' };
+const SECTION_PROJECTS = { id: '__projects__' };
+// Подсказка свайпа: через сколько после появления списка приоткрыть первую
+// строку и сколько подержать открытой.
+const HINT_DELAY_MS = 600;
+const HINT_HOLD_MS = 900;
 
 export default function HomeScreen({ navigation, route }) {
   const colors = useColors();
@@ -31,96 +48,93 @@ export default function HomeScreen({ navigation, route }) {
   const styles = makeStyles(colors, insets, useBottomClearance());
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
+  const statuses = useAppStore((s) => s.statuses);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const hourlyRate = useAppStore((s) => s.settings.hourlyRate);
   const currency = useAppStore((s) => s.settings.currency);
   const lang = useAppStore((s) => s.settings.lang);
+  const hintShown = useAppStore((s) => s.ui.homeSwipeHintShown);
+  const markSwipeHintShown = useAppStore((s) => s.markSwipeHintShown);
   const togglePinProject = useAppStore((s) => s.togglePinProject);
   const deleteProject = useAppStore((s) => s.deleteProject);
   const openProject = useAppStore((s) => s.openProject);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const searchRef = useRef(null);
+  const firstRow = useRef(null);
+
+  // Подсказка о свайпе — один раз за установку. Открывается и закрывается
+  // тем же механизмом, что и настоящий жест: свой сдвиг содержимого внутри
+  // Swipeable не работает — библиотека держит на детях собственный
+  // transform, и вложенный просто не доезжает до экрана. Заодно подсказка
+  // показывает ровно то, что увидит палец.
+  useEffect(() => {
+    if (hintShown || searchOpen || !projects.length) return undefined;
+    let frame = null;
+    const open = setTimeout(() => {
+      frame = requestAnimationFrame(() => {
+        if (firstRow.current) firstRow.current.open();
+      });
+    }, HINT_DELAY_MS);
+    const close = setTimeout(() => {
+      if (firstRow.current) firstRow.current.close();
+      markSwipeHintShown();
+    }, HINT_DELAY_MS + HINT_HOLD_MS);
+    return () => { clearTimeout(open); clearTimeout(close); if (frame) cancelAnimationFrame(frame); };
+  }, [hintShown, searchOpen, projects.length]);
 
   useTicker(!!activeTimer);
   const { todayMs, todayMoney } = useMemo(
     () => computeTodayStats(tasks, activeTimer, hourlyRate),
     [tasks, activeTimer, hourlyRate],
   );
-  const doneCount = useMemo(() => tasks.filter((task) => task.done).length, [tasks]);
 
-  // Иконка поиска в хедере есть на всех вкладках (см. MainTabs.js) — с
-  // других вкладок она переключает на Home и просит открыть поиск здесь же.
+  // С других вкладок поиск больше не зовут — иконки там убраны, — но параметр
+  // оставлен: он же используется голосовыми ярлыками и пригодится, когда
+  // поиск понадобится открыть снаружи.
   useEffect(() => {
     if (route.params?.openSearch) {
-      setSearchOpen(true);
+      openSearch();
       navigation.setParams({ openSearch: undefined });
     }
   }, [route.params?.openSearch]);
 
-  // Кнопка "+" теперь живёт в плавающем таббаре (FloatingTabBar.js), а не
-  // отдельным FAB на этом экране — с любой другой вкладки она так же
-  // переключает на Home и просит открыть тут диалог создания, как поиск.
+  // Системное «назад» на Android закрывает поиск, а не приложение: для
+  // пользователя это ровно тот же выход, что и «Отмена».
   useEffect(() => {
-    if (route.params?.openCreate) {
-      openNewProjectSheet();
-      navigation.setParams({ openCreate: undefined });
-    }
-  }, [route.params?.openCreate]);
+    if (!searchOpen) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { closeSearch(); return true; });
+    return () => sub.remove();
+  }, [searchOpen]);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerTitle: searchOpen
-        ? () => (
-          <TextInput
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={t(lang, 'search.placeholder')}
-            placeholderTextColor={colors.textDim}
-            autoFocus
-          />
-        )
-        : () => (
-          <View style={styles.brandRow}>
-            <Logo size={20} color={colors.accent} />
-            <Text style={styles.brandText}>Lancible</Text>
-          </View>
-        ),
-      headerRight: () => (
-        <View style={styles.headerActions}>
-          <Pressable
-            hitSlop={10}
-            onPress={() => { setSearchOpen((v) => !v); setQuery(''); }}
-          >
-            <Icon name={searchOpen ? 'x' : 'search'} size={20} color={colors.text} />
-          </Pressable>
-          <NotifButton />
-        </View>
-      ),
-    });
-  }, [navigation, searchOpen, query, colors, lang]);
-
-  const pinnedProjects = useMemo(() => projects.filter((p) => p.pinnedAt).sort(byPinned), [projects]);
-  const restProjects = useMemo(() => projects.filter((p) => !p.pinnedAt), [projects]);
-
+  const pinned = useMemo(() => projects.filter((p) => p.pinnedAt).sort(byPinned), [projects]);
+  const rest = useMemo(() => projects.filter((p) => !p.pinnedAt), [projects]);
+  // Одной секцией: закреплённые сверху, остальные следом. Отдельные
+  // заголовки «Закреплённые» и «Остальные» только дробили короткий список.
+  const ordered = useMemo(() => [...pinned, ...rest], [pinned, rest]);
   const recent = useMemo(() => recentTasks(tasks, 12), [tasks]);
 
   const q = query.trim().toLowerCase();
-  const isSearching = q.length > 0;
-  const matches = (p) => p.name.toLowerCase().includes(q);
-  const visiblePinned = isSearching ? pinnedProjects.filter(matches) : pinnedProjects;
-  const visibleRest = isSearching ? restProjects.filter(matches) : restProjects;
-  const matchingTasks = useMemo(
-    () => (isSearching ? tasks.filter((task) => (task.title || '').toLowerCase().includes(q)) : []),
-    [tasks, q, isSearching],
+  const foundProjects = useMemo(
+    () => (q ? projects.filter((p) => p.name.toLowerCase().includes(q)) : []),
+    [projects, q],
+  );
+  const foundTasks = useMemo(
+    () => (q ? tasks.filter((task) => (task.title || '').toLowerCase().includes(q)) : []),
+    [tasks, q],
   );
 
-  const listData = [
-    ...(visiblePinned.length ? [HEADER_PINNED, ...visiblePinned] : []),
-    ...(visibleRest.length ? [HEADER_REST, ...visibleRest] : []),
-    ...(isSearching ? [] : [ADD_TILE]),
-  ];
+  function openSearch() {
+    closeOpenSwipeRows();
+    setSearchOpen(true);
+  }
+
+  function closeSearch() {
+    setSearchOpen(false);
+    setQuery('');
+    Keyboard.dismiss();
+  }
 
   function openProjectScreen(id) {
     openProject(id);
@@ -158,125 +172,306 @@ export default function HomeScreen({ navigation, route }) {
     openSheet(
       <NewProjectSheet
         onCancel={closeSheet}
-        onCreated={(project) => {
-          closeSheet();
-          openProjectScreen(project.id);
-        }}
+        onCreated={(project) => { closeSheet(); openProjectScreen(project.id); }}
       />,
     );
   }
 
+  function openQuickTask() {
+    openSheet(<QuickTaskSheet pickProject onOpenTask={openTask} />);
+  }
+
+  const renderProject = useCallback(({ item, index }) => (
+    <SwipeRow
+      ref={index === 0 ? firstRow : null}
+      label={t(lang, item.pinnedAt ? 'pin.unpin' : 'pin.pin')}
+      onAction={() => togglePinProject(item.id)}
+    >
+      <ProjectListItem
+        project={item}
+        onPress={() => openProjectScreen(item.id)}
+        onLongPress={() => onLongPressProject(item)}
+      />
+    </SwipeRow>
+  ), [lang, togglePinProject]);
+
+  const header = (
+    <View style={styles.header}>
+      <Pressable style={styles.searchBox} onPress={openSearch}>
+        <Icon name="search" size={16} color={colors.textDim} />
+        {searchOpen ? (
+          <TextInput
+            ref={searchRef}
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t(lang, 'search.placeholder_home')}
+            placeholderTextColor={colors.textDim}
+            autoFocus
+            returnKeyType="search"
+          />
+        ) : (
+          <Text style={styles.searchPlaceholder} numberOfLines={1}>{t(lang, 'search.placeholder_home')}</Text>
+        )}
+      </Pressable>
+      {searchOpen ? (
+        <Pressable onPress={closeSearch} hitSlop={8} style={styles.cancelBtn}>
+          <Text style={styles.cancelText}>{t(lang, 'common.cancel')}</Text>
+        </Pressable>
+      ) : (
+        <>
+          {projects.length ? (
+            <Pressable onPress={openQuickTask} style={styles.headerBtn} hitSlop={4}>
+              <Icon name="plus" size={20} color={colors.text} />
+            </Pressable>
+          ) : null}
+          <View style={styles.headerBtn}><NotifButton /></View>
+        </>
+      )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <FlatList
-        data={listData}
-        keyExtractor={(p) => p.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <View>
-            {isSearching ? null : (
-              <View style={styles.todayGrid}>
-                <StatCard icon="wallet" label={t(lang, 'stats.today_earned')} value={fmtMoney(todayMoney, lang, currency)} />
-                <StatCard icon="clock" label={t(lang, 'stats.today_worked')} value={fmtDur(todayMs, lang)} />
-                <StatCard icon="check" label={t(lang, 'stats.done')} value={`${doneCount}/${tasks.length}`} />
-              </View>
-            )}
-            {isSearching ? (
-              matchingTasks.length ? (
-                <View style={styles.recentSection}>
-                  <Text style={styles.sectionTitle}>{t(lang, 'search.tasks_found')}</Text>
-                  {matchingTasks.map((task) => (
-                    <SearchTaskRow key={task.id} task={task} projects={projects} activeTimer={activeTimer} lang={lang} styles={styles} colors={colors} onPress={() => openTask(task)} />
-                  ))}
-                </View>
-              ) : null
-            ) : recent.length ? (
-              <View style={styles.recentSection}>
-                <Text style={styles.sectionTitle}>{t(lang, 'home.recent')}</Text>
-                <FlatList
-                  data={recent}
-                  keyExtractor={(task) => task.id}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  renderItem={({ item }) => <RecentTaskCard task={item} onPress={() => openTask(item)} />}
-                  contentContainerStyle={{ paddingRight: spacing.lg }}
-                />
-              </View>
-            ) : null}
+      {header}
+
+      {projects.length === 0 && !searchOpen ? (
+        <View style={styles.emptyWrap}>
+          <View style={styles.emptyCard}>
+            <Icon name="board" size={36} color={colors.textFaint} />
+            <Text style={styles.emptyTitle}>{t(lang, 'home.empty_title')}</Text>
+            <Text style={styles.emptyText}>{t(lang, 'home.empty_text')}</Text>
+            <PrimaryButton title={t(lang, 'home.new_project_title')} onPress={openNewProjectSheet} />
           </View>
-        }
-        renderItem={({ item }) => {
-          if (item.id === '__header_pinned__') return <Text style={styles.sectionTitle}>{t(lang, 'home.pinned')}</Text>;
-          if (item.id === '__header_rest__') return <Text style={styles.sectionTitle}>{visiblePinned.length ? t(lang, 'home.other') : t(lang, 'home.title')}</Text>;
-          if (item.id === '__add__') {
-            return (
-              <Pressable style={styles.addTile} onPress={openNewProjectSheet}>
-                <Icon name="plus" size={20} color={colors.textDim} />
-                <Text style={styles.addTileText}>{t(lang, 'home.create')}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={ordered.length ? [SECTION_PROJECTS, ...ordered] : []}
+          keyExtractor={(p) => p.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={closeOpenSwipeRows}
+          ListHeaderComponent={
+            <View>
+              <Pressable
+                style={styles.todayRow}
+                onPress={() => navigation.navigate('Stats', { period: 'today' })}
+              >
+                <Text style={styles.todayLabel}>{t(lang, 'home.today')}</Text>
+                <Text style={styles.todaySep}>·</Text>
+                <Text style={[styles.todayValue, !todayMs && styles.todayZero]}>{fmtDur(todayMs, lang)}</Text>
+                <Text style={styles.todaySep}>·</Text>
+                <Text style={[styles.todayValue, !todayMoney && styles.todayZero]}>
+                  {fmtMoney(todayMoney, lang, currency)}
+                </Text>
+                <View style={{ flex: 1 }} />
+                <Icon name="chevron-right" size={13} color={colors.textDim} />
               </Pressable>
-            );
+
+              {recent.length ? (
+                <View style={styles.recentSection}>
+                  <Text style={styles.sectionTitle}>{t(lang, 'home.recent')}</Text>
+                  <FlatList
+                    data={recent}
+                    keyExtractor={(task) => task.id}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    renderItem={({ item }) => <RecentTaskCard task={item} onPress={() => openTask(item)} />}
+                    contentContainerStyle={{ paddingRight: spacing.lg }}
+                  />
+                </View>
+              ) : null}
+            </View>
           }
-          return (
-            <ProjectListItem
-              project={item}
-              onPress={() => openProjectScreen(item.id)}
-              onLongPress={() => onLongPressProject(item)}
-              onTogglePin={() => togglePinProject(item.id)}
-            />
-          );
-        }}
-        ListEmptyComponent={<Text style={styles.empty}>{t(lang, 'home.empty')}</Text>}
-      />
+          renderItem={({ item, index }) => {
+            if (item.id === SECTION_PROJECTS.id) {
+              return (
+                <View style={styles.projectsHead}>
+                  <Text style={styles.sectionTitle}>{t(lang, 'home.title')}</Text>
+                  <Pressable onPress={openNewProjectSheet} hitSlop={12} style={styles.newProjectBtn}>
+                    <Icon name="plus" size={13} color={colors.accent} />
+                    <Text style={styles.newProjectText}>{t(lang, 'home.new_project')}</Text>
+                  </Pressable>
+                </View>
+              );
+            }
+            return renderProject({ item, index: index - 1 });
+          }}
+        />
+      )}
+
+      {searchOpen ? (
+        <SearchResults
+          query={q}
+          recent={recent}
+          projects={foundProjects}
+          tasks={foundTasks}
+          allProjects={projects}
+          allTasks={tasks}
+          statuses={statuses}
+          lang={lang}
+          colors={colors}
+          styles={styles}
+          onProject={openProjectScreen}
+          onTask={openTask}
+        />
+      ) : null}
     </View>
   );
 }
 
-function SearchTaskRow({ task, projects, activeTimer, lang, styles, colors, onPress }) {
-  const project = getProject(projects, task.projectId);
+/** Результаты поиска поверх Главной. Отдельным слоем, а не подменой данных
+ *  списка: так Главная остаётся смонтированной и по выходу показывает ту же
+ *  позицию прокрутки, на которой её оставили. */
+function SearchResults({
+  query, recent, projects, tasks, allProjects, allTasks, statuses,
+  lang, colors, styles, onProject, onTask,
+}) {
+  const empty = query && !projects.length && !tasks.length;
+  const rows = [];
+  if (!query) {
+    // Пустой запрос — недавние задачи строками: подсказка, что искать, и
+    // заодно самый частый переход.
+    if (recent.length) rows.push({ key: 'h-recent', head: t(lang, 'home.recent') });
+    for (const task of recent) rows.push({ key: 't-' + task.id, task });
+  } else {
+    if (projects.length) rows.push({ key: 'h-p', head: t(lang, 'search.projects_group') });
+    for (const p of projects) rows.push({ key: 'p-' + p.id, project: p });
+    if (tasks.length) rows.push({ key: 'h-t', head: t(lang, 'search.tasks_group') });
+    for (const task of tasks) rows.push({ key: 't-' + task.id, task });
+  }
+
   return (
-    <Pressable onPress={onPress} style={styles.searchTaskRow}>
-      <View style={[styles.searchTaskDot, { backgroundColor: project ? project.color : colors.accent }]} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.searchTaskTitle} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
-        <Text style={styles.searchTaskProject} numberOfLines={1}>{project ? project.name : ''}</Text>
-      </View>
-      <Text style={styles.searchTaskTime}>{fmtShort(taskElapsedMs(task, activeTimer), lang)}</Text>
-    </Pressable>
+    <View style={styles.results}>
+      {empty ? (
+        <Text style={styles.resultsEmpty}>{t(lang, 'search.nothing_found')}</Text>
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={(row) => row.key}
+          contentContainerStyle={styles.listContent}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => {
+            if (item.head) return <Text style={styles.sectionTitle}>{item.head}</Text>;
+            if (item.project) {
+              const count = tasksOf(allTasks, item.project.id).length;
+              return (
+                <Pressable style={styles.resultRow} onPress={() => onProject(item.project.id)}>
+                  <View style={[styles.resultDot, { backgroundColor: item.project.color }]} />
+                  <Text style={styles.resultTitle} numberOfLines={1}>{item.project.name}</Text>
+                  <Text style={styles.resultCount}>{count}</Text>
+                </Pressable>
+              );
+            }
+            const project = getProject(allProjects, item.task.projectId);
+            const status = getStatus(statuses, item.task.statusId);
+            return (
+              <Pressable style={styles.resultRow} onPress={() => onTask(item.task)}>
+                <View style={[styles.resultDot, { backgroundColor: project ? project.color : colors.accent }]} />
+                <View style={styles.resultBody}>
+                  <Text style={styles.resultTitle} numberOfLines={1}>
+                    {item.task.title || t(lang, 'task.no_name')}
+                  </Text>
+                  <View style={styles.resultSubRow}>
+                    <Text style={styles.resultSub} numberOfLines={1}>{project ? project.name : ''}</Text>
+                    {status ? (
+                      <>
+                        <Text style={styles.resultSub}>·</Text>
+                        <View style={[styles.statusChip, { backgroundColor: status.color }]} />
+                        <Text style={styles.resultSub} numberOfLines={1}>{status.name}</Text>
+                      </>
+                    ) : null}
+                  </View>
+                </View>
+              </Pressable>
+            );
+          }}
+        />
+      )}
+    </View>
   );
 }
 
 const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  listContent: { padding: spacing.lg, paddingBottom: insets.bottom + clearance },
-  headerIconBtnLast: { paddingLeft: spacing.sm },
-  headerActions: { flexDirection: 'row', alignItems: 'center' },
-  todayGrid: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingTop: insets.top + spacing.sm,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
+  },
+  searchBox: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    height: 44, paddingHorizontal: spacing.md,
+    backgroundColor: colors.panel, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },
+  searchPlaceholder: { flex: 1, color: colors.textDim, fontSize: fontSize.md },
+  headerBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  cancelBtn: { height: 44, justifyContent: 'center', paddingLeft: spacing.xs },
+  cancelText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700' },
+
+  listContent: { paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + clearance },
+
+  // Одна строка вместо трёх плиток: цифры за сегодня — это ориентир, а не
+  // отчёт, и читать их удобнее одной фразой.
+  todayRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.panel, borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  todayLabel: { color: colors.textDim, fontSize: fontSize.sm },
+  todayValue: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  // Нули не прячем: строка на месте — значит день ещё впереди.
+  todayZero: { color: colors.textDim, fontWeight: '400' },
+  todaySep: { color: colors.textFaint, fontSize: fontSize.sm },
+
   recentSection: { marginBottom: spacing.lg, gap: spacing.sm },
   sectionTitle: {
     color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700',
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: spacing.sm, marginTop: spacing.xs,
+    textTransform: 'uppercase', letterSpacing: 0.6,
   },
-  empty: { color: colors.textDim, textAlign: 'center', marginTop: spacing.xxl, fontSize: fontSize.sm },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  brandText: { color: colors.text, fontSize: fontSize.lg, fontFamily: 'BasiquePro-Regular' },
-  // Белый, а не inputBg: это поле сидит прямо на colors.bg экрана (не на
-  // белом шите), так что для контраста ему нужен тот же цвет, что у карточек.
-  searchInput: {
-    backgroundColor: colors.panel, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 8,
-    color: colors.text, fontSize: fontSize.md, width: '100%',
+  projectsHead: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: spacing.sm, minHeight: 44,
   },
-  addTile: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.panel, borderRadius: radius.lg, paddingVertical: spacing.lg, marginBottom: spacing.md,
+  newProjectBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm },
+  newProjectText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700' },
+
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  emptyCard: {
+    alignItems: 'center', gap: spacing.md, alignSelf: 'stretch',
+    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.xl,
   },
-  addTileText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  searchTaskRow: {
+  emptyTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', textAlign: 'center' },
+  emptyText: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', lineHeight: 20 },
+
+  // Результаты кладутся поверх, а не вместо: Главная под ними остаётся жива
+  // вместе со своей позицией прокрутки.
+  // Координаты расписаны руками, а не через StyleSheet.absoluteFillObject:
+  // в React Native 0.86 этого поля уже нет, остался только absoluteFill, и
+  // спред несуществующего объекта тихо давал стиль без position — слой
+  // вставал в поток под Главную вместо того, чтобы накрыть её.
+  results: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    top: insets.top + 44 + spacing.sm * 2,
+    backgroundColor: colors.bg,
+  },
+  resultsEmpty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.xxl },
+  resultRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.panel, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm,
+    backgroundColor: colors.panel, borderRadius: radius.md,
+    padding: spacing.md, marginBottom: spacing.sm,
   },
-  searchTaskDot: { width: 8, height: 8, borderRadius: 4 },
-  searchTaskTitle: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  searchTaskProject: { color: colors.textDim, fontSize: fontSize.xs },
-  searchTaskTime: { color: colors.textDim, fontSize: fontSize.xs },
+  resultDot: { width: 10, height: 10, borderRadius: 3 },
+  resultBody: { flex: 1, gap: 2 },
+  resultTitle: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  resultCount: { color: colors.textFaint, fontSize: fontSize.xs },
+  resultSubRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  resultSub: { color: colors.textDim, fontSize: fontSize.xs, flexShrink: 1 },
+  statusChip: { width: 8, height: 8, borderRadius: 2 },
 });

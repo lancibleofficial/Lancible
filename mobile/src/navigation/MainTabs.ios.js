@@ -1,4 +1,4 @@
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,8 +7,6 @@ import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import BoardStack from './BoardStack';
 import SettingsScreen from '../screens/SettingsScreen';
-import Icon from '../components/Icon';
-import NotifButton from '../components/NotifButton';
 import AppHeader from '../components/AppHeader';
 import TimerMiniPlayer from '../components/TimerMiniPlayer';
 import { useAppStore } from '../store/useAppStore';
@@ -49,7 +47,6 @@ import { useColors, spacing } from '../theme';
 // нативного контейнера.
 const Tab = createNativeBottomTabNavigator();
 
-const HEADER_ICON_SIZE = 20;
 const IOS_MAJOR = parseInt(String(Platform.Version), 10) || 0;
 const HAS_LIQUID_GLASS = IOS_MAJOR >= 26;
 // Высота UITabBar в компактной раскладке — та же константа, на которой
@@ -63,18 +60,6 @@ const TAB_ICONS = {
   chart: require('../../assets/tabs/chart.png'),
   menu: require('../../assets/tabs/menu.png'),
 };
-
-function SearchHeaderButton({ navigation, colors }) {
-  return (
-    <Pressable
-      hitSlop={10}
-      style={{ paddingLeft: spacing.sm }}
-      onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openSearch: true } })}
-    >
-      <Icon name="search" size={HEADER_ICON_SIZE} color={colors.text} />
-    </Pressable>
-  );
-}
 
 function tabIcon(name) {
   return { type: 'image', source: TAB_ICONS[name] };
@@ -119,13 +104,10 @@ export default function MainTabs() {
     <Tab.Navigator
       layout={HAS_LIQUID_GLASS ? undefined : LegacyMiniPlayerLayout}
       screenOptions={({ navigation }) => ({
+      // Поиск и уведомления живут только на Главной, в её собственной
+      // шапке: на доске или в календаре искать проекты незачем, а две
+      // иконки в каждой шапке съедали место у заголовка.
         header: (props) => <AppHeader {...props} />,
-        headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <SearchHeaderButton navigation={navigation} colors={colors} />
-            <NotifButton />
-          </View>
-        ),
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
         tabBarLabelStyle: { fontFamily: 'Gravity-Book', fontSize: 11 },

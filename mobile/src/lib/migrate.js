@@ -40,7 +40,11 @@ export function emptyState() {
     // boardVersion и boardCollapsed — положение доски, по проекту:
     // какой отбор по версии выбран и какие ряды свёрнуты. Живут в ui,
     // а значит остаются на устройстве и не ездят в синхронизации.
-    ui: { view: 'home', projectId: null, boardProjectId: null, boardVersion: {}, boardCollapsed: {} },
+    ui: {
+      view: 'home', projectId: null, boardProjectId: null,
+      boardVersion: {}, boardCollapsed: {},
+      quickAddProjectId: null, homeSwipeHintShown: false,
+    },
     settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, notifyEnabled: true, syncResolvedFor: null },
   };
 }
@@ -124,6 +128,8 @@ export function migrate(state) {
     for (const id of Object.keys(value)) if (known.has(id)) out[id] = value[id];
     return out;
   };
+  if (!known.has(state.ui.quickAddProjectId)) state.ui.quickAddProjectId = fallback;
+  state.ui.homeSwipeHintShown = !!state.ui.homeSwipeHintShown;
   state.ui.boardVersion = byProject(state.ui.boardVersion);
   state.ui.boardCollapsed = byProject(state.ui.boardCollapsed);
   for (const id of Object.keys(state.ui.boardCollapsed)) {

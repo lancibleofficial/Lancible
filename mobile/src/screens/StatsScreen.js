@@ -5,6 +5,7 @@ import { useAppStore, tasksOf, projectMs, projectMoney, getProject } from '../st
 import { fmtDur, fmtMoney, fmtClock, taskElapsedMs, earnedOf } from '../lib/format';
 import { buildAllProjectsSheets, buildPeriodSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
+import { computeTodayStats } from '../lib/todayStats';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
 import PrimaryButton from '../components/PrimaryButton';
@@ -16,7 +17,7 @@ import { useColors, spacing, radius, fontSize } from '../theme';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t } from '../lib/i18n';
 
-export default function StatsScreen({ navigation }) {
+export default function StatsScreen({ navigation, route }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets, useBottomClearance());
@@ -47,8 +48,18 @@ export default function StatsScreen({ navigation }) {
     openSheet(<ExportPeriodSheet lang={lang} onConfirm={onExportRange} onCancel={closeSheet} />);
   }
 
-  const totalMs = tasks.reduce((a, task) => a + taskElapsedMs(task, activeTimer), 0);
-  const totalMoney = tasks.reduce((a, task) => a + earnedOf(task, hourlyRate, activeTimer), 0);
+  // Строка «Сегодня» на Главной ведёт сюда и просит показать сегодняшнее
+  // — тогда две верхние карточки считают за день, а не за всё время.
+  // Списки ниже остаются общими: разбивка по периодам — отдельная
+  // работа, и делать её мимоходом значит сделать наполовину.
+  const todayOnly = route && route.params && route.params.period === 'today';
+  const today = computeTodayStats(tasks, activeTimer, hourlyRate);
+  const totalMs = todayOnly
+    ? today.todayMs
+    : tasks.reduce((a, task) => a + taskElapsedMs(task, activeTimer), 0);
+  const totalMoney = todayOnly
+    ? today.todayMoney
+    : tasks.reduce((a, task) => a + earnedOf(task, hourlyRate, activeTimer), 0);
   const runningTask = activeTimer && tasks.find((task) => task.id === activeTimer.taskId);
 
   const byProject = useMemo(
@@ -89,8 +100,8 @@ export default function StatsScreen({ navigation }) {
       ListHeaderComponent={
         <View style={{ gap: spacing.lg }}>
           <View style={styles.grid}>
-            <StatCard icon="clock" label={t(lang, 'stats.worked')} value={fmtDur(totalMs, lang)} />
-            <StatCard icon="wallet" label={t(lang, 'stats.earned')} value={fmtMoney(totalMoney, lang, currency)} />
+            <StatCard icon="clock" label={t(lang, todayOnly ? 'stats.today_worked' : 'stats.worked')} value={fmtDur(totalMs, lang)} />
+            <StatCard icon="wallet" label={t(lang, todayOnly ? 'stats.today_earned' : 'stats.earned')} value={fmtMoney(totalMoney, lang, currency)} />
           </View>
 
           <View style={styles.exportRow}>
