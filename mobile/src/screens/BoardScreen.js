@@ -32,6 +32,7 @@ import PickerSheet from '../components/PickerSheet';
 import QuickTaskSheet from '../components/QuickTaskSheet';
 import TaskMoveSheet from '../components/TaskMoveSheet';
 import PrimaryButton from '../components/PrimaryButton';
+import SearchHeader from '../components/SearchHeader';
 import NewProjectSheet from '../components/NewProjectSheet';
 import { useAppStore, getProject } from '../store/useAppStore';
 import { orderedStatuses } from '../lib/statuses';
@@ -176,7 +177,9 @@ export default function BoardScreen({ navigation }) {
 
   if (!project) {
     return (
-      <View style={styles.emptyWrap}>
+      <View style={styles.screen}>
+        <SearchHeader navigation={navigation} />
+        <View style={styles.emptyWrap}>
         <Icon name="board" size={40} color={colors.textFaint} />
         <Text style={styles.emptyText}>{t(lang, 'board.empty')}</Text>
         {/* Лист создания проекта глобальный — открывается прямо отсюда,
@@ -190,6 +193,7 @@ export default function BoardScreen({ navigation }) {
             />,
           )}
         />
+        </View>
       </View>
     );
   }
@@ -231,6 +235,7 @@ export default function BoardScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <SearchHeader navigation={navigation} />
       <View style={styles.headerRow}>
         <Pressable style={styles.chip} onPress={onPickProject} hitSlop={6}>
           <View style={[styles.dot, { backgroundColor: project.color || colors.accent }]} />
@@ -376,6 +381,7 @@ function Lane({ lane, lang, styles, colors, scrollX, collapsed, onToggle, render
 
 const makeStyles = (colors, columnWidth, laneWidth, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  screen: { flex: 1, backgroundColor: colors.bg },
 
   headerRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

@@ -12,6 +12,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import StatCard from '../components/StatCard';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
 import { openSheet, closeSheet } from '../store/useSheetStore';
+import SearchHeader from '../components/SearchHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, spacing, radius, fontSize } from '../theme';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
@@ -91,56 +92,61 @@ export default function StatsScreen({ navigation, route }) {
   }
 
   return (
-    <FlatList
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      data={listData}
-      keyExtractor={(row) => row.key}
-      ListHeaderComponent={
-        <View style={{ gap: spacing.lg }}>
-          <View style={styles.grid}>
-            <StatCard icon="clock" label={t(lang, todayOnly ? 'stats.today_worked' : 'stats.worked')} value={fmtDur(totalMs, lang)} />
-            <StatCard icon="wallet" label={t(lang, todayOnly ? 'stats.today_earned' : 'stats.earned')} value={fmtMoney(totalMoney, lang, currency)} />
-          </View>
-
-          <View style={styles.exportRow}>
-            <PrimaryButton icon="download" title={t(lang, 'export.short')} onPress={() => onExportRange(null)} loading={exporting} style={styles.exportRowBtn} shrinkText />
-            <PrimaryButton title={t(lang, 'export.pick_period')} variant="ghost" onPress={onOpenPeriodExport} style={styles.exportRowBtn} shrinkText />
-          </View>
-
-          {runningTask ? (
-            <View style={styles.runningCard}>
-              <Icon name="clock" color={colors.accent} />
-              <Text style={styles.runningName} numberOfLines={1}>{runningTask.title || t(lang, 'task.no_name')}</Text>
-              <Text style={styles.runningTime}>{fmtClock(Date.now() - new Date(activeTimer.startedAt).getTime())}</Text>
+    // Шапка с поиском — одна на все корневые экраны, поэтому она внутри
+    // экрана, а не в навигации: навигационная шапка на вкладках выключена.
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <SearchHeader navigation={navigation} />
+      <FlatList
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        data={listData}
+        keyExtractor={(row) => row.key}
+        ListHeaderComponent={
+          <View style={{ gap: spacing.lg }}>
+            <View style={styles.grid}>
+              <StatCard icon="clock" label={t(lang, todayOnly ? 'stats.today_worked' : 'stats.worked')} value={fmtDur(totalMs, lang)} />
+              <StatCard icon="wallet" label={t(lang, todayOnly ? 'stats.today_earned' : 'stats.earned')} value={fmtMoney(totalMoney, lang, currency)} />
             </View>
-          ) : null}
-        </View>
-      }
-      renderItem={({ item }) => {
-        if (item.row === 'header') return <Text style={styles.sectionTitle}>{item.label}</Text>;
-        if (item.row === 'task') {
-          const project = getProject(projects, item.task.projectId);
+
+            <View style={styles.exportRow}>
+              <PrimaryButton icon="download" title={t(lang, 'export.short')} onPress={() => onExportRange(null)} loading={exporting} style={styles.exportRowBtn} shrinkText />
+              <PrimaryButton title={t(lang, 'export.pick_period')} variant="ghost" onPress={onOpenPeriodExport} style={styles.exportRowBtn} shrinkText />
+            </View>
+
+            {runningTask ? (
+              <View style={styles.runningCard}>
+                <Icon name="clock" color={colors.accent} />
+                <Text style={styles.runningName} numberOfLines={1}>{runningTask.title || t(lang, 'task.no_name')}</Text>
+                <Text style={styles.runningTime}>{fmtClock(Date.now() - new Date(activeTimer.startedAt).getTime())}</Text>
+              </View>
+            ) : null}
+          </View>
+        }
+        renderItem={({ item }) => {
+          if (item.row === 'header') return <Text style={styles.sectionTitle}>{item.label}</Text>;
+          if (item.row === 'task') {
+            const project = getProject(projects, item.task.projectId);
+            return (
+              <Pressable onPress={() => openTask(item.task)} style={styles.projectRow}>
+                <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
+                <Text style={styles.projectName} numberOfLines={1}>{item.task.title || t(lang, 'task.no_name')}</Text>
+                <Text style={styles.projectStat}>{fmtDur(item.ms, lang)}</Text>
+                <Text style={styles.projectStat}>{fmtMoney(item.money, lang, currency)}</Text>
+              </Pressable>
+            );
+          }
           return (
-            <Pressable onPress={() => openTask(item.task)} style={styles.projectRow}>
-              <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
-              <Text style={styles.projectName} numberOfLines={1}>{item.task.title || t(lang, 'task.no_name')}</Text>
+            <View style={styles.projectRow}>
+              <View style={[styles.dot, { backgroundColor: item.project.color }]} />
+              <Text style={styles.projectName} numberOfLines={1}>{item.project.name}</Text>
               <Text style={styles.projectStat}>{fmtDur(item.ms, lang)}</Text>
               <Text style={styles.projectStat}>{fmtMoney(item.money, lang, currency)}</Text>
-            </Pressable>
+            </View>
           );
-        }
-        return (
-          <View style={styles.projectRow}>
-            <View style={[styles.dot, { backgroundColor: item.project.color }]} />
-            <Text style={styles.projectName} numberOfLines={1}>{item.project.name}</Text>
-            <Text style={styles.projectStat}>{fmtDur(item.ms, lang)}</Text>
-            <Text style={styles.projectStat}>{fmtMoney(item.money, lang, currency)}</Text>
-          </View>
-        );
-      }}
-    />
+        }}
+      />
+    </View>
   );
 }
 

@@ -164,17 +164,17 @@ export default function MainTabs() {
       <Tab.Screen
         name="Calendar"
         component={CalendarScreen}
-        options={{ title: t(lang, 'nav.calendar'), tabBarLabel: t(lang, 'nav.calendar'), tabBarIcon: tabIcon('calendar') }}
+        options={{ headerShown: false, tabBarLabel: t(lang, 'nav.calendar'), tabBarIcon: tabIcon('calendar') }}
       />
       <Tab.Screen
         name="Stats"
         component={StatsScreen}
-        options={{ title: t(lang, 'nav.stats'), tabBarLabel: t(lang, 'nav.stats'), tabBarIcon: tabIcon('chart') }}
+        options={{ headerShown: false, tabBarLabel: t(lang, 'nav.stats'), tabBarIcon: tabIcon('chart') }}
       />
       <Tab.Screen
         name="Menu"
         component={SettingsScreen}
-        options={{ title: t(lang, 'nav.menu'), tabBarLabel: t(lang, 'nav.menu'), tabBarIcon: tabIcon('menu') }}
+        options={{ headerShown: false, tabBarLabel: t(lang, 'nav.menu'), tabBarIcon: tabIcon('menu') }}
       />
     </Tab.Navigator>
   );

@@ -18,9 +18,10 @@ export default function MainTabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => <MainTabBar {...props} />}
-      // Поиск и уведомления живут только на Главной, в её собственной
-      // шапке: на доске или в календаре искать проекты незачем, а две
-      // иконки в каждой шапке съедали место у заголовка.
+      // Шапка у корневых экранов своя — общая SearchHeader внутри самого
+      // экрана (см. components/SearchHeader.js). Навигационная тут выключена
+      // целиком: двух шапок подряд быть не должно, а заголовок вкладки и так
+      // виден по таббару.
       screenOptions={{
         header: (props) => <AppHeader {...props} />,
         animation: 'shift',
@@ -50,9 +51,9 @@ export default function MainTabs() {
           tabBarStyle: ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
         })}
       />
-      <Tab.Screen name="Calendar" component={CalendarScreen} options={{ title: t(lang, 'nav.calendar'), tabBarLabel: t(lang, 'nav.calendar') }} />
-      <Tab.Screen name="Stats" component={StatsScreen} options={{ title: t(lang, 'nav.stats'), tabBarLabel: t(lang, 'nav.stats') }} />
-      <Tab.Screen name="Menu" component={SettingsScreen} options={{ title: t(lang, 'nav.menu'), tabBarLabel: t(lang, 'nav.menu') }} />
+      <Tab.Screen name="Calendar" component={CalendarScreen} options={{ headerShown: false, tabBarLabel: t(lang, 'nav.calendar') }} />
+      <Tab.Screen name="Stats" component={StatsScreen} options={{ headerShown: false, tabBarLabel: t(lang, 'nav.stats') }} />
+      <Tab.Screen name="Menu" component={SettingsScreen} options={{ headerShown: false, tabBarLabel: t(lang, 'nav.menu') }} />
     </Tab.Navigator>
   );
 }

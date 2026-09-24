@@ -46,11 +46,13 @@ export default function ProjectListItem({ project, onPress, onLongPress }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
+  // Ни скругления, ни нижнего отступа: и то и другое держит строка
+  // свайпа снаружи (SwipeRow). Со своим скруглением у открытой строки
+  // между карточкой и кнопкой оставался вырез, а со своим отступом
+  // кнопка вылезала ниже карточки.
   card: {
     flexDirection: 'row',
     backgroundColor: colors.panel,
-    borderRadius: radius.lg,
-    marginBottom: spacing.md,
     overflow: 'hidden',
   },
   pressed: { opacity: 0.8 },

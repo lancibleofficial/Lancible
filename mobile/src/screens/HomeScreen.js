@@ -14,7 +14,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, FlatList, Pressable, StyleSheet, BackHandler, Keyboard } from 'react-native';
 import Text from '../components/AppText';
-import TextInput from '../components/AppTextInput';
 import { useAppStore, recentTasks, getProject, tasksOf } from '../store/useAppStore';
 import { fmtDur, fmtMoney } from '../lib/format';
 import { computeTodayStats } from '../lib/todayStats';
@@ -23,11 +22,10 @@ import { confirmSheet } from '../lib/dialogs';
 import ProjectListItem from '../components/ProjectListItem';
 import RecentTaskCard from '../components/RecentTaskCard';
 import NewProjectSheet from '../components/NewProjectSheet';
-import QuickTaskSheet from '../components/QuickTaskSheet';
 import PrimaryButton from '../components/PrimaryButton';
 import SwipeRow, { closeOpenSwipeRows } from '../components/SwipeRow';
+import SearchHeader, { SEARCH_HEADER_HEIGHT } from '../components/SearchHeader';
 import Icon from '../components/Icon';
-import NotifButton from '../components/NotifButton';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useTicker } from '../hooks/useTicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -177,10 +175,6 @@ export default function HomeScreen({ navigation, route }) {
     );
   }
 
-  function openQuickTask() {
-    openSheet(<QuickTaskSheet pickProject onOpenTask={openTask} />);
-  }
-
   const renderProject = useCallback(({ item, index }) => (
     <SwipeRow
       ref={index === 0 ? firstRow : null}
@@ -196,39 +190,15 @@ export default function HomeScreen({ navigation, route }) {
   ), [lang, togglePinProject]);
 
   const header = (
-    <View style={styles.header}>
-      <Pressable style={styles.searchBox} onPress={openSearch}>
-        <Icon name="search" size={16} color={colors.textDim} />
-        {searchOpen ? (
-          <TextInput
-            ref={searchRef}
-            style={styles.searchInput}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={t(lang, 'search.placeholder_home')}
-            placeholderTextColor={colors.textDim}
-            autoFocus
-            returnKeyType="search"
-          />
-        ) : (
-          <Text style={styles.searchPlaceholder} numberOfLines={1}>{t(lang, 'search.placeholder_home')}</Text>
-        )}
-      </Pressable>
-      {searchOpen ? (
-        <Pressable onPress={closeSearch} hitSlop={8} style={styles.cancelBtn}>
-          <Text style={styles.cancelText}>{t(lang, 'common.cancel')}</Text>
-        </Pressable>
-      ) : (
-        <>
-          {projects.length ? (
-            <Pressable onPress={openQuickTask} style={styles.headerBtn} hitSlop={4}>
-              <Icon name="plus" size={20} color={colors.text} />
-            </Pressable>
-          ) : null}
-          <View style={styles.headerBtn}><NotifButton /></View>
-        </>
-      )}
-    </View>
+    <SearchHeader
+      navigation={navigation}
+      active={searchOpen}
+      value={query}
+      onChangeText={setQuery}
+      onOpen={openSearch}
+      onCancel={closeSearch}
+      inputRef={searchRef}
+    />
   );
 
   return (
@@ -397,24 +367,12 @@ function SearchResults({
 const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingTop: insets.top + spacing.sm,
-    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
-  },
-  searchBox: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    height: 44, paddingHorizontal: spacing.md,
-    backgroundColor: colors.panel, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  searchInput: { flex: 1, color: colors.text, fontSize: fontSize.md, padding: 0 },
-  searchPlaceholder: { flex: 1, color: colors.textDim, fontSize: fontSize.md },
-  headerBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  cancelBtn: { height: 44, justifyContent: 'center', paddingLeft: spacing.xs },
-  cancelText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700' },
 
-  listContent: { paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + clearance },
+  // Сверху воздух: шапка не должна упираться в первую карточку.
+  listContent: {
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md,
+    paddingBottom: insets.bottom + clearance,
+  },
 
   // Одна строка вместо трёх плиток: цифры за сегодня — это ориентир, а не
   // отчёт, и читать их удобнее одной фразой.
@@ -458,7 +416,7 @@ const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   // вставал в поток под Главную вместо того, чтобы накрыть её.
   results: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    top: insets.top + 44 + spacing.sm * 2,
+    top: insets.top + SEARCH_HEADER_HEIGHT + spacing.sm * 2,
     backgroundColor: colors.bg,
   },
   resultsEmpty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.xxl },

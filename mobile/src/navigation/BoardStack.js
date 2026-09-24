@@ -29,7 +29,8 @@ export default function BoardStack() {
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="BoardMain" component={BoardScreen} options={{ title: t(lang, 'nav.board') }} />
+      {/* Шапка доски — общая SearchHeader внутри экрана, как на Главной. */}
+      <Stack.Screen name="BoardMain" component={BoardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: '' }} />
       <Stack.Screen
         name="ProjectStatuses"

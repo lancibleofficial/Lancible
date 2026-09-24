@@ -35,7 +35,7 @@ export function closeOpenSwipeRows() {
 }
 
 const SwipeRow = forwardRef(function SwipeRow(
-  { children, label, icon = 'pin', onAction, renderAction, enabled = true },
+  { children, label, icon = 'pin', onAction, renderAction, enabled = true, style },
   ref,
 ) {
   const colors = useColors();
@@ -84,7 +84,7 @@ const SwipeRow = forwardRef(function SwipeRow(
       onSwipeableWillOpen={onWillOpen}
       onSwipeableClose={onClose}
       renderRightActions={right}
-      containerStyle={styles.container}
+      containerStyle={[styles.container, style]}
     >
       {children}
     </ReanimatedSwipeable>
@@ -94,9 +94,10 @@ const SwipeRow = forwardRef(function SwipeRow(
 export default SwipeRow;
 
 const makeStyles = (colors) => StyleSheet.create({
-  // Скругление на контейнере, а не на кнопке: иначе кнопка торчала бы
-  // прямым углом из-под скруглённой карточки.
-  container: { borderRadius: radius.lg, overflow: 'hidden' },
+  // Скругление и нижний отступ держит контейнер, а не содержимое: он
+  // обрезает и карточку, и кнопку одной формой, поэтому у открытой
+  // строки они сходятся встык, а внешние углы остаются скруглёнными.
+  container: { borderRadius: radius.lg, overflow: 'hidden', marginBottom: spacing.md },
   action: {
     width: SWIPE_ACTION_WIDTH,
     alignItems: 'center', justifyContent: 'center', gap: spacing.xs,

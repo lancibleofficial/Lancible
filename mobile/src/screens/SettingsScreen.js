@@ -21,6 +21,7 @@ import { openSheet } from '../store/useSheetStore';
 import { setSyncEnabled } from '../lib/sync';
 import { permissionStatus, ensurePermission } from '../lib/notifications';
 import { checkForUpdate, downloadAndInstall } from '../lib/updateCheck';
+import SearchHeader from '../components/SearchHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, useThemeMode, spacing, radius, fontSize } from '../theme';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
@@ -29,7 +30,7 @@ import { t, LANG_NAMES } from '../lib/i18n';
 // Лендинг: главная и страница блога. Тот же адрес, что и в десктопной версии.
 const LANDING_URL = 'https://lancible.vercel.app';
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [notifPerm, setNotifPerm] = useState('ask');
@@ -147,145 +148,150 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      {update ? (
-        <Pressable style={styles.updateBanner} onPress={onUpdatePress} disabled={updating}>
-          <Icon name="download" size={18} color={colors.accentText} />
-          <Text style={styles.updateBannerText} numberOfLines={1}>
-            {updating
-              ? t(settings.lang, 'settings.update_downloading', { percent: Math.round(updateProgress * 100) })
-              : t(settings.lang, 'settings.update_available', { version: update.version })}
-          </Text>
-          {updating ? null : (
-            <Text style={styles.updateBannerAction}>
-              {t(settings.lang, update.canInstall ? 'settings.update_install' : 'settings.update_download')}
+    // Шапка с поиском — одна на все корневые экраны, поэтому она внутри
+    // экрана, а не в навигации: навигационная шапка на вкладках выключена.
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <SearchHeader navigation={navigation} />
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {update ? (
+          <Pressable style={styles.updateBanner} onPress={onUpdatePress} disabled={updating}>
+            <Icon name="download" size={18} color={colors.accentText} />
+            <Text style={styles.updateBannerText} numberOfLines={1}>
+              {updating
+                ? t(settings.lang, 'settings.update_downloading', { percent: Math.round(updateProgress * 100) })
+                : t(settings.lang, 'settings.update_available', { version: update.version })}
             </Text>
-          )}
-        </Pressable>
-      ) : null}
+            {updating ? null : (
+              <Text style={styles.updateBannerAction}>
+                {t(settings.lang, update.canInstall ? 'settings.update_install' : 'settings.update_download')}
+              </Text>
+            )}
+          </Pressable>
+        ) : null}
 
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_account')}</Text>
-      {authStatus === 'signedIn' ? (
-        <Pressable style={styles.profileCard} onPress={onOpenProfile}>
-          <View style={styles.profileCardTop}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>{(user.name || user.email || '?')[0].toUpperCase()}</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.profileName} numberOfLines={1}>{user.name || user.email}</Text>
-              {user.name ? <Text style={styles.profileSub} numberOfLines={1}>{user.email}</Text> : null}
+        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_account')}</Text>
+        {authStatus === 'signedIn' ? (
+          <Pressable style={styles.profileCard} onPress={onOpenProfile}>
+            <View style={styles.profileCardTop}>
+              <View style={styles.avatar}><Text style={styles.avatarText}>{(user.name || user.email || '?')[0].toUpperCase()}</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.profileName} numberOfLines={1}>{user.name || user.email}</Text>
+                {user.name ? <Text style={styles.profileSub} numberOfLines={1}>{user.email}</Text> : null}
+              </View>
+              <Icon name="chevron-right" size={15} color={colors.textDim} />
             </View>
-            <Icon name="chevron-right" size={15} color={colors.textDim} />
-          </View>
-        </Pressable>
-      ) : (
-        <View style={styles.profileCard}>
-          <View style={styles.profileCardTop}>
-            <View style={[styles.avatar, { backgroundColor: colors.panel2 }]}><Text style={[styles.avatarText, { color: colors.textDim }]}>?</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.profileName}>{t(settings.lang, 'profile.guest')}</Text>
-              <Text style={styles.profileSub}>{t(settings.lang, 'profile.guest_sub')}</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.profileCard}>
+            <View style={styles.profileCardTop}>
+              <View style={[styles.avatar, { backgroundColor: colors.panel2 }]}><Text style={[styles.avatarText, { color: colors.textDim }]}>?</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.profileName}>{t(settings.lang, 'profile.guest')}</Text>
+                <Text style={styles.profileSub}>{t(settings.lang, 'profile.guest_sub')}</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.guestActions}>
-            <View style={{ flex: 0.8 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.sign_in')} variant="ghost" onPress={() => onOpenAuth('signin')} /></View>
-            <View style={{ flex: 1.2 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.create_account')} onPress={() => onOpenAuth('signup')} /></View>
-          </View>
-        </View>
-      )}
-
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_main')}</Text>
-      <SettingsCard>
-        <SettingsRow icon="globe" label={t(settings.lang, 'nav.language')} value={LANG_NAMES[settings.lang]} onPress={onOpenLanguage} />
-        <SettingsRow
-          icon="sun"
-          label={t(settings.lang, 'settings.theme_label')}
-          right={<ThemeSwitch value={resolvedMode === 'dark'} onValueChange={onToggleTheme} />}
-          last
-        />
-      </SettingsCard>
-
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_work')}</Text>
-      <SettingsCard>
-        <SettingsRow icon="wallet" label={t(settings.lang, 'settings.rate_label')} value={fmtMoney(settings.hourlyRate || 0, settings.lang, settings.currency)} onPress={onOpenRate} />
-        <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
-      </SettingsCard>
-
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_tags')}</Text>
-      <SettingsCard>
-        {tags.length ? tags.map((tag) => (
-          <SettingsRow
-            key={tag.id}
-            icon="pin"
-            label={tag.name}
-            value={tagUsageLabel(tag.id)}
-            onPress={() => openSheet(<TagEditSheet tag={tag} />)}
-          />
-        )) : (
-          <View style={styles.tagsHint}>
-            <Text style={styles.tagsHintText}>{t(settings.lang, 'tag.empty_hint')}</Text>
+            <View style={styles.guestActions}>
+              <View style={{ flex: 0.8 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.sign_in')} variant="ghost" onPress={() => onOpenAuth('signin')} /></View>
+              <View style={{ flex: 1.2 }}><PrimaryButton compact shrinkText title={t(settings.lang, 'auth.create_account')} onPress={() => onOpenAuth('signup')} /></View>
+            </View>
           </View>
         )}
-        <SettingsRow
-          icon="plus"
-          label={t(settings.lang, 'tag.add')}
-          onPress={() => openSheet(<TagEditSheet />)}
-          last
-        />
-      </SettingsCard>
 
-      {authStatus === 'signedIn' ? (
-        <>
-          <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_data')}</Text>
-          <SettingsCard>
+        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_main')}</Text>
+        <SettingsCard>
+          <SettingsRow icon="globe" label={t(settings.lang, 'nav.language')} value={LANG_NAMES[settings.lang]} onPress={onOpenLanguage} />
+          <SettingsRow
+            icon="sun"
+            label={t(settings.lang, 'settings.theme_label')}
+            right={<ThemeSwitch value={resolvedMode === 'dark'} onValueChange={onToggleTheme} />}
+            last
+          />
+        </SettingsCard>
+
+        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_work')}</Text>
+        <SettingsCard>
+          <SettingsRow icon="wallet" label={t(settings.lang, 'settings.rate_label')} value={fmtMoney(settings.hourlyRate || 0, settings.lang, settings.currency)} onPress={onOpenRate} />
+          <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
+        </SettingsCard>
+
+        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_tags')}</Text>
+        <SettingsCard>
+          {tags.length ? tags.map((tag) => (
             <SettingsRow
-              icon="cloud"
-              label={t(settings.lang, 'sync.toggle_label')}
-              right={(
-                <Switch
-                  value={settings.syncEnabled !== false}
-                  onValueChange={setSyncEnabled}
-                  trackColor={{ false: colors.panel2, true: colors.accent }}
-                  ios_backgroundColor={colors.panel2}
-                  thumbColor="#fff"
-                />
-              )}
-              last
+              key={tag.id}
+              icon="pin"
+              label={tag.name}
+              value={tagUsageLabel(tag.id)}
+              onPress={() => openSheet(<TagEditSheet tag={tag} />)}
             />
-          </SettingsCard>
-        </>
-      ) : null}
-
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_notifications')}</Text>
-      <SettingsCard>
-        <SettingsRow
-          icon="bell"
-          label={t(settings.lang, 'notif.enable')}
-          right={(
-            <Switch
-              value={settings.notifyEnabled !== false}
-              onValueChange={onToggleNotify}
-              trackColor={{ false: colors.panel2, true: colors.accent }}
-              ios_backgroundColor={colors.panel2}
-              thumbColor="#fff"
-            />
+          )) : (
+            <View style={styles.tagsHint}>
+              <Text style={styles.tagsHintText}>{t(settings.lang, 'tag.empty_hint')}</Text>
+            </View>
           )}
-        />
-        <SettingsRow
-          icon="settings"
-          label={t(settings.lang, 'notif.system')}
-          value={t(settings.lang, `notif.perm_${notifPerm === 'granted' ? 'granted' : notifPerm === 'denied' ? 'denied' : 'ask'}`)}
-          onPress={onOpenSystemNotifications}
-          last
-        />
-      </SettingsCard>
+          <SettingsRow
+            icon="plus"
+            label={t(settings.lang, 'tag.add')}
+            onPress={() => openSheet(<TagEditSheet />)}
+            last
+          />
+        </SettingsCard>
 
-      <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_about')}</Text>
-      <SettingsCard>
-        <SettingsRow icon="link" label={t(settings.lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
-        <SettingsRow icon="list-bullet" label={t(settings.lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} last />
-      </SettingsCard>
+        {authStatus === 'signedIn' ? (
+          <>
+            <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_data')}</Text>
+            <SettingsCard>
+              <SettingsRow
+                icon="cloud"
+                label={t(settings.lang, 'sync.toggle_label')}
+                right={(
+                  <Switch
+                    value={settings.syncEnabled !== false}
+                    onValueChange={setSyncEnabled}
+                    trackColor={{ false: colors.panel2, true: colors.accent }}
+                    ios_backgroundColor={colors.panel2}
+                    thumbColor="#fff"
+                  />
+                )}
+                last
+              />
+            </SettingsCard>
+          </>
+        ) : null}
 
-      <Text style={styles.footer}>Lancible · {appVersion}</Text>
-    </ScrollView>
+        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_notifications')}</Text>
+        <SettingsCard>
+          <SettingsRow
+            icon="bell"
+            label={t(settings.lang, 'notif.enable')}
+            right={(
+              <Switch
+                value={settings.notifyEnabled !== false}
+                onValueChange={onToggleNotify}
+                trackColor={{ false: colors.panel2, true: colors.accent }}
+                ios_backgroundColor={colors.panel2}
+                thumbColor="#fff"
+              />
+            )}
+          />
+          <SettingsRow
+            icon="settings"
+            label={t(settings.lang, 'notif.system')}
+            value={t(settings.lang, `notif.perm_${notifPerm === 'granted' ? 'granted' : notifPerm === 'denied' ? 'denied' : 'ask'}`)}
+            onPress={onOpenSystemNotifications}
+            last
+          />
+        </SettingsCard>
+
+        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_about')}</Text>
+        <SettingsCard>
+          <SettingsRow icon="link" label={t(settings.lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
+          <SettingsRow icon="list-bullet" label={t(settings.lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} last />
+        </SettingsCard>
+
+        <Text style={styles.footer}>Lancible · {appVersion}</Text>
+      </ScrollView>
+    </View>
   );
 }
 

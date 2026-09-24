@@ -11,6 +11,7 @@ import { buildPeriodSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import Icon from '../components/Icon';
 import PrimaryButton from '../components/PrimaryButton';
+import SearchHeader from '../components/SearchHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, spacing, radius, fontSize } from '../theme';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
@@ -339,140 +340,148 @@ export default function CalendarScreen({ navigation }) {
   // отработали, так что ранний возврат здесь безопасен.
   if (mode === 'schedule') {
     return (
-      <ScheduleView
-        onExit={() => setMode('month')}
-        navigate={(taskId) => {
-          const task = tasks.find((x) => x.id === taskId);
-          if (!task) return;
-          navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
-        }}
-      />
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <SearchHeader navigation={navigation} />
+        <ScheduleView
+          onExit={() => setMode('month')}
+          navigate={(taskId) => {
+            const task = tasks.find((x) => x.id === taskId);
+            if (!task) return;
+            navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
+          }}
+        />
+      </View>
     );
   }
 
   const listData = mode === 'day' ? [] : periodOn ? [] : daySessions;
 
   return (
-    <FlatList
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      data={listData}
-      keyExtractor={(item, i) => `${item.task.id}-${i}`}
-      showsVerticalScrollIndicator={false}
-      ListHeaderComponent={
-        <View>
-          <View style={styles.modeRow}>
-            {['schedule', 'month', 'week', 'day'].map((m) => (
-              <Pressable key={m} onPress={() => setMode(m)} style={[styles.modeTab, mode === m && styles.modeTabActive]}>
-                <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>{t(lang, m === 'schedule' ? 'agenda.schedule' : `calendar.${m}`)}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {mode !== 'day' ? (
-            <>
-              <View style={styles.navRow}>
-                <Pressable hitSlop={10} onPress={() => animateShift(-1)} style={styles.navBtn}><Icon name="chevron-left" size={18} color={colors.text} /></Pressable>
-                <Text style={styles.navTitle}>{capFirst(title)}</Text>
-                <Pressable hitSlop={10} onPress={() => animateShift(1)} style={styles.navBtn}><Icon name="chevron-right" size={18} color={colors.text} /></Pressable>
-              </View>
-
-              <View style={styles.actionsRow}>
-                <Pressable onPress={goToday} style={styles.todayBtn}>
-                  <Icon name="check" size={12} color={colors.text} />
-                  <Text style={styles.todayBtnText}>{t(lang, 'calendar.today')}</Text>
+    // Шапка с поиском — одна на все корневые экраны, поэтому она внутри
+    // экрана, а не в навигации: навигационная шапка на вкладках выключена.
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <SearchHeader navigation={navigation} />
+      <FlatList
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        data={listData}
+        keyExtractor={(item, i) => `${item.task.id}-${i}`}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View>
+            <View style={styles.modeRow}>
+              {['schedule', 'month', 'week', 'day'].map((m) => (
+                <Pressable key={m} onPress={() => setMode(m)} style={[styles.modeTab, mode === m && styles.modeTabActive]}>
+                  <Text style={[styles.modeText, mode === m && styles.modeTextActive]}>{t(lang, m === 'schedule' ? 'agenda.schedule' : `calendar.${m}`)}</Text>
                 </Pressable>
-                <Pressable onPress={togglePeriod} style={[styles.periodBtn, periodOn && styles.periodBtnActive]}>
-                  <Icon name="calendar" size={13} color={periodOn ? colors.accentText : colors.text} />
-                  <Text style={[styles.periodBtnText, periodOn && styles.periodBtnTextActive]}>{t(lang, 'calendar.choose_period')}</Text>
-                </Pressable>
-              </View>
+              ))}
+            </View>
 
-              <View style={styles.weekdaysRow}>
-                {WEEKDAY_KEYS.map((k) => <Text key={k} style={styles.weekday}>{t(lang, k)}</Text>)}
-              </View>
-
-              <View style={[styles.carouselViewport, { width: pageWidth }]}>
-                <GestureDetector gesture={swipeGesture}>
-                  <Animated.View style={[styles.carouselTrack, { width: pageWidth * 3 + PANEL_GAP * 2 }, carouselAnimatedStyle]}>
-                    <View style={{ width: pageWidth }}>{renderGridPanel(prevCells)}</View>
-                    <View style={{ width: pageWidth }}>{renderGridPanel(currCells)}</View>
-                    <View style={{ width: pageWidth }}>{renderGridPanel(nextCells)}</View>
-                  </Animated.View>
-                </GestureDetector>
-              </View>
-
-              {!periodOn ? (
-                <View style={styles.viewTotalBar}>
-                  <Text style={styles.viewTotalLabel}>{mode === 'month' ? t(lang, 'calendar.for_month') : t(lang, 'calendar.for_week')}</Text>
-                  <Text style={styles.viewTotalValue}>{fmtDur(viewTotal.ms, lang)} · {fmtMoney(viewTotal.money, lang, currency)}</Text>
+            {mode !== 'day' ? (
+              <>
+                <View style={styles.navRow}>
+                  <Pressable hitSlop={10} onPress={() => animateShift(-1)} style={styles.navBtn}><Icon name="chevron-left" size={18} color={colors.text} /></Pressable>
+                  <Text style={styles.navTitle}>{capFirst(title)}</Text>
+                  <Pressable hitSlop={10} onPress={() => animateShift(1)} style={styles.navBtn}><Icon name="chevron-right" size={18} color={colors.text} /></Pressable>
                 </View>
-              ) : (
-                <View style={styles.viewTotalBar}>
-                  <Text style={styles.viewTotalLabel} numberOfLines={1}>
-                    {rangeBounds ? `${dayKey(rangeBounds[0])} – ${dayKey(rangeBounds[1])}` : t(lang, 'calendar.choose_period')}
-                  </Text>
-                  {periodSummary && periodSummary.rows.length ? (
-                    <Text style={styles.viewTotalValue}>{fmtDur(periodSummary.totalMs, lang)} · {fmtMoney(periodSummary.totalMoney, lang, currency)}</Text>
-                  ) : null}
-                </View>
-              )}
 
-              {periodOn ? (
-                <>
-                  {periodSummary && periodSummary.rows.length ? (
-                    <View style={styles.exportBtnWrap}>
-                      <PrimaryButton icon="download" title={t(lang, 'export.title')} onPress={onExportPeriod} />
-                    </View>
-                  ) : null}
-                  {!periodSummary || !periodSummary.rows.length ? <Text style={styles.empty}>{t(lang, 'calendar.day_empty')}</Text> : null}
-                  {periodSummary ? periodSummary.rows.map(({ task, ms, money }) => {
-                    const project = getProject(projects, task.projectId);
-                    return (
-                      <Pressable key={task.id} onPress={() => openTask(task)} style={styles.sessionRow}>
-                        <View style={[styles.sessionDot, { backgroundColor: project ? project.color : colors.accent }]} />
-                        <View style={styles.sessionMid}>
-                          <Text style={styles.sessionTask} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
-                          <Text style={styles.sessionMeta}>{project ? project.name : ''} · {fmtMoney(money, lang, currency)}</Text>
-                        </View>
-                        <Text style={styles.sessionDur}>{fmtDur(ms, lang)}</Text>
-                      </Pressable>
-                    );
-                  }) : null}
-                </>
-              ) : (
-                <>
-                  <View style={styles.dayHeadRow}>
-                    <Text style={styles.dayHead}>{capFirst(keyToDate(selected).toLocaleDateString(LOCALE_MAP[lang], { weekday: 'short', day: 'numeric', month: 'long' }))}</Text>
-                    {daySessions.length ? <Text style={styles.dayHeadTot}>{fmtDur(dayTotal.ms, lang)} · {fmtMoney(dayTotal.money, lang, currency)}</Text> : null}
+                <View style={styles.actionsRow}>
+                  <Pressable onPress={goToday} style={styles.todayBtn}>
+                    <Icon name="check" size={12} color={colors.text} />
+                    <Text style={styles.todayBtnText}>{t(lang, 'calendar.today')}</Text>
+                  </Pressable>
+                  <Pressable onPress={togglePeriod} style={[styles.periodBtn, periodOn && styles.periodBtnActive]}>
+                    <Icon name="calendar" size={13} color={periodOn ? colors.accentText : colors.text} />
+                    <Text style={[styles.periodBtnText, periodOn && styles.periodBtnTextActive]}>{t(lang, 'calendar.choose_period')}</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.weekdaysRow}>
+                  {WEEKDAY_KEYS.map((k) => <Text key={k} style={styles.weekday}>{t(lang, k)}</Text>)}
+                </View>
+
+                <View style={[styles.carouselViewport, { width: pageWidth }]}>
+                  <GestureDetector gesture={swipeGesture}>
+                    <Animated.View style={[styles.carouselTrack, { width: pageWidth * 3 + PANEL_GAP * 2 }, carouselAnimatedStyle]}>
+                      <View style={{ width: pageWidth }}>{renderGridPanel(prevCells)}</View>
+                      <View style={{ width: pageWidth }}>{renderGridPanel(currCells)}</View>
+                      <View style={{ width: pageWidth }}>{renderGridPanel(nextCells)}</View>
+                    </Animated.View>
+                  </GestureDetector>
+                </View>
+
+                {!periodOn ? (
+                  <View style={styles.viewTotalBar}>
+                    <Text style={styles.viewTotalLabel}>{mode === 'month' ? t(lang, 'calendar.for_month') : t(lang, 'calendar.for_week')}</Text>
+                    <Text style={styles.viewTotalValue}>{fmtDur(viewTotal.ms, lang)} · {fmtMoney(viewTotal.money, lang, currency)}</Text>
                   </View>
-                  {!daySessions.length ? <Text style={styles.empty}>{t(lang, 'calendar.day_empty')}</Text> : null}
-                </>
-              )}
-            </>
-          ) : (
-            <View style={styles.dayStub}>
-              <Icon name="clock" size={32} color={colors.textDim} />
-              <Text style={styles.empty}>{t(lang, 'calendar.day')} — скоро</Text>
-            </View>
-          )}
-        </View>
-      }
-      renderItem={({ item }) => {
-        const { task, s } = item;
-        const project = getProject(projects, task.projectId);
-        return (
-          <Pressable onPress={() => openTask(task)} style={styles.sessionRow}>
-            <View style={[styles.sessionDot, { backgroundColor: project ? project.color : colors.accent }]} />
-            <View style={styles.sessionMid}>
-              <Text style={styles.sessionTask} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
-              <Text style={styles.sessionMeta}>{fmtTime(s.start, lang)}–{s.end ? fmtTime(s.end, lang) : '…'} · {project ? project.name : ''}</Text>
-            </View>
-            <Text style={styles.sessionDur}>{fmtDur(s.ms, lang)}</Text>
-          </Pressable>
-        );
-      }}
-    />
+                ) : (
+                  <View style={styles.viewTotalBar}>
+                    <Text style={styles.viewTotalLabel} numberOfLines={1}>
+                      {rangeBounds ? `${dayKey(rangeBounds[0])} – ${dayKey(rangeBounds[1])}` : t(lang, 'calendar.choose_period')}
+                    </Text>
+                    {periodSummary && periodSummary.rows.length ? (
+                      <Text style={styles.viewTotalValue}>{fmtDur(periodSummary.totalMs, lang)} · {fmtMoney(periodSummary.totalMoney, lang, currency)}</Text>
+                    ) : null}
+                  </View>
+                )}
+
+                {periodOn ? (
+                  <>
+                    {periodSummary && periodSummary.rows.length ? (
+                      <View style={styles.exportBtnWrap}>
+                        <PrimaryButton icon="download" title={t(lang, 'export.title')} onPress={onExportPeriod} />
+                      </View>
+                    ) : null}
+                    {!periodSummary || !periodSummary.rows.length ? <Text style={styles.empty}>{t(lang, 'calendar.day_empty')}</Text> : null}
+                    {periodSummary ? periodSummary.rows.map(({ task, ms, money }) => {
+                      const project = getProject(projects, task.projectId);
+                      return (
+                        <Pressable key={task.id} onPress={() => openTask(task)} style={styles.sessionRow}>
+                          <View style={[styles.sessionDot, { backgroundColor: project ? project.color : colors.accent }]} />
+                          <View style={styles.sessionMid}>
+                            <Text style={styles.sessionTask} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
+                            <Text style={styles.sessionMeta}>{project ? project.name : ''} · {fmtMoney(money, lang, currency)}</Text>
+                          </View>
+                          <Text style={styles.sessionDur}>{fmtDur(ms, lang)}</Text>
+                        </Pressable>
+                      );
+                    }) : null}
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.dayHeadRow}>
+                      <Text style={styles.dayHead}>{capFirst(keyToDate(selected).toLocaleDateString(LOCALE_MAP[lang], { weekday: 'short', day: 'numeric', month: 'long' }))}</Text>
+                      {daySessions.length ? <Text style={styles.dayHeadTot}>{fmtDur(dayTotal.ms, lang)} · {fmtMoney(dayTotal.money, lang, currency)}</Text> : null}
+                    </View>
+                    {!daySessions.length ? <Text style={styles.empty}>{t(lang, 'calendar.day_empty')}</Text> : null}
+                  </>
+                )}
+              </>
+            ) : (
+              <View style={styles.dayStub}>
+                <Icon name="clock" size={32} color={colors.textDim} />
+                <Text style={styles.empty}>{t(lang, 'calendar.day')} — скоро</Text>
+              </View>
+            )}
+          </View>
+        }
+        renderItem={({ item }) => {
+          const { task, s } = item;
+          const project = getProject(projects, task.projectId);
+          return (
+            <Pressable onPress={() => openTask(task)} style={styles.sessionRow}>
+              <View style={[styles.sessionDot, { backgroundColor: project ? project.color : colors.accent }]} />
+              <View style={styles.sessionMid}>
+                <Text style={styles.sessionTask} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
+                <Text style={styles.sessionMeta}>{fmtTime(s.start, lang)}–{s.end ? fmtTime(s.end, lang) : '…'} · {project ? project.name : ''}</Text>
+              </View>
+              <Text style={styles.sessionDur}>{fmtDur(s.ms, lang)}</Text>
+            </Pressable>
+          );
+        }}
+      />
+    </View>
   );
 }
 
