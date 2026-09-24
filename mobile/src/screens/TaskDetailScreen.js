@@ -9,6 +9,7 @@ import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney, capFirst
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
+import MenuSheet from '../components/MenuSheet';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import DueSheet from '../components/DueSheet';
 import TagPickerSheet from '../components/TagPickerSheet';
@@ -135,20 +136,60 @@ export default function TaskDetailScreen({ route, navigation }) {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <View style={styles.headerActions}>
-          <Pressable hitSlop={10} onPress={onExport} style={styles.headerIconBtn}>
-            <Icon name="download" size={20} color={colors.text} />
-          </Pressable>
-          <Pressable hitSlop={10} onPress={() => togglePinTask(taskId)} style={styles.headerIconBtn}>
-            <Icon name="pin" size={20} color={task && task.pinnedAt ? colors.accent : colors.text} />
-          </Pressable>
-          <Pressable hitSlop={10} onPress={onDelete} style={styles.headerIconBtnLast}>
-            <Icon name="trash" size={20} color={colors.text} />
-          </Pressable>
-        </View>
+        <Pressable hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn}>
+          <Icon name="kebab" size={18} color={colors.text} />
+        </Pressable>
       ),
     });
-  }, [navigation, task, colors]);
+  }, [navigation, task, colors, LANG]);
+
+  function onOpenMenu() {
+    openSheet(
+      <MenuSheet
+        title={(task && task.title) || t(LANG, 'task.no_name')}
+        items={[
+          {
+            key: 'pin',
+            icon: 'pin',
+            label: t(LANG, task && task.pinnedAt ? 'pin.unpin' : 'pin.pin'),
+            onPress: () => togglePinTask(taskId),
+          },
+          { key: 'export', icon: 'download', label: t(LANG, 'menu.export_excel'), onPress: onExport },
+          {
+            key: 'delete',
+            icon: 'trash',
+            label: t(LANG, 'task.delete_title'),
+            danger: true,
+            separated: true,
+            onPress: onDelete,
+          },
+        ]}
+      />,
+    );
+  }
+
+  const project = getProject(projects, task ? task.projectId : null);
+
+  /** Открыть проект задачи. Если мы пришли с его же страницы, возвращаемся
+   *  назад, а не кладём в стек второй такой же экран: иначе «назад» потом
+   *  проводит через ту же страницу дважды. Предыдущий экран смотрим в
+   *  состоянии навигатора — параметры маршрута об этом не знают. */
+  function onOpenProject() {
+    if (!project) return;
+    const state = navigation.getState();
+    const prev = state.routes[state.index - 1];
+    if (prev && prev.name === 'Project' && prev.params && prev.params.projectId === project.id) {
+      navigation.goBack();
+      return;
+    }
+    // В стеке доски экрана проекта нет вовсе — там он живёт в «Главной».
+    if (state.routes.some((r) => r.name === 'Project')
+      || state.routeNames.includes('Project')) {
+      navigation.navigate('Project', { projectId: project.id });
+      return;
+    }
+    navigation.navigate('Home', { screen: 'Project', params: { projectId: project.id } });
+  }
 
   function onDelete() {
     const msg = task && task.title
@@ -299,6 +340,15 @@ export default function TaskDetailScreen({ route, navigation }) {
         scrollEventThrottle={16}
       >
         <View style={styles.header}>
+          {/* Из какого проекта задача — первое, что нужно знать, открыв её
+              из поиска или мини-плеера: там контекста не было вовсе. */}
+          {project ? (
+            <Pressable style={styles.projectRow} onPress={onOpenProject}>
+              <View style={[styles.projectDot, { backgroundColor: project.color }]} />
+              <Text style={styles.projectName} numberOfLines={1}>{project.name}</Text>
+              <Icon name="chevron-right" size={12} color={colors.textDim} />
+            </Pressable>
+          ) : null}
           <TextInput
             style={styles.titleInput}
             value={title}
@@ -481,9 +531,15 @@ const makeStyles = (colors) => StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   header: { padding: spacing.lg, paddingBottom: spacing.sm },
-  headerActions: { flexDirection: 'row' },
-  headerIconBtn: { paddingHorizontal: spacing.sm },
-  headerIconBtnLast: { paddingLeft: spacing.sm },
+  menuBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  // Высота 44 — не для красоты: строка узкая, а промахиваться по ней
+  // означает уехать в чужой проект.
+  projectRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    height: 44,
+  },
+  projectDot: { width: 8, height: 8, borderRadius: 3 },
+  projectName: { color: colors.textDim, fontSize: fontSize.sm },
   // marginBottom меньше, чем зазор между остальными блоками ниже (timerCard/
   // splitRow/tabRow держат spacing.lg сами) — раньше был общий gap на .header,
   // одинаковый везде; тут именно название-таймер должен быть теснее.

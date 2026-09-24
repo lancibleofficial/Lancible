@@ -1,24 +1,36 @@
-import { useLayoutEffect, useMemo, useState } from 'react';
-import { View, SectionList, Pressable, ScrollView, StyleSheet } from 'react-native';
+// Страница проекта: сводка, отбор по версии и список задач.
+//
+// В шапке остались только «назад», название и ⋮. Четыре иконки подряд
+// съедали место у названия и всё равно требовали угадывать, что делает
+// каждая; в меню у действия есть подпись.
+//
+// Отбор по версии здесь тот же, что на доске, — один на проект. Два
+// независимых отбора расходились бы молча: на доске смотришь v1.0, а в
+// списке задач почему-то всё.
+import { useLayoutEffect, useMemo } from 'react';
+import { View, SectionList, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
-import TagPickerSheet from '../components/TagPickerSheet';
-import { TagBadgeRow } from '../components/TagBadge';
-import { tagsOf } from '../lib/tags';
+import NewProjectSheet from '../components/NewProjectSheet';
+import PickerSheet from '../components/PickerSheet';
+import MenuSheet from '../components/MenuSheet';
+import QuickTaskSheet from '../components/QuickTaskSheet';
+import SwipeRow from '../components/SwipeRow';
 import { useAppStore, sortedProjectTasks, tasksOf, projectMs, projectMoney, getProject } from '../store/useAppStore';
 import { fmtDur, fmtMoney } from '../lib/format';
+import { defaultStatusId } from '../lib/statuses';
 import { buildProjectSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
 import TaskListItem from '../components/TaskListItem';
 import Icon from '../components/Icon';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
-import VersionsSheet from '../components/VersionsSheet';
 import Versions from '../core/versions.js';
+import { useTicker } from '../hooks/useTicker';
 import { openSheet, closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, buttonHeight } from '../theme';
-import { t } from '../lib/i18n';
+import { useColors, spacing, radius, fontSize } from '../theme';
+import { t, pluralForm } from '../lib/i18n';
 
 export default function ProjectScreen({ route, navigation }) {
   const colors = useColors();
@@ -27,24 +39,28 @@ export default function ProjectScreen({ route, navigation }) {
   const { projectId } = route.params;
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
+  const statuses = useAppStore((s) => s.statuses);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const setBoardProject = useAppStore((s) => s.setBoardProject);
+  const boardVersion = useAppStore((s) => s.ui.boardVersion);
+  const setBoardVersion = useAppStore((s) => s.setBoardVersion);
   const hourlyRate = useAppStore((s) => s.settings.hourlyRate);
   const LANG = useAppStore((s) => s.settings.lang);
   const currency = useAppStore((s) => s.settings.currency);
-  const createTask = useAppStore((s) => s.createTask);
   const deleteProject = useAppStore((s) => s.deleteProject);
-  const allTags = useAppStore((s) => s.tags);
-  const setProjectTags = useAppStore((s) => s.setProjectTags);
   const togglePinProject = useAppStore((s) => s.togglePinProject);
+  const togglePinTask = useAppStore((s) => s.togglePinTask);
   const showToast = useAppStore((s) => s.showToast);
   const versions = useAppStore((s) => s.versions);
 
   const project = getProject(projects, projectId);
-  // Отбор по версии — как на десктопе в списке задач: «все», конкретная
-  // версия или «без версии». Живёт в экране, а не в данных: это способ
-  // смотреть, а не свойство проекта.
-  const [versionFilter, setVersionFilter] = useState('all');
+  // Идёт таймер по задаче этого проекта — время и деньги в сводке должны
+  // расти на глазах, а не после возврата на экран.
+  const runningHere = !!activeTimer
+    && (tasks.find((task) => task.id === activeTimer.taskId) || {}).projectId === projectId;
+  useTicker(runningHere);
+
+  const versionFilter = (boardVersion && boardVersion[projectId]) || 'all';
   const projectVersions = useMemo(
     () => Versions.versionsOf(versions, projectId),
     [versions, projectId],
@@ -87,114 +103,128 @@ export default function ProjectScreen({ route, navigation }) {
 
   function onOpenBoard() {
     setBoardProject(projectId);
-    navigation.navigate('Board');
+    navigation.navigate('Board', { screen: 'BoardMain' });
+  }
+
+  function onOpenStats() {
+    navigation.navigate('Stats');
+  }
+
+  function onEditProject() {
+    openSheet(<NewProjectSheet project={project} onCancel={closeSheet} onCreated={closeSheet} />);
+  }
+
+  function onOpenMenu() {
+    openSheet(
+      <MenuSheet
+        title={project ? project.name : ''}
+        items={[
+          { key: 'edit', icon: 'settings', label: t(LANG, 'project.menu_edit'), onPress: onEditProject },
+          { key: 'stats', icon: 'chart', label: t(LANG, 'project.menu_stats'), onPress: onOpenStats },
+          { key: 'board', icon: 'board', label: t(LANG, 'project.menu_board'), onPress: onOpenBoard },
+          {
+            key: 'pin',
+            icon: 'pin',
+            label: t(LANG, project && project.pinnedAt ? 'pin.unpin' : 'pin.pin'),
+            onPress: () => togglePinProject(projectId),
+          },
+          { key: 'export', icon: 'download', label: t(LANG, 'menu.export_excel'), onPress: onOpenExport },
+          {
+            key: 'delete',
+            icon: 'trash',
+            label: t(LANG, 'project.delete'),
+            danger: true,
+            separated: true,
+            onPress: onDeleteProject,
+          },
+        ]}
+      />,
+    );
+  }
+
+  function onPickVersion() {
+    openSheet(
+      <PickerSheet
+        title={t(LANG, 'version.label')}
+        value={versionFilter}
+        options={[
+          { value: 'all', label: t(LANG, 'board.all_versions') },
+          ...projectVersions.map((v) => ({ value: v.id, label: v.name })),
+          { value: 'none', label: t(LANG, 'version.none') },
+        ]}
+        onSelect={(value) => setBoardVersion(projectId, value)}
+      />,
+    );
+  }
+
+  function onAddTask() {
+    // Версия берётся из отбора: смотришь v1.0 — заводишь в v1.0. При «Все
+    // версии» и «Без версии» брать нечего, задача уходит без версии.
+    const versionId = versionFilter !== 'all' && versionFilter !== 'none' ? versionFilter : null;
+    openSheet(
+      <QuickTaskSheet
+        projectId={projectId}
+        statusId={defaultStatusId(statuses, projectId, false)}
+        versionId={versionId}
+        contextLabel={project ? project.name : ''}
+      />,
+    );
   }
 
   useLayoutEffect(() => {
     navigation.setOptions({
       title: project ? project.name : '',
       headerRight: () => (
-        <View style={styles.headerActions}>
-          {/* Доска живёт своей вкладкой, а не вторым экраном внутри
-              проекта: иначе один и тот же экран открывался бы из двух
-              мест с разной навигацией. Кнопка просто говорит доске,
-              какой проект показать, и переключает вкладку. */}
-          <Pressable hitSlop={10} onPress={onOpenBoard} style={styles.headerIconBtn}>
-            <Icon name="board" size={20} color={colors.text} />
-          </Pressable>
-          <Pressable hitSlop={10} onPress={onOpenVersions} style={styles.headerIconBtn}>
-            <Icon name="settings" size={20} color={colors.text} />
-          </Pressable>
-          <Pressable hitSlop={10} onPress={() => togglePinProject(projectId)} style={styles.headerIconBtn}>
-            <Icon name="pin" size={20} color={project && project.pinnedAt ? colors.accent : colors.text} />
-          </Pressable>
-          <Pressable hitSlop={10} onPress={onDeleteProject} style={styles.headerIconBtnLast}>
-            <Icon name="trash" size={20} color={colors.text} />
-          </Pressable>
-        </View>
+        <Pressable hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn}>
+          <Icon name="kebab" size={18} color={colors.text} />
+        </Pressable>
       ),
     });
-  }, [navigation, project, colors]);
-
-  const projectTags = tagsOf(allTags, project ? project.tagIds : []);
-
-
-
-  function onOpenVersions() {
-    openSheet(<VersionsSheet projectId={projectId} lang={LANG} />);
-  }
-
-  function onOpenTags() {
-
-
-    openSheet(<TagPickerSheet value={(project && project.tagIds) || []} onChange={(ids) => setProjectTags(projectId, ids)} />);
-
-
-  }
-
-
-
-  function onAddTask() {
-    const task = createTask(projectId);
-    navigation.navigate('TaskDetail', { taskId: task.id });
-  }
+  }, [navigation, project, colors, LANG, versionFilter]);
 
   if (!project) return null;
 
-  const ms = projectMs(tasks, projectId, activeTimer);
-  const money = projectMoney(tasks, projectId, hourlyRate, activeTimer);
+  const ms = projectMs(visibleTasks, projectId, activeTimer);
+  const money = projectMoney(visibleTasks, projectId, hourlyRate, activeTimer);
+  const doneCount = done.length;
+  const totalCount = pinned.length + rest.length + done.length;
+  const pct = totalCount ? Math.round((doneCount / totalCount) * 100) : 0;
+
   const sections = [
     pinned.length ? { key: 'pinned', label: t(LANG, 'home.pinned'), data: pinned } : null,
-    rest.length ? { key: 'rest', label: t(LANG, 'filter.active'), data: rest } : null,
+    rest.length ? { key: 'rest', label: t(LANG, 'section.active'), data: rest } : null,
     done.length ? { key: 'done', label: t(LANG, 'filter.done'), data: done } : null,
   ].filter(Boolean);
+  // Заголовки нужны, только когда есть что от чего отделять — как в вебе.
+  const showHeaders = sections.length > 1;
 
   return (
     <View style={styles.container}>
-      <View style={styles.summary}>
-        <View style={styles.statCard}>
-          <Icon name="wallet" size={14} color={colors.textDim} />
-          <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmtMoney(money, LANG, currency)}</Text>
+      <Pressable style={styles.summary} onPress={onOpenStats}>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryText} numberOfLines={1}>
+            {fmtDur(ms, LANG)} · {fmtMoney(money, LANG, currency)} · {t(LANG, 'project.summary_tasks', {
+              done: doneCount,
+              total: totalCount,
+              plural: pluralForm(LANG, totalCount, 'plural.task'),
+            })}
+          </Text>
+          <Icon name="chevron-right" size={13} color={colors.textDim} />
         </View>
-        <View style={styles.statCard}>
-          <Icon name="clock" size={14} color={colors.textDim} />
-          <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmtDur(ms, LANG)}</Text>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${pct}%` }]} />
         </View>
-        <PrimaryButton icon="download" onPress={onOpenExport} style={styles.exportBtn} />
-      </View>
-      {/* Теги проекта. Экрана правки проекта на мобильном нет вовсе, поэтому
-          ряд бейджей здесь же и редактируется по тапу — иначе выставленные
-          при создании теги остались бы навсегда. */}
-      <Pressable style={styles.tagsRow} onPress={onOpenTags}>
-        {projectTags.length ? (
-          <TagBadgeRow tags={projectTags} />
-        ) : (
-          <Text style={styles.tagsEmpty}>{t(LANG, 'tag.pick')}</Text>
-        )}
       </Pressable>
+
       {projectVersions.length ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-          // flexGrow: 0 — иначе ScrollView в колонке забирает всё свободное
-          // место, и полоса фишек растягивается на пол-экрана.
-          style={{ flexGrow: 0 }}
-        >
-          {[
-            { id: 'all', name: t(LANG, 'version.all') },
-            ...projectVersions,
-            { id: 'none', name: t(LANG, 'version.none') },
-          ].map((v) => {
-            const on = versionFilter === v.id;
-            return (
-              <Pressable key={v.id} onPress={() => setVersionFilter(v.id)} style={[styles.chip, on && styles.chipOn]}>
-                <Text style={[styles.chipText, on && styles.chipTextOn]} numberOfLines={1}>{v.name}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <Pressable style={styles.versionRow} onPress={onPickVersion} hitSlop={6}>
+          <Text style={styles.versionText} numberOfLines={1}>
+            {versionLabel(versionFilter, projectVersions, LANG)}
+          </Text>
+          <Icon name="chevron-down" size={12} color={colors.textDim} />
+        </Pressable>
       ) : null}
+
       <SectionList
         style={styles.list}
         sections={sections}
@@ -202,14 +232,20 @@ export default function ProjectScreen({ route, navigation }) {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}
-        renderSectionHeader={({ section }) => (
+        renderSectionHeader={({ section }) => (showHeaders ? (
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{section.label}</Text>
             <View style={styles.sectionBadge}><Text style={styles.sectionBadgeText}>{section.data.length}</Text></View>
           </View>
-        )}
+        ) : null)}
         renderItem={({ item }) => (
-          <TaskListItem task={item} onPress={() => navigation.navigate('TaskDetail', { taskId: item.id })} />
+          <SwipeRow
+            label={t(LANG, item.pinnedAt ? 'pin.unpin' : 'pin.pin')}
+            onAction={() => togglePinTask(item.id)}
+            style={styles.taskRow}
+          >
+            <TaskListItem task={item} onPress={() => navigation.navigate('TaskDetail', { taskId: item.id })} />
+          </SwipeRow>
         )}
         ListEmptyComponent={<Text style={styles.empty}>{t(LANG, 'sidebar.empty_default')}</Text>}
       />
@@ -220,39 +256,41 @@ export default function ProjectScreen({ route, navigation }) {
   );
 }
 
+/** Подпись отбора: «Все версии», имя версии или «Без версии». */
+function versionLabel(filter, list, lang) {
+  if (filter === 'all') return t(lang, 'board.all_versions');
+  if (filter === 'none') return t(lang, 'version.none');
+  const found = list.find((v) => v.id === filter);
+  return found ? found.name : t(lang, 'board.all_versions');
+}
+
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  // alignItems: center обязателен: горизонтальный ScrollView иначе
-  // растягивает детей по высоте, и фишки вытягиваются во весь экран.
-  filterRow: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, alignItems: 'center' },
-  chip: {
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
-    borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border,
-    maxWidth: 160,
+
+  // Одна строка вместо двух плиток и кнопки: всё, что было в них, читается
+  // фразой, а освободившееся место отдано списку задач.
+  summary: {
+    marginHorizontal: spacing.lg, marginTop: spacing.md, marginBottom: spacing.sm,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    backgroundColor: colors.panel, borderRadius: radius.lg, gap: spacing.sm,
   },
-  chipOn: { backgroundColor: colors.accentMuted, borderColor: colors.accent },
-  chipText: { color: colors.textDim, fontSize: fontSize.xs },
-  chipTextOn: { color: colors.text },
-  summary: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
-  // Белый, как карточки проектов на главной (ProjectListItem) — раньше был
-  // panel2, что на этом экране (тоже белый шит поверх bg) выглядело как
-  // отдельная серая подложка, а не единая карточка того же уровня.
-  statCard: {
-    flex: 1, height: buttonHeight, backgroundColor: colors.panel, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, justifyContent: 'center', gap: 2,
+  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  summaryText: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  progressTrack: { height: 4, borderRadius: radius.pill, backgroundColor: colors.panel2, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.accent },
+
+  versionRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
   },
-  statValue: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  // Квадрат buttonHeight×buttonHeight вместо ширины "по контенту" (icon +
-  // horizontal padding), которая на практике давала прямоугольник уже, чем
-  // высота кнопки.
-  exportBtn: { width: buttonHeight, height: buttonHeight, paddingHorizontal: 0 },
-  tagsRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, minHeight: 28, justifyContent: "center" },
-  tagsEmpty: { color: colors.textDim, fontSize: fontSize.sm },
+  versionText: { color: colors.textDim, fontSize: fontSize.sm },
+
+  // Список задач плотнее списка проектов: строки короче, и зазор в 12
+  // между ними рвал бы его на отдельные карточки.
+  taskRow: { marginBottom: spacing.sm, borderRadius: radius.md },
   list: { flex: 1 },
   listContent: { padding: spacing.lg, paddingTop: 0, paddingBottom: spacing.lg },
-  headerActions: { flexDirection: 'row' },
-  headerIconBtn: { paddingHorizontal: spacing.sm },
-  headerIconBtnLast: { paddingLeft: spacing.sm },
+  menuBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginTop: spacing.lg, marginBottom: spacing.sm, paddingBottom: spacing.xs,

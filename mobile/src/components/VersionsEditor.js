@@ -3,19 +3,22 @@
 // Версия принадлежит проекту, в отличие от тега, который общий на всё
 // приложение. Порядок и разбивку «в работе / выпущено» считает
 // src/core/versions.js — побайтная копия десктопного файла.
-import { useEffect, useMemo, useState } from 'react';
-import { View, Pressable, StyleSheet, ScrollView } from 'react-native';
+//
+// Не лист, а кусок листа: версии правятся внутри окна проекта, рядом с его
+// названием и цветом. Отдельным окном они были только потому, что окна
+// проекта на телефоне не существовало.
+import { useMemo, useState } from 'react';
+import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import TextInput from './AppTextInput';
 import Icon from './Icon';
 import PrimaryButton from './PrimaryButton';
 import Versions from '../core/versions.js';
 import { useAppStore } from '../store/useAppStore';
-import { closeSheet, setSheetFooter } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize, buttonHeight } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
-export default function VersionsSheet({ projectId, lang }) {
+export default function VersionsEditor({ projectId, lang }) {
   const colors = useColors();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const versions = useAppStore((s) => s.versions);
@@ -32,13 +35,9 @@ export default function VersionsSheet({ projectId, lang }) {
   const taken = Versions.versionNameTaken(versions, projectId, draft, null);
   const canAdd = !!draft.trim() && !taken;
 
-  useEffect(() => {
-    setSheetFooter(<PrimaryButton title={t(lang, 'common.done')} onPress={closeSheet} />);
-  }, [lang]);
-
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>{t(lang, 'version.label')}</Text>
+    <View style={styles.wrap}>
+      <Text style={styles.label}>{t(lang, 'version.label')}</Text>
 
       {own.length === 0 ? <Text style={styles.empty}>{t(lang, 'version.empty_hint')}</Text> : null}
 
@@ -89,14 +88,13 @@ export default function VersionsSheet({ projectId, lang }) {
         />
       </View>
       {taken ? <Text style={styles.bad}>{t(lang, 'version.name_taken')}</Text> : null}
-    </ScrollView>
+    </View>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  scroll: { maxHeight: 440 },
-  content: { gap: spacing.sm, paddingBottom: spacing.md },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  wrap: { gap: spacing.sm },
+  label: { color: colors.textDim, fontSize: fontSize.sm, marginTop: spacing.xs },
   empty: { color: colors.textDim, fontSize: fontSize.sm, lineHeight: 20 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   addRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
@@ -107,7 +105,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   nameBad: { borderColor: colors.danger },
   // PrimaryButton по умолчанию width: 100% — в строке это отнимает всю
-  // ширину у поля. Квадрат по высоте кнопки, как у экспорта в проекте.
+  // ширину у поля. Квадрат по высоте кнопки.
   addBtn: { width: buttonHeight, height: buttonHeight, paddingHorizontal: 0 },
   bad: { color: colors.danger, fontSize: fontSize.xs },
   released: {

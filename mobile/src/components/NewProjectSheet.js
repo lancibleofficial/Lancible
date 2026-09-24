@@ -6,30 +6,46 @@ import { useAppStore } from '../store/useAppStore';
 import { PALETTE } from '../lib/migrate';
 import { tagsOf } from '../lib/tags';
 import TagPickerSheet from './TagPickerSheet';
+import VersionsEditor from './VersionsEditor';
 import { TagBadgeRow } from './TagBadge';
 import { t } from '../lib/i18n';
 import PrimaryButton from './PrimaryButton';
 import { openSheet, setSheetFooter } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize } from '../theme';
 
-export default function NewProjectSheet({ onCreated, onCancel, initial }) {
+/** Окно проекта: создание и правка одним листом.
+ *
+ *  @param {object} [project] — правим существующий. В этом режиме внизу
+ *    появляется список версий: версия принадлежит проекту, и держать её
+ *    в отдельном окне значило бы прятать половину свойств проекта во
+ *    второе место.
+ *  @param {object} [initial] — черновик полей (см. onOpenTags). */
+export default function NewProjectSheet({ onCreated, onCancel, initial, project }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
   const projects = useAppStore((s) => s.projects);
   const createProject = useAppStore((s) => s.createProject);
-  const [name, setName] = useState((initial && initial.name) || '');
-  const [description, setDescription] = useState((initial && initial.description) || '');
-  const [color, setColor] = useState((initial && initial.color) || PALETTE[projects.length % PALETTE.length]);
-  const [tagIds, setTagIds] = useState((initial && initial.tagIds) || []);
+  const updateProject = useAppStore((s) => s.updateProject);
+  // Черновик перебивает сохранённое: он приходит, когда лист открывают
+  // заново после выбора тегов, и набранное к этому моменту дороже.
+  const base = initial || project || {};
+  const [name, setName] = useState(base.name || '');
+  const [description, setDescription] = useState(base.description || '');
+  const [color, setColor] = useState(base.color || PALETTE[projects.length % PALETTE.length]);
+  const [tagIds, setTagIds] = useState(base.tagIds || []);
   const allTags = useAppStore((s) => s.tags);
   const projectTags = tagsOf(allTags, tagIds);
 
   function onSave() {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const project = createProject({ name: trimmed, description: description.trim(), color, tagIds });
-    onCreated(project);
+    if (project) {
+      updateProject(project.id, { name: trimmed, description: description.trim(), color, tagIds });
+      onCreated(project);
+      return;
+    }
+    onCreated(createProject({ name: trimmed, description: description.trim(), color, tagIds }));
   }
 
   // Лист в приложении один, поэтому пикер закрывает собой это окно. Чтобы
@@ -42,7 +58,12 @@ export default function NewProjectSheet({ onCreated, onCancel, initial }) {
         value={tagIds}
         onChange={() => {}}
         onDone={(ids) => openSheet(
-          <NewProjectSheet initial={{ ...draft, tagIds: ids }} onCreated={onCreated} onCancel={onCancel} />,
+          <NewProjectSheet
+            project={project}
+            initial={{ ...draft, tagIds: ids }}
+            onCreated={onCreated}
+            onCancel={onCancel}
+          />,
         )}
       />,
     );
@@ -51,7 +72,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial }) {
   useEffect(() => {
     setSheetFooter(
       <>
-        <PrimaryButton title={t(lang, 'home.create')} onPress={onSave} disabled={!name.trim()} />
+        <PrimaryButton title={t(lang, project ? 'common.save' : 'home.create')} onPress={onSave} disabled={!name.trim()} />
         <PrimaryButton title={t(lang, 'common.cancel')} variant="ghost" onPress={onCancel} />
       </>,
     );
@@ -60,7 +81,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial }) {
 
   return (
     <View style={styles.content}>
-      <Text style={styles.title}>{t(lang, 'project.new_title')}</Text>
+      <Text style={styles.title}>{t(lang, project ? 'project.edit_title' : 'project.new_title')}</Text>
 
       <TextInput
         style={styles.input}
@@ -91,6 +112,8 @@ export default function NewProjectSheet({ onCreated, onCancel, initial }) {
           ? <TagBadgeRow tags={projectTags} />
           : <Text style={styles.tagsEmpty}>{t(lang, 'tag.pick')}</Text>}
       </Pressable>
+
+      {project ? <VersionsEditor projectId={project.id} lang={lang} /> : null}
     </View>
   );
 }
