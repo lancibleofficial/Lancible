@@ -28,6 +28,7 @@ export default function ProjectScreen({ route, navigation }) {
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
   const activeTimer = useAppStore((s) => s.activeTimer);
+  const setBoardProject = useAppStore((s) => s.setBoardProject);
   const hourlyRate = useAppStore((s) => s.settings.hourlyRate);
   const LANG = useAppStore((s) => s.settings.lang);
   const currency = useAppStore((s) => s.settings.currency);
@@ -84,13 +85,22 @@ export default function ProjectScreen({ route, navigation }) {
     openSheet(<ExportPeriodSheet lang={LANG} onConfirm={onExportConfirm} onCancel={closeSheet} />);
   }
 
+  function onOpenBoard() {
+    setBoardProject(projectId);
+    navigation.navigate('Board');
+  }
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: project ? project.name : '',
       headerRight: () => (
         <View style={styles.headerActions}>
-          <Pressable hitSlop={10} onPress={() => navigation.navigate('Board', { projectId })} style={styles.headerIconBtn}>
-            <Icon name="chart" size={20} color={colors.text} />
+          {/* Доска живёт своей вкладкой, а не вторым экраном внутри
+              проекта: иначе один и тот же экран открывался бы из двух
+              мест с разной навигацией. Кнопка просто говорит доске,
+              какой проект показать, и переключает вкладку. */}
+          <Pressable hitSlop={10} onPress={onOpenBoard} style={styles.headerIconBtn}>
+            <Icon name="board" size={20} color={colors.text} />
           </Pressable>
           <Pressable hitSlop={10} onPress={onOpenVersions} style={styles.headerIconBtn}>
             <Icon name="settings" size={20} color={colors.text} />

@@ -2685,12 +2685,13 @@ function renderStatusDialog() {
  *  завершающий: иначе задачу станет нечем закрыть. */
 async function deleteStatus(st) {
   const pid = st.projectId;
-  const list = orderedStatuses(pid);
-  if (list.length <= 1) { toast(t('status.delete_last')); return; }
-  if (st.kind === 'done' && statusesOfKind(pid, 'done').length <= 1) { toast(t('status.delete_last_done')); return; }
-
-  const target = list.find((s) => s.id !== st.id && s.kind === st.kind) || list.find((s) => s.id !== st.id);
-  const moving = state.tasks.filter((t2) => t2.statusId === st.id);
+  // Сами правила — в ядре: телефон удаляет статусы тем же кодом, и разойтись
+  // они уже не могут.
+  const plan = Core.planStatusDelete(state.statuses, state.tasks, st.id);
+  if (plan.blocked === 'last') { toast(t('status.delete_last')); return; }
+  if (plan.blocked === 'last_done') { toast(t('status.delete_last_done')); return; }
+  if (plan.blocked) return;
+  const { target, moving } = plan;
   if (moving.length) {
     const ok = await confirmDialog(t('status.move_tasks', { name: target.name }));
     if (!ok) return;

@@ -14,7 +14,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyState, migrate, uid, PALETTE } from '../lib/migrate';
 import { scheduleTaskReminder, cancelTaskReminder, rescheduleAll } from '../lib/notifications';
 import { effectiveRate, earnedOf, taskElapsedMs } from '../lib/format';
-import { seedProjectStatuses, defaultStatusId, getStatus } from '../lib/statuses';
+import { seedProjectStatuses, defaultStatusId, getStatus, orderedStatuses, planStatusDelete } from '../lib/statuses';
+import { t } from '../lib/i18n';
 import Repeat from '../core/repeat.js';
 import Versions from '../core/versions.js';
 
@@ -355,6 +356,97 @@ export const useAppStore = create(
         }));
       },
 
+      // --- статусы проекта ---
+      // Набор свой у каждого проекта, поэтому правится он с доски этого
+      // проекта, а не в общих настройках. Правила — в core/status.js,
+      // тот же файл, по которому работает веб.
+
+      /** Новый статус в конец списка. Возвращает id: экран ставит курсор
+       *  в его название, как это делает addStatus в вебе. */
+      addStatus(projectId) {
+        const list = orderedStatuses(get().statuses, projectId);
+        const row = {
+          id: uid(),
+          projectId,
+          name: t(get().settings.lang, "status.add"),
+          color: PALETTE[list.length % PALETTE.length],
+          kind: "todo",
+          order: list.length,
+          builtin: false,
+        };
+        set((s) => ({ statuses: [...s.statuses, row] }));
+        return row.id;
+      },
+
+      /** Название и цвет — всё, что меняется без последствий для задач. */
+      updateStatus(id, patch) {
+        set((s) => ({ statuses: s.statuses.map((st) => (st.id === id ? { ...st, ...patch } : st)) }));
+      },
+
+      /** Вид решает, закрыта ли задача и считается ли она сделанной, —
+       *  поэтому все задачи этого статуса надо пересчитать. Иначе доска,
+       *  галочки и статистика разойдутся; в вебе тот же пересчёт. */
+      setStatusKind(id, kind) {
+        set((s) => ({ statuses: s.statuses.map((st) => (st.id === id ? { ...st, kind } : st)) }));
+        for (const task of get().tasks.filter((t2) => t2.statusId === id)) {
+          get().setTaskStatus(task.id, id);
+        }
+      },
+
+      /** Меняет статус местами с соседом: порядок статусов — это порядок
+       *  столбцов доски, и другого способа задать его нет. */
+      moveStatus(id, dir) {
+        const st = get().statuses.find((s2) => s2.id === id);
+        if (!st) return;
+        const list = orderedStatuses(get().statuses, st.projectId);
+        const i = list.findIndex((s2) => s2.id === id);
+        const other = list[dir === "up" ? i - 1 : i + 1];
+        if (!other) return;
+        set((s) => ({
+          statuses: s.statuses.map((row) => {
+            if (row.id === st.id) return { ...row, order: other.order };
+            if (row.id === other.id) return { ...row, order: st.order };
+            return row;
+          }),
+        }));
+      },
+
+      /** Само удаление. Проверки и вопрос «куда переедут задачи» остаются
+       *  экрану: между решением и действием стоит подтверждение. */
+      deleteStatus(id) {
+        const plan = planStatusDelete(get().statuses, get().tasks, id);
+        if (plan.blocked || !plan.target) return;
+        for (const task of plan.moving) get().setTaskStatus(task.id, plan.target.id);
+        const projectId = plan.status.projectId;
+        set((s) => {
+          const rest = s.statuses.filter((st) => st.id !== id);
+          // Порядок пересчитывается подряд, без дыр: иначе следующий
+          // добавленный статус получит чужой номер.
+          const order = new Map(orderedStatuses(rest, projectId).map((st, i) => [st.id, i]));
+          return { statuses: rest.map((st) => (order.has(st.id) ? { ...st, order: order.get(st.id) } : st)) };
+        });
+      },
+
+      /** Задача прямо в ячейке доски: тот же набор полей, что у
+       *  newTaskInStatus в вебе, плюс версия ячейки и уже введённое
+       *  название — на телефоне его спрашивают до создания, а не после. */
+      createTaskInStatus(projectId, statusId, versionId, title) {
+        const now = new Date().toISOString();
+        const st = getStatus(get().statuses, statusId);
+        const task = {
+          id: uid(), projectId, title: String(title || "").trim(), notes: null,
+          totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
+          dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+          tagIds: [], statusId, versionId: versionId || null, repeat: null,
+          // Вид статуса решает, а не умолчание: задачу можно завести сразу
+          // в «Готово», и тогда она выполненная с первой секунды.
+          done: !!st && st.kind === "done",
+          cancelled: !!st && st.kind === "cancelled",
+        };
+        task.doneAt = task.done ? now : null;
+        set((s) => ({ tasks: [task, ...s.tasks] }));
+        return task;
+      },
       // --- навигация (какой проект открыт — не персистится в UI-смысле,
       // но храним рядом с остальным state ради простоты) ---
       openProject(id) {
@@ -368,6 +460,23 @@ export const useAppStore = create(
       // и ожидает увидеть тот проект, на котором закончил.
       setBoardProject(id) {
         set((s) => ({ ui: { ...s.ui, boardProjectId: id } }));
+      },
+      /** Отбор по версии — свой у каждого проекта: у одного смотрят
+       *  релиз, у другого всё сразу, и общая настройка сбрасывала бы
+       *  чужой выбор. ALL_VERSIONS — без отбора, пустая строка — «без
+       *  версии». */
+      setBoardVersion(projectId, versionId) {
+        set((s) => ({ ui: { ...s.ui, boardVersion: { ...s.ui.boardVersion, [projectId]: versionId } } }));
+      },
+      /** Свёрнутые ряды версий — тоже по проектам и тоже только на этом
+       *  устройстве: это положение экрана, а не данные. */
+      toggleBoardLane(projectId, laneId) {
+        set((s) => {
+          const all = s.ui.boardCollapsed || {};
+          const mine = all[projectId] || [];
+          const next = mine.includes(laneId) ? mine.filter((x) => x !== laneId) : [...mine, laneId];
+          return { ui: { ...s.ui, boardCollapsed: { ...all, [projectId]: next } } };
+        });
       },
 
       // --- настройки ---

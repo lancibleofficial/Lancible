@@ -2,7 +2,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import ProjectScreen from '../screens/ProjectScreen';
 import TaskDetailScreen from '../screens/TaskDetailScreen';
-import BoardScreen from '../screens/BoardScreen';
 import AppHeader from '../components/AppHeader';
 import { useColors } from '../theme';
 
@@ -26,7 +25,6 @@ export default function HomeStack() {
     >
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="Project" component={ProjectScreen} />
-      <Stack.Screen name="Board" component={BoardScreen} />
       <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: '' }} />
     </Stack.Navigator>
   );

@@ -71,9 +71,33 @@
     }));
   }
 
+  /** Что случится, если удалить статус: либо он заблокирован, либо известно,
+   *  куда переедут его задачи. Решение отделено от самого удаления, потому
+   *  что между ними стоит вопрос пользователю, а спрашивать имеет смысл
+   *  только когда переезжать действительно есть чему.
+   *
+   *  Два запрета, и оба не про удобство. Единственный статус проекта убрать
+   *  нельзя: доска осталась бы без столбцов, а задачам негде стоять.
+   *  Последний «готово» — тоже: задачу станет нечем закрыть, а на этом
+   *  держится и статистика, и повторения. */
+  function planStatusDelete(statuses, tasks, id) {
+    const st = getStatus(statuses, id);
+    if (!st) return { blocked: 'missing' };
+    const list = orderedStatuses(statuses, st.projectId);
+    if (list.length <= 1) return { blocked: 'last' };
+    if (st.kind === 'done' && statusesOfKind(statuses, st.projectId, 'done').length <= 1) {
+      return { blocked: 'last_done' };
+    }
+    // Задачи переезжают в статус того же вида — «в работе» остаётся «в
+    // работе», — и только если такого нет, в первый попавшийся.
+    const target = list.find((s) => s.id !== st.id && s.kind === st.kind)
+      || list.find((s) => s.id !== st.id);
+    return { status: st, target, moving: tasks.filter((t) => t.statusId === st.id) };
+  }
+
   const api = {
     STATUS_KINDS, CLOSING_KINDS, DEFAULT_STATUSES,
-    orderedStatuses, getStatus, statusesOfKind, defaultStatusId,
+    orderedStatuses, getStatus, statusesOfKind, defaultStatusId, planStatusDelete,
     isDoneStatus, isClosedStatus, makeProjectStatuses,
   };
 

@@ -80,3 +80,49 @@ test('«Checking» — это ещё работа, а не закрытие', ()
   const checking = S.DEFAULT_STATUSES.find((s) => s.key === 'checking');
   assert.equal(checking.kind, 'progress');
 });
+
+test('удалить единственный статус проекта нельзя', () => {
+  const one = [{ id: 'a', projectId: 'p', kind: 'todo', order: 0, name: 'Один' }];
+  assert.equal(S.planStatusDelete(one, [], 'a').blocked, 'last');
+});
+
+test('удалить последний «готово» нельзя — задачу станет нечем закрыть', () => {
+  assert.equal(S.planStatusDelete(statuses, [], 's3').blocked, 'last_done');
+  // Второй «готово» снимает запрет с обоих.
+  const two = statuses.concat({ id: 's4', projectId: 'p1', kind: 'done', order: 3, name: 'Сдано' });
+  assert.equal(S.planStatusDelete(two, [], 's3').blocked, undefined);
+  assert.equal(S.planStatusDelete(two, [], 's4').blocked, undefined);
+});
+
+test('несуществующий статус — не падение, а отказ', () => {
+  assert.equal(S.planStatusDelete(statuses, [], 'призрак').blocked, 'missing');
+});
+
+test('задачи переезжают в статус того же вида, иначе в первый по порядку', () => {
+  const set = [
+    { id: 'a', projectId: 'p', kind: 'todo', order: 0, name: 'A' },
+    { id: 'b', projectId: 'p', kind: 'progress', order: 1, name: 'B' },
+    { id: 'c', projectId: 'p', kind: 'progress', order: 2, name: 'C' },
+  ];
+  assert.equal(S.planStatusDelete(set, [], 'b').target.id, 'c', 'вид совпадает — берём его');
+  assert.equal(S.planStatusDelete(set, [], 'a').target.id, 'b', 'своего вида больше нет — первый по порядку');
+});
+
+test('переезжают только задачи удаляемого статуса', () => {
+  const tasks = [
+    { id: 't1', statusId: 's1' },
+    { id: 't2', statusId: 's2' },
+    { id: 't3', statusId: 's1' },
+  ];
+  const plan = S.planStatusDelete(statuses, tasks, 's1');
+  assert.deepEqual(plan.moving.map((t) => t.id), ['t1', 't3']);
+  assert.equal(plan.target.id, 's2', 'своего вида нет — первый оставшийся по порядку');
+});
+
+test('заблокированный план не называет, куда переезжать', () => {
+  // Иначе вызывающий код мог бы спросить пользователя о переезде, которого
+  // не будет.
+  const plan = S.planStatusDelete(statuses, [{ id: 't', statusId: 's3' }], 's3');
+  assert.equal(plan.target, undefined);
+  assert.equal(plan.moving, undefined);
+});

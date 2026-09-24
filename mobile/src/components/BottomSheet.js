@@ -32,6 +32,11 @@ const DRAG_CLOSE_VELOCITY = 0.8;
 //   сдвигала translateY на этот пиксель — из-за неточности расчёта нижняя
 //   часть футера (акцентная кнопка) иногда оставалась под клавиатурой и не
 //   ловила тапы, хотя текст кнопки (выше) — ловил.
+//   На Android поведение НЕ задаётся вовсе, и это важно: окно приложения
+//   там и так ужимается под клавиатуру (adjustResize), а behavior='height'
+//   вычитал её высоту второй раз. Оба пересчёта приходят разными кадрами,
+//   и лист успевал подняться, а потом опуститься обратно — палец,
+//   нацеленный на «Создать», попадал в поле ввода или в «Готово».
 export default function BottomSheet() {
   const content = useSheetStore((s) => s.content);
   const footer = useSheetStore((s) => s.footer);
@@ -101,7 +106,7 @@ export default function BottomSheet() {
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={closeSheet}>
-      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
         <Animated.View style={[styles.sheet, { maxHeight, paddingBottom: insets.bottom || spacing.md, transform: [{ translateY }] }]}>
           <View {...panResponder.panHandlers} style={styles.grabberZone}>

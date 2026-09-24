@@ -5,7 +5,7 @@ import HomeStack from './HomeStack';
 import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import BoardScreen from '../screens/BoardScreen';
+import BoardStack from './BoardStack';
 import Icon from '../components/Icon';
 import NotifButton from '../components/NotifButton';
 import AppHeader from '../components/AppHeader';
@@ -64,10 +64,18 @@ export default function MainTabs() {
           // tabBarStyle родительского Tab.Screen по имени сфокусированного
           // вложенного роута (setOptions из самого экрана на это НЕ влияет,
           // несмотря на то что можно было бы предположить обратное).
-          tabBarStyle: ['Project', 'TaskDetail'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
+          tabBarStyle: ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
         })}
       />
-      <Tab.Screen name="Board" component={BoardScreen} options={{ title: t(lang, 'nav.board'), tabBarLabel: t(lang, 'nav.board') }} />
+      <Tab.Screen
+        name="Board"
+        component={BoardStack}
+        options={({ route }) => ({
+          headerShown: false,
+          tabBarLabel: t(lang, 'nav.board'),
+          tabBarStyle: ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
+        })}
+      />
       <Tab.Screen name="Calendar" component={CalendarScreen} options={{ title: t(lang, 'nav.calendar'), tabBarLabel: t(lang, 'nav.calendar') }} />
       <Tab.Screen name="Stats" component={StatsScreen} options={{ title: t(lang, 'nav.stats'), tabBarLabel: t(lang, 'nav.stats') }} />
       <Tab.Screen name="Menu" component={SettingsScreen} options={{ title: t(lang, 'nav.menu'), tabBarLabel: t(lang, 'nav.menu') }} />

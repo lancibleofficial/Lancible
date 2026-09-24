@@ -1,277 +1,444 @@
-// Канбан-доска проекта: столбцы статусов, а при заведённых версиях —
-// дорожки, внутри каждой те же столбцы.
+// Канбан-доска проекта: столбцы статусов, а при заведённых версиях — ряды,
+// внутри каждого те же столбцы. Порт renderBoard/boardColumn из веба.
 //
-// Отличие от десктопа только в способе перенести задачу. Там её тащат мышью;
-// на телефоне столбец шириной в треть экрана, и перетаскивание через край с
-// автопрокруткой — это мучение. Поэтому долгое нажатие на карточке открывает
-// список статусов (и версий, если они есть) — то же действие, но без борьбы
-// с пальцем.
-import { useLayoutEffect, useMemo } from 'react';
+// Главное решение здесь — устройство прокрутки. Рядов может быть сколько
+// угодно, и если каждому дать свой горизонтальный ScrollView, их придётся
+// синхронизировать вручную: один сдвинули — остальные догоняют, и на
+// инерционной прокрутке они разъезжаются. Поэтому горизонтальный скролл
+// ровно один на всю сетку, а ряды лежат внутри него друг под другом:
+// синхронность получается сама, синхронизировать нечего.
+//
+// Из этого же следует, где живут «липкие» части. Шапка статусов стоит над
+// вертикальной прокруткой (иначе уехала бы вверх) и сдвигается по X на
+// минус прокрутку. Заголовок ряда стоит внутри ряда и сдвигается на плюс
+// прокрутку — так он остаётся у левого края экрана. Тот же приём, что в
+// вебе с --lane-x, только сдвиг считает reanimated на UI-потоке, а не
+// обработчик события.
+//
+// Перетаскивания карточек нет намеренно: столбец шириной почти в экран, и
+// тащить через край с автопрокруткой на телефоне мучительно. Вместо этого
+// долгое нажатие открывает лист со статусами — то же действие, но без
+// борьбы с пальцем.
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withTiming,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
+import BoardCard from '../components/BoardCard';
 import PickerSheet from '../components/PickerSheet';
+import QuickTaskSheet from '../components/QuickTaskSheet';
+import TaskMoveSheet from '../components/TaskMoveSheet';
+import PrimaryButton from '../components/PrimaryButton';
 import { useAppStore, getProject } from '../store/useAppStore';
 import { orderedStatuses } from '../lib/statuses';
 import Versions from '../core/versions.js';
-import { fmtDur, fmtMoney, earnedOf, taskElapsedMs } from '../lib/format';
 import { openSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { confirmSheet } from '../lib/dialogs';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
+import { useColors, spacing, radius, fontSize } from '../theme';
 import { t } from '../lib/i18n';
 
-export default function BoardScreen({ route, navigation }) {
+// Отступ от края экрана — общий с остальными экранами.
+const GUTTER = spacing.lg;
+// Зазор между столбцами.
+const COL_GAP = spacing.sm;
+// Сколько остаётся на край следующего столбца: по нему и видно, что доска
+// продолжается вправо.
+const PEEK = 56;
+const COLLAPSE_MS = 200;
+
+export default function BoardScreen({ navigation }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
-  // Столбец чуть уже половины экрана: так видно, что справа есть следующий, и
-  // доска читается как лента, а не как одна колонка.
-  const columnWidth = Math.round(Math.min(280, width * 0.62));
   const clearance = useBottomClearance();
+
+  const columnWidth = Math.max(160, width - PEEK);
+  const snap = columnWidth + COL_GAP;
+  const laneWidth = width - GUTTER * 2;
   const styles = useMemo(
-    () => makeStyles(colors, columnWidth, clearance),
-    [colors, columnWidth, clearance],
+    () => makeStyles(colors, columnWidth, laneWidth, clearance),
+    [colors, columnWidth, laneWidth, clearance],
   );
 
   const projects = useAppStore((s) => s.projects);
-  const boardProjectId = useAppStore((s) => s.ui.boardProjectId);
-  const setBoardProject = useAppStore((s) => s.setBoardProject);
   const tasks = useAppStore((s) => s.tasks);
   const statuses = useAppStore((s) => s.statuses);
   const versions = useAppStore((s) => s.versions);
   const activeTimer = useAppStore((s) => s.activeTimer);
-  const hourlyRate = useAppStore((s) => s.settings.hourlyRate);
-  const currency = useAppStore((s) => s.settings.currency);
-  const LANG = useAppStore((s) => s.settings.lang);
-  const setTaskStatus = useAppStore((s) => s.setTaskStatus);
-  const setTaskVersion = useAppStore((s) => s.setTaskVersion);
+  const boardProjectId = useAppStore((s) => s.ui.boardProjectId);
+  const boardVersion = useAppStore((s) => s.ui.boardVersion);
+  const boardCollapsed = useAppStore((s) => s.ui.boardCollapsed);
+  const lang = useAppStore((s) => s.settings.lang);
+  const setBoardProject = useAppStore((s) => s.setBoardProject);
+  const setBoardVersion = useAppStore((s) => s.setBoardVersion);
+  const toggleBoardLane = useAppStore((s) => s.toggleBoardLane);
 
-  // Экран живёт в двух местах сразу: вкладкой таббара и страницей внутри
-  // проекта. Проект приходит параметром только со страницы проекта — у
-  // вкладки его неоткуда взять, поэтому она помнит выбранный в ui и
-  // показывает переключатель, а первый раз открывается на первом проекте.
-  const fromProject = !!(route.params && route.params.projectId);
-  const chosen = fromProject ? route.params.projectId : boardProjectId;
-  const project = getProject(projects, chosen) || (fromProject ? null : projects[0]);
+  // Проект мог быть удалён на другом устройстве — тогда просто первый.
+  const project = getProject(projects, boardProjectId) || projects[0];
   const projectId = project ? project.id : null;
-  const columns = orderedStatuses(statuses, projectId);
+
+  const columns = useMemo(() => orderedStatuses(statuses, projectId), [statuses, projectId]);
+  const projectVersions = useMemo(() => Versions.versionsOf(versions, projectId), [versions, projectId]);
+  const filter = (boardVersion && boardVersion[projectId]) || 'all';
+
   const own = useMemo(() => tasks.filter((task) => task.projectId === projectId), [tasks, projectId]);
-  const lanes = useMemo(
-    () => Versions.boardLanes(versions, own, projectId),
-    [versions, own, projectId],
+  const shown = useMemo(
+    () => Versions.filterTasks(own, versions, { versionId: filter }),
+    [own, versions, filter],
   );
+  const doneCount = shown.filter((task) => task.done).length;
 
-  useLayoutEffect(() => {
-    // У вкладки заголовок свой («Доска») и меняться не должен: какой
-    // проект открыт, видно по переключателю под шапкой.
-    if (fromProject) navigation.setOptions({ title: project ? project.name : '' });
-  }, [navigation, project, fromProject]);
+  // Ряды нужны только когда есть из чего их делать: без версий доска — это
+  // просто столбцы, а при выбранном отборе ряд всё равно остался бы один, и
+  // подпись над ним повторяла бы то, что уже написано в шапке.
+  const lanes = useMemo(() => {
+    if (!projectVersions.length || filter !== 'all') return null;
+    const list = Versions.boardLanes(versions, shown, projectId).filter((lane) => lane.tasks.length);
+    return list.length ? list : null;
+  }, [projectVersions, filter, versions, shown, projectId]);
 
-  // Со страницы проекта задача открывается в том же стеке; из вкладки —
-  // в стеке «Главной», где TaskDetail и живёт.
-  function openTask(taskId) {
-    if (fromProject) navigation.navigate('TaskDetail', { taskId });
-    else navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
-  }
+  const scrollX = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => { scrollX.value = e.contentOffset.x; });
+  const headStyle = useAnimatedStyle(() => ({ transform: [{ translateX: -scrollX.value }] }));
 
-  function pickProject() {
+  // Прокрутка отсчитывается от начала столбца, поэтому точки остановки —
+  // просто кратные его ширине с зазором.
+  const offsets = useMemo(() => columns.map((_, i) => i * snap), [columns, snap]);
+
+  const openTask = useCallback(
+    (taskId) => navigation.navigate('TaskDetail', { taskId }),
+    [navigation],
+  );
+  const onCardLongPress = useCallback((taskId) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    openSheet(<TaskMoveSheet taskId={taskId} />);
+  }, []);
+
+  function onPickProject() {
     openSheet(
       <PickerSheet
-        title={t(LANG, 'board.pick_project')}
+        title={t(lang, 'board.pick_project')}
         value={projectId || ''}
         options={projects.map((p) => ({ value: p.id, label: p.name }))}
-        onSelect={(id) => setBoardProject(id)}
+        onSelect={setBoardProject}
       />,
     );
   }
 
-  // Шапка вкладки: какой проект показан и чем его сменить. На странице
-  // проекта её нет — там это и так заголовок экрана.
-  const picker = fromProject ? null : (
-    <Pressable style={styles.picker} onPress={pickProject} hitSlop={6}>
-      <View style={[styles.dot, { backgroundColor: project ? project.color : colors.textFaint }]} />
-      <Text style={styles.pickerName} numberOfLines={1}>{project ? project.name : ''}</Text>
-      <Icon name="chevron-down" size={12} color={colors.textDim} />
-    </Pressable>
-  );
-
-  function onMove(task) {
+  function onPickVersion() {
     openSheet(
       <PickerSheet
-        title={t(LANG, 'task.status_label')}
-        value={task.statusId}
-        options={columns.map((s) => ({ value: s.id, label: s.name }))}
-        onSelect={(id) => setTaskStatus(task.id, id)}
-      />,
-    );
-  }
-
-  function onMoveVersion(task) {
-    openSheet(
-      <PickerSheet
-        title={t(LANG, 'version.label')}
-        value={task.versionId || ''}
+        title={t(lang, 'version.label')}
+        value={filter}
         options={[
-          { value: '', label: t(LANG, 'version.none') },
-          ...Versions.versionsOf(versions, projectId).map((v) => ({ value: v.id, label: v.name })),
+          { value: 'all', label: t(lang, 'board.all_versions') },
+          ...projectVersions.map((v) => ({ value: v.id, label: v.name })),
+          { value: 'none', label: t(lang, 'version.none') },
         ]}
-        onSelect={(id) => setTaskVersion(task.id, id || null)}
+        onSelect={(value) => setBoardVersion(projectId, value)}
       />,
     );
   }
 
-  // Проектов нет вовсе — показывать нечего и выбирать не из чего.
+  function onMenu() {
+    confirmSheet({
+      title: project ? project.name : '',
+      actions: [
+        {
+          label: t(lang, 'board.open_project'),
+          onPress: () => navigation.navigate('Home', { screen: 'Project', params: { projectId } }),
+        },
+        {
+          label: t(lang, 'board.project_statuses'),
+          onPress: () => navigation.navigate('ProjectStatuses', { projectId }),
+        },
+        { label: t(lang, 'common.cancel'), cancel: true },
+      ],
+    });
+  }
+
+  function onAdd(statusId, versionId) {
+    const status = columns.find((s) => s.id === statusId);
+    const version = versionId ? projectVersions.find((v) => v.id === versionId) : null;
+    openSheet(
+      <QuickTaskSheet
+        projectId={projectId}
+        statusId={statusId}
+        versionId={versionId}
+        contextLabel={[status && status.name, version && version.name].filter(Boolean).join(' · ')}
+      />,
+    );
+  }
+
   if (!project) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.empty}>{t(LANG, fromProject ? 'board.empty' : 'home.empty')}</Text>
+      <View style={styles.emptyWrap}>
+        <Icon name="board" size={40} color={colors.textFaint} />
+        <Text style={styles.emptyText}>{t(lang, 'board.empty')}</Text>
+        <PrimaryButton
+          title={t(lang, 'home.new_project_title')}
+          onPress={() => navigation.navigate('Home', { screen: 'HomeMain', params: { openCreate: true } })}
+        />
       </View>
     );
   }
 
-  if (!columns.length) {
+  /** Один столбец: карточки статуса и кнопка добавления под ними. */
+  const renderColumn = (status, laneTasks, versionId) => {
+    const inColumn = laneTasks.filter((task) => task.statusId === status.id);
     return (
-      <View style={styles.container}>
-        {picker}
-        <Text style={styles.empty}>{t(LANG, 'board.empty')}</Text>
+      <View key={status.id} style={styles.columnSlot}>
+        <View style={styles.column}>
+          {inColumn.map((task) => (
+            <BoardCard
+              key={task.id}
+              task={task}
+              color={status.color}
+              runningSince={activeTimer && activeTimer.taskId === task.id ? activeTimer.startedAt : null}
+              lang={lang}
+              onPress={openTask}
+              onLongPress={onCardLongPress}
+            />
+          ))}
+          <Pressable style={styles.add} onPress={() => onAdd(status.id, versionId)}>
+            <Icon name="plus" size={11} color={colors.textDim} />
+            <Text style={styles.addText}>{t(lang, 'board.add_task')}</Text>
+          </Pressable>
+        </View>
       </View>
     );
-  }
+  };
 
-  const renderColumns = (laneTasks) => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.columns}
-      // Столбцы прилипают: палец отпускают — и следующий встаёт на место, а
-      // не замирает посередине.
-      snapToInterval={columnWidth + spacing.sm}
-      decelerationRate="fast"
-    >
-      {columns.map((col) => {
-        const inColumn = laneTasks.filter((task) => task.statusId === col.id);
-        const ms = inColumn.reduce((sum, task) => sum + taskElapsedMs(task, activeTimer), 0);
-        return (
-          <View key={col.id} style={styles.column}>
-            <View style={styles.columnHead}>
-              <View style={[styles.dot, { backgroundColor: col.color }]} />
-              <Text style={styles.columnName} numberOfLines={1}>{col.name}</Text>
-              <Text style={styles.columnCount}>{inColumn.length}</Text>
-              <Text style={styles.columnTime}>{fmtDur(ms, LANG)}</Text>
-            </View>
-            <View style={styles.columnBody}>
-              {inColumn.map((task) => (
-                <Pressable
-                  key={task.id}
-                  style={[styles.card, { borderLeftColor: col.color }]}
-                  onPress={() => openTask(task.id)}
-                  onLongPress={() => onMove(task)}
-                  delayLongPress={300}
-                >
-                  <Text style={[styles.cardTitle, task.done && styles.cardTitleDone]} numberOfLines={2}>
-                    {task.title || t(LANG, 'task.no_name')}
-                  </Text>
-                  <View style={styles.cardFoot}>
-                    <Icon name="clock" size={10} color={colors.textDim} />
-                    <Text style={styles.cardTime}>{fmtDur(taskElapsedMs(task, activeTimer), LANG)}</Text>
-                    <Text style={styles.cardMoney}>{fmtMoney(earnedOf(task, hourlyRate, activeTimer), LANG, currency)}</Text>
-                  </View>
-                </Pressable>
-              ))}
-              {inColumn.length === 0 ? <Text style={styles.columnEmpty}>—</Text> : null}
-            </View>
-          </View>
-        );
-      })}
-    </ScrollView>
+  const renderRow = (laneTasks, versionId) => (
+    <View style={styles.row}>
+      {columns.map((status) => renderColumn(status, laneTasks, versionId))}
+    </View>
   );
 
-  // Дорожек нет вовсе, пока у проекта нет версий: доска остаётся ровно такой,
-  // какой была бы без них.
-  const hasLanes = lanes.length > 1 || (lanes.length === 1 && lanes[0].version);
+  // Отбор по конкретной версии — новые задачи заводятся сразу в неё.
+  const plainVersionId = filter !== 'all' && filter !== 'none' ? filter : null;
 
   return (
     <View style={styles.container}>
-      {picker}
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.page}>
-        {hasLanes
-          ? lanes.map((lane) => (
-            <View key={lane.version ? lane.version.id : 'none'} style={styles.lane}>
-              <Pressable
-                style={styles.laneHead}
-                onLongPress={() => (lane.tasks[0] ? onMoveVersion(lane.tasks[0]) : null)}
-              >
-                <Text style={styles.laneName} numberOfLines={1}>
-                  {lane.version ? lane.version.name : t(LANG, 'version.none')}
-                </Text>
-                {lane.version && lane.version.releasedAt ? (
-                  <Text style={styles.laneReleased}>
-                    {new Date(lane.version.releasedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+      <View style={styles.headerRow}>
+        <Pressable style={styles.chip} onPress={onPickProject} hitSlop={6}>
+          <View style={[styles.dot, { backgroundColor: project.color || colors.accent }]} />
+          <Text style={styles.chipText} numberOfLines={1}>{project.name}</Text>
+          <Icon name="chevron-down" size={12} color={colors.textDim} />
+        </Pressable>
+        <Pressable style={styles.menuBtn} onPress={onMenu} hitSlop={10}>
+          <Icon name="kebab" size={18} color={colors.text} />
+        </Pressable>
+      </View>
+
+      <View style={styles.headerRow}>
+        {projectVersions.length ? (
+          <Pressable style={[styles.chip, styles.chipQuiet]} onPress={onPickVersion} hitSlop={6}>
+            <Text style={styles.chipQuietText} numberOfLines={1}>{versionLabel(filter, projectVersions, lang)}</Text>
+            <Icon name="chevron-down" size={12} color={colors.textDim} />
+          </Pressable>
+        ) : <View style={{ flex: 1 }} />}
+        <Text style={styles.counter}>{doneCount}/{shown.length}</Text>
+      </View>
+
+      {columns.length ? (
+        <>
+          <View style={styles.stickyHead}>
+            <Animated.View style={[styles.headInner, headStyle]}>
+              {columns.map((status) => (
+                <View key={status.id} style={styles.headCell}>
+                  <View style={[styles.dot, { backgroundColor: status.color }]} />
+                  <Text style={styles.headName} numberOfLines={1}>{status.name}</Text>
+                  <Text style={styles.headCount}>
+                    {shown.filter((task) => task.statusId === status.id).length}
                   </Text>
-                ) : null}
-                <Text style={styles.laneCount}>{lane.tasks.length}</Text>
-              </Pressable>
-              {renderColumns(lane.tasks)}
-            </View>
-          ))
-          : renderColumns(own)}
-      </ScrollView>
+                </View>
+              ))}
+            </Animated.View>
+          </View>
+
+          <ScrollView
+            style={styles.vertical}
+            contentContainerStyle={styles.verticalContent}
+            // Жест, начатый по одной оси, по другой уже не поедет: без этого
+            // доска ползёт по диагонали и «липкие» части дрожат.
+            directionalLockEnabled
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.ScrollView
+              horizontal
+              onScroll={onScroll}
+              scrollEventThrottle={16}
+              directionalLockEnabled
+              showsHorizontalScrollIndicator={false}
+              snapToOffsets={offsets}
+              decelerationRate="fast"
+              contentContainerStyle={styles.horizontalContent}
+            >
+              <View>
+                {lanes
+                  ? lanes.map((lane) => (
+                    <Lane
+                      key={lane.version ? lane.version.id : 'none'}
+                      lane={lane}
+                      lang={lang}
+                      styles={styles}
+                      colors={colors}
+                      scrollX={scrollX}
+                      collapsed={((boardCollapsed && boardCollapsed[projectId]) || [])
+                        .includes(lane.version ? lane.version.id : 'none')}
+                      onToggle={() => toggleBoardLane(projectId, lane.version ? lane.version.id : 'none')}
+                      renderRow={renderRow}
+                    />
+                  ))
+                  : renderRow(shown, plainVersionId)}
+              </View>
+            </Animated.ScrollView>
+          </ScrollView>
+        </>
+      ) : (
+        <Text style={styles.emptyText}>{t(lang, 'board.empty')}</Text>
+      )}
     </View>
   );
 }
 
-const makeStyles = (colors, columnWidth, clearance) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  scroll: { flex: 1 },
-  page: { paddingVertical: spacing.md, paddingBottom: clearance + spacing.xl, gap: spacing.lg },
-  empty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.xl },
+/** Подпись отбора: «Все версии», имя версии или «Без версии». */
+function versionLabel(filter, list, lang) {
+  if (filter === 'all') return t(lang, 'board.all_versions');
+  if (filter === 'none') return t(lang, 'version.none');
+  const found = list.find((v) => v.id === filter);
+  return found ? found.name : t(lang, 'board.all_versions');
+}
 
-  picker: {
+/** Ряд одной версии: заголовок на всю видимую ширину и сетка столбцов под
+ *  ним.
+ *
+ *  Высота задаётся ТОЛЬКО пока ряд сворачивается или свёрнут. Стоит
+ *  оставить её заданной и у развёрнутого — и замер начнёт возвращать её
+ *  же вместо настоящей: содержимое меряется внутри родителя, которому
+ *  высоту уже назначили. Ряд после этого перестаёт расти, и добавленная
+ *  карточка оказывается обрезанной. */
+function Lane({ lane, lang, styles, colors, scrollX, collapsed, onToggle, renderRow }) {
+  const [height, setHeight] = useState(0);
+  const [free, setFree] = useState(!collapsed);
+  const progress = useSharedValue(collapsed ? 0 : 1);
+
+  useEffect(() => {
+    progress.value = withTiming(collapsed ? 0 : 1, { duration: COLLAPSE_MS });
+    if (collapsed) { setFree(false); return undefined; }
+    // Высоту отпускаем по таймеру, а не по колбэку withTiming: тот
+    // исполняется воркletом на UI-потоке, и возврат в JS оттуда зависит
+    // от того, как babel-плагин разобрал замыкание. Таймер той же длины
+    // делает ровно то же и не зависит ни от чего.
+    const id = setTimeout(() => setFree(true), COLLAPSE_MS);
+    return () => clearTimeout(id);
+  }, [collapsed]);
+
+  const headStyle = useAnimatedStyle(() => ({ transform: [{ translateX: scrollX.value }] }));
+  const bodyStyle = useAnimatedStyle(() => ({
+    height: free ? undefined : height * progress.value,
+    opacity: progress.value,
+  }));
+
+  return (
+    <View style={styles.lane}>
+      <Animated.View style={[styles.laneHead, headStyle]}>
+        <Pressable style={styles.laneHeadInner} onPress={onToggle}>
+          <Icon name={collapsed ? 'chevron-right' : 'chevron-down'} size={11} color={colors.textDim} />
+          <Text style={styles.laneName} numberOfLines={1}>
+            {lane.version ? lane.version.name : t(lang, 'version.none')}
+          </Text>
+          <Text style={styles.laneCount}>{lane.tasks.length}</Text>
+        </Pressable>
+      </Animated.View>
+      <Animated.View style={[styles.laneBody, bodyStyle]}>
+        {/* Замеряем только пока высота не задана: иначе замер вернёт
+            назначенную высоту, а не настоящую, и ряд перестанет расти. */}
+        <View onLayout={(e) => { if (free) setHeight(e.nativeEvent.layout.height); }}>
+          {renderRow(lane.tasks, lane.version ? lane.version.id : null)}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+const makeStyles = (colors, columnWidth, laneWidth, clearance) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+
+  headerRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginHorizontal: spacing.lg, marginTop: spacing.md,
+    paddingHorizontal: GUTTER, paddingTop: spacing.sm,
+  },
+  chip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     backgroundColor: colors.panel, borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.border,
   },
-  pickerName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
+  // Отбор по версии — второстепенный: без рамки и фона, чтобы не спорить с
+  // выбором проекта над ним.
+  chipQuiet: { backgroundColor: 'transparent', borderColor: 'transparent', paddingHorizontal: spacing.xs, flex: 0 },
+  chipText: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
+  // Точка цвета — и у проекта в шапке, и у статуса над столбцом: по ней
+  // столбец и узнают, когда название не помещается целиком.
+  dot: { width: 10, height: 10, borderRadius: 3 },
+  chipQuietText: { color: colors.textDim, fontSize: fontSize.sm },
+  menuBtn: { padding: spacing.xs },
+  counter: { marginLeft: 'auto', color: colors.textDim, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
 
-  lane: { gap: spacing.sm },
-  laneHead: {
+  // Шапка статусов стоит над прокруткой, поэтому вертикально не уезжает;
+  // лишнее по бокам режется, чтобы сдвинутая строка не вылезала за экран.
+  stickyHead: { overflow: 'hidden', paddingTop: spacing.md, paddingBottom: spacing.xs },
+  headInner: { flexDirection: 'row', paddingLeft: GUTTER },
+  headCell: {
+    width: columnWidth, marginRight: COL_GAP,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  headName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
+  headCount: { color: colors.textFaint, fontSize: fontSize.xs },
+
+  vertical: { flex: 1 },
+  verticalContent: { paddingBottom: clearance + spacing.xl },
+  // Справа запас в ширину выглядывающего края: без него последний столбец
+  // упирается в конец прокрутки и не доезжает до своего места у отступа.
+  horizontalContent: { paddingLeft: GUTTER, paddingRight: PEEK },
+
+  lane: { marginBottom: spacing.lg },
+  // Ширина — видимая часть экрана, а не всей сетки: заголовок должен стоять
+  // у левого края, а не растягиваться на все столбцы.
+  laneHead: { width: laneWidth, marginBottom: spacing.sm },
+  laneHeadInner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginHorizontal: spacing.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     backgroundColor: colors.boardCol, borderRadius: radius.md,
   },
   laneName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
-  laneReleased: { color: colors.textDim, fontSize: fontSize.xs },
   laneCount: { color: colors.textFaint, fontSize: fontSize.xs },
+  laneBody: { overflow: 'hidden' },
 
-  // alignItems: stretch — столбцы дорожки одной высоты по самому высокому.
+  // alignItems: stretch — столбцы ряда одной высоты по самому высокому.
   // По содержимому они получались разной длины, и ряд выглядел рваным.
-  columns: { paddingHorizontal: spacing.lg, gap: spacing.sm, alignItems: 'stretch' },
+  row: { flexDirection: 'row', alignItems: 'stretch' },
+  columnSlot: { width: columnWidth, marginRight: COL_GAP },
   column: {
-    width: columnWidth,
+    flex: 1, gap: spacing.sm,
     backgroundColor: colors.boardCol, borderRadius: radius.md,
-    paddingBottom: spacing.sm,
+    padding: spacing.sm,
   },
-  columnHead: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+  // Пунктир — как .board-add в вебе, но видна всегда: на телефоне нет
+  // наведения, при котором кнопка могла бы появляться.
+  add: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
+    paddingVertical: spacing.sm, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
   },
-  dot: { width: 8, height: 8, borderRadius: 3 },
-  columnName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
-  columnCount: { color: colors.textFaint, fontSize: fontSize.xs },
-  columnTime: { color: colors.textDim, fontSize: fontSize.xs },
-  columnBody: { flex: 1, paddingHorizontal: spacing.sm, gap: spacing.sm },
-  columnEmpty: { color: colors.textFaint, fontSize: fontSize.xs, textAlign: 'center', paddingVertical: spacing.md },
+  addText: { color: colors.textDim, fontSize: fontSize.xs },
 
-  // Карточка на ступень светлее столбца — то же правило, что на десктопе.
-  card: {
-    backgroundColor: colors.boardCard, borderRadius: radius.sm,
-    borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs,
-  },
-  cardTitle: { color: colors.text, fontSize: fontSize.sm, lineHeight: 19 },
-  cardTitleDone: { color: colors.textDim, textDecorationLine: 'line-through' },
-  cardFoot: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  cardTime: { color: colors.textDim, fontSize: fontSize.xs },
-  cardMoney: { color: colors.textFaint, fontSize: fontSize.xs, marginLeft: 'auto' },
+  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.lg, padding: spacing.xl },
+  emptyText: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.xl },
 });

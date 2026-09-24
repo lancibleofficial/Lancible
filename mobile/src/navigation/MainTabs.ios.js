@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeStack from './HomeStack';
 import StatsScreen from '../screens/StatsScreen';
 import CalendarScreen from '../screens/CalendarScreen';
-import BoardScreen from '../screens/BoardScreen';
+import BoardStack from './BoardStack';
 import SettingsScreen from '../screens/SettingsScreen';
 import Icon from '../components/Icon';
 import NotifButton from '../components/NotifButton';
@@ -147,7 +147,7 @@ export default function MainTabs() {
           // Same nested-route hide as Android -- see the detailed comment in
           // MainTabs.android.js for why this has to be recomputed here
           // rather than left to the nested stack.
-          const barHidden = ['Project', 'TaskDetail'].includes(getFocusedRouteNameFromRoute(route));
+          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route));
           return {
             headerShown: false,
             tabBarLabel: t(lang, 'nav.home'),
@@ -165,8 +165,19 @@ export default function MainTabs() {
       />
       <Tab.Screen
         name="Board"
-        component={BoardScreen}
-        options={{ title: t(lang, 'nav.board'), tabBarLabel: t(lang, 'nav.board'), tabBarIcon: tabIcon('board') }}
+        component={BoardStack}
+        options={({ route, navigation }) => {
+          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route));
+          return {
+            headerShown: false,
+            tabBarLabel: t(lang, 'nav.board'),
+            tabBarIcon: tabIcon('board'),
+            tabBarStyle: barHidden ? { display: 'none' } : legacyTabBarStyle,
+            bottomAccessory: barHidden || !HAS_LIQUID_GLASS
+              ? undefined
+              : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
+          };
+        }}
       />
       <Tab.Screen
         name="Calendar"

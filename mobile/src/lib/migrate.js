@@ -37,7 +37,10 @@ export function emptyState() {
     statuses: [],
     versions: [],
     activeTimer: null,
-    ui: { view: 'home', projectId: null },
+    // boardVersion и boardCollapsed — положение доски, по проекту:
+    // какой отбор по версии выбран и какие ряды свёрнуты. Живут в ui,
+    // а значит остаются на устройстве и не ездят в синхронизации.
+    ui: { view: 'home', projectId: null, boardProjectId: null, boardVersion: {}, boardCollapsed: {} },
     settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, notifyEnabled: true, syncResolvedFor: null },
   };
 }
@@ -112,6 +115,20 @@ export function migrate(state) {
   const fallback = state.projects[0] ? state.projects[0].id : null;
   for (const task of state.tasks) if (!task.projectId || !known.has(task.projectId)) task.projectId = fallback;
   if (!known.has(state.ui.projectId)) state.ui.projectId = fallback;
+  if (!known.has(state.ui.boardProjectId)) state.ui.boardProjectId = fallback;
+  // Положение доски по проектам: чинится так же, как всё остальное в ui —
+  // мусор из старого хранилища не должен ронять экран.
+  const byProject = (value) => {
+    if (!value || typeof value !== 'object') return {};
+    const out = {};
+    for (const id of Object.keys(value)) if (known.has(id)) out[id] = value[id];
+    return out;
+  };
+  state.ui.boardVersion = byProject(state.ui.boardVersion);
+  state.ui.boardCollapsed = byProject(state.ui.boardCollapsed);
+  for (const id of Object.keys(state.ui.boardCollapsed)) {
+    if (!Array.isArray(state.ui.boardCollapsed[id])) state.ui.boardCollapsed[id] = [];
+  }
 
   // Статусы: у проекта либо есть свой набор, либо он заводится здесь. Прежняя
   // сборка телефона не заводила их вовсе — проекты, созданные на нём, до сих
