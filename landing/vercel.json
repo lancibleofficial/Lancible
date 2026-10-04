@@ -9,6 +9,10 @@
   ],
   "rewrites": [
     {
+      "source": "/architecture",
+      "destination": "/architecture.html"
+    },
+    {
       "source": "/logs",
       "destination": "/logs.html"
     },
@@ -28,6 +32,14 @@
     },
     {
       "source": "/logs.html",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/architecture",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/architecture.html",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     }
   ]
