@@ -21,7 +21,9 @@ const reports = (langCode, currencyCode, hourlyRate) => Core.makeReports({
   cur: CURRENCY_SYMBOLS[currencyCode] || currencyCode || '₽',
   fmtClock,
   fmtDate,
-  fmtTime: (ts) => fmtTime(ts, langCode),
+  // Секунды в выгрузке нужны: это отчёт по учёту времени. Формат — как в
+  // ядре, тот же, что на десктопе.
+  fmtTime,
   hoursOf,
   effectiveRate: (task) => effectiveRate(task, hourlyRate),
   sessionRate: (s, task) => sessionRate(s, task, hourlyRate),

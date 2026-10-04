@@ -387,12 +387,9 @@ const taskElapsedMs = (task) => Core.taskElapsedMs(task, state.activeTimer, Date
 const fmtShort = (ms) => Core.fmtShort(ms, lang());
 const fmtDur = (ms) => Core.fmtDur(ms, lang());
 
-function fmtWhen(iso) {
-  const d = new Date(iso);
-  const time = d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
-  if (d.toDateString() === new Date().toDateString()) return t('session.today', { time });
-  return `${d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' })} ${time}`;
-}
+// Правило подписи — в ядре (core/format.js), общее с телефоном; здесь только
+// подстановка локали, словаря и «сейчас».
+const fmtWhen = (iso) => Core.fmtWhen(iso, locale(), t, Date.now());
 const fmtDateShort = (iso) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
 const monthLabel = (y, m) => `${capFirst(new Date(y, m, 1).toLocaleDateString(locale(), { month: 'long' }))} ${y}`;
 

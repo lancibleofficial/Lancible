@@ -5,7 +5,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 
 import { useIsFocused } from '@react-navigation/native';
 import Text from '../components/AppText';
 import { useAppStore, getProject } from '../store/useAppStore';
-import { fmtDur, fmtMoney, monthLabel, capFirst, fmtTime, sessionMoney } from '../lib/format';
+import { fmtDur, fmtMoney, monthLabel, capFirst, fmtTimeShort, sessionMoney } from '../lib/format';
 import { dayKey, keyToDate, mondayOf, aggregateDays, rangeAgg, sessionsOfDay, allSessionPairs } from '../lib/calendarMath';
 import { buildPeriodSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
@@ -474,7 +474,7 @@ export default function CalendarScreen({ navigation }) {
               <View style={[styles.sessionDot, { backgroundColor: project ? project.color : colors.accent }]} />
               <View style={styles.sessionMid}>
                 <Text style={styles.sessionTask} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
-                <Text style={styles.sessionMeta}>{fmtTime(s.start, lang)}–{s.end ? fmtTime(s.end, lang) : '…'} · {project ? project.name : ''}</Text>
+                <Text style={styles.sessionMeta}>{fmtTimeShort(s.start, lang)}–{s.end ? fmtTimeShort(s.end, lang) : '…'} · {project ? project.name : ''}</Text>
               </View>
               <Text style={styles.sessionDur}>{fmtDur(s.ms, lang)}</Text>
             </Pressable>

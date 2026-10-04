@@ -5,9 +5,10 @@
 // тем, что расхождение не видно: обе стороны работают, просто по-разному, и
 // узнаёшь об этом из жалобы пользователя.
 //
-// Здесь стережётся то, что обязано совпадать. Что различается намеренно
-// (мобильные строки короче, у даты есть «сегодня»), сюда не входит — и
-// перечислено ниже, чтобы отличать умысел от недосмотра.
+// После переноса format, money и tags в ядро сравнивать почти нечего — зато
+// есть что стеречь: что телефон берёт ИМЕННО функции ядра, а не их двойников.
+// Проверка «работает так же» пропустила бы заново написанную копию, проверка
+// тождеством — нет.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -15,6 +16,7 @@ const path = require('path');
 
 const CoreTags = require('../../src/renderer/core/tags.js');
 const CoreFormat = require('../../src/renderer/core/format.js');
+const CoreMoney = require('../../src/renderer/core/money.js');
 
 const MOBILE = path.join(__dirname, '..', '..', 'mobile', 'src', 'lib');
 
@@ -30,9 +32,7 @@ function loadMobile(file, stubs, names) {
   return new Function(...keys, body)(...keys.map((k) => stubs[k]));
 }
 
-// --- теги ------------------------------------------------------------------
-// Телефон берёт их из побайтной копии ядра. Проверяем не «работает так же»,
-// а «это те же самые функции»: иначе копия однажды снова заведётся.
+// --- теги --------------------------------------------------------------------
 
 test('теги на телефоне — это ровно функции ядра, а не их двойники', () => {
   const api = loadMobile(
@@ -49,200 +49,99 @@ test('теги на телефоне — это ровно функции ядр
   assert.equal(CoreTags.badgeInk, undefined, 'цветовым в ядре делать нечего');
 });
 
-// --- формат ----------------------------------------------------------------
-// Общего файла тут нет и не будет: мобильный format.js — это ещё и деньги, и
-// подписи вроде «сегодня». Но чистые функции обязаны давать одно и то же.
+// --- формат и деньги ---------------------------------------------------------
 
-const mobileFormat = loadMobile(
-  'format.js',
-  {
-    LOCALE_MAP: { ru: 'ru-RU', en: 'en-US', uk: 'uk-UA', kk: 'kk-KZ' },
-    t: (lang, key) => key,
-  },
-  ['fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'taskElapsedMs'],
-);
-
-// Второй загрузчик — со словарём-заглушкой, которая видна в ответе: так
-// проверяется, что подпись «сегодня» действительно подставляется.
-const mobileFormat2 = loadMobile(
-  "format.js",
-  {
-    LOCALE_MAP: { ru: "ru-RU", en: "en-US", uk: "uk-UA", kk: "kk-KZ" },
-    t: (lang, key, params) => `${key.split(".").pop()}-в-${params && params.time}`,
-  },
-  ["fmtDate", "fmtTime", "fmtWhen"],
-);
-
-const LANGS = ['ru', 'en', 'uk', 'kk'];
-const MS = [0, 1, 999, 1000, 59_999, 60_000, 61_000, 3_599_999, 3_600_000, 3_661_000, 86_400_000, 123_456_789];
-
-test('fmtClock даёт одно и то же на любом числе', () => {
-  for (const ms of [...MS, -1, -100000]) {
-    assert.equal(mobileFormat.fmtClock(ms), CoreFormat.fmtClock(ms), `разошлись на ${ms}`);
-  }
-});
-
-test('fmtShort совпадает на всех языках — значит и таблица единиц совпадает', () => {
-  // Единицы («ч», «h», «г», «сағ») лежат в обоих файлах отдельными таблицами.
-  // Разойтись они могут молча, поэтому проходим все языки, а не только русский.
-  for (const lang of [...LANGS, 'нет такого']) {
-    for (const ms of MS) {
-      assert.equal(
-        mobileFormat.fmtShort(ms, lang), CoreFormat.fmtShort(ms, lang),
-        `разошлись на ${ms} мс, язык ${lang}`,
-      );
-    }
-  }
-});
-
-test('fmtDur совпадает: ноль пишется честным нулём, а не прочерком', () => {
-  for (const lang of LANGS) {
-    for (const ms of MS) {
-      assert.equal(mobileFormat.fmtDur(ms, lang), CoreFormat.fmtDur(ms, lang), `разошлись на ${ms}, ${lang}`);
-    }
-  }
-  assert.notEqual(CoreFormat.fmtDur(0, 'ru'), '—', 'fmtDur не прочерк — на этом держится сверка');
-});
-
-test('parseNum одинаково терпит запятую, пробелы и мусор', () => {
-  const inputs = ['', '0', '12', '12,5', '12.5', '1 234', '1 234,56', ' 7 ', 'abc', '-5', '0,0', null, undefined, '1e3'];
-  for (const v of inputs) {
-    assert.equal(mobileFormat.parseNum(v), CoreFormat.parseNum(v), `разошлись на ${JSON.stringify(v)}`);
-  }
-});
-
-test('hoursOf и capFirst совпадают', () => {
-  for (const ms of MS) assert.equal(mobileFormat.hoursOf(ms), CoreFormat.hoursOf(ms));
-  for (const s of ['', 'слово', 'ДВА слова', 'ß', '1абв']) {
-    assert.equal(mobileFormat.capFirst(s), CoreFormat.capFirst(s), `разошлись на ${JSON.stringify(s)}`);
-  }
-});
-
-test('taskElapsedMs: математика та же, но время берётся по-разному', () => {
-  // Единственное известное расхождение в подписях. У ядра «сейчас» —
-  // параметр, и его можно подставить в тесте; телефон зовёт Date.now() внутри
-  // и потому непроверяем в заданный момент. Пока так, но считают они одно:
-  // сверяем, подставив ядру то же самое «сейчас».
-  const now = Date.now();
-  const task = { id: 't1', totalMs: 5000 };
-  const running = { taskId: 't1', startedAt: new Date(now - 60000).toISOString() };
-  const other = { taskId: 'чужая', startedAt: new Date(now - 60000).toISOString() };
-
-  assert.equal(mobileFormat.taskElapsedMs(task, null), CoreFormat.taskElapsedMs(task, null, now));
-  assert.equal(mobileFormat.taskElapsedMs(task, other), CoreFormat.taskElapsedMs(task, other, now));
-  // Идущий таймер: допускаем расхождение в пару миллисекунд между двумя
-  // вызовами Date.now(), но не больше.
-  const diff = Math.abs(mobileFormat.taskElapsedMs(task, running) - CoreFormat.taskElapsedMs(task, running, now));
-  assert.ok(diff <= 50, `идущий таймер разошёлся на ${diff} мс`);
-});
-
-// --- деньги ----------------------------------------------------------------
-// На десктопе это отдельный core/money.js, на телефоне они живут внутри
-// format.js. Подписи совпадают, кроме earnedOf — там та же история с «сейчас».
-
-const CoreMoney = require('../../src/renderer/core/money.js');
-const mobileMoney = loadMobile(
-  'format.js',
-  { LOCALE_MAP: { ru: 'ru-RU' }, t: (lang, key) => key },
-  ['effectiveRate', 'sessionRate', 'sessionMoney', 'earnedOf'],
-);
-
-const RATES = [0, 1, 100, 2000, 2500.5];
-const TASKS = [
-  { id: 't', totalMs: 0, sessions: [] },
-  { id: 't', rate: 0, totalMs: 0, sessions: [] },          // своя ставка — ноль, а не «не задано»
-  { id: 't', rate: 3000, totalMs: 0, sessions: [] },
-  { id: 't', rate: null, totalMs: 0, sessions: [] },
+const NAMES = [
+  'fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'fmtDate', 'fmtTime',
+  'effectiveRate', 'sessionRate', 'sessionMoney',
+  'taskElapsedMs', 'earnedOf', 'fmtWhen',
+  'fmtTimeShort', 'fmtDateShort', 'monthLabel', 'moneyFmt', 'fmtMoney', 'CURRENCY_SYMBOLS',
 ];
+const mobile = loadMobile(
+  'format.js',
+  {
+    CoreFormat,
+    CoreMoney,
+    LOCALE_MAP: { ru: 'ru-RU', en: 'en-US', uk: 'uk-UA', kk: 'kk-KZ' },
+    t: (lang, key, params) => `${key}|${lang}|${params && params.time}`,
+  },
+  NAMES,
+);
 
-test('ставка задачи считается одинаково, включая нулевую', () => {
-  for (const task of TASKS) {
-    for (const rate of RATES) {
-      assert.equal(
-        mobileMoney.effectiveRate(task, rate), CoreMoney.effectiveRate(task, rate),
-        `разошлись на ставке ${rate}, задача ${JSON.stringify(task.rate)}`,
-      );
-    }
+test('форматирование берётся у ядра, а не переписано заново', () => {
+  for (const name of ['fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'fmtDate', 'fmtTime']) {
+    assert.equal(mobile[name], CoreFormat[name], `${name} — не функция ядра`);
   }
 });
 
-test('ставка и деньги записи совпадают, в том числе у записи со своей ставкой', () => {
-  const sessions = [
-    { ms: 3600000 },
-    { ms: 1800000, rate: 500 },
-    { ms: 1800000, rate: 0 },
-    { ms: 0 },
-  ];
-  for (const task of TASKS) {
-    for (const rate of RATES) {
-      for (const s of sessions) {
-        assert.equal(mobileMoney.sessionRate(s, task, rate), CoreMoney.sessionRate(s, task, rate));
-        assert.equal(mobileMoney.sessionMoney(s, task, rate), CoreMoney.sessionMoney(s, task, rate));
-      }
-    }
+test('деньги берутся у ядра', () => {
+  for (const name of ['effectiveRate', 'sessionRate', 'sessionMoney']) {
+    assert.equal(mobile[name], CoreMoney[name], `${name} — не функция ядра`);
   }
 });
 
-test('earnedOf совпадает на закрытых записях', () => {
-  // С идущим таймером не сверяем: у ядра «сейчас» — параметр, у телефона
-  // Date.now() внутри, и это уже проверено на taskElapsedMs.
-  const task = {
-    id: 't',
-    totalMs: 5400000,
-    sessions: [{ ms: 3600000 }, { ms: 1800000, rate: 500 }],
-  };
-  for (const rate of RATES) {
-    assert.equal(
-      mobileMoney.earnedOf(task, rate, null), CoreMoney.earnedOf(task, rate, null, Date.now()),
-      `разошлись на ставке ${rate}`,
-    );
-  }
+test('обёртки подставляют «сейчас» и считают то же, что ядро', () => {
+  // Ядру «сейчас» приходит параметром, чтобы результат можно было проверить;
+  // телефону удобнее без него. Обёртка — единственное, что их различает.
+  const now = Date.now();
+  const task = { id: 't', totalMs: 5000, sessions: [{ ms: 3600000 }] };
+  const idle = null;
+  const running = { taskId: 't', startedAt: new Date(now - 60000).toISOString() };
+
+  assert.equal(mobile.taskElapsedMs(task, idle), CoreFormat.taskElapsedMs(task, idle, now));
+  assert.equal(mobile.earnedOf(task, 100, idle), CoreMoney.earnedOf(task, 100, idle, now));
+
+  // С идущим таймером допускаем пару миллисекунд между двумя Date.now().
+  const d1 = Math.abs(mobile.taskElapsedMs(task, running) - CoreFormat.taskElapsedMs(task, running, now));
+  const d2 = Math.abs(mobile.earnedOf(task, 100, running) - CoreMoney.earnedOf(task, 100, running, now));
+  assert.ok(d1 <= 50, `taskElapsedMs разошёлся на ${d1} мс`);
+  assert.ok(d2 < 0.01, `earnedOf разошёлся на ${d2}`);
 });
 
-test('список намеренных различий не разрастается молча', () => {
-  // Если у телефона появилась функция с именем из ядра, которой здесь нет, —
-  // это новая необъявленная копия, и её нужно либо сверить, либо объяснить.
-  const mobileSrc = fs.readFileSync(path.join(MOBILE, 'format.js'), 'utf8');
-  const mobileNames = [...mobileSrc.matchAll(/^export (?:function|const) ([a-zA-Z0-9_]+)/gm)].map((m) => m[1]);
-  const shared = mobileNames.filter((n) => n in CoreFormat);
-
-  const checked = ['fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'taskElapsedMs'];
-  // Намеренно разные: у телефона свои локали и подписи вроде «сегодня».
-  const byDesign = ['fmtDate', 'fmtTime'];
-
-  const unexplained = shared.filter((n) => !checked.includes(n) && !byDesign.includes(n));
-  assert.deepEqual(unexplained, [], `новые необъявленные копии: ${unexplained.join(', ')}`);
-});
-
-// --- Известные различия, закреплённые нарочно --------------------------------
-// Они не ошибки сами по себе, но раньше были невидимы: одно имя, разный смысл.
-// Тест падает, если различие изменится, — тогда это надо будет заметить и
-// решить, а не обнаружить в выгрузке у пользователя.
-
-test('fmtDate одинаков на обеих платформах', () => {
-  for (const iso of ['2026-06-10T14:30:05', '2026-01-01T00:00:00', '2026-12-31T23:59:59']) {
-    assert.equal(mobileFormat2.fmtDate(iso), CoreFormat.fmtDate(iso), `разошлись на ${iso}`);
-  }
-});
-
-test('fmtTime называется одинаково, но значит разное', () => {
-  // Ядро отдаёт ЧЧ:ММ:СС без локали, телефон — локальное ЧЧ:ММ. Это не описка:
-  // мобильная версия писалась для экрана, а потом была переиспользована в
-  // отчётах. Следствие видно в выгрузке: один и тот же отчёт с десктопа и с
-  // телефона содержит «14:30:05» и «14:30» соответственно.
-  const iso = '2026-06-10T14:30:05';
-  assert.equal(CoreFormat.fmtTime(iso), '14:30:05', 'ядро пишет секунды');
-  assert.equal(mobileFormat2.fmtTime(iso, 'ru'), '14:30', 'телефон их опускает');
-  assert.notEqual(CoreFormat.fmtTime(iso), mobileFormat2.fmtTime(iso, 'ru'));
-});
-
-test('fmtWhen — тот же дубль, что и остальные, только ещё не вынесенный', () => {
-  // Пять строк в app.js и пять на телефоне, правило одно: сегодняшняя запись
-  // подписывается словом, остальные — числом. Сверить их здесь нельзя:
-  // десктопная версия лежит в app.js, а не в ядре, и в Node не грузится.
-  // Поэтому тест стережёт хотя бы мобильную сторону от тихой правки.
+test('fmtWhen подставляет локаль и словарь телефона', () => {
   const today = new Date();
   today.setHours(14, 30, 0, 0);
-  assert.equal(mobileFormat2.fmtWhen(today.toISOString(), 'ru'), 'today-в-14:30');
-  assert.match(mobileFormat2.fmtWhen('2020-03-04T14:30:00', 'ru'), /^04\.03 \d{2}:\d{2}$/);
+  // Заглушка словаря отдаёт ключ, язык и подстановку — видно, что дошло всё.
+  assert.equal(mobile.fmtWhen(today.toISOString(), 'kk'), 'session.today|kk|14:30');
+  assert.match(mobile.fmtWhen('2020-03-04T14:30:00', 'ru'), /^04\.03 \d{2}:\d{2}$/);
+});
+
+// --- то, что осталось своим --------------------------------------------------
+
+test('fmtTime и fmtTimeShort — разные вещи, и теперь это видно по имени', () => {
+  // Раньше обе назывались fmtTime, и выгрузка с телефона отличалась от
+  // десктопной: в отчёт уходило экранное ЧЧ:ММ вместо ЧЧ:ММ:СС. Теперь в
+  // отчёт идёт функция ядра, а экранная зовётся иначе.
+  const iso = '2026-06-10T14:30:05';
+  assert.equal(mobile.fmtTime(iso), '14:30:05', 'в отчёт — с секундами, как в ядре');
+  assert.equal(mobile.fmtTimeShort(iso, 'ru'), '14:30', 'на экран — без них');
+  assert.equal(CoreFormat.fmtTimeShort, undefined, 'экранного формата в ядре нет и не нужно');
+});
+
+test('локальные форматы остались на телефоне', () => {
+  assert.equal(typeof mobile.fmtDateShort, 'function');
+  assert.equal(typeof mobile.monthLabel, 'function');
+  assert.equal(mobile.CURRENCY_SYMBOLS.RUB, '₽');
+  assert.equal(mobile.fmtMoney(1234.5, 'ru', 'KZT').endsWith('₸'), true);
+});
+
+test('список своего не разрастается молча', () => {
+  // Если у телефона заведётся функция с именем из ядра, которой здесь нет, —
+  // это новая необъявленная копия. Именно так однажды появилась вторая
+  // реализация отчётов.
+  const src = fs.readFileSync(path.join(MOBILE, 'format.js'), 'utf8');
+  const single = [...src.matchAll(/^export (?:function|const) ([a-zA-Z0-9_]+)/gm)].map((m) => m[1]);
+  const destructured = [...src.matchAll(/^export const \{([^}]+)\}/gm)]
+    .flatMap((m) => m[1].split(',').map((x) => x.trim()))
+    .filter(Boolean);
+  const exported = [...single, ...destructured];
+
+  const fromCore = exported.filter((n) => n in CoreFormat || n in CoreMoney);
+  const wrapped = ['taskElapsedMs', 'earnedOf', 'fmtWhen'];
+  const checked = [
+    'fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'fmtDate', 'fmtTime',
+    'effectiveRate', 'sessionRate', 'sessionMoney',
+  ];
+  const unexplained = fromCore.filter((n) => !checked.includes(n) && !wrapped.includes(n));
+  assert.deepEqual(unexplained, [], `необъявленные совпадения имён: ${unexplained.join(', ')}`);
 });
