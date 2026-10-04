@@ -200,12 +200,51 @@
     return false;
   }
 
+  /** Что делать с повторяющейся задачей, когда её закрыли.
+   *
+   *  Решение отделено от применения: десктоп правит задачу на месте и
+   *  показывает тост, телефон заменяет её в сторе. Раньше это были две
+   *  реализации, и они разошлись по четырём местам сразу — от сравнения
+   *  с несуществующим значением `completion` до пропущенного догона.
+   *
+   *  @param rule — правило задачи, как есть (нормализуется внутри).
+   *  @param dueAtIso — текущий срок задачи.
+   *  @param now — «сейчас» числом. Параметром, а не Date.now(), чтобы
+   *    перекат можно было проверить в заданный момент.
+   *  @returns null — делать нечего;
+   *    {finished: true, repeat} — серия кончилась, задача остаётся закрытой;
+   *    {repeat, nextDue, keepHistory} — срок уехал вперёд.
+   */
+  function planRepeatRoll(rule, dueAtIso, now) {
+    const r = normalizeRepeat(rule);
+    if (!r || !dueAtIso || repeatFinished(r)) return null;
+
+    // От срока или от дня закрытия — это выбор пользователя, и значение
+    // ровно одно: normalizeRepeat сводит from к schedule либо done.
+    const base = r.from === "done" ? now : new Date(dueAtIso).getTime();
+    let next = nextDue(r, base);
+
+    // Если задачу не трогали неделями, один шаг оставил бы срок в прошлом —
+    // догоняем до ближайшего будущего, не тратя на это лимит повторений.
+    let guard = 0;
+    while (next != null && next < now && guard < 500) {
+      const further = nextDue(r, next);
+      if (further == null) break;
+      next = further;
+      guard += 1;
+    }
+
+    const spent = { ...r, done: r.done + 1 };
+    if (next == null) return { finished: true, repeat: spent };
+    return { repeat: spent, nextDue: next, keepHistory: !!r.keepHistory };
+  }
   const api = {
     normalizeRepeat,
     nextDue,
     upcomingDue,
     describeRepeat,
     repeatFinished,
+    planRepeatRoll,
     nthWeekdayOfMonth,
     weekdayOrdinal,
     REPEAT_FREQS: FREQS,

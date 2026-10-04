@@ -5829,31 +5829,21 @@ function afterTaskClosed(task, wasDone) {
 }
 
 /** Переводит повторяющуюся задачу на следующий срок. */
+// Решение о перекате — в ядре (core/repeat.js, planRepeatRoll), общее с
+// телефоном; здесь только применение к задаче и тосты.
 function rollRepeat(task) {
-  const rule = Core.normalizeRepeat(task.repeat);
-  if (!rule || !task.dueAt || Core.repeatFinished(rule)) return;
+  const plan = Core.planRepeatRoll(task.repeat, task.dueAt, Date.now());
+  if (!plan) return;
 
-  const base = rule.from === 'done' ? Date.now() : new Date(task.dueAt).getTime();
-  let next = Core.nextDue(rule, base);
-  // Если задачу не трогали неделями, один шаг оставил бы срок в прошлом —
-  // догоняем до ближайшего будущего, не тратя на это лимит повторений.
-  let guard = 0;
-  while (next != null && next < Date.now() && guard < 500) {
-    const further = Core.nextDue(rule, next);
-    if (further == null) break;
-    next = further;
-    guard += 1;
-  }
-
-  const spent = { ...rule, done: rule.done + 1 };
-  if (next == null) {
-    task.repeat = spent;
+  if (plan.finished) {
+    task.repeat = plan.repeat;
     task.updatedAt = new Date().toISOString();
     toast(t('repeat.series_done'));
     return;
   }
+  const next = plan.nextDue;
 
-  if (rule.keepHistory) {
+  if (plan.keepHistory) {
     // Выполненная копия остаётся в списке со своим временем, а сама задача
     // уезжает на следующий срок с чистого листа.
     const copy = {
@@ -5870,7 +5860,7 @@ function rollRepeat(task) {
     task.totalMs = 0;
   }
 
-  task.repeat = spent;
+  task.repeat = plan.repeat;
   task.dueAt = new Date(next).toISOString();
   task.doneAt = null;
   task.notifiedAt = null;

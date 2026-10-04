@@ -135,3 +135,67 @@ test('описание правила отдаёт ключ и подстано�
   assert.deepEqual(wk.vars.days, [1, 3]);
   assert.equal(R.describeRepeat(null), null);
 });
+
+// --- Перекат закрытой задачи ------------------------------------------------
+// До выноса в ядро это были две реализации, и они разошлись по четырём местам:
+// телефон сравнивал from с несуществующим 'completion', не догонял просроченный
+// срок, увеличивал счётчик до расчёта следующей даты и проверял конец серии
+// после увеличения, а не до. Поэтому тут проверяется каждое из четырёх.
+
+const DAY = 86400000;
+const AT = (iso) => new Date(iso).getTime();
+
+test('от срока: следующий срок считается от прежнего, а не от дня закрытия', () => {
+  const rule = R.normalizeRepeat({ freq: 'day', every: 1, from: 'schedule' });
+  const plan = R.planRepeatRoll(rule, '2026-06-10T09:00:00Z', AT('2026-06-10T20:00:00Z'));
+  assert.equal(new Date(plan.nextDue).toISOString(), '2026-06-11T09:00:00.000Z');
+});
+
+test('от дня закрытия: отсчёт идёт от «сейчас»', () => {
+  // Значение ровно одно — 'done'. Сравнение с чем-то другим молча превращает
+  // этот режим в обычный отсчёт от срока.
+  const rule = R.normalizeRepeat({ freq: 'day', every: 1, from: 'done' });
+  const plan = R.planRepeatRoll(rule, '2026-06-01T09:00:00Z', AT('2026-06-10T20:00:00Z'));
+  assert.ok(plan.nextDue > AT('2026-06-10T20:00:00Z'), 'срок должен уехать вперёд от «сейчас»');
+  assert.ok(plan.nextDue - AT('2026-06-10T20:00:00Z') <= DAY, 'и не дальше чем на шаг');
+});
+
+test('просроченный срок догоняется до будущего, а не сдвигается на один шаг', () => {
+  // Задачу не трогали три недели: один шаг оставил бы срок в прошлом.
+  const rule = R.normalizeRepeat({ freq: 'day', every: 1, from: 'schedule' });
+  const now = AT('2026-06-30T12:00:00Z');
+  const plan = R.planRepeatRoll(rule, '2026-06-10T09:00:00Z', now);
+  assert.ok(plan.nextDue > now, 'срок в будущем');
+  assert.equal(plan.repeat.done, 1, 'догон не тратит лимит повторений');
+});
+
+test('кончившаяся серия не перекатывается вовсе', () => {
+  // Серия из двух, обе использованы: repeatFinished обрывает на done >= count.
+  const rule = R.normalizeRepeat({ freq: 'day', every: 1, ends: { kind: 'after', count: 2 } });
+  const spent = { ...rule, done: 2 };
+  assert.equal(R.planRepeatRoll(spent, '2026-06-10T09:00:00Z', AT('2026-06-10T20:00:00Z')), null);
+});
+
+test('последнее повторение закрывает серию, а не уезжает вперёд', () => {
+  // Одна из двух использована: сам перекат ещё случается, но следующего
+  // срока уже нет — nextDue обрывает серию на done + 1 >= count.
+  const rule = R.normalizeRepeat({ freq: 'day', every: 1, ends: { kind: 'after', count: 2 } });
+  const one = { ...rule, done: 1 };
+  const plan = R.planRepeatRoll(one, '2026-06-10T09:00:00Z', AT('2026-06-10T20:00:00Z'));
+  assert.equal(plan.finished, true);
+  assert.equal(plan.repeat.done, 2, 'счётчик всё равно растёт — серия использована до конца');
+  assert.equal(plan.nextDue, undefined);
+});
+
+test('без правила и без срока плана нет', () => {
+  assert.equal(R.planRepeatRoll(null, '2026-06-10T09:00:00Z', Date.now()), null);
+  assert.equal(R.planRepeatRoll(R.normalizeRepeat({ freq: 'day', every: 1 }), null, Date.now()), null);
+});
+
+test('keepHistory доезжает до вызывающего', () => {
+  const on = R.normalizeRepeat({ freq: 'day', every: 1, keepHistory: true });
+  const off = R.normalizeRepeat({ freq: 'day', every: 1 });
+  const now = AT('2026-06-10T20:00:00Z');
+  assert.equal(R.planRepeatRoll(on, '2026-06-10T09:00:00Z', now).keepHistory, true);
+  assert.equal(R.planRepeatRoll(off, '2026-06-10T09:00:00Z', now).keepHistory, false);
+});

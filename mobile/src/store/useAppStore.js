@@ -230,21 +230,28 @@ export const useAppStore = create(
         if (fresh) scheduleTaskReminder(fresh, lang, notifyEnabled !== false);
       },
 
+      /** Перекат закрытой повторяющейся задачи. Решение — в ядре
+       *  (core/repeat.js, planRepeatRoll), общее с десктопом; здесь только
+       *  применение к стору.
+       *
+       *  Раньше это была своя реализация, и она разошлась с десктопом по
+       *  четырём местам сразу: сравнивала from с несуществующим
+       *  «completion» (то есть отсчёт от дня закрытия не работал вовсе),
+       *  не догоняла просроченный срок, считала следующую дату от уже
+       *  увеличенного счётчика и проверяла конец серии после увеличения,
+       *  а не до. */
       _rollRepeat(id) {
         const task = get().tasks.find((t2) => t2.id === id);
-        if (!task || !task.dueAt) return;
-        const rule = Repeat.normalizeRepeat(task.repeat);
-        if (!rule) return;
-        const done = { ...rule, done: (rule.done || 0) + 1 };
+        if (!task) return;
+        const plan = Repeat.planRepeatRoll(task.repeat, task.dueAt, Date.now());
+        if (!plan) return;
         const now = new Date().toISOString();
         // Серия кончилась — задача просто остаётся закрытой.
-        if (Repeat.repeatFinished(done)) {
-          set((s) => ({ tasks: s.tasks.map((t2) => (t2.id === id ? { ...t2, repeat: done, updatedAt: now } : t2)) }));
+        if (plan.finished) {
+          set((s) => ({ tasks: s.tasks.map((t2) => (t2.id === id ? { ...t2, repeat: plan.repeat, updatedAt: now } : t2)) }));
           return;
         }
-        const base = rule.from === 'completion' ? Date.now() : new Date(task.dueAt).getTime();
-        const next = Repeat.nextDue(done, base);
-        if (!next) return;
+        const next = plan.nextDue;
         const openStatus = defaultStatusId(get().statuses, task.projectId, false);
         const copyId = uid();
         set((s) => ({
@@ -252,7 +259,7 @@ export const useAppStore = create(
             if (t2.id !== id) return [t2];
             const reopened = {
               ...t2,
-              repeat: done,
+              repeat: plan.repeat,
               done: false,
               cancelled: false,
               doneAt: null,
@@ -261,7 +268,7 @@ export const useAppStore = create(
               notifiedAt: null,
               updatedAt: now,
             };
-            if (!rule.keepHistory) return [reopened];
+            if (!plan.keepHistory) return [reopened];
             // Копия — это история: своё время, своя запись, без правила.
             const copy = {
               ...t2,
