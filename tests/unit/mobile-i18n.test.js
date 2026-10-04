@@ -111,3 +111,39 @@ test('каждый ключ, который экраны просят у сло�
   }
   assert.deepEqual([...new Set(missing)], [], `ключей нет в словаре:\n  ${[...new Set(missing)].join('\n  ')}`);
 });
+
+test('в словаре нет ключей, которых никто не просит', () => {
+  // Обратная сторона предыдущего теста. Лишний ключ ничего не ломает, поэтому
+  // копится незаметно: словарь телефона был списан с десктопного, и к моменту
+  // первой проверки 117 ключей из 431 не использовались нигде.
+  //
+  // Часть ключей собирается на месте — `status.default_${kind}`,
+  // `repeat.desc_${unit}` и подобное, — поэтому кроме буквальных вхождений
+  // собираются префиксы шаблонов: если в коде есть `plural.${...}`, все ключи
+  // на «plural.» считаются живыми. Сверх того каждый кандидат ищется в коде
+  // как простой текст: лучше оставить лишний ключ, чем удалить нужный.
+  const MOBILE = path.join(__dirname, '..', '..', 'mobile', 'src');
+  let code = '';
+  (function walk(dir) {
+    for (const name of fs.readdirSync(dir)) {
+      const full = path.join(dir, name);
+      if (fs.statSync(full).isDirectory()) { walk(full); continue; }
+      if (!name.endsWith('.js')) continue;
+      if (full.replace(/\\/g, '/').endsWith('lib/i18n.js')) continue;
+      code += fs.readFileSync(full, 'utf8') + '\n';
+    }
+  }(MOBILE));
+
+  const literal = new Set();
+  for (const m of code.matchAll(/['"`]([a-z0-9_]+(?:\.[a-z0-9_]+)+)['"`]/gi)) literal.add(m[1]);
+  const prefixes = [];
+  for (const m of code.matchAll(/`([a-z0-9_.]*[a-z0-9_.])\$\{/gi)) prefixes.push(m[1]);
+  for (const m of code.matchAll(/['"]([a-z0-9_.]*[._])['"]\s*\+/gi)) prefixes.push(m[1]);
+  const built = [...new Set(prefixes)].filter((p) => p && p.includes('.'));
+
+  const unused = Object.keys(T.ru).filter((k) => !literal.has(k)
+    && !built.some((p) => k.startsWith(p))
+    && !code.includes(k));
+
+  assert.deepEqual(unused, [], `ключи без единого обращения:\n  ${unused.join('\n  ')}`);
+});
