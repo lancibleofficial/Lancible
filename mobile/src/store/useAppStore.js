@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyState, migrate, uid, PALETTE } from '../lib/migrate';
 import { scheduleTaskReminder, cancelTaskReminder, rescheduleAll } from '../lib/notifications';
 import { effectiveRate, earnedOf, taskElapsedMs } from '../lib/format';
-import { seedProjectStatuses, defaultStatusId, getStatus, orderedStatuses, planStatusDelete, isDoneStatus } from '../lib/statuses';
+import { seedProjectStatuses, defaultStatusId, getStatus, orderedStatuses, planStatusDelete, planTaskDone } from '../lib/statuses';
 import { t } from '../lib/i18n';
 import Repeat from '../core/repeat.js';
 import Versions from '../core/versions.js';
@@ -194,28 +194,20 @@ export const useAppStore = create(
         get()._afterTaskClosed(id, wasDone);
       },
 
-      /** Галочка «выполнено». Порт setTaskDone из src/renderer/app.js,
-       *  вплоть до условия: статус меняется только если он сейчас не того
-       *  вида, какой нужен. У проекта может быть несколько завершающих
-       *  статусов, и галочка не должна схлопывать их в один — задача,
-       *  стоящая в «Сдано», при повторной отметке остаётся в «Сдано», а не
-       *  переезжает в первый «Готово».
-       *
-       *  Снятие галочки уводит задачу в первый статус вида «к выполнению»
-       *  (defaultStatusId с done: false) — не в тот, откуда она пришла:
-       *  откуда именно, нигде не хранится, и веб ведёт себя так же. */
+      /** Галочка «выполнено». Само правило — в ядре (core/status.js,
+       *  planTaskDone), общее с десктопом; здесь только применение к стору.
+       *  Пересказывать правило тут нельзя: пересказ разойдётся с кодом
+       *  раньше, чем кто-нибудь это заметит. */
       setTaskDone(id, done) {
         const task = get().tasks.find((t2) => t2.id === id);
         if (!task) return;
-        if (isDoneStatus(get().statuses, task.statusId) !== done) {
-          const next = defaultStatusId(get().statuses, task.projectId, done);
-          if (next) { get().setTaskStatus(id, next); return; }
-        }
+        const plan = planTaskDone(get().statuses, task, done);
+        if (plan.moveTo) { get().setTaskStatus(id, plan.moveTo); return; }
         const wasDone = !!task.done;
         const now = new Date().toISOString();
         set((s) => ({
           tasks: s.tasks.map((t2) => (t2.id === id
-            ? { ...t2, done, doneAt: done ? now : null, updatedAt: now }
+            ? { ...t2, done: plan.setDone, doneAt: plan.setDone ? now : null, updatedAt: now }
             : t2)),
         }));
         get()._afterTaskClosed(id, wasDone);

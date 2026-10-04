@@ -95,9 +95,36 @@
     return { status: st, target, moving: tasks.filter((t) => t.statusId === st.id) };
   }
 
+  /** Что должно случиться по галочке «выполнено».
+   *
+   *  Решение отделено от применения, потому что применяют его по-разному:
+   *  десктоп правит объект задачи на месте, телефон заменяет его в сторе.
+   *  А правило одно, и разойтись ему нельзя — иначе одна и та же галочка
+   *  уводит задачу в разные статусы на разных устройствах.
+   *
+   *  Статус меняется, только если он сейчас не того вида, какой нужен. У
+   *  проекта может быть несколько завершающих статусов, и галочка не должна
+   *  схлопывать их в один: задача в «Сдано» при повторной отметке остаётся
+   *  в «Сдано», а не переезжает в первый «Готово».
+   *
+   *  Снятие галочки уводит в первый статус вида «к выполнению», а не туда,
+   *  откуда задача пришла: откуда именно, нигде не хранится.
+   *
+   *  @returns {{moveTo: string}|{setDone: boolean}} — либо переезд в статус,
+   *    либо просто смена флага.
+   */
+  function planTaskDone(statuses, task, done) {
+    if (!task) return { setDone: !!done };
+    if (isDoneStatus(statuses, task.statusId) !== done) {
+      const next = defaultStatusId(statuses, task.projectId, done);
+      if (next) return { moveTo: next };
+    }
+    return { setDone: !!done };
+  }
+
   const api = {
     STATUS_KINDS, CLOSING_KINDS, DEFAULT_STATUSES,
-    orderedStatuses, getStatus, statusesOfKind, defaultStatusId, planStatusDelete,
+    orderedStatuses, getStatus, statusesOfKind, defaultStatusId, planStatusDelete, planTaskDone,
     isDoneStatus, isClosedStatus, makeProjectStatuses,
   };
 

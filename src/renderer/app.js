@@ -290,7 +290,6 @@ const orderedStatuses = (projectId) => Core.orderedStatuses(state.statuses, proj
 const getStatus = (id) => Core.getStatus(state.statuses, id);
 const statusesOfKind = (projectId, kind) => Core.statusesOfKind(state.statuses, projectId, kind);
 const defaultStatusId = (projectId, done) => Core.defaultStatusId(state.statuses, projectId, done);
-const isDoneStatus = (id) => Core.isDoneStatus(state.statuses, id);
 
 /** Набор по умолчанию для нового проекта. Вызывается при создании, а не
  *  только из migrate(): та правит уже сохранённые данные при загрузке и до
@@ -326,15 +325,16 @@ function setTaskStatus(task, statusId) {
  *  по доске, иначе список и доска разойдутся. Если задача уже стоит в статусе
  *  нужного вида, он сохраняется — у пользователя может быть несколько
  *  завершающих статусов, и галочка не должна схлопывать их в один. */
+// Что должно случиться по галочке, решает ядро: правило общее с телефоном
+// (core/status.js, planTaskDone), а применяют его стороны по-разному — тут
+// правкой объекта на месте, там заменой в сторе.
 function setTaskDone(task, done) {
   if (!task) return;
-  if (isDoneStatus(task.statusId) !== done) {
-    const next = defaultStatusId(task.projectId, done);
-    if (next) { setTaskStatus(task, next); return; }
-  }
+  const plan = Core.planTaskDone(state.statuses, task, done);
+  if (plan.moveTo) { setTaskStatus(task, plan.moveTo); return; }
   const wasDone = !!task.done;
-  task.done = done;
-  task.doneAt = done ? new Date().toISOString() : null;
+  task.done = plan.setDone;
+  task.doneAt = plan.setDone ? new Date().toISOString() : null;
   task.updatedAt = new Date().toISOString();
   afterTaskClosed(task, wasDone);
 }

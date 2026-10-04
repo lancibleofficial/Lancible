@@ -126,3 +126,42 @@ test('заблокированный план не называет, куда п
   assert.equal(plan.target, undefined);
   assert.equal(plan.moving, undefined);
 });
+
+// --- Галочка «выполнено» ----------------------------------------------------
+// Правило одно на обе платформы, применяют его по-разному. Расхождение здесь
+// значит, что одна и та же галочка уводит задачу в разные статусы на телефоне
+// и на десктопе — а заметно это только по жалобе.
+
+const doneSet = [
+  { id: "todo", projectId: "p", kind: "todo", order: 0 },
+  { id: "work", projectId: "p", kind: "progress", order: 1 },
+  { id: "done", projectId: "p", kind: "done", order: 2 },
+  { id: "sent", projectId: "p", kind: "done", order: 3 },
+];
+
+test("галочка уводит в первый «готово», если задача ещё не закрыта", () => {
+  const task = { projectId: "p", statusId: "work" };
+  assert.deepEqual(S.planTaskDone(doneSet, task, true), { moveTo: "done" });
+});
+
+test("задача в «Сдано» при повторной отметке остаётся там же", () => {
+  // Вид уже нужный — значит менять статус не на что, меняется только флаг.
+  // Иначе несколько завершающих статусов схлопнулись бы в первый.
+  const task = { projectId: "p", statusId: "sent" };
+  assert.deepEqual(S.planTaskDone(doneSet, task, true), { setDone: true });
+});
+
+test("снятие галочки уводит в «к выполнению», а не туда, откуда пришла", () => {
+  const task = { projectId: "p", statusId: "sent" };
+  assert.deepEqual(S.planTaskDone(doneSet, task, false), { moveTo: "todo" });
+});
+
+test("у проекта без статусов переезжать некуда — меняется только флаг", () => {
+  const task = { projectId: "пусто", statusId: null };
+  assert.deepEqual(S.planTaskDone(doneSet, task, true), { setDone: true });
+});
+
+test("без задачи план не падает", () => {
+  assert.deepEqual(S.planTaskDone(doneSet, null, true), { setDone: true });
+  assert.deepEqual(S.planTaskDone(doneSet, undefined, false), { setDone: false });
+});
