@@ -34,3 +34,7 @@ Thumbs.db
 *.log
 .vercel
 .env*
+
+# Граф кода graphify — производный артефакт, пересобирается `graphify update .`
+# (3,9 МБ на коммит, из них 2 МБ graph.json)
+graphify-out/
