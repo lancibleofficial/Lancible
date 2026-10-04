@@ -1,9 +1,13 @@
 // Повторение задач: строка в настройках, окно тонкой настройки, поведение
 // при закрытии и призраки на календаре. Запуск: npm run test:e2e
 const { test, expect } = require('@playwright/test');
+const { pinClock } = require('./clock');
 
 /** Проект с двумя задачами: со сроком на сегодня 18:00 и без срока. */
 async function seed(page) {
+  // Часы прибиты до перехода: см. tests/e2e/clock.js — иначе неделя
+  // календаря съезжает и в воскресенье срок «на завтра» в неё не попадает.
+  await pinClock(page);
   await page.goto('/index.html');
   await page.evaluate(() => localStorage.clear());
   await page.reload();

@@ -1,6 +1,7 @@
 // Страница «Календарь»: часовая сетка, перетаскивание записей, проекты как
 // календари. Запуск: npm run test:e2e
 const { test, expect } = require('@playwright/test');
+const { pinClock } = require('./clock');
 
 const HOUR = 3_600_000;
 
@@ -8,6 +9,9 @@ const HOUR = 3_600_000;
  *  полночь и пара дедлайнов. Готовим в состоянии приложения — через
  *  интерфейс такие времена не набрать. */
 async function seed(page) {
+  // Часы прибиты до перехода: см. tests/e2e/clock.js — иначе неделя
+  // календаря съезжает и в воскресенье срок «на завтра» в неё не попадает.
+  await pinClock(page);
   await page.goto('/index.html');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
