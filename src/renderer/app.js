@@ -3544,186 +3544,45 @@ el.sdlgEndBtn.addEventListener('click', () => openTimePicker(el.sdlgEndBtn, sdlg
 // Выгрузка в Excel
 // ---------------------------------------------------------------------------
 
-const cellBold = (txt) => ({ t: txt, s: 1 });
-const cellHours = (n) => ({ n, s: 2 });
-const sortByStart = (a, b) => new Date(a.start || a.s.start) - new Date(b.start || b.s.start);
+// Форма отчётов — в core/reports.js, общая с телефоном: строки, колонки и
+// формулы там, а здесь только подстановка состояния. Подписи и
+// форматирование передаются параметрами, потому что словарь и format у
+// десктопа и телефона свои.
+const reports = () => Core.makeReports({
+  t,
+  cur: currencySym(),
+  fmtClock,
+  fmtDate,
+  fmtTime,
+  hoursOf,
+  effectiveRate,
+  sessionRate,
+  sessionMoney,
+});
 
 function buildTaskSheets(task) {
-  const project = getProject(task.projectId);
-  const sessions = [...(task.sessions || [])].sort(sortByStart);
-  const totalMs = task.totalMs || 0;
-  const cur = currencySym();
-  const totalMoney = sessions.reduce((a, s) => a + sessionMoney(s, task), 0);
-  const rows = [
-    [cellBold(t('xlsx.task')), task.title || t('xlsx.no_title')],
-    [cellBold(t('xlsx.project')), project ? project.name : t('xlsx.no_project')],
-    [cellBold(t('xlsx.total_time')), fmtClock(totalMs), cellHours(hoursOf(totalMs))],
-    [cellBold(t('xlsx.sessions')), sessions.length],
-    [cellBold(t('xlsx.rate_now', { cur })), cellHours(effectiveRate(task))],
-    [cellBold(t('xlsx.earned', { cur })), cellHours(totalMoney)],
-    [cellBold(t('xlsx.exported')), `${fmtDate(Date.now())} ${fmtTime(Date.now())}`],
-    [],
-    [t('xlsx.num'), t('xlsx.date'), t('xlsx.start'), t('xlsx.end'), t('xlsx.duration'), t('xlsx.hours'),
-      t('xlsx.rate', { cur }), t('xlsx.sum', { cur }), t('xlsx.note')].map(cellBold),
-  ];
-  const firstRow = rows.length + 1;
-  sessions.forEach((s, i) => {
-    rows.push([
-      i + 1, fmtDate(s.start), fmtTime(s.start), s.end ? fmtTime(s.end) : '',
-      fmtClock(s.ms), cellHours(hoursOf(s.ms)), cellHours(sessionRate(s, task)),
-      cellHours(sessionMoney(s, task)), s.recovered ? t('xlsx.recovered') : s.manual ? t('xlsx.manual') : '',
-    ]);
-  });
-  const lastRow = firstRow + sessions.length - 1;
-  rows.push([
-    cellBold(t('xlsx.total')), '', '', '', fmtClock(sessions.reduce((a, s) => a + s.ms, 0)),
-    sessions.length ? { f: `SUM(F${firstRow}:F${lastRow})`, n: hoursOf(totalMs), s: 2 } : cellHours(0), '',
-    sessions.length ? { f: `SUM(H${firstRow}:H${lastRow})`, n: totalMoney, s: 2 } : cellHours(0),
-  ]);
-  return [{ name: task.title || t('xlsx.default_task_sheet'), cols: [6, 12, 10, 10, 14, 9, 12, 12, 14].map((width) => ({ width })), rows }];
+  return reports().buildTaskSheets(task, getProject(task.projectId));
 }
 
 function buildProjectSheets(project, versionId) {
   const tasks = Core.filterTasks(tasksOf(project.id), state.versions, { versionId: versionId || 'all' });
-  const stamp = `${fmtDate(Date.now())} ${fmtTime(Date.now())}`;
-  const cur = currencySym();
-  const taskMoney = (t2) => (t2.sessions || []).reduce((a, s) => a + sessionMoney(s, t2), 0);
-  const taskRows = [
-    [cellBold(t('xlsx.project')), project.name],
-    project.description ? [cellBold(t('xlsx.description')), project.description] : [],
-    versionId && versionId !== 'all' ? [cellBold(t('xlsx.version')), versionFilterLabel(project.id, versionId)] : [],
-    [cellBold(t('xlsx.exported')), stamp],
-    [],
-    [t('xlsx.num'), t('xlsx.task'), t('xlsx.status'), t('xlsx.total_time'), t('xlsx.hours'), t('xlsx.sum', { cur }),
-      t('xlsx.rate', { cur }), t('xlsx.sessions'), t('xlsx.first_entry'), t('xlsx.last_entry')].map(cellBold),
-  ];
-  const tFirst = taskRows.length + 1;
-  tasks.forEach((t2, i) => {
-    const starts = (t2.sessions || []).map((s) => new Date(s.start).getTime());
-    taskRows.push([
-      i + 1, t2.title || t('xlsx.no_title'), t2.done ? t('xlsx.done') : t('xlsx.active'),
-      fmtClock(t2.totalMs || 0), cellHours(hoursOf(t2.totalMs || 0)),
-      cellHours(taskMoney(t2)), cellHours(effectiveRate(t2)),
-      (t2.sessions || []).length,
-      starts.length ? fmtDate(Math.min(...starts)) : '', starts.length ? fmtDate(Math.max(...starts)) : '',
-    ]);
-  });
-  const tLast = tFirst + tasks.length - 1;
-  const totalMs = tasks.reduce((a, t2) => a + (t2.totalMs || 0), 0);
-  const totalMoney = tasks.reduce((a, t2) => a + taskMoney(t2), 0);
-  taskRows.push([
-    cellBold(t('xlsx.total')), '', '', fmtClock(totalMs),
-    tasks.length ? { f: `SUM(E${tFirst}:E${tLast})`, n: hoursOf(totalMs), s: 2 } : cellHours(0),
-    tasks.length ? { f: `SUM(F${tFirst}:F${tLast})`, n: totalMoney, s: 2 } : cellHours(0), '',
-    tasks.reduce((a, t2) => a + (t2.sessions ? t2.sessions.length : 0), 0),
-  ]);
-  const all = [];
-  for (const t2 of tasks) for (const s of t2.sessions || []) all.push({ t: t2, s });
-  all.sort((a, b) => new Date(a.s.start) - new Date(b.s.start));
-  const sesRows = [
-    [t('xlsx.num'), t('xlsx.task'), t('xlsx.date'), t('xlsx.start'), t('xlsx.end'), t('xlsx.duration'),
-      t('xlsx.hours'), t('xlsx.rate', { cur }), t('xlsx.sum', { cur }), t('xlsx.note')].map(cellBold),
-  ];
-  all.forEach(({ t: t2, s }, i) => {
-    sesRows.push([
-      i + 1, t2.title || t('xlsx.no_title'), fmtDate(s.start), fmtTime(s.start),
-      s.end ? fmtTime(s.end) : '', fmtClock(s.ms), cellHours(hoursOf(s.ms)),
-      cellHours(sessionRate(s, t2)), cellHours(sessionMoney(s, t2)),
-      s.recovered ? t('xlsx.recovered') : s.manual ? t('xlsx.manual') : '',
-    ]);
-  });
-  const sesTotalMs = all.reduce((a, x) => a + x.s.ms, 0);
-  const sesTotalMoney = all.reduce((a, x) => a + sessionMoney(x.s, x.t), 0);
-  sesRows.push([
-    cellBold(t('xlsx.total')), '', '', '', '', fmtClock(sesTotalMs),
-    all.length ? { f: `SUM(G2:G${all.length + 1})`, n: hoursOf(sesTotalMs), s: 2 } : cellHours(0), '',
-    all.length ? { f: `SUM(I2:I${all.length + 1})`, n: sesTotalMoney, s: 2 } : cellHours(0),
-  ]);
-  return [
-    { name: t('xlsx.sheet_tasks'), cols: [6, 34, 12, 14, 9, 12, 12, 8, 14, 16].map((width) => ({ width })), rows: taskRows },
-    { name: t('xlsx.sheet_sessions'), cols: [6, 34, 12, 10, 10, 14, 9, 12, 12, 16].map((width) => ({ width })), rows: sesRows },
-  ];
+  // Отбор по версии виден в самом отчёте: иначе две выгрузки одного
+  // проекта различаются только числами, и какая из них за что — не
+  // вспомнить.
+  const meta = versionId && versionId !== 'all'
+    ? [[{ t: t('xlsx.version'), s: 1 }, versionFilterLabel(project.id, versionId)]]
+    : [];
+  return reports().buildProjectSheets(project, tasks, { meta });
 }
 
-/** Сводка по всем проектам: первый лист — итоги по каждому проекту,
- *  дальше по листу на проект. Порт buildAllProjectsSheets() из
- *  mobile/src/lib/xlsxReports.js. Имена листов Excel ограничены 31
- *  символом и не терпят []:*?/\\, плюс не могут повторяться — отсюда
- *  uniqueName(). */
 function buildAllProjectsSheets() {
-  const cur = currencySym();
-  const stamp = `${fmtDate(Date.now())} ${fmtTime(Date.now())}`;
-  const rows = [
-    [cellBold(t('xlsx.exported')), stamp],
-    [],
-    [t('xlsx.num'), t('xlsx.project'), t('xlsx.total_time'), t('xlsx.hours'), t('xlsx.sum', { cur }), t('xlsx.sessions')].map(cellBold),
-  ];
-  const first = rows.length + 1;
-  let grandMs = 0;
-  let grandMoney = 0;
-  let grandSessions = 0;
-  state.projects.forEach((project, i) => {
-    const tasks = tasksOf(project.id);
-    const ms = tasks.reduce((a, t2) => a + (t2.totalMs || 0), 0);
-    const money = tasks.reduce((a, t2) => a + (t2.sessions || []).reduce((b, ses) => b + sessionMoney(ses, t2), 0), 0);
-    const count = tasks.reduce((a, t2) => a + (t2.sessions ? t2.sessions.length : 0), 0);
-    grandMs += ms; grandMoney += money; grandSessions += count;
-    rows.push([i + 1, project.name, fmtClock(ms), cellHours(hoursOf(ms)), cellHours(money), count]);
-  });
-  const last = first + state.projects.length - 1;
-  rows.push([
-    cellBold(t('xlsx.total')), '', fmtClock(grandMs),
-    state.projects.length ? { f: `SUM(D${first}:D${last})`, n: hoursOf(grandMs), s: 2 } : cellHours(0),
-    state.projects.length ? { f: `SUM(E${first}:E${last})`, n: grandMoney, s: 2 } : cellHours(0),
-    grandSessions,
-  ]);
-  const used = new Set();
-  const uniqueName = (raw) => {
-    const base = (raw || '').replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, 28) || t('xlsx.default_task_sheet');
-    let name = base;
-    let n = 2;
-    while (used.has(name)) name = `${base} ${n++}`;
-    used.add(name);
-    return name;
-  };
-  const sheets = [{ name: uniqueName(t('xlsx.sheet_tasks')), cols: [6, 34, 14, 9, 12, 10].map((width) => ({ width })), rows }];
-  for (const project of state.projects) {
-    const [tasksSheet] = buildProjectSheets(project);
-    sheets.push({ ...tasksSheet, name: uniqueName(project.name) });
-  }
-  return sheets;
+  return reports().buildAllProjectsSheets(state.projects, tasksOf);
 }
 
-/** Один лист «Сессии» за произвольный промежуток — для выгрузки из
- *  календаря. Порт buildPeriodSheets() из mobile/src/lib/xlsxReports.js;
- *  в отличие от buildProjectSheets он не привязан к проекту и собирает
- *  сессии всех задач, добавляя колонку с названием проекта. */
 function buildPeriodSheets(from, to) {
-  const cur = currencySym();
-  const all = calSessionPairs()
-    .filter(({ s }) => { const d = new Date(s.start); return d >= from && d <= to; })
-    .sort((a, b) => new Date(a.s.start) - new Date(b.s.start));
-  const rows = [
-    [t('xlsx.num'), t('xlsx.task'), t('xlsx.project'), t('xlsx.date'), t('xlsx.start'), t('xlsx.end'),
-      t('xlsx.duration'), t('xlsx.hours'), t('xlsx.rate', { cur }), t('xlsx.sum', { cur }), t('xlsx.note')].map(cellBold),
-  ];
-  all.forEach(({ t: t2, s }, i) => {
-    const p = getProject(t2.projectId);
-    rows.push([
-      i + 1, t2.title || t('xlsx.no_title'), p ? p.name : t('xlsx.no_project'),
-      fmtDate(s.start), fmtTime(s.start), s.end ? fmtTime(s.end) : '',
-      fmtClock(s.ms), cellHours(hoursOf(s.ms)), cellHours(sessionRate(s, t2)),
-      cellHours(sessionMoney(s, t2)), s.recovered ? t('xlsx.recovered') : s.manual ? t('xlsx.manual') : '',
-    ]);
-  });
-  const totalMs = all.reduce((a, x) => a + x.s.ms, 0);
-  const totalMoney = all.reduce((a, x) => a + sessionMoney(x.s, x.t), 0);
-  rows.push([
-    cellBold(t('xlsx.total')), '', '', '', '', '', fmtClock(totalMs),
-    all.length ? { f: `SUM(H2:H${all.length + 1})`, n: hoursOf(totalMs), s: 2 } : cellHours(0), '',
-    all.length ? { f: `SUM(J2:J${all.length + 1})`, n: totalMoney, s: 2 } : cellHours(0),
-  ]);
-  return [{ name: t('xlsx.sheet_sessions').slice(0, 31), cols: [6, 30, 24, 12, 10, 10, 14, 9, 12, 12, 16].map((width) => ({ width })), rows }];
+  // statsTasks() уже учитывает фильтр по проекту на экране статистики,
+  // поэтому ядру достаётся готовый список, а оно отбирает сессии по датам.
+  return reports().buildPeriodSheets(statsTasks(), getProject, { from, to });
 }
 
 async function runExport(defaultName, sheets) {
