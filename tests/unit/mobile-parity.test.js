@@ -62,6 +62,17 @@ const mobileFormat = loadMobile(
   ['fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'taskElapsedMs'],
 );
 
+// Второй загрузчик — со словарём-заглушкой, которая видна в ответе: так
+// проверяется, что подпись «сегодня» действительно подставляется.
+const mobileFormat2 = loadMobile(
+  "format.js",
+  {
+    LOCALE_MAP: { ru: "ru-RU", en: "en-US", uk: "uk-UA", kk: "kk-KZ" },
+    t: (lang, key, params) => `${key.split(".").pop()}-в-${params && params.time}`,
+  },
+  ["fmtDate", "fmtTime", "fmtWhen"],
+);
+
 const LANGS = ['ru', 'en', 'uk', 'kk'];
 const MS = [0, 1, 999, 1000, 59_999, 60_000, 61_000, 3_599_999, 3_600_000, 3_661_000, 86_400_000, 123_456_789];
 
@@ -201,4 +212,37 @@ test('список намеренных различий не разрастае
 
   const unexplained = shared.filter((n) => !checked.includes(n) && !byDesign.includes(n));
   assert.deepEqual(unexplained, [], `новые необъявленные копии: ${unexplained.join(', ')}`);
+});
+
+// --- Известные различия, закреплённые нарочно --------------------------------
+// Они не ошибки сами по себе, но раньше были невидимы: одно имя, разный смысл.
+// Тест падает, если различие изменится, — тогда это надо будет заметить и
+// решить, а не обнаружить в выгрузке у пользователя.
+
+test('fmtDate одинаков на обеих платформах', () => {
+  for (const iso of ['2026-06-10T14:30:05', '2026-01-01T00:00:00', '2026-12-31T23:59:59']) {
+    assert.equal(mobileFormat2.fmtDate(iso), CoreFormat.fmtDate(iso), `разошлись на ${iso}`);
+  }
+});
+
+test('fmtTime называется одинаково, но значит разное', () => {
+  // Ядро отдаёт ЧЧ:ММ:СС без локали, телефон — локальное ЧЧ:ММ. Это не описка:
+  // мобильная версия писалась для экрана, а потом была переиспользована в
+  // отчётах. Следствие видно в выгрузке: один и тот же отчёт с десктопа и с
+  // телефона содержит «14:30:05» и «14:30» соответственно.
+  const iso = '2026-06-10T14:30:05';
+  assert.equal(CoreFormat.fmtTime(iso), '14:30:05', 'ядро пишет секунды');
+  assert.equal(mobileFormat2.fmtTime(iso, 'ru'), '14:30', 'телефон их опускает');
+  assert.notEqual(CoreFormat.fmtTime(iso), mobileFormat2.fmtTime(iso, 'ru'));
+});
+
+test('fmtWhen — тот же дубль, что и остальные, только ещё не вынесенный', () => {
+  // Пять строк в app.js и пять на телефоне, правило одно: сегодняшняя запись
+  // подписывается словом, остальные — числом. Сверить их здесь нельзя:
+  // десктопная версия лежит в app.js, а не в ядре, и в Node не грузится.
+  // Поэтому тест стережёт хотя бы мобильную сторону от тихой правки.
+  const today = new Date();
+  today.setHours(14, 30, 0, 0);
+  assert.equal(mobileFormat2.fmtWhen(today.toISOString(), 'ru'), 'today-в-14:30');
+  assert.match(mobileFormat2.fmtWhen('2020-03-04T14:30:00', 'ru'), /^04\.03 \d{2}:\d{2}$/);
 });
