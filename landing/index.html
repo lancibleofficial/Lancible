@@ -184,7 +184,7 @@
   .feature-desc{font-size:.84rem; color:var(--text-dim); line-height:1.55;}
 
   /* ---------- footer ---------- */
-  footer{padding-block:44px; border-top:1px solid var(--border-soft);}
+  footer{padding-block:44px; border-top:1px solid var(--border-soft); flex:none;}
   .footer-row{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
   .footer-brand{display:flex; align-items:center; gap:9px; color:var(--text-dim); font-size:.86rem;}
   .footer-brand svg{width:18px; height:18px;}
@@ -238,17 +238,20 @@
     .feature-grid{grid-template-columns:1fr 1fr;}
     .blog-head{align-items:flex-start; flex-direction:column; gap:20px;}
   }
+  /* Порог замерен, а не угадан: шапке в полном составе нужно 583 px, и на
+   * 561 правый блок вылезал за поле страницы. 640 даёт запас. Страничные
+   * правила ниже живут отдельно — они сужаются на своей ширине. */
+  @media (max-width: 640px){
+    .header-row{height:60px;}
+    .gh-link span.long{display:none;}
+    .status-pill{display:none;}
+  }
   @media (max-width: 560px){
     .platform-grid{grid-template-columns:1fr;}
     .platform-card.wide{grid-column:span 1;}
     .platform-card.wide-inner{grid-template-columns:auto 1fr; }
     .platform-card.wide-inner .platform-cta{grid-column:span 2;}
     .feature-grid{grid-template-columns:1fr;}
-    .header-row{height:60px;}
-    .gh-link span{display:none;}
-    /* На узком экране в шапке остаётся только навигация: «Блог» — это
-     * отдельная страница, а плашка со статусом здесь лишь украшение. */
-    .status-pill{display:none;}
     .blog-entry{grid-template-columns:1fr; gap:14px; padding-block:26px;}
     .blog-when{flex-direction:row; align-items:baseline; gap:10px; padding-top:0;}
     .blog-main{padding-left:0; border-left:none;}
@@ -269,11 +272,11 @@
       Lancible
     </div>
     <div class="header-actions">
-      <div class="status-pill"><span class="status-dot"></span><span class="long">В активной разработке</span><span>· v0.3</span></div>
-      <a class="gh-link nav-link" href="blog.html">Блог</a>
+      <div class="status-pill"><span class="status-dot"></span><span>В активной разработке</span><span>· v0.3</span></div>
+      <a class="gh-link" href="blog.html">Блог</a>
       <a class="gh-link" href="https://github.com/lancibleofficial/Lancible" target="_blank" rel="noopener">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38v-1.49c-2.23.48-2.7-1.07-2.7-1.07-.36-.93-.89-1.17-.89-1.17-.72-.5.06-.49.06-.49.8.06 1.22.82 1.22.82.71 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
-        <span>GitHub</span>
+        <span class="long">GitHub</span>
       </a>
     </div>
   </div>

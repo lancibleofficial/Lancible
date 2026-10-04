@@ -151,10 +151,15 @@
   @media (max-width: 860px){
     .blog-hero-row{align-items:flex-start; flex-direction:column; gap:22px;}
   }
-  @media (max-width: 560px){
+  /* Порог замерен, а не угадан: шапке в полном составе нужно 583 px, и на
+   * 561 правый блок вылезал за поле страницы. 640 даёт запас. Страничные
+   * правила ниже живут отдельно — они сужаются на своей ширине. */
+  @media (max-width: 640px){
     .header-row{height:60px;}
     .gh-link span.long{display:none;}
     .status-pill{display:none;}
+  }
+  @media (max-width: 560px){
     .blog-hero{padding-block:44px 32px;}
     .blog-entry{grid-template-columns:1fr; gap:14px; padding-block:26px;}
     .blog-when{flex-direction:row; align-items:baseline; gap:10px; padding-top:0;}

@@ -1,14 +1,19 @@
-// Браузерные тесты веб-версии. Запуск: npm run test:e2e
+// Браузерные тесты. Запуск: npm run test:e2e (веб), npm run test:landing
+// (лендинг), npm run test:visual (снимки с эталоном) — или playwright test
+// целиком.
 //
 // Почему настоящий браузер, а не подделка DOM: приложение целиком про DOM —
 // фокус, хранилище вкладки, перерисовка списков. Подделка всё это имитирует,
 // и тест остаётся зелёным там, где продукт сломан.
+//
+// Три набора, три папки, три сервера-источника:
+//   tests/e2e/     — веб-версия приложения (web/), поведение и данные
+//   tests/landing/ — лендинг (landing/), отрисованная шапка/подвал и размеры
+//   tests/visual/  — снимки обоих с эталоном, см. tests/visual/shot.js
 const { defineConfig, devices } = require('@playwright/test');
-
-const PORT = 5199; // не 5173: тесты не должны драться за порт с открытым превью
+const { PORT_WEB, PORT_LANDING } = require('./tests/ports');
 
 module.exports = defineConfig({
-  testDir: './tests/e2e',
   // Гонять параллельно нельзя: у вкладок общее хранилище на один адрес, и
   // тесты начнут видеть проекты друг друга.
   workers: 1,
@@ -17,17 +22,40 @@ module.exports = defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: `http://localhost:${PORT}`,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  // Сервер поднимается сам — тест не должен зависеть от того, что кто-то
+  projects: [
+    {
+      name: 'web',
+      testDir: './tests/e2e',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT_WEB}` },
+    },
+    {
+      name: 'landing',
+      testDir: './tests/landing',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT_LANDING}` },
+    },
+    {
+      name: 'visual',
+      testDir: './tests/visual',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT_LANDING}` },
+    },
+  ],
+  // Серверы поднимаются сами — тест не должен зависеть от того, что кто-то
   // заранее запустил npm run serve:web.
-  webServer: {
-    command: `node scripts/serve-web.js ${PORT}`,
-    url: `http://localhost:${PORT}/index.html`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  webServer: [
+    {
+      command: `node scripts/serve-web.js ${PORT_WEB}`,
+      url: `http://localhost:${PORT_WEB}/index.html`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: `node scripts/serve-web.js ${PORT_LANDING} --root landing`,
+      url: `http://localhost:${PORT_LANDING}/index.html`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+  ],
 });

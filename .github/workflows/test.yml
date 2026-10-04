@@ -1,6 +1,12 @@
 # Автотесты на каждый push и каждый pull request. Релизные процессы
 # (release.yml, mobile-release.yml) этот файл не трогает: они запускаются по
 # тегам и живут отдельно.
+#
+# Работы разделены не по вкусу, а по тому, от чего они зависят: юнитам нужен
+# только Node, телефону — свой набор зависимостей, браузерным — Chromium и
+# собранный web/, проверке прав — сеть и живая база. Сбой на стороне Supabase
+# не должен выглядеть как поломка кода, а установка Chromium не должна
+# задерживать ответ от юнитов.
 name: Тесты
 
 on:
@@ -25,6 +31,21 @@ jobs:
       - run: npm run test:unit
       - run: npm run check:xlsx
 
+  mobile:
+    name: Телефон
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: mobile
+      - run: npm test
+        working-directory: mobile
+
   e2e:
     name: Браузер
     runs-on: ubuntu-latest
@@ -42,6 +63,13 @@ jobs:
       - run: npm run build:web
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - run: npm run test:landing
+      # Снимки сравниваются с эталоном для своей системы. Эталоны в
+      # репозитории заведены для Windows — на линуксовом раннере их нет, и
+      # набор пропускается с объяснением (tests/visual/shot.js). Это
+      # осознанно: красить сборку красным из-за другого сглаживания шрифтов
+      # нельзя, а молча не гонять — тоже.
+      - run: npm run test:visual
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -58,7 +86,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci --ignore-scripts
       # Отдельной работой, а не шагом в юнитах: эти тесты ходят в сеть, и
       # сбой на стороне Supabase не должен выглядеть как поломка кода.
+      - run: npm ci --ignore-scripts
       - run: npm run test:backend
