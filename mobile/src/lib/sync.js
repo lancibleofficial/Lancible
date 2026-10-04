@@ -16,6 +16,7 @@ import { useAppStore } from '../store/useAppStore';
 import { openSheet } from '../store/useSheetStore';
 import ActionSheetContent from '../components/ActionSheetContent';
 import { uid } from './migrate';
+import CoreSync from '../core/sync.js';
 import { t } from './i18n';
 
 const SYNC_CLIENT_ID = uid(); // отличает собственные правки от чужих в realtime-подписке
@@ -149,13 +150,16 @@ export async function syncOnSignIn(userId) {
       return;
     }
     const { projects, tasks, settings } = useAppStore.getState();
-    const localHasData = projects.length > 0 || tasks.length > 0;
-    const remoteHasData = !!(row && row.data && ((row.data.projects || []).length > 0 || (row.data.tasks || []).length > 0));
-    if (!remoteHasData) {
-      if (localHasData) await pushSyncState();
-    } else if (!localHasData) {
-      applyRemoteData(row.data);
-    } else if (!isSyncAlreadyResolved(userId)) {
+    // Какую ветку выбрать — решает ядро (core/sync.js), общее с десктопом:
+    // это единственное место, где ошибка стоит пользователю его данных.
+    const plan = CoreSync.planSignInSync({
+      localHasData: CoreSync.hasData({ projects, tasks }),
+      remoteHasData: CoreSync.hasData(row && row.data),
+      resolved: isSyncAlreadyResolved(userId),
+    });
+    if (plan === 'push') await pushSyncState();
+    else if (plan === 'pull') applyRemoteData(row.data);
+    else if (plan === 'ask') {
       const useServer = await confirmDialog(t(settings.lang, 'sync.conflict_text'), {
         title: t(settings.lang, 'sync.conflict_title'),
         okLabel: t(settings.lang, 'sync.use_server'),

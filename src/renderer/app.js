@@ -1208,13 +1208,17 @@ async function syncOnSignInInner() {
     console.error('Не удалось прочитать синхронизированные данные:', err);
     return;
   }
-  const localHasData = state.projects.length > 0 || state.tasks.length > 0;
-  const remoteHasData = !!(row && row.data && ((row.data.projects || []).length > 0 || (row.data.tasks || []).length > 0));
-  if (!remoteHasData) {
-    if (localHasData) await pushSyncState();
-  } else if (!localHasData) {
-    applyRemoteData(row.data);
-  } else if (!isSyncAlreadyResolved()) {
+  // Какую ветку выбрать — решает ядро (core/sync.js): это единственное
+  // место, где ошибка стоит пользователю его данных, и правило обязано
+  // совпадать с телефоном. Сами запросы и диалог остаются здесь.
+  const plan = Core.planSignInSync({
+    localHasData: Core.hasData(state),
+    remoteHasData: Core.hasData(row && row.data),
+    resolved: isSyncAlreadyResolved(),
+  });
+  if (plan === 'push') await pushSyncState();
+  else if (plan === 'pull') applyRemoteData(row.data);
+  else if (plan === 'ask') {
     const useServer = await confirmDialog(t('sync.conflict_text'), {
       title: t('sync.conflict_title'),
       okLabel: t('sync.use_server'),
