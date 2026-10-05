@@ -44,12 +44,6 @@
       "at": "L48"
     },
     {
-      "id": "mobile_src_components_logo_logo",
-      "label": "Logo()",
-      "file": "mobile/src/components/Logo.js",
-      "at": "L6"
-    },
-    {
       "id": "mobile_src_components_minidatepicker_minidatepicker_shift",
       "label": "shift()",
       "file": "mobile/src/components/MiniDatePicker.js",
@@ -546,6 +540,12 @@
       "label": "task()",
       "file": "mobile/tests/store-tasks.test.js",
       "at": "L30"
+    },
+    {
+      "id": "scripts_graph_orphans_main",
+      "label": "main()",
+      "file": "scripts/graph-orphans.js",
+      "at": "L77"
     },
     {
       "id": "scripts_make_icon_draw",
