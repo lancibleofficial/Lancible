@@ -3123,7 +3123,7 @@ function renderSessions(task) {
     when.addEventListener('click', () => openSessionDialog(task, i));
 
     const right = document.createElement('span');
-    right.style.cssText = 'display:flex;align-items:center;gap:8px';
+    right.className = 'session-side';
 
     const dur = document.createElement('span');
     dur.className = 'session-dur';

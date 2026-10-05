@@ -70,6 +70,13 @@
   --link: #5ec8f2;
   --danger: #ef7a72;
   --running: #aceb98;
+  /* Белое поверх насыщенной заливки: текст опасной кнопки, цифра в значке,
+     бегунок включённого переключателя. В обеих темах одно и то же. */
+  --text-on-color: #fff;
+  /* Затемнение под модалкой и фон блока кода в редакторе — тоже одни на обе
+     темы: код читается светлым по тёмному и в светлой теме. */
+  --scrim: rgba(0, 0, 0, 0.45);
+  --code-bg: #232428;
 
   --tab-active-bg: #2a2b2e;
   --nav-active-bg: color-mix(in srgb, var(--accent) 15%, transparent);
@@ -344,7 +351,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
    а на светлой давало почти белую полоску с зелёной точкой, по которой было
    не понять, включено ли что-нибудь вообще. */
 .switch[aria-pressed='true'] .switch-track { background: var(--accent); border-color: var(--accent); }
-.switch[aria-pressed='true'] .switch-thumb { transform: translateX(13px); background: #fff; }
+.switch[aria-pressed='true'] .switch-thumb { transform: translateX(13px); background: var(--text-on-color); }
 
 /* ---------- Меню / модалки ---------- */
 
@@ -376,7 +383,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
 #modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #stdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+  position: fixed; inset: 0; background: var(--scrim);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
 }
@@ -452,7 +459,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .modal-buttons button:hover { border-color: var(--border-strong); }
 .modal-buttons button.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 .modal-buttons button:active { transform: scale(0.97); }
-.modal-buttons button.confirm-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.modal-buttons button.confirm-danger { background: var(--danger); border-color: var(--danger); color: var(--text-on-color); }
 .modal-buttons button.confirm-danger:hover { filter: brightness(1.08); background: var(--danger); border-color: var(--danger); }
 
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -961,7 +968,7 @@ body.platform-web .tb-account {
   padding: 0 4px;
   border-radius: 999px;
   background: var(--danger);
-  color: #fff;
+  color: var(--text-on-color);
   font-size: 10px;
   line-height: 16px;
   text-align: center;
@@ -1403,7 +1410,7 @@ body.platform-web .tb-account {
   min-width: 108px;
   transition: background 0.13s var(--ease), transform 0.08s var(--ease);
 }
-.timer-btn.running { background: var(--danger); color: #fff; }
+.timer-btn.running { background: var(--danger); color: var(--text-on-color); }
 .timer-btn:hover { background: var(--accent-hover); }
 .timer-btn.running:hover { background: var(--danger); filter: brightness(1.08); }
 .timer-btn:active { transform: scale(0.97); }
@@ -1443,7 +1450,7 @@ body.platform-web .tb-account {
 .ql-snow .ql-picker-item.ql-selected { color: var(--accent); }
 .ql-editor a { color: var(--link); }
 .ql-editor blockquote { border-left-color: var(--border-strong); color: var(--text-dim); }
-.ql-editor code, .ql-editor pre, .ql-editor pre.ql-syntax { background: #232428; color: var(--text); }
+.ql-editor code, .ql-editor pre, .ql-editor pre.ql-syntax { background: var(--code-bg); color: var(--text); }
 .ql-snow .ql-tooltip { background: var(--panel-2); color: var(--text); border-color: var(--border); }
 .ql-snow .ql-tooltip input[type='text'] { background: var(--panel); color: var(--text); border-color: var(--border); }
 .ql-snow .ql-tooltip a.ql-action, .ql-snow .ql-tooltip a.ql-preview { color: var(--link); }
@@ -1510,6 +1517,7 @@ body.platform-web .tb-account {
 .session-item:hover { border-color: var(--border-strong); }
 .session-when { color: var(--text-dim); cursor: pointer; transition: color 0.1s var(--ease); }
 .session-when:hover { color: var(--text); }
+.session-side { display: flex; align-items: center; gap: 8px; }
 .session-dur { font-variant-numeric: tabular-nums; font-weight: 400; font-size: 14px; }
 .session-del {
   border: none; background: transparent; color: var(--icon); cursor: pointer; padding: 0 3px; line-height: 1;
@@ -2686,7 +2694,7 @@ body.platform-web .tb-account {
   flex: none; width: 14px; height: 14px; border-radius: 4px;
   background: var(--pc, var(--accent));
   display: inline-flex; align-items: center; justify-content: center;
-  color: #10141a;
+  color: var(--accent-text);
 }
 .ag-proj-box .icon { width: 10px; height: 10px; }
 /* Снятая галочка — пустая рамка цвета проекта: цвет остаётся подсказкой,
@@ -2735,7 +2743,7 @@ body.platform-web .tb-account {
   min-width: 26px; height: 26px; line-height: 26px; border-radius: 999px;
   transition: background 0.12s var(--ease);
 }
-.ag-dayname.today .ag-dnum { background: var(--accent); color: #10141a; }
+.ag-dayname.today .ag-dnum { background: var(--accent); color: var(--accent-text); }
 .ag-dayname.today .ag-dow { color: var(--accent); }
 
 /* Подпись — обычный флекс-сосед ячеек, а не absolute: абсолютная выпадала
@@ -2857,7 +2865,7 @@ body.platform-web .tb-account {
 }
 .ag-month-num:hover { background: var(--panel-2); color: var(--text); }
 .ag-month-cell.out .ag-month-num { color: var(--text-faint); }
-.ag-month-cell.today .ag-month-num { background: var(--accent); color: #10141a; font-weight: 600; }
+.ag-month-cell.today .ag-month-num { background: var(--accent); color: var(--accent-text); font-weight: 600; }
 .ag-mchip {
   display: flex; align-items: baseline; gap: 5px;
   border: none; border-radius: 5px; cursor: pointer; text-align: left;
@@ -2965,7 +2973,7 @@ body.platform-web .tb-account {
   transition: background 0.12s var(--ease), color 0.12s var(--ease), border-color 0.12s var(--ease);
 }
 .rp-day:hover { border-color: var(--border-strong); color: var(--text); }
-.rp-day.on { background: var(--accent); border-color: var(--accent); color: #10141a; font-weight: 600; }
+.rp-day.on { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 
 .rp-field { display: flex; flex-direction: column; gap: 6px; }
 .rp-field-label {

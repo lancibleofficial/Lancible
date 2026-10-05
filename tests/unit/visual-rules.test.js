@@ -33,22 +33,9 @@ function ratchet(found, listed, what) {
 
 // --- десктоп и веб: цвета только из палитры ------------------------------------
 
-/** Отступления в styles.css, которые предстоит заменить токенами. */
-const DESKTOP_TO_FIX = [
-  '.timer-btn.running { color: #fff }',
-  '.ql-editor code, .ql-editor pre, .ql-editor pre.ql-syntax { background: #232428 }',
-  // Затемнение под модалкой — одно правило на все подложки.
-  '#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #stdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop { background: rgba(0, 0, 0, 0.45) }',
-  '.modal-buttons button.confirm-danger { color: #fff }',
-  ".switch[aria-pressed='true'] .switch-thumb { background: #fff }",
-  '.notif-badge { color: #fff }',
-  // Текст поверх акцента. В палитре для этого есть --accent-text (#16220e),
-  // а здесь стоит другой, на глаз почти такой же цвет.
-  '.ag-proj-box { color: #10141a }',
-  '.ag-dayname.today .ag-dnum { color: #10141a }',
-  '.ag-month-cell.today .ag-month-num { color: #10141a }',
-  '.rp-day.on { color: #10141a }',
-];
+/** Отступления в styles.css, которые предстоит заменить токенами. Пусто с
+ *  6 октября: новое отступление сразу красит тест. */
+const DESKTOP_TO_FIX = [];
 
 test('styles.css: цвета берутся из палитры', () => {
   const found = [];
@@ -71,9 +58,7 @@ const JS_STYLE_ALLOWED = new Set([
   'transform', 'animation', 'animationDelay', 'background', 'backgroundColor',
 ]);
 
-const JS_TO_FIX = [
-  "right.style.cssText = 'display:flex;align-items:center;gap:8px';",
-];
+const JS_TO_FIX = [];
 
 test('app.js: из кода — только координаты, размеры и цвета пользователя', () => {
   const found = [];
