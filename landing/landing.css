@@ -124,13 +124,32 @@ footer{padding-block:44px; border-top:1px solid var(--border-soft); flex:none;}
 /* Счётчик в кнопке фильтра — у блога и журнала. */
 .filter-count{font-size:.74rem; opacity:.7; font-variant-numeric:tabular-nums;}
 
-/* ---------- шапка служебной страницы: журнал, устройство, граф ---------- */
-.log-hero{padding-block:64px 40px; border-bottom:1px solid var(--border-soft); background:var(--bg-deep);}
-h1.log-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-height:1.1;}
-.log-lede{margin-top:18px; font-size:1.02rem; line-height:1.65; color:var(--text-dim); max-width:58ch;}
+/* ---------- шапка страницы: блог, журнал, устройство, граф ----------
+ * Раньше у блога она называлась .blog-hero, у журнала — .log-hero, и при
+ * одинаковых значениях сжималась на разной ширине: у блога на 560, у журнала
+ * на 640. Теперь блок один и порог один — 640, как у шапки сайта. */
+.page-hero{padding-block:64px 40px; border-bottom:1px solid var(--border-soft); background:var(--bg-deep);}
+h1.page-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-height:1.1;}
+.page-lede{margin-top:18px; font-size:1.02rem; line-height:1.65; color:var(--text-dim); max-width:58ch;}
+/* Заголовок слева, кнопки справа — у блога и журнала. */
+.page-hero-row{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
+/* Фильтр по типу: у блога — тип записи, у журнала — вид события. */
+.page-filter{display:flex; gap:8px; flex-wrap:wrap; margin-top:30px;}
+.page-filter button{
+  font-family:'Sora', system-ui, sans-serif; font-size:.82rem; font-weight:600;
+  display:inline-flex; align-items:center; gap:7px;
+  padding:8px 15px; border-radius:999px; cursor:pointer;
+  background:transparent; color:var(--text-dim); border:1px solid var(--border);
+  transition:border-color .2s, color .2s, background .2s;
+}
+.page-filter button:hover{color:var(--text); border-color:var(--accent);}
+.page-filter button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
 .log-back{display:flex; justify-content:center; margin-top:48px;}
+@media (max-width: 860px){
+  .page-hero-row{align-items:flex-start; flex-direction:column; gap:22px;}
+}
 @media (max-width: 640px){
-  .log-hero{padding-block:44px 32px;}
+  .page-hero{padding-block:44px 32px;}
 }
 
 /* ---------- плитки с числами: устройство и граф ---------- */

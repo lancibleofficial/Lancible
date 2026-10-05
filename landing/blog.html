@@ -12,28 +12,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800;900&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="landing.css">
 <style>
-  /* Блог — вся лента обновлений. Общее (токены, шапка, подвал, кнопки,
-   * линия времени и ярлыки записей) — в landing.css; здесь шапка страницы,
-   * фильтр по типу записи и плотность записи. Шапка страницы и фильтр —
-   * тот же блок, что у журнала, под своими именами: свести их в один —
-   * в списке работ DESIGN.md. */
-  /* ---------- page head ---------- */
-  .blog-hero{padding-block:64px 40px; border-bottom:1px solid var(--border-soft); background:var(--bg-deep);}
-  h1.blog-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-height:1.1;}
-  .blog-lede{margin-top:18px; font-size:1.02rem; line-height:1.65; color:var(--text-dim); max-width:58ch;}
-  .blog-hero-row{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
-  /* Фильтр по типу записи. Типы уже есть в данных, и с ростом ленты это
-   * единственный способ быстро найти, скажем, только релизы. */
-  .blog-filter{display:flex; gap:8px; flex-wrap:wrap; margin-top:30px;}
-  .blog-filter button{
-    font-family:'Sora', system-ui, sans-serif; font-size:.82rem; font-weight:600;
-    display:inline-flex; align-items:center; gap:7px;
-    padding:8px 15px; border-radius:999px; cursor:pointer;
-    background:transparent; color:var(--text-dim); border:1px solid var(--border);
-    transition:border-color .2s, color .2s, background .2s;
-  }
-  .blog-filter button:hover{color:var(--text); border-color:var(--accent);}
-  .blog-filter button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
+  /* Блог — вся лента обновлений. Общее — токены, шапка сайта, подвал,
+   * кнопки, шапка страницы и фильтр (те же, что у журнала), линия времени и
+   * ярлыки записей — в landing.css; здесь плотность записи и то, что есть
+   * только у блога. */
   /* ---------- записи ---------- */
   .blog-body{padding-block:48px 72px;}
   .blog-entry{display:grid; grid-template-columns:150px 1fr; gap:28px; padding-block:32px; border-top:1px solid var(--border-soft); scroll-margin-top:88px;}
@@ -44,11 +26,7 @@
   .blog-text p{font-size:.92rem; line-height:1.7; color:var(--text-dim); max-width:68ch;}
   .blog-back{display:flex; justify-content:center; margin-top:56px;}
   /* ---------- узкий экран ---------- */
-  @media (max-width: 860px){
-    .blog-hero-row{align-items:flex-start; flex-direction:column; gap:22px;}
-  }
   @media (max-width: 560px){
-    .blog-hero{padding-block:44px 32px;}
     .blog-entry{grid-template-columns:1fr; gap:14px; padding-block:26px;}
   }
 </style>
@@ -77,20 +55,20 @@
 </header>
 
 <main>
-  <section class="blog-hero">
+  <section class="page-hero">
     <div class="wrap">
-      <div class="blog-hero-row">
+      <div class="page-hero-row">
         <div>
           <div class="eyebrow" data-blog="eyebrow">Блог</div>
-          <h1 class="blog-headline" data-blog="title">Что нового в Lancible</h1>
-          <p class="blog-lede" data-blog="lede">Сюда попадает всё заметное: новые платформы, релизы и крупные возможности. Мелкие правки остаются в истории коммитов.</p>
+          <h1 class="page-headline" data-blog="title">Что нового в Lancible</h1>
+          <p class="page-lede" data-blog="lede">Сюда попадает всё заметное: новые платформы, релизы и крупные возможности. Мелкие правки остаются в истории коммитов.</p>
         </div>
         <div class="lang-switch" role="group" aria-label="Язык записей">
           <button type="button" data-lang="ru" aria-pressed="true">RU</button>
           <button type="button" data-lang="en" aria-pressed="false">EN</button>
         </div>
       </div>
-      <div class="blog-filter" id="blogFilter" role="group" aria-label="Тип записи"></div>
+      <div class="page-filter" id="blogFilter" role="group" aria-label="Тип записи"></div>
     </div>
   </section>
 

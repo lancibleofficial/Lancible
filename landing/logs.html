@@ -21,7 +21,6 @@
    * Общее с остальными страницами — в landing.css; здесь задачи, события и
    * состояния журнала. */
   /* ---------- шапка страницы ---------- */
-  .log-hero-row{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
   .log-refresh{display:flex; align-items:center; gap:12px; flex:none; font-size:.8rem; color:var(--text-faint);}
   .log-refresh button{
     font-family:'Sora', system-ui, sans-serif; font-size:.8rem; font-weight:600;
@@ -30,18 +29,6 @@
     transition:border-color .2s, color .2s;
   }
   .log-refresh button:hover{color:var(--text); border-color:var(--accent);}
-  /* Фильтр по виду события — тот же компонент, что фильтр по типу записи в
-   * блоге. Без него быстро найти в длинной ленте именно ошибки невозможно. */
-  .log-filter{display:flex; gap:8px; flex-wrap:wrap; margin-top:30px;}
-  .log-filter button{
-    font-family:'Sora', system-ui, sans-serif; font-size:.82rem; font-weight:600;
-    display:inline-flex; align-items:center; gap:7px;
-    padding:8px 15px; border-radius:999px; cursor:pointer;
-    background:transparent; color:var(--text-dim); border:1px solid var(--border);
-    transition:border-color .2s, color .2s, background .2s;
-  }
-  .log-filter button:hover{color:var(--text); border-color:var(--accent);}
-  .log-filter button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
   /* ---------- задачи ---------- */
   .log-body{padding-block:48px 72px;}
   .log-list{display:flex; flex-direction:column; gap:14px;}
@@ -102,9 +89,6 @@
   .log-note code{font-family:'JetBrains Mono', ui-monospace, monospace; font-size:.84rem; color:var(--accent-deep); overflow-wrap:anywhere;}
   .log-note.is-error{border-color:rgba(255,134,116,.32);}
   /* ---------- узкий экран ---------- */
-  @media (max-width: 860px){
-    .log-hero-row{align-items:flex-start; flex-direction:column; gap:22px;}
-  }
   @media (max-width: 640px){
     .log-task-head{padding:18px 16px;}
     /* На узком экране три колонки не помещаются. Вид события и время встают
@@ -141,20 +125,20 @@
 </header>
 
 <main>
-  <section class="log-hero">
+  <section class="page-hero">
     <div class="wrap">
-      <div class="log-hero-row">
+      <div class="page-hero-row">
         <div>
           <div class="eyebrow">Журнал</div>
-          <h1 class="log-headline">Что происходило в работе</h1>
-          <p class="log-lede">Каждая задача целиком: что сделано, что сломалось и почему, что вы попросили поправить, чем это проверено и когда уехало на боевой сайт. Блог рассказывает пользователям о результате — здесь остаётся сам ход работы.</p>
+          <h1 class="page-headline">Что происходило в работе</h1>
+          <p class="page-lede">Каждая задача целиком: что сделано, что сломалось и почему, что вы попросили поправить, чем это проверено и когда уехало на боевой сайт. Блог рассказывает пользователям о результате — здесь остаётся сам ход работы.</p>
         </div>
         <div class="log-refresh">
           <span id="logUpdated"></span>
           <button type="button" id="logReload">Обновить</button>
         </div>
       </div>
-      <div class="log-filter" id="logFilter" role="group" aria-label="Вид события"></div>
+      <div class="page-filter" id="logFilter" role="group" aria-label="Вид события"></div>
     </div>
   </section>
 
