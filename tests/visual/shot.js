@@ -21,9 +21,15 @@ const { expect } = require('@playwright/test');
 async function expectShot(target, test, name, options = {}) {
   const info = test.info();
   const file = info.snapshotPath(name);
-  // При обычном прогоне отсутствие эталона — повод пропустить. При прогоне с
-  // --update-snapshots эталон как раз и создаётся, пропускать нечего.
-  const updating = info.config.updateSnapshots !== 'none';
+  // При обычном прогоне отсутствие эталона — повод пропустить. При прогоне
+  // через npm run test:visual:update эталон как раз и создаётся.
+  //
+  // Признак — переменная окружения, а не config.updateSnapshots. На него я
+  // уже наступил: по умолчанию он 'missing', то есть «пиши недостающие и
+  // считай тест упавшим», и условие «не none — значит создаём» пропускало
+  // вперёд обычный прогон. На GitHub из-за этого покраснели все 22 снимка
+  // вместо того, чтобы пропуститься.
+  const updating = process.env.LANCIBLE_SNAPSHOTS === 'update';
   if (!updating && !fs.existsSync(file)) {
     test.skip(true,
       `эталона для этой системы нет (${file}). Завести: npm run test:visual:update`);

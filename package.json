@@ -16,7 +16,7 @@
     "test:e2e": "playwright test --project=web",
     "test:landing": "playwright test --project=landing",
     "test:visual": "playwright test --project=visual",
-    "test:visual:update": "playwright test --project=visual --update-snapshots",
+    "test:visual:update": "node scripts/visual-update.js",
     "check:xlsx": "node scripts/xlsx-check.js",
     "graph:update": "graphify update .",
     "build:web": "node scripts/sync-web-assets.js",
