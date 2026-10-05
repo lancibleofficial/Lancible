@@ -39,27 +39,20 @@ let state = {
 let selectedId = null;
 let quill = null;
 
-const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
+// Палитра, валюты и ключ имени проекта по умолчанию — в core/catalog.js:
+// это свойства продукта, а не платформы, и лежали они в двух экземплярах.
+const { DEFAULT_PROJECT_NAME_KEY, PALETTE, CURRENCIES, SYM2CODE } = Core;
 
 // Словарь переводов, LOCALE_MAP и LANG_NAMES — в core/i18n.js: там на них
 // есть тест, проверяющий, что набор ключей во всех языках одинаковый.
 const { T, LOCALE_MAP, LANG_NAMES } = Core;
 const HEARTBEAT_MS = 15000;
-const PALETTE = [
-  '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5',
-  '#e63950', '#2dd4bf', '#5468ff', '#ff9142', '#d946a8', '#6ee7b7', '#c8956d', '#6b7cad',
-];
 const TEXT_COLORS = ['', '#ecedef', '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#a4c2a8', '#767b86'];
 const FILL_COLORS = ['', '#3a4a34', '#2f4653', '#43385a', '#544a30', '#5a3a37', '#3e4a40'];
 
 // Виды статусов, набор по умолчанию и разбор — в core/status.js.
 const { STATUS_KINDS, CLOSING_KINDS, DEFAULT_STATUSES } = Core;
 
-const CURRENCIES = {
-  USD: '$', EUR: '€', GBP: '£', RUB: '₽', KZT: '₸',
-  UAH: '₴', KGS: 'сом', BYN: 'Br', PLN: 'zł', TRY: '₺',
-};
-const SYM2CODE = { '$': 'USD', '€': 'EUR', '£': 'GBP', '₽': 'RUB', '₸': 'KZT', '₴': 'UAH', '₺': 'TRY', 'Br': 'BYN', 'zł': 'PLN' };
 
 // ---------------------------------------------------------------------------
 // Аккаунт (Supabase) — вход опционален, приложение и без него полностью
@@ -4283,6 +4276,14 @@ function migrate() {
     currencies: CURRENCIES,
     sym2code: SYM2CODE,
     defaultProjectNameKey: DEFAULT_PROJECT_NAME_KEY,
+    // Поля интерфейса десктопа: свёрнутая левая панель и отметка «панель
+    // уведомлений открывали в такой-то момент». У телефона на этом месте
+    // своё — положение доски и подсказка про свайп, — поэтому ядро их не
+    // знает и знать не должно.
+    ui: () => {
+      if (typeof state.ui.navCollapsed !== 'boolean') state.ui.navCollapsed = false;
+      if (typeof state.ui.notifSeenAt !== 'string') state.ui.notifSeenAt = null;
+    },
   });
 }
 

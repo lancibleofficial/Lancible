@@ -13,7 +13,6 @@ const fs = require('fs');
 const path = require('path');
 
 const MOBILE = path.join(__dirname, '..', '..', 'mobile', 'src');
-const STATUS = require('../../src/renderer/core/status.js');
 
 function sandbox(file, names, values, exports) {
   const src = fs.readFileSync(file, 'utf8')
@@ -29,10 +28,15 @@ function sandbox(file, names, values, exports) {
 // вырезает, значит подставляем настоящую.
 const Lang = require('../../src/renderer/core/lang.js');
 const i18n = sandbox(path.join(MOBILE, 'lib', 'i18n.js'), ['Lang'], [Lang], 'T, t');
+// Миграция телефона — тонкий слой над ядром: правила в core/migrate.js,
+// справочники в core/catalog.js. Подставляем настоящие модули, а не
+// заглушки: тест должен проверять то, что поедет в приложение.
+const Catalog = require('../../src/renderer/core/catalog.js');
+const CoreMigrate = require('../../src/renderer/core/migrate.js');
 const M = sandbox(
   path.join(MOBILE, 'lib', 'migrate.js'),
-  ['T', 't', 'makeProjectStatuses', 'defaultStatusId'],
-  [i18n.T, i18n.t, STATUS.makeProjectStatuses, STATUS.defaultStatusId],
+  ['T', 't', 'Catalog', 'Core'],
+  [i18n.T, i18n.t, Catalog, CoreMigrate],
   'emptyState, migrate, uid',
 );
 
@@ -118,4 +122,67 @@ test('повторный прогон ничего не меняет', () => {
   const before = JSON.stringify(state);
   M.migrate(state);
   assert.equal(JSON.stringify(state), before);
+});
+
+// --- телефон и ядро ---------------------------------------------------------
+
+test('правила миграции у телефона не свои, а ядра', () => {
+  // Проверка по тексту, а не по поведению: заново написанная копия вела бы
+  // себя так же, и поведенческий тест её бы пропустил. Ровно так две
+  // реализации однажды и разошлись — в обе стороны: телефон чинил время
+  // задачи, а десктоп нет; десктоп чинил статусы, а телефон нет.
+  const src = fs.readFileSync(path.join(MOBILE, 'lib', 'migrate.js'), 'utf8')
+    .split('\n')
+    .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+    .join('\n');
+  for (const mark of ['state.tasks.forEach', 'state.statuses.filter', 'keepTags', 'SYM2CODE[cur]']) {
+    assert.ok(!src.includes(mark), `в миграции телефона снова своё правило: «${mark}»`);
+  }
+});
+
+test('битое время задачи чинится, а не роняет подсчёт', () => {
+  // Это правило пришло с телефона: десктоп его не знал, и задача с
+  // sessions: null роняла бы первый же подсчёт — sessionsOf зовёт .filter.
+  const state = M.migrate({
+    projects: [{ id: 'p1', name: 'П', createdAt: '2026-06-10T12:00:00.000Z' }],
+    tasks: [{ id: 't1', projectId: 'p1', sessions: null, totalMs: 'много' }],
+  });
+  assert.deepEqual(state.tasks[0].sessions, []);
+  assert.equal(state.tasks[0].totalMs, 0);
+});
+
+// --- поля интерфейса телефона ------------------------------------------------
+
+test('доска не смотрит на удалённый проект', () => {
+  // Проект удалили на другом устройстве, а доска и быстрое добавление
+  // по-прежнему на него ссылаются. Без починки экран открывается пустым и
+  // молчит, почему.
+  const state = M.migrate({
+    projects: [{ id: 'p1', name: 'П', createdAt: '2026-06-10T12:00:00.000Z' }],
+    ui: { boardProjectId: 'нет', quickAddProjectId: 'нет' },
+  });
+  assert.equal(state.ui.boardProjectId, 'p1');
+  assert.equal(state.ui.quickAddProjectId, 'p1');
+});
+
+test('положение доски чистится от удалённых проектов и мусора', () => {
+  const state = M.migrate({
+    projects: [{ id: 'p1', name: 'П', createdAt: '2026-06-10T12:00:00.000Z' }],
+    ui: {
+      boardVersion: { p1: 'all', нет: 'v9' },
+      boardCollapsed: { p1: 'сломано', нет: ['v1'] },
+      homeSwipeHintShown: 'да',
+    },
+  });
+  assert.deepEqual(state.ui.boardVersion, { p1: 'all' }, 'запись удалённого проекта выброшена');
+  assert.deepEqual(state.ui.boardCollapsed, { p1: [] }, 'мусор вместо списка заменён пустым');
+  assert.equal(state.ui.homeSwipeHintShown, true, 'флаг приведён к логическому');
+});
+
+test('поля интерфейса десктопа на телефон не заводятся', () => {
+  // У каждой платформы свои экраны: свёрнутая боковая панель телефону
+  // незачем, как и десктопу — положение мобильной доски.
+  const state = M.migrate({});
+  assert.equal(state.ui.navCollapsed, undefined);
+  assert.equal(state.ui.notifSeenAt, undefined);
 });

@@ -1,23 +1,32 @@
-// Порт формы state + uid() + migrate() из src/renderer/app.js (app.js:7-13,
-// 19-27, 621-623, 3203-3238). Чистая логика — работает над обычным объектом,
-// без обращений к DOM/платформе.
+// Форма состояния телефона и её починка при загрузке — тонкий слой над ядром.
+//
+// Сама миграция лежит в src/core/migrate.js, побайтной копии десктопного
+// ядра (scripts/sync-mobile-core.js, сверка — tests/unit/mobile-core.test.js).
+// Раньше здесь была своя реализация тех же правил, и две копии успели
+// разойтись — в обе стороны:
+//
+//   • телефон чинил sessions и totalMs, а десктоп нет: задача с
+//     sessions: null роняла десктоп на первом же подсчёте времени;
+//   • десктоп чинил статусы неизвестного вида, нумеровал версии подряд,
+//     выбрасывал мусор вместо правила повторения и выводил «отменена» из
+//     статуса — телефон ничего этого не делал.
+//
+// Это самая опасная функция в приложении: она трогает всё, что пользователь
+// накопил, при каждом запуске, и её ошибка необратима. Держать её в двух
+// экземплярах значило ждать, когда они разойдутся в следующий раз.
+//
+// Своим здесь остаётся только то, что у телефона и правда своё: генератор
+// идентификаторов, начальная форма состояния и поля интерфейса — положение
+// доски, проект быстрого добавления, подсказка про свайп. Ядро их не знает и
+// знать не должно; оно даёт для них крючок и список живых проектов.
 import { T, t } from './i18n';
-// Напрямую из ядра, а не через lib/statuses.js: тот сам импортирует uid()
-// отсюда, и получилось бы кольцо.
-import { makeProjectStatuses, defaultStatusId } from '../core/status.js';
+import Catalog from '../core/catalog.js';
+import Core from '../core/migrate.js';
 
-export const DEFAULT_PROJECT_NAME_KEY = 'app.default_project_name';
-
-export const PALETTE = [
-  '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#f58cc0', '#a4c2a8', '#8a93a5',
-  '#e63950', '#2dd4bf', '#5468ff', '#ff9142', '#d946a8', '#6ee7b7', '#c8956d', '#6b7cad',
-];
-
-export const CURRENCIES = {
-  USD: '$', EUR: '€', GBP: '£', RUB: '₽', KZT: '₸',
-  UAH: '₴', KGS: 'сом', BYN: 'Br', PLN: 'zł', TRY: '₺',
-};
-export const SYM2CODE = { '$': 'USD', '€': 'EUR', '£': 'GBP', '₽': 'RUB', '₸': 'KZT', '₴': 'UAH', '₺': 'TRY', 'Br': 'BYN', 'zł': 'PLN' };
+// Справочники продукта — палитра, валюты, ключ имени проекта — общие с
+// десктопом (src/core/catalog.js). Экспортируются отсюда по-прежнему: на них
+// ссылаются экраны выбора цвета и настроек.
+export const { DEFAULT_PROJECT_NAME_KEY, PALETTE, CURRENCIES, SYM2CODE } = Catalog;
 
 export function uid() {
   return (globalThis.crypto && globalThis.crypto.randomUUID)
@@ -49,119 +58,44 @@ export function emptyState() {
   };
 }
 
-/** Нормализует загруженный state в-месте (и возвращает его же) — тот же
- * набор проверок, что и в десктопной/веб-версии. */
-export function migrate(state) {
-  if (!Array.isArray(state.tasks)) state.tasks = [];
-  if (!Array.isArray(state.projects)) state.projects = [];
-  if (!Array.isArray(state.tags)) state.tags = [];
-  if (!Array.isArray(state.statuses)) state.statuses = [];
-  if (!Array.isArray(state.versions)) state.versions = [];
-  if (!state.ui || typeof state.ui !== 'object') state.ui = {};
-  if (!state.settings || typeof state.settings !== 'object') state.settings = {};
-  if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;
-  if (!['system', 'light', 'dark'].includes(state.settings.theme)) state.settings.theme = 'system';
-  if (!T[state.settings.lang]) state.settings.lang = 'ru';
-  if (typeof state.settings.syncEnabled !== 'boolean') state.settings.syncEnabled = true;
-  if (typeof state.settings.notifyEnabled !== 'boolean') state.settings.notifyEnabled = true;
-  if (!state.settings.syncResolvedFor || typeof state.settings.syncResolvedFor !== 'object') state.settings.syncResolvedFor = null;
-
-  let cur = state.settings.currency || 'RUB';
-  if (SYM2CODE[cur]) cur = SYM2CODE[cur];
-  if (!CURRENCIES[cur]) cur = 'RUB';
-  state.settings.currency = cur;
-
-  state.tags.forEach((tg, i) => {
-    if (!tg.color) tg.color = PALETTE[i % PALETTE.length];
-    if (typeof tg.name !== 'string') tg.name = '';
-  });
-  // Ссылки на исчезнувшие теги вычищаются, иначе на карточке остался бы
-  // пустой бейдж: тег удалили на другом устройстве, а ссылка доехала.
-  const tagIds = new Set(state.tags.map((tg) => tg.id));
-  const keepTags = (arr) => (Array.isArray(arr) ? arr.filter((id) => tagIds.has(id)) : []);
-
-  state.projects.forEach((p, i) => {
-    if (!p.color) p.color = PALETTE[i % PALETTE.length];
-    if (typeof p.description !== 'string') p.description = '';
-    if (p.pinnedAt === undefined) p.pinnedAt = null;
-    p.tagIds = keepTags(p.tagIds);
-  });
-  state.tasks.forEach((task) => {
-    if (task.pinnedAt === undefined) task.pinnedAt = null;
-    if (task.rate === undefined) task.rate = null;
-    if (!Array.isArray(task.sessions)) task.sessions = [];
-    if (!Number.isFinite(task.totalMs)) task.totalMs = 0;
-    // Дедлайн и напоминание — те же поля и та же трактовка, что на
-    // десктопе: они едут в одном блоке синхронизации (см. lib/due.js).
-    if (task.dueAt === undefined) task.dueAt = null;
-    if (task.remindOffsetMin === undefined) task.remindOffsetMin = null;
-    if (task.remindAt === undefined) task.remindAt = null;
-    if (task.notifiedAt === undefined) task.notifiedAt = null;
-    // Версия и правило повторения появились в 0.3.0. У задач, заведённых
-    // прежней сборкой телефона, их просто нет — и это не ошибка.
-    if (task.versionId === undefined) task.versionId = null;
-    if (task.repeat === undefined) task.repeat = null;
-    if (task.cancelled === undefined) task.cancelled = false;
-    task.tagIds = keepTags(task.tagIds);
-  });
-
-  if (state.projects.length === 0 && state.tasks.length > 0) {
-    state.projects.push({
-      id: uid(),
-      name: t(state.settings.lang, DEFAULT_PROJECT_NAME_KEY),
-      createdAt: new Date().toISOString(),
-      color: PALETTE[0],
-      description: '',
-      pinnedAt: null,
-    });
-  }
-  const known = new Set(state.projects.map((p) => p.id));
-  const fallback = state.projects[0] ? state.projects[0].id : null;
-  for (const task of state.tasks) if (!task.projectId || !known.has(task.projectId)) task.projectId = fallback;
-  if (!known.has(state.ui.projectId)) state.ui.projectId = fallback;
+/** Поля интерфейса телефона. Ссылки на проекты в них чинятся по списку
+ *  живых проектов, который даёт ядро: мусор из старого хранилища не должен
+ *  ронять экран, а проект, удалённый на другом устройстве, — оставлять доску
+ *  смотреть в пустоту. */
+function fixUi(state, { known, fallback }) {
   if (!known.has(state.ui.boardProjectId)) state.ui.boardProjectId = fallback;
-  // Положение доски по проектам: чинится так же, как всё остальное в ui —
-  // мусор из старого хранилища не должен ронять экран.
+  if (!known.has(state.ui.quickAddProjectId)) state.ui.quickAddProjectId = fallback;
+  state.ui.homeSwipeHintShown = !!state.ui.homeSwipeHintShown;
+
+  // Положение доски хранится по проектам — записи исчезнувших выбрасываются.
   const byProject = (value) => {
     if (!value || typeof value !== 'object') return {};
     const out = {};
     for (const id of Object.keys(value)) if (known.has(id)) out[id] = value[id];
     return out;
   };
-  if (!known.has(state.ui.quickAddProjectId)) state.ui.quickAddProjectId = fallback;
-  state.ui.homeSwipeHintShown = !!state.ui.homeSwipeHintShown;
   state.ui.boardVersion = byProject(state.ui.boardVersion);
   state.ui.boardCollapsed = byProject(state.ui.boardCollapsed);
   for (const id of Object.keys(state.ui.boardCollapsed)) {
     if (!Array.isArray(state.ui.boardCollapsed[id])) state.ui.boardCollapsed[id] = [];
   }
+}
 
-  // Статусы: у проекта либо есть свой набор, либо он заводится здесь. Прежняя
-  // сборка телефона не заводила их вовсе — проекты, созданные на нём, до сих
-  // пор чинил десктоп при первой же загрузке. Теперь чинит и телефон, иначе
-  // доске не из чего строиться.
-  for (const project of state.projects) {
-    if (state.statuses.some((s) => s.projectId === project.id)) continue;
-    state.statuses.push(...makeProjectStatuses(
-      project.id,
-      (key) => t(state.settings.lang, `status.default_${key}`),
-      uid,
-    ));
-  }
-  // Статусы исчезнувших проектов не остаются висеть.
-  state.statuses = state.statuses.filter((s) => known.has(s.projectId));
-  state.versions = state.versions.filter((v) => known.has(v.projectId));
-
-  const statusIds = new Set(state.statuses.map((s) => s.id));
-  const versionIds = new Set(state.versions.map((v) => v.id));
-  for (const task of state.tasks) {
-    if (!task.statusId || !statusIds.has(task.statusId)) {
-      task.statusId = defaultStatusId(state.statuses, task.projectId, task.done);
-    }
-    if (task.versionId && !versionIds.has(task.versionId)) task.versionId = null;
-  }
-
-  return state;
+/** Нормализует загруженное состояние на месте и возвращает его же. */
+export function migrate(state) {
+  return Core.migrate(state, {
+    // Язык читается в момент вызова, а не заранее: ядро сперва чинит
+    // settings.lang и только потом зовёт перевод — для имён статусов и
+    // проекта по умолчанию.
+    t: (key) => t(state.settings.lang, key),
+    uid,
+    langs: Object.keys(T),
+    palette: PALETTE,
+    currencies: CURRENCIES,
+    sym2code: SYM2CODE,
+    defaultProjectNameKey: DEFAULT_PROJECT_NAME_KEY,
+    ui: fixUi,
+  });
 }
 
 // Заметки хранятся в общем формате Quill Delta (совместимо с десктопом/

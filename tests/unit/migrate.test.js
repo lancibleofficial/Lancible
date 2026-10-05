@@ -36,7 +36,23 @@ test('пустое состояние обрастает всеми полями
   assert.equal(s.settings.lang, 'ru');
   assert.equal(s.settings.currency, 'RUB');
   assert.equal(s.settings.syncEnabled, true);
-  assert.equal(s.ui.navCollapsed, false);
+});
+
+test('поля интерфейса ядро не трогает — их чинит платформа через крючок', () => {
+  // navCollapsed и notifSeenAt раньше чинились здесь, а boardCollapsed и
+  // подсказка про свайп — в миграции телефона. Это поля разных экранов, и
+  // общими они быть не могут. Ядро даёт им место и список живых проектов,
+  // без которого не проверить ссылки.
+  const seen = [];
+  const s = migrate(
+    { projects: [{ id: 'p1', name: 'П', createdAt: '2026-06-10T12:00:00.000Z' }], ui: { своё: 1 } },
+    { ...deps(), ui: (state, info) => { seen.push(info); state.ui.своё = 2; } },
+  );
+  assert.equal(seen.length, 1, 'крючок зовётся ровно один раз');
+  assert.deepEqual([...seen[0].known], ['p1'], 'крючку известно, какие проекты живы');
+  assert.equal(seen[0].fallback, 'p1');
+  assert.equal(s.ui.своё, 2, 'правки крючка остаются в состоянии');
+  assert.equal(s.ui.navCollapsed, undefined, 'ядро не придумывает чужих полей');
 });
 
 test('мусор вместо массивов заменяется пустыми массивами, а не роняет запуск', () => {
@@ -217,4 +233,22 @@ test('миграция не придумывает данные на пусто�
   const s = migrate({}, deps());
   assert.equal(s.projects.length, 0, 'без задач проект создавать незачем');
   assert.equal(s.statuses.length, 0);
+});
+
+test('битое время задачи чинится, а не роняет подсчёт', () => {
+  // Правило пришло с телефона, где оно было, а у десктопа его не было:
+  // задача с sessions: null роняла первый же подсчёт — sessionsOf зовёт
+  // .filter. Приехать такое может из синхронизации или из правленого
+  // руками файла данных.
+  const s = migrate({
+    projects: [{ id: 'p1', name: 'П', createdAt: '2026-06-10T12:00:00.000Z' }],
+    tasks: [
+      { id: 'a', projectId: 'p1', sessions: null, totalMs: 'много' },
+      { id: 'b', projectId: 'p1', sessions: [{ ms: 5 }], totalMs: 5 },
+    ],
+  }, deps());
+  assert.deepEqual(s.tasks[0].sessions, []);
+  assert.equal(s.tasks[0].totalMs, 0);
+  assert.deepEqual(s.tasks[1].sessions, [{ ms: 5 }], 'целые записи не трогаются');
+  assert.equal(s.tasks[1].totalMs, 5);
 });

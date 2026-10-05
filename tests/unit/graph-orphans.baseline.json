@@ -659,265 +659,265 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L5498"
+      "at": "L5499"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L5122"
+      "at": "L5123"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L5112"
+      "at": "L5113"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L5504"
+      "at": "L5505"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
       "label": "allSessionPairs()",
       "file": "src/renderer/app.js",
-      "at": "L418"
+      "at": "L411"
     },
     {
       "id": "src_renderer_app_anydialogopen",
       "label": "anyDialogOpen()",
       "file": "src/renderer/app.js",
-      "at": "L450"
+      "at": "L443"
     },
     {
       "id": "src_renderer_app_applyremind",
       "label": "applyRemind()",
       "file": "src/renderer/app.js",
-      "at": "L4111"
+      "at": "L4104"
     },
     {
       "id": "src_renderer_app_boardlane",
       "label": "boardLane()",
       "file": "src/renderer/app.js",
-      "at": "L2215"
+      "at": "L2208"
     },
     {
       "id": "src_renderer_app_calshift",
       "label": "calShift()",
       "file": "src/renderer/app.js",
-      "at": "L1699"
+      "at": "L1692"
     },
     {
       "id": "src_renderer_app_changepassword",
       "label": "changePassword()",
       "file": "src/renderer/app.js",
-      "at": "L941"
+      "at": "L934"
     },
     {
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L3672"
+      "at": "L3665"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5654"
+      "at": "L5655"
     },
     {
       "id": "src_renderer_app_closestatusdialog",
       "label": "closeStatusDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2608"
+      "at": "L2601"
     },
     {
       "id": "src_renderer_app_committime",
       "label": "commitTime()",
       "file": "src/renderer/app.js",
-      "at": "L1895"
+      "at": "L1888"
     },
     {
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L5413"
+      "at": "L5414"
     },
     {
       "id": "src_renderer_app_deletestatus",
       "label": "deleteStatus()",
       "file": "src/renderer/app.js",
-      "at": "L2676"
+      "at": "L2669"
     },
     {
       "id": "src_renderer_app_deletetask",
       "label": "deleteTask()",
       "file": "src/renderer/app.js",
-      "at": "L3210"
+      "at": "L3203"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4488"
+      "at": "L4489"
     },
     {
       "id": "src_renderer_app_expdlgrange",
       "label": "expdlgRange()",
       "file": "src/renderer/app.js",
-      "at": "L3574"
+      "at": "L3567"
     },
     {
       "id": "src_renderer_app_exportallprojects",
       "label": "exportAllProjects()",
       "file": "src/renderer/app.js",
-      "at": "L3687"
+      "at": "L3680"
     },
     {
       "id": "src_renderer_app_gettag",
       "label": "getTag()",
       "file": "src/renderer/app.js",
-      "at": "L2360"
+      "at": "L2353"
     },
     {
       "id": "src_renderer_app_handleauthsubmit",
       "label": "handleAuthSubmit()",
       "file": "src/renderer/app.js",
-      "at": "L863"
+      "at": "L856"
     },
     {
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L4289"
+      "at": "L4290"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
       "label": "isClosedStatus()",
       "file": "src/renderer/app.js",
-      "at": "L307"
+      "at": "L300"
     },
     {
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L3188"
+      "at": "L3181"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4253"
+      "at": "L4246"
     },
     {
       "id": "src_renderer_app_openexternallink",
       "label": "openExternalLink()",
       "file": "src/renderer/app.js",
-      "at": "L602"
+      "at": "L595"
     },
     {
       "id": "src_renderer_app_openlangmenu",
       "label": "openLangMenu()",
       "file": "src/renderer/app.js",
-      "at": "L570"
+      "at": "L563"
     },
     {
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4444"
+      "at": "L4445"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5648"
+      "at": "L5649"
     },
     {
       "id": "src_renderer_app_opensearch",
       "label": "openSearch()",
       "file": "src/renderer/app.js",
-      "at": "L1585"
+      "at": "L1578"
     },
     {
       "id": "src_renderer_app_openstatusdialog",
       "label": "openStatusDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2602"
+      "at": "L2595"
     },
     {
       "id": "src_renderer_app_opentagpicker",
       "label": "openTagPicker()",
       "file": "src/renderer/app.js",
-      "at": "L2521"
+      "at": "L2514"
     },
     {
       "id": "src_renderer_app_pickrangeday",
       "label": "pickRangeDay()",
       "file": "src/renderer/app.js",
-      "at": "L1755"
+      "at": "L1748"
     },
     {
       "id": "src_renderer_app_promptdialog",
       "label": "promptDialog()",
       "file": "src/renderer/app.js",
-      "at": "L470"
+      "at": "L463"
     },
     {
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L3407"
+      "at": "L3400"
     },
     {
       "id": "src_renderer_app_savetagdialog",
       "label": "saveTagDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2471"
+      "at": "L2464"
     },
     {
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L5615"
+      "at": "L5616"
     },
     {
       "id": "src_renderer_app_settaskversion",
       "label": "setTaskVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4340"
+      "at": "L4341"
     },
     {
       "id": "src_renderer_app_startofday",
       "label": "startOfDay()",
       "file": "src/renderer/app.js",
-      "at": "L1693"
+      "at": "L1686"
     },
     {
       "id": "src_renderer_app_statusesofkind",
       "label": "statusesOfKind()",
       "file": "src/renderer/app.js",
-      "at": "L291"
+      "at": "L284"
     },
     {
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L2973"
+      "at": "L2966"
     },
     {
       "id": "src_renderer_app_togglesyncenabled",
       "label": "toggleSyncEnabled()",
       "file": "src/renderer/app.js",
-      "at": "L1240"
+      "at": "L1233"
     },
     {
       "id": "src_renderer_app_updateprofilename",
       "label": "updateProfileName()",
       "file": "src/renderer/app.js",
-      "at": "L929"
+      "at": "L922"
     },
     {
       "id": "src_renderer_core_format_fmtshort",
@@ -1181,13 +1181,13 @@
       "id": "tests_unit_mobile_migrate_test_oldphonedata",
       "label": "oldPhoneData()",
       "file": "tests/unit/mobile-migrate.test.js",
-      "at": "L41"
+      "at": "L45"
     },
     {
       "id": "tests_unit_mobile_migrate_test_sandbox",
       "label": "sandbox()",
       "file": "tests/unit/mobile-migrate.test.js",
-      "at": "L18"
+      "at": "L17"
     },
     {
       "id": "tests_unit_mobile_parity_test_loadmobile",

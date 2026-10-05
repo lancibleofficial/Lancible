@@ -274,7 +274,7 @@
         <div class="arch-stat"><b>5834</b><span>строк в app.js</span></div>
         <div class="arch-stat"><b>297</b><span>функций верхнего уровня</span></div>
         <div class="arch-stat"><b>150</b><span>из них без DOM</span></div>
-        <div class="arch-stat"><b>11 / 13</b><span>файлов ядра делятся</span></div>
+        <div class="arch-stat"><b>13 / 14</b><span>файлов ядра делятся</span></div>
       </div>
     </div>
   </section>
@@ -333,7 +333,7 @@
             <path class="dg-line" d="M636 367 C 724 367 724 250 710 216"/>
             <text class="dg-lbl" x="646" y="326">журнал</text>
           </svg>
-          <figcaption>Зелёным — то, что действительно общее: одиннадцать файлов ядра из тринадцати, скопированных на телефон побайтно, и база, в которую ходят все три приложения. Лендинг только читает из неё журнал работы.</figcaption>
+          <figcaption>Зелёным — то, что действительно общее: тринадцать файлов ядра из четырнадцати, скопированных на телефон побайтно, и база, в которую ходят все три приложения. Лендинг только читает из неё журнал работы.</figcaption>
         </figure>
       </div>
 
@@ -365,7 +365,7 @@
 
       <div class="arch-sec">
         <h2>Шов между десктопом и телефоном</h2>
-        <p class="arch-sub">Из тринадцати файлов ядра на телефон копируются побайтно одиннадцать, и за ними следит тест. Своими у телефона остались два — словарь и миграция.</p>
+        <p class="arch-sub">Из четырнадцати файлов ядра на телефон копируются побайтно тринадцать, и за ними следит тест. Своим у телефона остался один — словарь: экраны разные, и строки короче.</p>
         <div class="arch-scroll">
           <table>
             <thead><tr><th>Область</th><th>Десктоп и веб</th><th>Телефон</th><th>Сверяется</th></tr></thead>
@@ -377,7 +377,8 @@
               <tr><td class="mono">отчёты</td><td class="mono">core/reports.js</td><td>побайтная копия + обёртка</td><td><span class="mark ok">да</span></td></tr>
               <tr><td class="mono">tags</td><td class="mono">core/tags.js</td><td>побайтная копия + свои цвета</td><td><span class="mark ok">да</span></td></tr>
               <tr><td class="mono">i18n</td><td class="mono">core/i18n.js</td><td>свой словарь, строки короче</td><td><span class="mark part">частично</span></td></tr>
-              <tr><td class="mono">migrate</td><td class="mono">core/migrate.js</td><td>своя реализация</td><td><span class="mark part">частично</span></td></tr>
+              <tr><td class="mono">migrate</td><td class="mono">core/migrate.js</td><td>побайтная копия + свои поля интерфейса</td><td><span class="mark ok">да</span></td></tr>
+              <tr><td class="mono">catalog</td><td class="mono">core/catalog.js</td><td>побайтная копия</td><td><span class="mark ok">да</span></td></tr>
               <tr><td class="mono">format</td><td class="mono">core/format.js</td><td>побайтная копия + локали</td><td><span class="mark ok">да</span></td></tr>
               <tr><td class="mono">money</td><td class="mono">core/money.js</td><td>побайтная копия</td><td><span class="mark ok">да</span></td></tr>
               <tr><td class="mono">sync</td><td class="mono">core/sync.js</td><td>побайтная копия</td><td><span class="mark ok">да</span></td></tr>
@@ -452,6 +453,10 @@
               <tr>
                 <td><b>Часы в браузерных тестах прибиты.</b> Два теста падали каждое воскресенье: неделя начинается с понедельника, и в последний её день срок «на завтра» уезжал в следующую.</td>
                 <td>Прогон в воскресенье — тот самый день, когда они падали: 96 из 96 вместо 94 и двух падений.</td>
+              </tr>
+              <tr>
+                <td><b>Миграция данных сведена в ядро.</b> Самая опасная функция в приложении — она трогает всё, что пользователь накопил, и ошибка в ней необратима. Две реализации разошлись в обе стороны: телефон чинил время задачи, десктоп — статусы и версии.</td>
+                <td>Перед заменой старая и новая миграции телефона прогнаны на одних и тех же данных: изменилось ровно одиннадцать полей, и каждое сознательно. Ни одного неожиданного; обычные данные не изменились вовсе.</td>
               </tr>
               <tr>
                 <td><b>Машинка перевода сведена в ядро, слова приведены к одному.</b> Словари у платформ разные по делу, а <span class="mono">translate</span> и <span class="mono">pluralForm</span> были одинаковы слово в слово.</td>
