@@ -42,3 +42,9 @@ Thumbs.db
 # Граф кода graphify — производный артефакт, пересобирается `graphify update .`
 # (3,9 МБ на коммит, из них 2 МБ graph.json)
 graphify-out/
+
+# Личные настройки Claude Code для этого проекта. Здесь же подключён
+# oh-my-claudecode на пробу — только на этой машине, в репозиторий не уходит.
+.claude/settings.local.json
+# Рабочая папка oh-my-claudecode: журналы сессий, его навыки, артефакты.
+.omc/

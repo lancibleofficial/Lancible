@@ -635,7 +635,7 @@
       "id": "scripts_watch_touched",
       "label": "touched()",
       "file": "scripts/watch.js",
-      "at": "L185"
+      "at": "L186"
     },
     {
       "id": "scripts_worklog_main",
@@ -1302,6 +1302,24 @@
       "label": "ses()",
       "file": "tests/unit/views.test.js",
       "at": "L127"
+    },
+    {
+      "id": "tests_unit_visual_rules_test_expand",
+      "label": "expand()",
+      "file": "tests/unit/visual-rules.test.js",
+      "at": "L130"
+    },
+    {
+      "id": "tests_unit_visual_rules_test_ratchet",
+      "label": "ratchet()",
+      "file": "tests/unit/visual-rules.test.js",
+      "at": "L24"
+    },
+    {
+      "id": "tests_unit_visual_rules_test_read",
+      "label": "read()",
+      "file": "tests/unit/visual-rules.test.js",
+      "at": "L19"
     },
     {
       "id": "tests_unit_wording_test_strings",
