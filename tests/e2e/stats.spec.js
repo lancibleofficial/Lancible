@@ -269,8 +269,14 @@ test('имя выгрузки называет фильтр, а сама выг�
   const got = await page.evaluate(() => {
     const calls = [];
     const real = window.api.exportXlsx;
+    // Из листа забираем названия задач: по ним видно, что именно урезано.
+    // Длина листа для этого не годится — в шапке отчёта есть строка «Версия»,
+    // которой в полной выгрузке нет, и счёт сходится при разном составе.
     window.api.exportXlsx = async ({ defaultName, sheets }) => {
-      calls.push({ defaultName, rows: sheets[0].rows.length });
+      const titles = sheets[0].rows
+        .map((r) => (Array.isArray(r) ? r[1] : null))
+        .filter((x) => typeof x === 'string');
+      calls.push({ defaultName, rows: sheets[0].rows.length, titles });
       return { ok: true };
     };
     const p1 = state.projects[0];
@@ -298,6 +304,8 @@ test('имя выгрузки называет фильтр, а сама выг�
 
   expect(got.all.defaultName).not.toMatch(/v1\.3/);
   expect(got.filtered.defaultName).toMatch(/v1\.3/);
-  expect(got.filtered.rows, 'урезанная выгрузка должна быть короче').toBeLessThan(got.all.rows);
+  expect(got.all.titles, 'в полной выгрузке есть задача из v1.4').toContain('Поиск');
+  expect(got.filtered.titles, 'в урезанной задачи из v1.4 быть не должно').not.toContain('Поиск');
+  expect(got.filtered.titles, 'а задачи из v1.3 остаются').toContain('Вёрстка карточек');
   expect(got.period.defaultName).toMatch(/Сайт клиента · v1\.3/);
 });
