@@ -164,17 +164,29 @@ test('DESIGN.md называет те же числа, что списки в э
 
 const LAYERS = ['Шрифты', 'Палитра', 'Основа', 'Компоненты', 'Каркас', 'Экраны'];
 
-/** Общие детали приложения. Растёт, когда деталь появляется на втором экране. */
-const COMPONENTS = ['primary', 'ghost', 'danger', 'icon-btn', 'dp-btn', 'switch', 'empty', 'modal', 'modal-buttons', 'ctx-menu', 'toast'];
+/** Общие детали приложения и их части. Растёт, когда деталь появляется на
+ *  втором экране. `.empty` и `.ghost` в разметке встречаются ещё и как
+ *  модификаторы чужих блоков (пустая клетка календаря, «призрак» будущего
+ *  повторения) — такие правила детали не принадлежат, см. owns ниже. */
+const COMPONENTS = [
+  'primary', 'ghost', 'danger', 'icon-btn', 'icon-btn-accent', 'dp-btn', 'dp-btn-wide',
+  'switch', 'switch-track', 'switch-thumb',
+  'modal', 'modal-lg', 'modal-buttons', 'modal-error', 'ctx-menu', 'ctx-item', 'ctx-sep', 'ctx-check',
+];
 
-test('styles.css: слои по порядку, общие детали — только в слое «Компоненты»', { todo: 'переезд: слои в styles.css' }, () => {
+test('styles.css: слои по порядку, общие детали — только в слое «Компоненты»', () => {
   const css = read('src/renderer/styles.css');
   const marks = [...css.matchAll(/^\/\* =+ Слой: (.+?) =+ \*\/$/gm)];
   assert.deepEqual(marks.map((m) => m[1]), LAYERS, 'слои styles.css не на месте или не по порядку');
-  // Правило «принадлежит» компоненту, если его селектор начинается с класса
-  // компонента. Селектор, начатый с класса экрана (.settings-page .switch), —
-  // законная подстройка, ей место в экране.
-  const owns = (sel) => sel.split(',').some((part) => COMPONENTS.some((c) => new RegExp(`^\\.${c}(?![\\w-])`).test(part.trim())));
+  // Правило принадлежит детали, если её класс — первый в первой части
+  // селектора: `.switch`, `button.ghost`, `.modal-buttons button`. А
+  // `.settings-row.switch` (строка, которая ведёт себя как переключатель) и
+  // `.settings-page .switch` — подстройка экрана, ей место в экране.
+  const owns = (sel) => sel.split(',').some((part) => {
+    const first = part.trim().split(/\s*[ >+~]\s*/)[0];
+    const m = first.match(/\.([\w-]+)/);
+    return !!m && COMPONENTS.includes(m[1]);
+  });
   const stray = [];
   marks.forEach((m, i) => {
     if (m[1] === 'Компоненты') return;
