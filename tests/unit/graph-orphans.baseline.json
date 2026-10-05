@@ -542,6 +542,12 @@
       "at": "L30"
     },
     {
+      "id": "mobile_tests_tasklistitem_test_task",
+      "label": "task()",
+      "file": "mobile/tests/TaskListItem.test.js",
+      "at": "L25"
+    },
+    {
       "id": "scripts_graph_orphans_main",
       "label": "main()",
       "file": "scripts/graph-orphans.js",
@@ -659,25 +665,25 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L5499"
+      "at": "L5494"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L5123"
+      "at": "L5118"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L5113"
+      "at": "L5108"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L5505"
+      "at": "L5500"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
@@ -695,7 +701,7 @@
       "id": "src_renderer_app_applyremind",
       "label": "applyRemind()",
       "file": "src/renderer/app.js",
-      "at": "L4104"
+      "at": "L4119"
     },
     {
       "id": "src_renderer_app_boardlane",
@@ -719,13 +725,13 @@
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L3665"
+      "at": "L3661"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5655"
+      "at": "L5650"
     },
     {
       "id": "src_renderer_app_closestatusdialog",
@@ -743,7 +749,7 @@
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L5414"
+      "at": "L5409"
     },
     {
       "id": "src_renderer_app_deletestatus",
@@ -755,25 +761,25 @@
       "id": "src_renderer_app_deletetask",
       "label": "deleteTask()",
       "file": "src/renderer/app.js",
-      "at": "L3203"
+      "at": "L3199"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4489"
+      "at": "L4504"
     },
     {
       "id": "src_renderer_app_expdlgrange",
       "label": "expdlgRange()",
       "file": "src/renderer/app.js",
-      "at": "L3567"
+      "at": "L3563"
     },
     {
       "id": "src_renderer_app_exportallprojects",
       "label": "exportAllProjects()",
       "file": "src/renderer/app.js",
-      "at": "L3680"
+      "at": "L3676"
     },
     {
       "id": "src_renderer_app_gettag",
@@ -791,7 +797,7 @@
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L4290"
+      "at": "L4305"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
@@ -803,13 +809,13 @@
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L3181"
+      "at": "L3177"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4246"
+      "at": "L4261"
     },
     {
       "id": "src_renderer_app_openexternallink",
@@ -827,13 +833,13 @@
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4445"
+      "at": "L4460"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5649"
+      "at": "L5644"
     },
     {
       "id": "src_renderer_app_opensearch",
@@ -846,12 +852,6 @@
       "label": "openStatusDialog()",
       "file": "src/renderer/app.js",
       "at": "L2595"
-    },
-    {
-      "id": "src_renderer_app_opentagpicker",
-      "label": "openTagPicker()",
-      "file": "src/renderer/app.js",
-      "at": "L2514"
     },
     {
       "id": "src_renderer_app_pickrangeday",
@@ -869,7 +869,7 @@
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L3400"
+      "at": "L3396"
     },
     {
       "id": "src_renderer_app_savetagdialog",
@@ -881,13 +881,13 @@
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L5616"
+      "at": "L5611"
     },
     {
       "id": "src_renderer_app_settaskversion",
       "label": "setTaskVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4341"
+      "at": "L4356"
     },
     {
       "id": "src_renderer_app_startofday",
@@ -905,7 +905,7 @@
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L2966"
+      "at": "L2962"
     },
     {
       "id": "src_renderer_app_togglesyncenabled",
@@ -990,6 +990,18 @@
       "label": "seed()",
       "file": "tests/e2e/currency.spec.js",
       "at": "L9"
+    },
+    {
+      "id": "tests_e2e_editor_spec_opentask",
+      "label": "openTask()",
+      "file": "tests/e2e/editor.spec.js",
+      "at": "L10"
+    },
+    {
+      "id": "tests_e2e_editor_spec_tableshape",
+      "label": "tableShape()",
+      "file": "tests/e2e/editor.spec.js",
+      "at": "L37"
     },
     {
       "id": "tests_e2e_layout_spec_open",
@@ -1244,6 +1256,24 @@
       "at": "L32"
     },
     {
+      "id": "tests_unit_views_test_calctx",
+      "label": "calCtx()",
+      "file": "tests/unit/views.test.js",
+      "at": "L129"
+    },
+    {
+      "id": "tests_unit_views_test_ctx",
+      "label": "ctx()",
+      "file": "tests/unit/views.test.js",
+      "at": "L25"
+    },
+    {
+      "id": "tests_unit_views_test_ses",
+      "label": "ses()",
+      "file": "tests/unit/views.test.js",
+      "at": "L127"
+    },
+    {
       "id": "tests_unit_wording_test_strings",
       "label": "strings()",
       "file": "tests/unit/wording.test.js",
@@ -1268,10 +1298,10 @@
       "at": "L30"
     },
     {
-      "id": "tests_visual_web_spec_seeded",
-      "label": "seeded()",
+      "id": "tests_visual_web_spec_busycalendar",
+      "label": "busyCalendar()",
       "file": "tests/visual/web.spec.js",
-      "at": "L25"
+      "at": "L81"
     },
     {
       "id": "web_api_shim_loadlocal",

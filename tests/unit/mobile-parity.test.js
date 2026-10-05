@@ -256,3 +256,21 @@ test('палитра и валюты на телефоне — те же объ�
   assert.ok(code.includes('Catalog'), 'телефон должен брать справочники из ядра');
   assert.equal(Catalog.PALETTE.length, 16);
 });
+
+// --- строка задачи ------------------------------------------------------------
+
+test('строка задачи на телефоне берёт решения у ядра, а не принимает сама', () => {
+  // Раньше TaskListItem сам решал, какие значки показать, и разошёлся с
+  // десктопом молча: не было ни версии, ни значка повторения. Проверка по
+  // тексту — поведенческий тест пропустил бы заново написанные решения,
+  // если они совпадут с ядром сегодня и разойдутся завтра.
+  const file = path.join(__dirname, '..', '..', 'mobile', 'src', 'components', 'TaskListItem.js');
+  const code = fs.readFileSync(file, 'utf8')
+    .split('\n')
+    .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+    .join('\n');
+  assert.ok(code.includes('taskRowView'), 'строка должна звать taskRowView');
+  for (const own of ['getStatus(', 'dueState(', 'dueShort(', 'taskElapsedMs(', 'normalizeRepeat(']) {
+    assert.ok(!code.includes(own), `строка снова решает сама: «${own}»`);
+  }
+});

@@ -2832,19 +2832,47 @@ function taskSep(text) {
   return li;
 }
 
+/** Элемент с классом и текстом — то, из чего собраны строки задач и
+ *  клетки календаря. Без него каждый значок занимал пять строк, и за ними
+ *  терялось, что именно рисуется. */
+function elt(tag, className, text) {
+  const n = document.createElement(tag);
+  if (className) n.className = className;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+/** Всё, что нужно правилу строки задачи (core/views.js, taskRowView).
+ *  Собирается заново на каждую строку: «сейчас» и выделение меняются. */
+const taskRowCtx = () => ({
+  statuses: state.statuses,
+  versions: state.versions,
+  selectedId,
+  activeTimer: state.activeTimer,
+  now: Date.now(),
+  lang: lang(),
+  t,
+  fmtDateShort,
+  repeatLabel,
+});
+
+/** Строка задачи в списке. Что показать — решает ядро (taskRowView), общее
+ *  с телефоном; здесь только сборка DOM и обработчики. */
 function taskItem(task, i) {
+  const v = Core.taskRowView(task, taskRowCtx());
+
   const li = document.createElement('li');
   li.className = 'task-item';
   li.dataset.id = task.id;
   li.style.animationDelay = `${Math.min(i, 12) * 16}ms`;
-  if (task.id === selectedId) li.classList.add('selected');
-  if (task.done) li.classList.add('done');
-  if (task.pinnedAt) li.classList.add('pinned');
+  if (v.selected) li.classList.add('selected');
+  if (v.done) li.classList.add('done');
+  if (v.pinned) li.classList.add('pinned');
 
   const cb = document.createElement('input');
   cb.type = 'checkbox';
   cb.className = 'task-done';
-  cb.checked = !!task.done;
+  cb.checked = v.done;
   cb.addEventListener('click', (e) => e.stopPropagation());
   cb.addEventListener('change', () => {
     setTaskDone(task, cb.checked);
@@ -2853,65 +2881,33 @@ function taskItem(task, i) {
     scheduleSave();
   });
 
-  const name = document.createElement('span');
-  name.className = 'task-name';
-  name.textContent = task.title || t('task.no_name');
+  const name = elt('span', 'task-name', v.title);
 
   const pin = document.createElement('button');
   pin.className = 'task-pin';
   pin.innerHTML = icon('pin');
-  pin.title = task.pinnedAt ? t('task.unpin_short') : t('task.pin_short');
+  pin.title = v.pinTitle;
   pin.addEventListener('click', (e) => { e.stopPropagation(); togglePinTask(task.id); });
 
-  const top = document.createElement('div');
-  top.className = 'ti-top';
+  const top = elt('div', 'ti-top');
   top.append(cb, name, pin);
 
-  const bottom = document.createElement('div');
-  bottom.className = 'ti-bottom';
-  // Статус в списке: галочка отвечает только на «закончена или нет», а в
-  // каком именно состоянии задача — видно было лишь на доске.
-  const st = getStatus(task.statusId);
-  if (st) {
-    const chip = document.createElement('span');
-    chip.className = 'task-status';
-    chip.style.setProperty('--sc', st.color);
-    chip.innerHTML = `<span class="st-swatch"></span>${escapeHtml(st.name)}`;
+  const bottom = elt('div', 'ti-bottom');
+  if (v.status) {
+    const chip = elt('span', 'task-status');
+    chip.style.setProperty('--sc', v.status.color);
+    chip.innerHTML = `<span class="st-swatch"></span>${escapeHtml(v.status.name)}`;
     bottom.appendChild(chip);
   }
-  // Версия рядом со статусом: на доске её видно по дорожке, а в списке
-  // задач её было не видно нигде, кроме как открыв задачу.
-  const ver = task.versionId ? getVersion(task.versionId) : null;
-  if (ver) {
-    const vchip = document.createElement('span');
-    vchip.className = 'task-version' + (ver.releasedAt ? ' released' : '');
-    vchip.textContent = ver.name || t('task.no_name');
-    bottom.appendChild(vchip);
-  }
-  if (Core.normalizeRepeat(task.repeat)) {
-    const rep = document.createElement('span');
-    rep.className = 'task-repeat-mark';
-    rep.title = repeatLabel(task.repeat);
-    rep.textContent = '↻';
+  if (v.version) bottom.appendChild(elt('span', 'task-version' + (v.version.released ? ' released' : ''), v.version.name));
+  if (v.repeat) {
+    const rep = elt('span', 'task-repeat-mark', '↻');
+    rep.title = v.repeat.title;
     bottom.appendChild(rep);
   }
-  const ds = dueState(task);
-  if (ds) {
-    const badge = document.createElement('span');
-    badge.className = `task-due ${ds}`;
-    badge.textContent = dueShort(task);
-    bottom.appendChild(badge);
-  }
-  if (state.activeTimer && state.activeTimer.taskId === task.id) {
-    const dot = document.createElement('span');
-    dot.className = 'running-dot';
-    dot.textContent = '●';
-    bottom.appendChild(dot);
-  }
-  const time = document.createElement('span');
-  time.className = 'task-time';
-  time.textContent = fmtShort(taskElapsedMs(task));
-  bottom.appendChild(time);
+  if (v.due) bottom.appendChild(elt('span', `task-due ${v.due.state}`, v.due.text));
+  if (v.running) bottom.appendChild(elt('span', 'running-dot', '●'));
+  bottom.appendChild(elt('span', 'task-time', v.time));
 
   li.append(top, bottom);
   li.addEventListener('click', () => selectTask(task.id));
@@ -3740,73 +3736,92 @@ function stopTimer() {
 const tableModule = () => { try { return quill.getModule('table'); } catch { return null; } };
 let ttScope = 'cell';
 
-function setupEditor() {
-  // атрибутор фона ячейки таблицы (блочный, чтобы стиль лёг на <td> и попал в Delta)
+// Панель инструментов редактора. Порядок групп — порядок на экране.
+const EDITOR_TOOLBAR = [
+  [{ header: [1, 2, 3, false] }],
+  ['bold', 'italic', 'underline', 'strike'],
+  [{ color: TEXT_COLORS }, { background: TEXT_COLORS }],
+  [{ list: 'check' }, { list: 'bullet' }, { list: 'ordered' }],
+  [{ indent: '-1' }, { indent: '+1' }],
+  ['blockquote', 'code-block', 'link'],
+  ['clean'],
+];
+
+// Кнопки инструментов таблицы (data-tt в разметке) → метод модуля таблиц
+// Quill. Неизвестная кнопка не делает ничего — как и цепочка if/else,
+// которую эта таблица заменила.
+const TABLE_OPS = {
+  rowBelow: 'insertRowBelow',
+  colRight: 'insertColumnRight',
+  rowDel: 'deleteRow',
+  colDel: 'deleteColumn',
+  tableDel: 'deleteTable',
+};
+
+/** Фон ячейки таблицы: блочный атрибут, чтобы стиль лёг на <td> и попал в
+ *  Delta, а значит — в заметки и синхронизацию. */
+function registerCellBackground() {
   try {
     const Parchment = Quill.import('parchment');
     const CellBg = new Parchment.StyleAttributor('cellBg', 'background-color', { scope: Parchment.Scope.BLOCK });
     Quill.register(CellBg, true);
   } catch (e) { console.error('cellBg attributor:', e); }
+}
 
+/** Любая правка таблицы — одной обвязкой: вернуть фокус редактору, править,
+ *  записать заметки в задачу и показать или спрятать панель таблицы. */
+function editTable(edit) {
+  quill.focus();
+  try { edit(); } catch (e) { console.error(e); }
+  persistNotes();
+  updateTableTools();
+}
+
+/** Кнопка «▦» в панели инструментов: вставляет таблицу три на три. */
+function addTableInsertButton(tm) {
+  const group = document.createElement('span');
+  group.className = 'ql-formats';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'ql-table-insert';
+  btn.title = t('table.insert_title');
+  btn.textContent = '▦';
+  btn.addEventListener('click', () => editTable(() => tm.insertTable(3, 3)));
+  group.appendChild(btn);
+  quill.getModule('toolbar').container.appendChild(group);
+}
+
+/** Панель таблицы: строки и столбцы, удаление и что заливать цветом. */
+function setupTableTools(tm) {
+  el.tableTools.querySelectorAll('button[data-tt]').forEach((b) => {
+    b.addEventListener('click', () => editTable(() => {
+      const method = TABLE_OPS[b.dataset.tt];
+      if (method) tm[method]();
+    }));
+  });
+  el.tableTools.querySelectorAll('button[data-scope]').forEach((b) => {
+    b.addEventListener('click', () => {
+      ttScope = b.dataset.scope;
+      el.tableTools.querySelectorAll('button[data-scope]').forEach((x) => x.classList.toggle('on', x === b));
+    });
+  });
+  buildFillSwatches();
+}
+
+/** Редактор заметок. Закрыт, пока не выбрана задача: писать некуда. */
+function setupEditor() {
+  registerCellBackground();
   quill = new Quill('#editor', {
     theme: 'snow',
     placeholder: t('editor.placeholder'),
     bounds: '#editor-wrap',
-    modules: {
-      table: true,
-      toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: TEXT_COLORS }, { background: TEXT_COLORS }],
-        [{ list: 'check' }, { list: 'bullet' }, { list: 'ordered' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        ['blockquote', 'code-block', 'link'],
-        ['clean'],
-      ],
-    },
+    modules: { table: true, toolbar: EDITOR_TOOLBAR },
   });
 
   const tm = tableModule();
   if (tm) {
-    const bar = quill.getModule('toolbar').container;
-    const group = document.createElement('span');
-    group.className = 'ql-formats';
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'ql-table-insert';
-    btn.title = t('table.insert_title');
-    btn.textContent = '▦';
-    btn.addEventListener('click', () => {
-      quill.focus();
-      try { tm.insertTable(3, 3); } catch (e) { console.error(e); }
-      persistNotes();
-      updateTableTools();
-    });
-    group.appendChild(btn);
-    bar.appendChild(group);
-
-    el.tableTools.querySelectorAll('button[data-tt]').forEach((b) => {
-      b.addEventListener('click', () => {
-        quill.focus();
-        const op = b.dataset.tt;
-        try {
-          if (op === 'rowBelow') tm.insertRowBelow();
-          else if (op === 'colRight') tm.insertColumnRight();
-          else if (op === 'rowDel') tm.deleteRow();
-          else if (op === 'colDel') tm.deleteColumn();
-          else if (op === 'tableDel') tm.deleteTable();
-        } catch (e) { console.error(e); }
-        persistNotes();
-        updateTableTools();
-      });
-    });
-    el.tableTools.querySelectorAll('button[data-scope]').forEach((b) => {
-      b.addEventListener('click', () => {
-        ttScope = b.dataset.scope;
-        el.tableTools.querySelectorAll('button[data-scope]').forEach((x) => x.classList.toggle('on', x === b));
-      });
-    });
-    buildFillSwatches();
+    addTableInsertButton(tm);
+    setupTableTools(tm);
   }
 
   quill.on('text-change', (_d, _o, source) => { if (source === 'user' && selectedId) persistNotes(); });
@@ -4862,38 +4877,50 @@ function renderAgendaSide() {
 }
 
 /** Часовая сетка: день, четыре дня или неделя. */
-function renderAgendaTime() {
+/** Всё, что нужно правилам календаря (core/views.js). */
+const agendaCtx = () => {
   const { from, days } = agendaSpan();
-  const to = from + days * Core.DAY;
-  const tasks = agendaTasks();
-  const today = dayKey(new Date());
+  return {
+    from,
+    days,
+    anchor: agenda.anchor,
+    now: Date.now(),
+    t,
+    fmtTime,
+    locale: locale(),
+    projectColor: agendaProjectColor,
+  };
+};
 
-  for (const node of [el.agDaynames, el.agAllday, el.agCols]) node.style.setProperty('--ag-days', String(days));
+/** День из календаря открывается во весь экран: клик по числу. */
+const openAgendaDay = (start) => { agenda.anchor = Core.startOfDayMs(start); agenda.mode = 'day'; renderAgendaPage(); };
 
-  const deadlines = Core.deadlineItems(tasks, from, to).concat(repeatGhosts(tasks, from, to));
+/** Часовая сетка — день, четыре дня или неделя. Что показать — решает
+ *  ядро (agendaTimeView); здесь сборка DOM, черта «сейчас» и прокрутка. */
+function renderAgendaTime() {
+  const v = Core.agendaTimeView(agendaTasks(), agendaCtx());
+
+  for (const node of [el.agDaynames, el.agAllday, el.agCols]) node.style.setProperty('--ag-days', String(v.days.length));
+
   el.agDaynames.innerHTML = '';
   el.agAllday.innerHTML = '';
-  for (let i = 0; i < days; i += 1) {
-    const d = new Date(from + i * Core.DAY);
+  for (const d of v.days) {
     const head = document.createElement('button');
     head.type = 'button';
-    head.className = 'ag-dayname' + (dayKey(d) === today ? ' today' : '');
-    head.innerHTML = `<span class="ag-dow">${escapeHtml(d.toLocaleDateString(locale(), { weekday: 'short' }))}</span>`
-      + `<span class="ag-dnum">${d.getDate()}</span>`;
-    head.addEventListener('click', () => { agenda.anchor = Core.startOfDayMs(d); agenda.mode = 'day'; renderAgendaPage(); });
+    head.className = 'ag-dayname' + (d.today ? ' today' : '');
+    head.innerHTML = `<span class="ag-dow">${escapeHtml(d.weekday)}</span>`
+      + `<span class="ag-dnum">${d.date}</span>`;
+    head.addEventListener('click', () => openAgendaDay(d.start));
     el.agDaynames.appendChild(head);
 
-    const cell = document.createElement('div');
-    cell.className = 'ag-allday-cell';
-    for (const dl of deadlines) {
-      if (dl.dayIndex !== i) continue;
-      const task = getTask(dl.taskId);
+    const cell = elt('div', 'ag-allday-cell');
+    for (const dl of d.deadlines) {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'ag-dl' + (dl.done ? ' done' : '') + (dl.ghost ? ' ghost' : '');
-      chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
-      chip.title = `${t('agenda.deadline')} · ${fmtTime(dl.at)}`;
-      chip.textContent = (dl.ghost ? '↻ ' : '') + (task ? (task.title || t('task.no_name')) : '');
+      chip.style.setProperty('--pc', dl.color);
+      chip.title = dl.tooltip;
+      chip.textContent = dl.label;
       chip.addEventListener('click', () => openTaskModal(getTask(dl.taskId), null));
       cell.appendChild(chip);
     }
@@ -4901,33 +4928,19 @@ function renderAgendaTime() {
   }
 
   el.agGutter.innerHTML = '';
-  for (let h = 0; h < 24; h += 1) {
-    const s = document.createElement('span');
-    s.className = 'ag-hour';
-    // Полночь не подписываем: её метка висела бы над первой линией и
-    // читалась подписью ко всей сетке.
-    s.textContent = h ? `${pad2(h)}:00` : '';
-    el.agGutter.appendChild(s);
-  }
+  for (const label of v.hours) el.agGutter.appendChild(elt('span', 'ag-hour', label));
 
-  const segments = Core.sessionSegments(tasks, from, to);
   el.agCols.innerHTML = '';
-  for (let i = 0; i < days; i += 1) {
-    const col = document.createElement('div');
-    col.className = 'ag-col' + (dayKey(new Date(from + i * Core.DAY)) === today ? ' today' : '');
-    col.dataset.dayIndex = String(i);
-    col.dataset.dayStart = String(from + i * Core.DAY);
-    // Линии каждые полчаса, а не каждый час: шаг перетаскивания — 15 минут,
-    // и по одним часовым не видно, куда встанет запись.
-    for (let half = 1; half < 48; half += 1) {
-      const line = document.createElement('div');
-      line.className = 'ag-line' + (half % 2 ? ' half' : '');
-      line.style.top = `${(half / 48) * 100}%`;
+  for (const d of v.days) {
+    const col = elt('div', 'ag-col' + (d.today ? ' today' : ''));
+    col.dataset.dayIndex = String(d.index);
+    col.dataset.dayStart = String(d.start);
+    for (const ln of v.lines) {
+      const line = elt('div', 'ag-line' + (ln.half ? ' half' : ''));
+      line.style.top = `${ln.top}%`;
       col.appendChild(line);
     }
-    for (const seg of Core.layoutOverlaps(segments.filter((s) => s.dayIndex === i))) {
-      col.appendChild(agendaBlock(seg));
-    }
+    for (const seg of d.blocks) col.appendChild(agendaBlock(seg));
     el.agCols.appendChild(col);
   }
 
@@ -4975,73 +4988,55 @@ function renderAgendaNow() {
   col.appendChild(line);
 }
 
-/** Месяц: клетки с короткими чипами, как в Google. */
+/** Месяц: клетки с короткими чипами, как в Google. Что показать —
+ *  решает ядро (agendaMonthView); здесь только сборка DOM. */
 function renderAgendaMonth() {
-  const { from, days } = agendaSpan();
-  const to = from + days * Core.DAY;
-  const tasks = agendaTasks();
-  const today = dayKey(new Date());
-  const cur = new Date(agenda.anchor).getMonth();
-  const segments = Core.sessionSegments(tasks, from, to);
-  const deadlines = Core.deadlineItems(tasks, from, to).concat(repeatGhosts(tasks, from, to));
+  const v = Core.agendaMonthView(agendaTasks(), agendaCtx());
 
   el.agMonth.innerHTML = '';
-  const head = document.createElement('div');
-  head.className = 'ag-month-week';
-  for (const key of ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']) {
-    const s = document.createElement('span');
-    s.className = 'ag-month-dow';
-    s.textContent = t(`weekday.${key}`);
-    head.appendChild(s);
-  }
+  const head = elt('div', 'ag-month-week');
+  for (const name of v.weekdays) head.appendChild(elt('span', 'ag-month-dow', name));
   el.agMonth.appendChild(head);
 
-  const grid = document.createElement('div');
-  grid.className = 'ag-month-grid';
-  grid.style.setProperty('--ag-weeks', String(days / 7));
-  for (let i = 0; i < days; i += 1) {
-    const d = new Date(from + i * Core.DAY);
-    const cell = document.createElement('div');
-    cell.className = 'ag-month-cell';
-    cell.classList.toggle('out', d.getMonth() !== cur);
-    cell.classList.toggle('today', dayKey(d) === today);
+  const grid = elt('div', 'ag-month-grid');
+  grid.style.setProperty('--ag-weeks', String(v.weeks));
+  for (const c of v.cells) {
+    const cell = elt('div', 'ag-month-cell');
+    cell.classList.toggle('out', c.out);
+    cell.classList.toggle('today', c.today);
 
     const num = document.createElement('button');
     num.type = 'button';
     num.className = 'ag-month-num';
-    num.textContent = String(d.getDate());
-    num.addEventListener('click', () => { agenda.anchor = Core.startOfDayMs(d); agenda.mode = 'day'; renderAgendaPage(); });
+    num.textContent = String(c.date);
+    num.addEventListener('click', () => openAgendaDay(c.start));
     cell.appendChild(num);
 
-    for (const dl of deadlines) {
-      if (dl.dayIndex !== i) continue;
-      const task = getTask(dl.taskId);
+    for (const dl of c.deadlines) {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'ag-mchip dl' + (dl.done ? ' done' : '') + (dl.ghost ? ' ghost' : '');
-      chip.style.setProperty('--pc', agendaProjectColor(dl.projectId));
-      chip.textContent = task ? (task.title || t('task.no_name')) : '';
+      chip.style.setProperty('--pc', dl.color);
+      chip.textContent = dl.title;
       chip.addEventListener('click', () => openTaskModal(getTask(dl.taskId), null));
       cell.appendChild(chip);
     }
-    const daySegs = segments.filter((s) => s.dayIndex === i);
-    for (const seg of daySegs.slice(0, 3)) {
-      const task = getTask(seg.taskId);
+    for (const seg of c.sessions) {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = 'ag-mchip';
-      chip.style.setProperty('--pc', agendaProjectColor(seg.projectId));
-      chip.innerHTML = `<span class="ag-mchip-time">${fmtTime(seg.start).slice(0, 5)}</span>`
-        + `<span class="ag-mchip-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`;
-      chip.addEventListener('click', () => { if (task) openTaskModal(task, seg.index); });
+      chip.style.setProperty('--pc', seg.color);
+      chip.innerHTML = `<span class="ag-mchip-time">${seg.time}</span>`
+        + `<span class="ag-mchip-name">${escapeHtml(seg.title)}</span>`;
+      chip.addEventListener('click', () => { const task = getTask(seg.taskId); if (task) openTaskModal(task, seg.index); });
       cell.appendChild(chip);
     }
-    if (daySegs.length > 3) {
+    if (c.more) {
       const more = document.createElement('button');
       more.type = 'button';
       more.className = 'ag-mmore';
-      more.textContent = `+${daySegs.length - 3}`;
-      more.addEventListener('click', () => { agenda.anchor = Core.startOfDayMs(d); agenda.mode = 'day'; renderAgendaPage(); });
+      more.textContent = `+${c.more}`;
+      more.addEventListener('click', () => openAgendaDay(c.start));
       cell.appendChild(more);
     }
     grid.appendChild(cell);

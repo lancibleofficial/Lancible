@@ -1,13 +1,12 @@
 import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import { useAppStore } from '../store/useAppStore';
-import { getStatus } from '../lib/statuses';
-import { fmtShort, taskElapsedMs } from '../lib/format';
-import { dueState, dueShort } from '../lib/due';
+import { fmtDateShort } from '../lib/format';
 import { useTicker } from '../hooks/useTicker';
 import Icon from './Icon';
 import { useColors, spacing, radius, fontSize } from '../theme';
 import { t } from '../lib/i18n';
+import Views from '../core/views.js';
 
 // Таймер запускается/останавливается только из TaskDetailScreen — в списке
 // только индикация, что задача сейчас в работе (см. фидбек: кнопка "старт"
@@ -16,6 +15,10 @@ import { t } from '../lib/i18n';
 // Кнопки-пина тут тоже нет: закрепление переехало на свайп влево (SwipeRow),
 // как у проектов на Главной. Строка списка — это про задачу, а не про
 // панель управления ею.
+//
+// Что показать в строке, решает ядро (src/core/views.js, taskRowView) —
+// то же правило, что у десктопа. Раньше строка решала сама и разошлась с
+// десктопом молча: не показывала ни версию, ни значок повторения.
 export default function TaskListItem({ task, onPress }) {
   const colors = useColors();
   const styles = makeStyles(colors);
@@ -23,39 +26,54 @@ export default function TaskListItem({ task, onPress }) {
   const activeTimer = useAppStore((s) => s.activeTimer);
   const toggleTaskDone = useAppStore((s) => s.toggleTaskDone);
   const statuses = useAppStore((s) => s.statuses);
-  const isRunning = activeTimer && activeTimer.taskId === task.id;
+  const versions = useAppStore((s) => s.versions);
 
-  useTicker(!!isRunning);
+  const v = Views.taskRowView(task, {
+    statuses,
+    versions,
+    selectedId: null,
+    activeTimer,
+    now: Date.now(),
+    lang,
+    t: (key, vars) => t(lang, key, vars),
+    fmtDateShort: (date) => fmtDateShort(date, lang),
+    // Подписи по наведению у телефона нет — значку повторения она не нужна.
+  });
 
-  const ds = dueState(task);
-  const status = getStatus(statuses, task.statusId);
+  useTicker(v.running);
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-      <Pressable hitSlop={10} onPress={() => toggleTaskDone(task.id)} style={[styles.checkbox, task.done && styles.checkboxOn]}>
-        {task.done ? <Icon name="check" size={13} color={colors.accentText} /> : null}
+      <Pressable hitSlop={10} onPress={() => toggleTaskDone(task.id)} style={[styles.checkbox, v.done && styles.checkboxOn]}>
+        {v.done ? <Icon name="check" size={13} color={colors.accentText} /> : null}
       </Pressable>
 
       <View style={styles.mid}>
-        <Text style={[styles.title, task.done && styles.titleDone]} numberOfLines={1}>
-          {task.title || t(lang, 'task.no_name')}
+        <Text style={[styles.title, v.done && styles.titleDone]} numberOfLines={1}>
+          {v.title}
         </Text>
         <View style={styles.timeRow}>
-          {/* Статус первым: по нему и видно, на какой стадии задача, —
-              срок и время только уточняют. */}
-          {status ? (
+          {v.status ? (
             <View style={styles.statusChip}>
-              <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-              <Text style={styles.statusText} numberOfLines={1}>{status.name}</Text>
+              <View style={[styles.statusDot, { backgroundColor: v.status.color }]} />
+              <Text style={styles.statusText} numberOfLines={1}>{v.status.name}</Text>
             </View>
           ) : null}
-          {ds ? (
-            <View style={[styles.dueBadge, styles[ds] || null]}>
-              <Text style={[styles.dueText, styles[ds + 'Text'] || null]}>{dueShort(task, lang)}</Text>
+          {v.version ? (
+            <View style={styles.versionChip}>
+              <Text style={[styles.versionText, v.version.released && styles.versionReleased]} numberOfLines={1}>
+                {v.version.name}
+              </Text>
             </View>
           ) : null}
-          {isRunning ? <View style={styles.liveDot} /> : null}
-          <Text style={[styles.time, isRunning && styles.timeRunning]}>{fmtShort(taskElapsedMs(task, activeTimer), lang)}</Text>
+          {v.repeat ? <Text style={styles.repeatMark}>↻</Text> : null}
+          {v.due ? (
+            <View style={[styles.dueBadge, styles[v.due.state] || null]}>
+              <Text style={[styles.dueText, styles[v.due.state + 'Text'] || null]}>{v.due.text}</Text>
+            </View>
+          ) : null}
+          {v.running ? <View style={styles.liveDot} /> : null}
+          <Text style={[styles.time, v.running && styles.timeRunning]}>{v.time}</Text>
         </View>
       </View>
 
@@ -84,6 +102,13 @@ const makeStyles = (colors) => StyleSheet.create({
   statusChip: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: 140 },
   statusDot: { width: 8, height: 8, borderRadius: 2 },
   statusText: { color: colors.textDim, fontSize: 11 },
+  // Версия и значок повторения — с десктопа (.task-version,
+  // .task-repeat-mark) теми же токенами: плашка panel2, текст textDim, у
+  // выпущенной версии и у значка — textFaint.
+  versionChip: { backgroundColor: colors.panel2, borderRadius: radius.sm, paddingHorizontal: 7, paddingVertical: 1, maxWidth: 120 },
+  versionText: { color: colors.textDim, fontSize: 11, fontWeight: '500' },
+  versionReleased: { color: colors.textFaint },
+  repeatMark: { color: colors.textFaint, fontSize: 11 },
   // Тот же цветовой код, что в десктопной версии: красный — просрочено,
   // акцент — в пределах суток, нейтральный — дальше.
   dueBadge: { backgroundColor: colors.panel2, borderRadius: radius.pill, paddingHorizontal: 7, paddingVertical: 1 },

@@ -22,7 +22,7 @@ const to = path.join(root, 'mobile', 'src', 'core');
 // Только то, что мобильному действительно нужно. Остальное (format, money,
 // tags, migrate) у него своё: там логика переписана под явную передачу языка
 // и валюты вместо глобального state.
-const FILES = ['repeat.js', 'versions.js', 'agenda.js', 'status.js', 'reports.js', 'tags.js', 'sync.js', 'format.js', 'money.js', 'due.js', 'lang.js', 'catalog.js', 'migrate.js'];
+const FILES = ['repeat.js', 'versions.js', 'agenda.js', 'status.js', 'reports.js', 'tags.js', 'sync.js', 'format.js', 'money.js', 'due.js', 'lang.js', 'catalog.js', 'migrate.js', 'views.js'];
 
 fs.mkdirSync(to, { recursive: true });
 let changed = 0;
