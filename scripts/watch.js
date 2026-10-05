@@ -41,6 +41,9 @@ const LAYERS = [
   { id: 'unit', title: 'юниты', args: ['--test', 'tests/unit/*.test.js'], fast: true },
   { id: 'xlsx', title: 'таблицы', args: ['scripts/xlsx-check.js'], fast: true },
   { id: 'mobile', title: 'телефон', args: ['node_modules/jest/bin/jest.js'], cwd: 'mobile', fast: true },
+  // jest гоняет код в Node, бандл собирает Metro, и понимают они разное — см.
+  // scripts/check-mobile-build.js. Браузера не нужно, поэтому и в --fast.
+  { id: 'mobile-build', title: 'сборка телефона', args: ['scripts/check-mobile-build.js'], fast: true },
   { id: 'web', title: 'браузер: веб', args: [PLAYWRIGHT, 'test', '--project=web', PW_OUT], fast: false, build: true },
   { id: 'landing', title: 'браузер: лендинг', args: [PLAYWRIGHT, 'test', '--project=landing', PW_OUT], fast: false },
   { id: 'visual', title: 'снимки', args: [PLAYWRIGHT, 'test', '--project=visual', PW_OUT], fast: false },
@@ -58,6 +61,11 @@ const ROUTES = [
   [/^src[\\/]renderer[\\/]/, ['unit', 'web', 'visual']],
   [/^web[\\/]index\.html$/, ['unit', 'web', 'visual']],
   [/^mobile[\\/]/, ['unit', 'mobile']],
+  // Бандл собирается из mobile/, в том числе из копий ядра в mobile/src/core —
+  // правка src/renderer/core доходит до сборки, когда её туда скопируют.
+  // Тесты в бандл не попадают.
+  [/^mobile[\\/](?!tests[\\/])/, ['mobile-build']],
+  [/^scripts[\\/]check-mobile-build\.js$/, ['mobile-build']],
   [/^landing[\\/]/, ['unit', 'landing', 'visual']],
   [/^tests[\\/]unit[\\/]/, ['unit']],
   [/^tests[\\/]e2e[\\/]/, ['web']],
@@ -93,6 +101,10 @@ const WATCH_DIRS = ['src', 'web', 'mobile/src', 'mobile/tests', 'landing', 'test
 // Файлы в корне, которые проверяет набор. За корнем целиком не следим — там
 // node_modules и выход сборки, — поэтому только они, поимённо.
 const ROOT_FILES = ['ARCHITECTURE.md', 'DESIGN.md', 'playwright.config.js'];
+
+// То же в корне телефона: точка входа и конфиг сборки. За mobile/ целиком не
+// следим по той же причине — там node_modules.
+const MOBILE_FILES = ['App.js', 'index.js', 'app.json'];
 
 // --- вывод ------------------------------------------------------------------
 
@@ -197,22 +209,33 @@ function touched(rel) {
 
 // --- запуск -----------------------------------------------------------------
 
-for (const dir of WATCH_DIRS) {
-  const full = path.join(ROOT, dir);
-  if (!fs.existsSync(full)) continue;
-  fs.watch(full, { recursive: true }, (_event, name) => {
-    if (!name) return;
-    touched(path.join(dir, name));
+function main() {
+  for (const dir of WATCH_DIRS) {
+    const full = path.join(ROOT, dir);
+    if (!fs.existsSync(full)) continue;
+    fs.watch(full, { recursive: true }, (_event, name) => {
+      if (!name) return;
+      touched(path.join(dir, name));
+    });
+  }
+
+  // Сам корень — без recursive: иначе сюда пошли бы все события node_modules.
+  // Редактор нередко сохраняет файл через переименование, и слежка за самим
+  // файлом после этого глохнет; за папкой — нет.
+  fs.watch(ROOT, (_event, name) => {
+    if (name && ROOT_FILES.includes(name)) touched(name);
   });
+  fs.watch(path.join(ROOT, 'mobile'), (_event, name) => {
+    if (name && MOBILE_FILES.includes(name)) touched(path.join('mobile', name));
+  });
+
+  const mobileFiles = MOBILE_FILES.map((f) => `mobile/${f}`);
+  say(`сторож смотрит за: ${[...WATCH_DIRS, ...ROOT_FILES, ...mobileFiles].join(', ')}`);
+  say(FAST_ONLY ? 'режим --fast: юниты, таблицы, телефон и его сборка' : 'браузерные слои включены (быстрее — npm run watch -- --fast)');
+  say('остановить — Ctrl+C');
 }
 
-// Сам корень — без recursive: иначе сюда пошли бы все события node_modules.
-// Редактор нередко сохраняет файл через переименование, и слежка за самим
-// файлом после этого глохнет; за папкой — нет.
-fs.watch(ROOT, (_event, name) => {
-  if (name && ROOT_FILES.includes(name)) touched(name);
-});
+// Подключённый из теста, сторож ни за чем не следит — только отдаёт маршруты.
+if (require.main === module) main();
 
-say(`сторож смотрит за: ${[...WATCH_DIRS, ...ROOT_FILES].join(', ')}`);
-say(FAST_ONLY ? 'режим --fast: только юниты, таблицы и телефон' : 'браузерные слои включены (быстрее — npm run watch -- --fast)');
-say('остановить — Ctrl+C');
+module.exports = { layersFor };

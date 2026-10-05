@@ -99,6 +99,25 @@ test('в таблице шва на странице есть строка на 
   }
 });
 
+// --- сколько работ гоняет GitHub ------------------------------------------------
+
+// Тот же сорт, что число файлов ядра: меняется редко и забывается. Когда в
+// test.yml добавилась сборка телефона, «четырьмя работами» осталось в трёх
+// местах сразу.
+const JOBS = (() => {
+  const yml = read('.github/workflows/test.yml');
+  return (yml.slice(yml.search(/^jobs:$/m)).match(/^ {2}[\w-]+:\s*$/gm) || []).length;
+})();
+const INS = { 3: 'тремя', 4: 'четырьмя', 5: 'пятью', 6: 'шестью', 7: 'семью', 8: 'восемью' };
+
+test('документы называют правильное число работ в test.yml', () => {
+  const phrase = `${word(INS, JOBS)} параллельными работами`;
+  const flat = (text) => text.replace(/\s+/g, ' ');
+  for (const [where, text] of [['CLAUDE.md', read('CLAUDE.md')], ['ARCHITECTURE.md', DOC], ['/architecture', PAGE]]) {
+    assert.ok(flat(text).includes(phrase), `в ${where} нет «${phrase}» — работ в test.yml: ${JOBS}`);
+  }
+});
+
 // --- частые числа: места размечены и заполнены --------------------------------
 
 const marks = (html) => [...html.matchAll(/<!--m:([\w.]+)-->([\s\S]*?)<!--\/m-->/g)]

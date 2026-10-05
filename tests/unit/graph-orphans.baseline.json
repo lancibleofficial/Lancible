@@ -566,6 +566,12 @@
       "at": "L25"
     },
     {
+      "id": "scripts_check_mobile_build_main",
+      "label": "main()",
+      "file": "scripts/check-mobile-build.js",
+      "at": "L42"
+    },
+    {
       "id": "scripts_graph_orphans_main",
       "label": "main()",
       "file": "scripts/graph-orphans.js",
@@ -650,10 +656,10 @@
       "at": "L9"
     },
     {
-      "id": "scripts_watch_touched",
-      "label": "touched()",
+      "id": "scripts_watch_main",
+      "label": "main()",
       "file": "scripts/watch.js",
-      "at": "L186"
+      "at": "L212"
     },
     {
       "id": "scripts_worklog_main",
@@ -1175,7 +1181,7 @@
       "id": "tests_unit_architecture_test_marks",
       "label": "marks()",
       "file": "tests/unit/architecture.test.js",
-      "at": "L104"
+      "at": "L123"
     },
     {
       "id": "tests_unit_architecture_test_word",
@@ -1230,6 +1236,18 @@
       "label": "deps()",
       "file": "tests/unit/migrate.test.js",
       "at": "L14"
+    },
+    {
+      "id": "tests_unit_mobile_build_test_fakeexport",
+      "label": "fakeExport()",
+      "file": "tests/unit/mobile-build.test.js",
+      "at": "L23"
+    },
+    {
+      "id": "tests_unit_mobile_build_test_read",
+      "label": "read()",
+      "file": "tests/unit/mobile-build.test.js",
+      "at": "L18"
     },
     {
       "id": "tests_unit_mobile_i18n_test_loadmobiledict",

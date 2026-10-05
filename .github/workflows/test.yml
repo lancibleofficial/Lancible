@@ -46,6 +46,26 @@ jobs:
       - run: npm test
         working-directory: mobile
 
+  # Отдельно от «Телефона»: jest гоняет код в Node, а Node понимает то, чего
+  # не понимает Metro. 6 октября 2026 сборка APK падала на require с
+  # вычисляемым путём, а все тесты были зелёными. Своя работа — своя строка
+  # в проверках: красная значит «не собирается», а не «упал jest».
+  mobile-build:
+    name: Сборка телефона
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: mobile
+      # expo export --platform android во временную папку; падает, если
+      # Metro не собрал бандл. Корневые зависимости скрипту не нужны.
+      - run: npm run check:mobile-build
+
   e2e:
     name: Браузер
     runs-on: ubuntu-latest
