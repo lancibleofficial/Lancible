@@ -78,7 +78,7 @@ const makeStyles = (colors) => StyleSheet.create({
   name: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   sub: { color: colors.textDim, fontSize: fontSize.xs },
   when: { backgroundColor: colors.panel, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
-  whenOverdue: { backgroundColor: 'rgba(255,92,80,0.18)' },
+  whenOverdue: { backgroundColor: colors.dangerMuted },
   whenSoon: { backgroundColor: colors.accentMuted },
   whenText: { color: colors.textDim, fontSize: 11 },
   whenTextOverdue: { color: colors.danger },

@@ -536,6 +536,24 @@
       "at": "L19"
     },
     {
+      "id": "mobile_tests_icon_test_fillof",
+      "label": "fillOf()",
+      "file": "mobile/tests/Icon.test.js",
+      "at": "L17"
+    },
+    {
+      "id": "mobile_tests_icon_test_settheme",
+      "label": "setTheme()",
+      "file": "mobile/tests/Icon.test.js",
+      "at": "L14"
+    },
+    {
+      "id": "mobile_tests_icon_test_themetext",
+      "label": "themeText()",
+      "file": "mobile/tests/Icon.test.js",
+      "at": "L31"
+    },
+    {
       "id": "mobile_tests_store_tasks_test_task",
       "label": "task()",
       "file": "mobile/tests/store-tasks.test.js",
@@ -1187,25 +1205,25 @@
       "id": "tests_unit_landing_test_chromecss",
       "label": "chromeCss()",
       "file": "tests/unit/landing.test.js",
-      "at": "L96"
+      "at": "L118"
     },
     {
       "id": "tests_unit_landing_test_lines",
       "label": "lines()",
       "file": "tests/unit/landing.test.js",
-      "at": "L42"
+      "at": "L51"
     },
     {
       "id": "tests_unit_landing_test_onlyblock",
       "label": "onlyBlock()",
       "file": "tests/unit/landing.test.js",
-      "at": "L32"
+      "at": "L41"
     },
     {
       "id": "tests_unit_landing_test_vercel",
       "label": "vercel()",
       "file": "tests/unit/landing.test.js",
-      "at": "L171"
+      "at": "L189"
     },
     {
       "id": "tests_unit_migrate_test_deps",
@@ -1307,7 +1325,7 @@
       "id": "tests_unit_visual_rules_test_expand",
       "label": "expand()",
       "file": "tests/unit/visual-rules.test.js",
-      "at": "L130"
+      "at": "L106"
     },
     {
       "id": "tests_unit_visual_rules_test_ratchet",

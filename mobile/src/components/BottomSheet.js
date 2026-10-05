@@ -128,7 +128,7 @@ export default function BottomSheet() {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
   sheet: {
     backgroundColor: colors.panel, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
     overflow: 'hidden',

@@ -100,17 +100,8 @@ const MOBILE_LEGIT = {
   'lib/tags.js rgba(${r}, ${g}, ${b}, ${alpha})': 1,
 };
 
-/** Предстоит заменить токенами темы. */
-const MOBILE_TO_FIX = {
-  'screens/SettingsScreen.js "#fff"': 2,
-  "components/PrimaryButton.js '#fff'": 1,
-  "components/NotifButton.js '#fff'": 1,
-  'components/BottomSheet.js rgba(0,0,0,0.5)': 1,
-  'components/TaskListItem.js rgba(255,92,80,0.18)': 1,
-  'components/NotificationsSheet.js rgba(255,92,80,0.18)': 1,
-  // Почти белый по умолчанию: первая иконка без цвета будет белой на белом.
-  "components/Icon.js '#ecedef'": 1,
-};
+/** Предстоит заменить токенами темы. Пусто с 6 октября. */
+const MOBILE_TO_FIX = {};
 
 const expand = (o) => Object.entries(o).flatMap(([k, n]) => Array(n).fill(k));
 

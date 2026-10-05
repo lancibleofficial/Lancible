@@ -1,4 +1,5 @@
 import Svg, { Path } from 'react-native-svg';
+import { useColors } from '../theme';
 
 // Порт иконок из src/renderer/app.js:522-528 (ICONS) и index.html (svg.icon) —
 // те же path-данные, viewBox 16x16, отрисованные через react-native-svg
@@ -57,14 +58,18 @@ const PATHS = {
 // strokeLinejoin="round" поверх заливки визуально скругляет все углы разом.
 const ROUNDED_JOIN_WIDTH = { pin: 0.9 };
 
-export default function Icon({ name, size = 16, color = '#ecedef', style }) {
+// Цвет по умолчанию — текст текущей темы. Раньше стоял почти белый #ecedef,
+// и первая иконка без цвета оказалась бы белой на белом в светлой теме.
+export default function Icon({ name, size = 16, color, style }) {
+  const colors = useColors();
+  const fill = color || colors.text;
   const strokeWidth = ROUNDED_JOIN_WIDTH[name];
   return (
     <Svg width={size} height={size} viewBox="0 0 16 16" style={style}>
       <Path
         d={PATHS[name]}
-        fill={color}
-        stroke={strokeWidth ? color : undefined}
+        fill={fill}
+        stroke={strokeWidth ? fill : undefined}
         strokeWidth={strokeWidth}
         strokeLinejoin={strokeWidth ? 'round' : undefined}
       />

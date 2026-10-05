@@ -74,5 +74,5 @@ const makeStyles = (colors) => StyleSheet.create({
   pressed: { opacity: 0.85 },
   primaryText: { color: colors.accentText, fontSize: fontSize.md, fontWeight: '700' },
   ghostText: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
-  dangerText: { color: '#fff', fontSize: fontSize.md, fontWeight: '700' },
+  dangerText: { color: colors.textOnColor, fontSize: fontSize.md, fontWeight: '700' },
 });

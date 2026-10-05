@@ -17,13 +17,16 @@
  */
 (function (global) {
   const isNode = typeof module !== 'undefined' && module.exports;
-  const req = (name) => (isNode ? require(`./${name}.js`) : global.Core);
-  const S = req('status');
-  const V = req('versions');
-  const R = req('repeat');
-  const F = req('format');
-  const D = req('due');
-  const A = req('agenda');
+  // Путь — строкой целиком, как в остальном ядре. Сборщик телефона (Metro)
+  // понимает только require('./файл.js'); вычисляемый путь require(`./${x}`)
+  // в Node работает, а сборку APK роняет — так и было, и тесты в Node этого
+  // не видели.
+  const S = isNode ? require('./status.js') : global.Core;
+  const V = isNode ? require('./versions.js') : global.Core;
+  const R = isNode ? require('./repeat.js') : global.Core;
+  const F = isNode ? require('./format.js') : global.Core;
+  const D = isNode ? require('./due.js') : global.Core;
+  const A = isNode ? require('./agenda.js') : global.Core;
 
   /**
    * Строка задачи в списке.

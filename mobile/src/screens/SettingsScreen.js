@@ -250,7 +250,7 @@ export default function SettingsScreen({ navigation }) {
                     onValueChange={setSyncEnabled}
                     trackColor={{ false: colors.panel2, true: colors.accent }}
                     ios_backgroundColor={colors.panel2}
-                    thumbColor="#fff"
+                    thumbColor={colors.textOnColor}
                   />
                 )}
                 last
@@ -270,7 +270,7 @@ export default function SettingsScreen({ navigation }) {
                 onValueChange={onToggleNotify}
                 trackColor={{ false: colors.panel2, true: colors.accent }}
                 ios_backgroundColor={colors.panel2}
-                thumbColor="#fff"
+                thumbColor={colors.textOnColor}
               />
             )}
           />

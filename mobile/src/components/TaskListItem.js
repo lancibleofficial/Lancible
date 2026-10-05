@@ -115,7 +115,7 @@ const makeStyles = (colors) => StyleSheet.create({
   dueText: { color: colors.textDim, fontSize: 11 },
   soon: { backgroundColor: colors.accentMuted },
   soonText: { color: colors.accentHover },
-  overdue: { backgroundColor: 'rgba(255,92,80,0.18)' },
+  overdue: { backgroundColor: colors.dangerMuted },
   overdueText: { color: colors.danger },
   later: {},
   laterText: {},

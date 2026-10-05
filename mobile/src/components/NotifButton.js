@@ -40,5 +40,5 @@ const makeStyles = (colors) => StyleSheet.create({
     minWidth: 15, height: 15, borderRadius: 999, paddingHorizontal: 3,
     backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',
   },
-  badgeText: { color: '#fff', fontSize: 9, lineHeight: 12 },
+  badgeText: { color: colors.textOnColor, fontSize: 9, lineHeight: 12 },
 });

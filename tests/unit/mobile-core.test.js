@@ -66,3 +66,20 @@ test('светлая и тёмная палитры телефона объяв�
     assert.ok(dark[key] && light[key], `${key}: пустое значение в одной из тем`);
   }
 });
+
+test('ядро подключает соседей путём-строкой, понятным сборщику телефона', () => {
+  // Metro, который собирает APK, понимает только require('./файл.js'). Путь,
+  // склеенный на ходу (require(`./${name}.js`)), в Node работает — и все
+  // тесты зелёные, — а сборка телефона падает. Так уже было с views.js:
+  // поломку нашла только ручная сборка, до APK она дошла бы на теге.
+  const bad = [];
+  for (const name of fs.readdirSync(CORE).filter((f) => f.endsWith('.js'))) {
+    // Комментарии — прочь: в них require бывает примером того, как нельзя.
+    const src = fs.readFileSync(path.join(CORE, name), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    for (const m of src.matchAll(/\brequire\(\s*([^)]*)\)/g)) {
+      if (!/^(['"])\.\/[\w.-]+\.js\1$/.test(m[1].trim())) bad.push(`${name}: require(${m[1]})`);
+    }
+  }
+  assert.deepEqual(bad, [], 'require с вычисляемым или чужим путём в ядре');
+});
