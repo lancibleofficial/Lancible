@@ -426,23 +426,10 @@ const dueState = (task) => Core.dueState(task, Date.now());
 
 const fmtMoney = (n) => `${moneyFmt().format(Math.round((n + Number.EPSILON) * 100) / 100)} ${currencySym()}`;
 
-const REMIND_PRESETS = [null, 0, 15, 60, 180, 1440, 'custom'];
-const REMIND_LABEL = { null: 'remind.none', 0: 'remind.at', 15: 'remind.15m', 60: 'remind.1h', 180: 'remind.3h', 1440: 'remind.1d', custom: 'remind.custom' };
-
-
+const { REMIND_PRESETS, REMIND_LABEL } = Core;
 
 /** Короткая подпись срока для списка: «просрочено» / «сегодня» / дата. */
-function dueShort(task) {
-  if (!task.dueAt) return '';
-  const due = new Date(task.dueAt);
-  const startOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const days = Math.round((startOf(due) - startOf(new Date())) / 86400000);
-  if (dueState(task) === 'overdue') return t('due.overdue');
-  if (days === 0) return t('due.today');
-  if (days === 1) return t('due.tomorrow');
-  if (days > 1 && days < 7) return t('due.in_days', { n: days });
-  return fmtDateShort(due);
-}
+const dueShort = (task) => Core.dueShort(task, Date.now(), t, fmtDateShort);
 
 
 // ---------------------------------------------------------------------------
@@ -2944,29 +2931,9 @@ function taskItem(task, i) {
 
 /** Строки «Срок» и «Напомнить» под ставкой. Время срока показывается
  *  только когда сама дата задана — до этого показывать «00:00» не о чем. */
-/** Лента уведомлений собирается из задач на лету, отдельного хранилища у
- *  неё нет: просроченные, те, чей срок в пределах суток, и те, у кого уже
- *  сработало напоминание. Непрочитанным считается то, чей момент
- *  наступил позже последнего открытия панели (ui.notifSeenAt). */
-function notificationFeed() {
-  const now = Date.now();
-  const seen = state.ui.notifSeenAt ? new Date(state.ui.notifSeenAt).getTime() : 0;
-  const out = [];
-  for (const task of state.tasks) {
-    if (task.done || !task.dueAt) continue;
-    const due = new Date(task.dueAt).getTime();
-    const rt = reminderTime(task);
-    const fired = !!rt && rt.getTime() <= now;
-    let kind = null;
-    let at = due;
-    if (due < now) kind = 'overdue';
-    else if (due - now <= 86400000) { kind = 'soon'; at = due - 86400000; }
-    else if (fired) { kind = 'reminder'; at = rt.getTime(); }
-    if (!kind) continue;
-    out.push({ task, kind, at, due, unread: at > seen });
-  }
-  return out.sort((a, b) => a.due - b.due);
-}
+/** Лента уведомлений — из ядра (core/due.js), общая с телефоном. */
+const notificationFeed = () =>
+  Core.notificationFeed(state.tasks, state.ui.notifSeenAt, Date.now());
 
 function renderNotifBadge() {
   const unread = notificationFeed().filter((n) => n.unread).length;
@@ -3497,23 +3464,13 @@ function spanFromParts(dateKey, startHm, endHm) {
 }
 
 /** Записывает отрезок в задачу: index — правка записи, null — новая.
- *  Своя ставка записи переживает правку: её ставили осознанно. */
+ *  Само правило — в ядре (core/money.js, planSessionEdit), здесь только
+ *  применение к задаче. */
 function applySessionEdit(task, index, span) {
-  const entry = {
-    start: span.start.toISOString(), end: span.end.toISOString(), ms: span.ms,
-    rate: effectiveRate(task), manual: true,
-  };
-  if (index != null && task.sessions && task.sessions[index]) {
-    const old = task.sessions[index];
-    if (Number.isFinite(Number(old.rate))) entry.rate = Number(old.rate);
-    task.totalMs = Math.max(0, (task.totalMs || 0) - old.ms + span.ms);
-    task.sessions[index] = entry;
-  } else {
-    task.sessions = task.sessions || [];
-    task.sessions.push(entry);
-    task.totalMs = (task.totalMs || 0) + span.ms;
-  }
-  task.updatedAt = new Date().toISOString();
+  const upd = Core.planSessionEdit(task, index, span, defaultRate(), Date.now());
+  task.sessions = upd.sessions;
+  task.totalMs = upd.totalMs;
+  task.updatedAt = upd.updatedAt;
 }
 
 function sdlgTimes() { return spanFromParts(sdlg.date, sdlg.start, sdlg.end); }
@@ -4150,10 +4107,7 @@ el.dueClearBtn.addEventListener('click', () => {
   touchTask(task);
 });
 /** Ключ текущего варианта напоминания: 'null' | 'custom' | число минут. */
-function remindKey(task) {
-  if ((task.remindOffsetMin === null || task.remindOffsetMin === undefined) && task.remindAt) return 'custom';
-  return String(task.remindOffsetMin === undefined ? null : task.remindOffsetMin);
-}
+const remindKey = Core.remindKey;
 function applyRemind(task, v) {
   if (v !== 'null') ensureNotifPermission();
   if (v === 'custom') {
@@ -5872,25 +5826,8 @@ function rollRepeat(task) {
   toast(t('repeat.moved', { date: fmtDateShort(next) }));
 }
 
-/** Будущие сроки повторений — призраками на календаре. */
-function repeatGhosts(tasks, from, to) {
-  const out = [];
-  for (const task of tasks) {
-    const rule = Core.normalizeRepeat(task.repeat);
-    if (!rule || !task.dueAt || Core.repeatFinished(rule)) continue;
-    for (const at of Core.upcomingDue(rule, new Date(task.dueAt).getTime(), to, 40)) {
-      if (at < from) continue;
-      out.push({
-        taskId: task.id,
-        projectId: task.projectId,
-        at,
-        ghost: true,
-        dayIndex: Math.round((Core.startOfDayMs(at) - from) / Core.DAY),
-      });
-    }
-  }
-  return out.sort((a, b) => a.at - b.at);
-}
+/** Будущие сроки повторений — призраками на календаре (core/agenda.js). */
+const repeatGhosts = Core.repeatGhosts;
 
 
 init();

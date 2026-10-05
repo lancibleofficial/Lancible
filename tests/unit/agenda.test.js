@@ -171,3 +171,48 @@ test('доля суток считается от местной полуноч�
   assert.equal(A.dayFraction(at(2026, 9, 23, 12, 0)), 0.5);
   assert.ok(Math.abs(A.dayFraction(at(2026, 9, 23, 18, 0)) - 0.75) < 1e-9);
 });
+
+// --- призраки повторений ----------------------------------------------------
+
+test('призраки показывают будущие сроки повторяющейся задачи', () => {
+  // Отличие от deadlineItems: там сроки, которые уже стоят в задачах, здесь
+  // те, которых ещё нет — они появятся, когда задачу закроют.
+  const from = new Date(2026, 5, 1).getTime();
+  const to = new Date(2026, 5, 15).getTime();
+  const task = {
+    id: 't1', projectId: 'p1',
+    dueAt: new Date(2026, 5, 2, 10).toISOString(),
+    repeat: { kind: 'daily', every: 1 },
+  };
+  const ghosts = A.repeatGhosts([task], from, to);
+  assert.ok(ghosts.length > 0, 'ежедневное правило должно дать призраков');
+  assert.ok(ghosts.every((g) => g.ghost === true), 'все помечены призраками');
+  assert.ok(ghosts.every((g) => g.taskId === 't1' && g.projectId === 'p1'));
+  assert.ok(ghosts.every((g) => g.at >= from && g.at < to), 'все внутри отрезка');
+  assert.deepEqual(
+    ghosts.map((g) => g.at).slice().sort((x, y) => x - y),
+    ghosts.map((g) => g.at),
+    'по возрастанию срока',
+  );
+});
+
+test('задача без правила и без срока призраков не даёт', () => {
+  const from = new Date(2026, 5, 1).getTime();
+  const to = new Date(2026, 5, 15).getTime();
+  assert.deepEqual(A.repeatGhosts([{ id: 'a', dueAt: new Date(2026, 5, 2).toISOString() }], from, to), []);
+  assert.deepEqual(A.repeatGhosts([{ id: 'b', repeat: { kind: 'daily', every: 1 } }], from, to), []);
+});
+
+test('dayIndex призрака считается от начала отрезка', () => {
+  const from = new Date(2026, 5, 1).getTime();
+  const to = new Date(2026, 5, 10).getTime();
+  const task = {
+    id: 't', projectId: 'p',
+    dueAt: new Date(2026, 5, 1, 9).toISOString(),
+    repeat: { kind: 'daily', every: 2 },
+  };
+  for (const g of A.repeatGhosts([task], from, to)) {
+    const expected = Math.round((A.startOfDayMs(g.at) - from) / A.DAY);
+    assert.equal(g.dayIndex, expected);
+  }
+});

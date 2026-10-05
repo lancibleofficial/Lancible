@@ -145,3 +145,45 @@ test('список своего не разрастается молча', () =>
   const unexplained = fromCore.filter((n) => !checked.includes(n) && !wrapped.includes(n));
   assert.deepEqual(unexplained, [], `необъявленные совпадения имён: ${unexplained.join(', ')}`);
 });
+
+// --- сроки и напоминания -----------------------------------------------------
+
+const CoreDue = require('../../src/renderer/core/due.js');
+
+const mobileDue = loadMobile(
+  'due.js',
+  {
+    Core: CoreDue,
+    t: (lang, key, params) => `${key}|${lang}|${params && params.n}`,
+    fmtDateShort: (date, lang) => `дата|${lang}|${date.getDate()}`,
+  },
+  ['REMIND_PRESETS', 'REMIND_LABEL', 'remindKey', 'reminderTime', 'dueState', 'dueShort', 'notificationFeed'],
+);
+
+test('сроки на телефоне — это функции ядра, а не их двойники', () => {
+  // До этого переноса здесь лежали дословные копии четырёх правил, причём два
+  // из них уже были в ядре — просто спрятаны в money.js, где их никто не искал.
+  for (const name of ['remindKey', 'reminderTime']) {
+    assert.equal(mobileDue[name], CoreDue[name], `${name} — не функция ядра`);
+  }
+  assert.deepEqual(mobileDue.REMIND_PRESETS, CoreDue.REMIND_PRESETS);
+  assert.deepEqual(mobileDue.REMIND_LABEL, CoreDue.REMIND_LABEL);
+});
+
+test('обёртки сроков подставляют «сейчас» и язык, не меняя правила', () => {
+  const now = Date.now();
+  const soon = { id: 'a', dueAt: new Date(now + 3600000).toISOString() };
+  const later = { id: 'b', dueAt: new Date(now + 10 * 86400000).toISOString() };
+
+  assert.equal(mobileDue.dueState(soon), CoreDue.dueState(soon, now));
+  assert.equal(mobileDue.dueState(later), CoreDue.dueState(later, now));
+
+  assert.deepEqual(
+    mobileDue.notificationFeed([soon, later], null).map((n) => [n.task.id, n.kind]),
+    CoreDue.notificationFeed([soon, later], null, now).map((n) => [n.task.id, n.kind]),
+  );
+
+  // Язык доходит до перевода и до формата даты — обе подстановки на месте.
+  assert.equal(mobileDue.dueShort(soon, 'en'), 'due.today|en|undefined');
+  assert.ok(mobileDue.dueShort(later, 'kk').startsWith('дата|kk|'));
+});

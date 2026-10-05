@@ -80,27 +80,43 @@
   const projectMs = (tasks, activeTimer, now) =>
     tasks.reduce((a, t) => a + taskElapsedMs(t, activeTimer, now), 0);
 
-  /** Момент напоминания: либо смещение от срока, либо своё время. */
-  function reminderTime(task) {
-    if (task.remindOffsetMin !== null && task.remindOffsetMin !== undefined && task.dueAt) {
-      return new Date(new Date(task.dueAt).getTime() - task.remindOffsetMin * 60000);
+  /** Правка записи времени: что станет с задачей, если положить в неё
+   *  отрезок span. index — номер правимой записи, null — новая.
+   *
+   *  Возвращает новые sessions и totalMs, а не мутирует задачу: решение и
+   *  применение разделены так же, как в planTaskDone и planRepeatRoll.
+   *  Здесь это особенно уместно — арифметика totalMs про деньги, и проверять
+   *  её надо отдельно от того, кто её записывает.
+   *
+   *  Своя ставка записи переживает правку: её ставили осознанно, и
+   *  пересчитывать её по текущей ставке задачи нельзя — это молча изменило бы
+   *  уже заработанное. */
+  function planSessionEdit(task, index, span, defaultRate, now) {
+    const entry = {
+      start: new Date(span.start).toISOString(),
+      end: new Date(span.end).toISOString(),
+      ms: span.ms,
+      rate: effectiveRate(task, defaultRate),
+      manual: true,
+    };
+    const sessions = (task.sessions || []).slice();
+    const old = (index !== null && index !== undefined) ? sessions[index] : null;
+    let totalMs;
+    if (old) {
+      if (Number.isFinite(Number(old.rate))) entry.rate = Number(old.rate);
+      sessions[index] = entry;
+      totalMs = Math.max(0, (task.totalMs || 0) - old.ms + span.ms);
+    } else {
+      sessions.push(entry);
+      totalMs = (task.totalMs || 0) + span.ms;
     }
-    return task.remindAt ? new Date(task.remindAt) : null;
-  }
-
-  /** 'overdue' | 'soon' (в пределах суток) | 'later' | null. Выполненная
-   *  задача срока не имеет — она уже не горит. */
-  function dueState(task, now) {
-    if (!task.dueAt || task.done) return null;
-    const diff = new Date(task.dueAt).getTime() - now;
-    if (diff < 0) return 'overdue';
-    return diff <= 86400000 ? 'soon' : 'later';
+    return { sessions, totalMs, updatedAt: new Date(now).toISOString() };
   }
 
   const api = {
     effectiveRate, hasOwnRate, sessionRate, sessionMoney, earnedOf,
     allSessionPairs, aggregateDays, rangeAgg, tasksDoneOnDay,
-    projectMoney, projectMs, reminderTime, dueState,
+    projectMoney, projectMs, planSessionEdit,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

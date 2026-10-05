@@ -99,26 +99,63 @@ test('tasksDoneOnDay не считает завершения без даты', 
   assert.deepEqual(M.tasksDoneOnDay(tasks, '2026-09-19').map((t) => t.id), ['a']);
 });
 
-test('dueState различает просрочку, ближайшие сутки и потом', () => {
-  const now = new Date(2026, 8, 19, 12).getTime();
-  const at = (h) => ({ dueAt: new Date(now + h * HOUR).toISOString() });
-  assert.equal(M.dueState(at(-1), now), 'overdue');
-  assert.equal(M.dueState(at(5), now), 'soon');
-  assert.equal(M.dueState(at(48), now), 'later');
-  assert.equal(M.dueState({}, now), null, 'без срока гореть нечему');
+// --- правка записи времени --------------------------------------------------
+
+const SPAN = {
+  start: new Date(2026, 8, 19, 10),
+  end: new Date(2026, 8, 19, 12),
+  ms: 2 * HOUR,
+};
+const EDITED_AT = new Date(2026, 8, 20, 9).getTime();
+
+test('новая запись прибавляется ко времени задачи', () => {
+  const task = { rate: null, totalMs: HOUR, sessions: [] };
+  const upd = M.planSessionEdit(task, null, SPAN, 500, EDITED_AT);
+  assert.equal(upd.totalMs, 3 * HOUR);
+  assert.equal(upd.sessions.length, 1);
+  assert.equal(upd.sessions[0].rate, 500, 'у новой записи ставка задачи');
+  assert.equal(upd.sessions[0].manual, true);
 });
 
-test('выполненная задача не горит, даже если срок прошёл', () => {
-  const now = Date.now();
-  assert.equal(M.dueState({ dueAt: new Date(now - HOUR).toISOString(), done: true }, now), null);
+test('правка записи заменяет её время, а не прибавляет', () => {
+  const task = { rate: null, totalMs: 5 * HOUR, sessions: [{ ms: 4 * HOUR, rate: 100 }] };
+  const upd = M.planSessionEdit(task, 0, SPAN, 500, EDITED_AT);
+  assert.equal(upd.totalMs, 3 * HOUR, '5 − 4 + 2');
+  assert.equal(upd.sessions.length, 1);
 });
 
-test('reminderTime считает смещение от срока', () => {
-  const due = new Date(2026, 8, 19, 12).toISOString();
-  assert.equal(
-    M.reminderTime({ dueAt: due, remindOffsetMin: 15 }).toISOString(),
-    new Date(new Date(due).getTime() - 15 * 60000).toISOString(),
-  );
-  assert.equal(M.reminderTime({ dueAt: due, remindOffsetMin: 0 }).toISOString(), due, 'ноль — ровно в срок');
-  assert.equal(M.reminderTime({}), null);
+test('своя ставка записи переживает правку', () => {
+  // Ставку записи ставили осознанно. Пересчитать её по текущей ставке задачи
+  // значило бы молча изменить уже заработанное.
+  const task = { rate: 900, totalMs: 4 * HOUR, sessions: [{ ms: 4 * HOUR, rate: 123 }] };
+  const upd = M.planSessionEdit(task, 0, SPAN, 500, EDITED_AT);
+  assert.equal(upd.sessions[0].rate, 123);
+});
+
+test('время задачи не уходит в минус', () => {
+  // Данные могли разъехаться при синхронизации: сумма меньше, чем запись,
+  // которую из неё вычитают. Итог упирается в ноль — так вело себя и
+  // исходное applySessionEdit, перенос это поведение сохранил.
+  //
+  // Строго говоря, честнее было бы оставить длительность самой записи (2
+  // часа): ноль теряет и её тоже. Но это уже не перенос, а правка смысла, и
+  // делать её заодно нельзя — тест фиксирует, как есть сейчас.
+  const task = { rate: null, totalMs: HOUR, sessions: [{ ms: 10 * HOUR, rate: 0 }] };
+  const upd = M.planSessionEdit(task, 0, SPAN, 0, EDITED_AT);
+  assert.equal(upd.totalMs, 0);
+});
+
+test('план не трогает задачу на месте', () => {
+  const task = { rate: null, totalMs: HOUR, sessions: [{ ms: HOUR, rate: 1 }] };
+  M.planSessionEdit(task, 0, SPAN, 500, EDITED_AT);
+  assert.equal(task.totalMs, HOUR);
+  assert.equal(task.sessions.length, 1);
+  assert.equal(task.sessions[0].ms, HOUR);
+});
+
+test('несуществующий номер записи означает новую, а не поломку', () => {
+  const task = { rate: null, totalMs: 0, sessions: [] };
+  const upd = M.planSessionEdit(task, 7, SPAN, 500, EDITED_AT);
+  assert.equal(upd.sessions.length, 1);
+  assert.equal(upd.totalMs, 2 * HOUR);
 });

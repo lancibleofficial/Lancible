@@ -6,6 +6,11 @@
  * app.js, а сюда вынесено то, что можно проверить без браузера.
  */
 (function (global) {
+  // Призраки повторений строятся по правилу повторения — отсюда зависимость
+  // от соседнего модуля ядра. Разрешается так же, как в money.js: через
+  // require в Node и через общий global.Core в браузере.
+  const R = (typeof module !== 'undefined' && module.exports) ? require('./repeat.js') : global.Core;
+
   const DAY = 86400000;
   const MIN = 60000;
 
@@ -110,6 +115,35 @@
       .sort((a, b) => a.at - b.at);
   }
 
+  /** Будущие сроки повторений — призраками на календаре.
+   *
+   *  Отличие от deadlineItems: там сроки, которые уже стоят в задачах, здесь
+   *  те, которых ещё нет — они появятся, когда задачу закроют. Поэтому у
+   *  призрака нет done, зато есть пометка ghost: отрисовка показывает его
+   *  бледным, и кликать по нему нечего.
+   *
+   *  Предел в 40 повторений на задачу — защита от правила «каждый день» на
+   *  годовом отрезке: рисовать 365 призраков незачем, да и видно на экране
+   *  всё равно меньше. */
+  function repeatGhosts(tasks, from, to) {
+    const out = [];
+    for (const task of tasks) {
+      const rule = R.normalizeRepeat(task.repeat);
+      if (!rule || !task.dueAt || R.repeatFinished(rule)) continue;
+      for (const at of R.upcomingDue(rule, new Date(task.dueAt).getTime(), to, 40)) {
+        if (at < from) continue;
+        out.push({
+          taskId: task.id,
+          projectId: task.projectId,
+          at,
+          ghost: true,
+          dayIndex: Math.round((startOfDayMs(at) - from) / DAY),
+        });
+      }
+    }
+    return out.sort((x, y) => x.at - y.at);
+  }
+
   /** Раскладка пересекающихся записей по колонкам — как в Google Calendar:
    *  наложившиеся друг на друга события делят ширину поровну.
    *
@@ -186,6 +220,7 @@
     shiftAnchor,
     sessionSegments,
     deadlineItems,
+    repeatGhosts,
     layoutOverlaps,
     snapMinutes,
     clampSpan,

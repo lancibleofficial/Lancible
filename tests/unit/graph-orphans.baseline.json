@@ -611,7 +611,7 @@
       "id": "scripts_watch_touched",
       "label": "touched()",
       "file": "scripts/watch.js",
-      "at": "L169"
+      "at": "L179"
     },
     {
       "id": "scripts_worklog_main",
@@ -659,25 +659,25 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L5544"
+      "at": "L5498"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L5168"
+      "at": "L5122"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L5158"
+      "at": "L5112"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L5550"
+      "at": "L5504"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
@@ -689,109 +689,109 @@
       "id": "src_renderer_app_anydialogopen",
       "label": "anyDialogOpen()",
       "file": "src/renderer/app.js",
-      "at": "L463"
+      "at": "L450"
     },
     {
       "id": "src_renderer_app_applyremind",
       "label": "applyRemind()",
       "file": "src/renderer/app.js",
-      "at": "L4157"
+      "at": "L4111"
     },
     {
       "id": "src_renderer_app_boardlane",
       "label": "boardLane()",
       "file": "src/renderer/app.js",
-      "at": "L2228"
+      "at": "L2215"
     },
     {
       "id": "src_renderer_app_calshift",
       "label": "calShift()",
       "file": "src/renderer/app.js",
-      "at": "L1712"
+      "at": "L1699"
     },
     {
       "id": "src_renderer_app_changepassword",
       "label": "changePassword()",
       "file": "src/renderer/app.js",
-      "at": "L954"
+      "at": "L941"
     },
     {
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L3715"
+      "at": "L3672"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5700"
+      "at": "L5654"
     },
     {
       "id": "src_renderer_app_closestatusdialog",
       "label": "closeStatusDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2621"
+      "at": "L2608"
     },
     {
       "id": "src_renderer_app_committime",
       "label": "commitTime()",
       "file": "src/renderer/app.js",
-      "at": "L1908"
+      "at": "L1895"
     },
     {
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L5459"
+      "at": "L5413"
     },
     {
       "id": "src_renderer_app_deletestatus",
       "label": "deleteStatus()",
       "file": "src/renderer/app.js",
-      "at": "L2689"
+      "at": "L2676"
     },
     {
       "id": "src_renderer_app_deletetask",
       "label": "deleteTask()",
       "file": "src/renderer/app.js",
-      "at": "L3243"
+      "at": "L3210"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4534"
+      "at": "L4488"
     },
     {
       "id": "src_renderer_app_expdlgrange",
       "label": "expdlgRange()",
       "file": "src/renderer/app.js",
-      "at": "L3617"
+      "at": "L3574"
     },
     {
       "id": "src_renderer_app_exportallprojects",
       "label": "exportAllProjects()",
       "file": "src/renderer/app.js",
-      "at": "L3730"
+      "at": "L3687"
     },
     {
       "id": "src_renderer_app_gettag",
       "label": "getTag()",
       "file": "src/renderer/app.js",
-      "at": "L2373"
+      "at": "L2360"
     },
     {
       "id": "src_renderer_app_handleauthsubmit",
       "label": "handleAuthSubmit()",
       "file": "src/renderer/app.js",
-      "at": "L876"
+      "at": "L863"
     },
     {
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L4335"
+      "at": "L4289"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
@@ -803,97 +803,97 @@
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L3221"
+      "at": "L3188"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4299"
+      "at": "L4253"
     },
     {
       "id": "src_renderer_app_openexternallink",
       "label": "openExternalLink()",
       "file": "src/renderer/app.js",
-      "at": "L615"
+      "at": "L602"
     },
     {
       "id": "src_renderer_app_openlangmenu",
       "label": "openLangMenu()",
       "file": "src/renderer/app.js",
-      "at": "L583"
+      "at": "L570"
     },
     {
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4490"
+      "at": "L4444"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5694"
+      "at": "L5648"
     },
     {
       "id": "src_renderer_app_opensearch",
       "label": "openSearch()",
       "file": "src/renderer/app.js",
-      "at": "L1598"
+      "at": "L1585"
     },
     {
       "id": "src_renderer_app_openstatusdialog",
       "label": "openStatusDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2615"
+      "at": "L2602"
     },
     {
       "id": "src_renderer_app_opentagpicker",
       "label": "openTagPicker()",
       "file": "src/renderer/app.js",
-      "at": "L2534"
+      "at": "L2521"
     },
     {
       "id": "src_renderer_app_pickrangeday",
       "label": "pickRangeDay()",
       "file": "src/renderer/app.js",
-      "at": "L1768"
+      "at": "L1755"
     },
     {
       "id": "src_renderer_app_promptdialog",
       "label": "promptDialog()",
       "file": "src/renderer/app.js",
-      "at": "L483"
+      "at": "L470"
     },
     {
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L3440"
+      "at": "L3407"
     },
     {
       "id": "src_renderer_app_savetagdialog",
       "label": "saveTagDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2484"
+      "at": "L2471"
     },
     {
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L5661"
+      "at": "L5615"
     },
     {
       "id": "src_renderer_app_settaskversion",
       "label": "setTaskVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4386"
+      "at": "L4340"
     },
     {
       "id": "src_renderer_app_startofday",
       "label": "startOfDay()",
       "file": "src/renderer/app.js",
-      "at": "L1706"
+      "at": "L1693"
     },
     {
       "id": "src_renderer_app_statusesofkind",
@@ -905,19 +905,19 @@
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L3006"
+      "at": "L2973"
     },
     {
       "id": "src_renderer_app_togglesyncenabled",
       "label": "toggleSyncEnabled()",
       "file": "src/renderer/app.js",
-      "at": "L1253"
+      "at": "L1240"
     },
     {
       "id": "src_renderer_app_updateprofilename",
       "label": "updateProfileName()",
       "file": "src/renderer/app.js",
-      "at": "L942"
+      "at": "L929"
     },
     {
       "id": "src_renderer_core_format_fmtshort",
@@ -1122,6 +1122,24 @@
       "label": "session()",
       "file": "tests/unit/agenda.test.js",
       "at": "L8"
+    },
+    {
+      "id": "tests_unit_due_test_duein",
+      "label": "dueIn()",
+      "file": "tests/unit/due.test.js",
+      "at": "L18"
+    },
+    {
+      "id": "tests_unit_due_test_feed",
+      "label": "feed()",
+      "file": "tests/unit/due.test.js",
+      "at": "L105"
+    },
+    {
+      "id": "tests_unit_due_test_short",
+      "label": "short()",
+      "file": "tests/unit/due.test.js",
+      "at": "L84"
     },
     {
       "id": "tests_unit_landing_test_chromecss",
