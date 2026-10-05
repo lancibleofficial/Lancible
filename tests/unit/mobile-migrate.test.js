@@ -25,7 +25,10 @@ function sandbox(file, names, values, exports) {
   return box.exports;
 }
 
-const i18n = sandbox(path.join(MOBILE, 'lib', 'i18n.js'), [], [], 'T, t');
+// Словарю телефона теперь нужна машинка перевода из ядра: импорт песочница
+// вырезает, значит подставляем настоящую.
+const Lang = require('../../src/renderer/core/lang.js');
+const i18n = sandbox(path.join(MOBILE, 'lib', 'i18n.js'), ['Lang'], [Lang], 'T, t');
 const M = sandbox(
   path.join(MOBILE, 'lib', 'migrate.js'),
   ['T', 't', 'makeProjectStatuses', 'defaultStatusId'],

@@ -1181,7 +1181,7 @@
       "id": "tests_unit_mobile_migrate_test_oldphonedata",
       "label": "oldPhoneData()",
       "file": "tests/unit/mobile-migrate.test.js",
-      "at": "L38"
+      "at": "L41"
     },
     {
       "id": "tests_unit_mobile_migrate_test_sandbox",
@@ -1242,6 +1242,18 @@
       "label": "task()",
       "file": "tests/unit/reports.test.js",
       "at": "L32"
+    },
+    {
+      "id": "tests_unit_wording_test_strings",
+      "label": "strings()",
+      "file": "tests/unit/wording.test.js",
+      "at": "L47"
+    },
+    {
+      "id": "tests_unit_wording_test_word",
+      "label": "word()",
+      "file": "tests/unit/wording.test.js",
+      "at": "L42"
     },
     {
       "id": "tests_visual_landing_spec_onlychrome",

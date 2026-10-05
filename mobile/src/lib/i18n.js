@@ -1,11 +1,20 @@
-// Порт словаря переводов из src/renderer/app.js (T/t()/pluralForm()/LANG_NAMES).
-// Чистая логика без обращений к DOM — здесь t()/pluralForm() принимают код
-// языка явным параметром (а не читают его из глобального `state`, как в
-// десктопной/веб-версии), чтобы модуль не зависел от конкретного стора и был
+// Словарь переводов телефона.
+//
+// Сам словарь — свой, и это по делу: у телефона свои экраны (жесты, листы,
+// доска) и строки короче. Из 314 его ключей 46 на десктопе не нужны вовсе, а
+// из десктопных 416 телефону не нужны 148. Сливать их в один файл значило бы
+// возить на телефон полторы сотни чужих строк.
+//
+// А машинка перевода — из ядра (src/core/lang.js, побайтная копия файла
+// десктопа). Раньше t и pluralForm лежали здесь своими копиями, слово в
+// слово теми же, включая комментарий про общее славянское правило. Карта
+// локалей и названия языков — оттуда же.
+//
+// Код языка остаётся явным параметром, а не читается из стора: модуль
 // одинаково пригоден и внутри компонентов, и в lib/sync.js, lib/auth.js.
+import Lang from '../core/lang.js';
 
-export const LOCALE_MAP = { ru: 'ru-RU', en: 'en-US', uk: 'uk-UA', kk: 'kk-KZ' };
-export const LANG_NAMES = { ru: 'Русский', en: 'English', uk: 'Українська', kk: 'Қазақша' };
+export const { LOCALE_MAP, LANG_NAMES } = Lang;
 
 export const T = {
   ru: {
@@ -105,7 +114,7 @@ export const T = {
     'search.nothing_found': 'Ничего не найдено',
     'search.projects_group': 'Проекты',
     'search.tasks_group': 'Задачи',
-    'nav.home': 'Главная', 'nav.calendar': 'Календарь',
+    'nav.home': 'Обзор', 'nav.calendar': 'Календарь',
     'nav.stats': 'Статистика',
     'nav.language': 'Язык',
     'stats.worked': 'всего проработано', 'stats.earned': 'всего заработано',
@@ -122,7 +131,7 @@ export const T = {
     'project.new_title': 'Новый проект', 'project.edit_title': 'Редактировать проект',
     'project.summary': 'Проект: {time} · {money}',
     'filter.done': 'Готово',
-    'sidebar.empty_default': 'В этом проекте пока нет задач.\nНажми «+ Новая».',
+    'sidebar.empty_default': 'В этом проекте пока нет задач.\nНажмите «+ Новая».',
     'task.rate_label': 'Ставка в час', 'task.earned_label': 'Заработано',
     'task.title_ph': 'Название задачи',
     'task.delete_title': 'Удалить задачу',
@@ -144,7 +153,7 @@ export const T = {
     'session.recovered': ' · восстановлено', 'session.manual': ' · вручную',
     'session.delete_title': 'Удалить запись', 'session.today': 'сегодня {time}',
     'calendar.month': 'Месяц', 'calendar.week': 'Неделя', 'calendar.day': 'День', 'calendar.today': 'Сегодня',
-    'calendar.choose_period': 'Выбрать период', 'calendar.pick_day': 'Выбери день',
+    'calendar.choose_period': 'Выбрать период', 'calendar.pick_day': 'Выберите день',
     'calendar.day_empty': 'В этот день записей не было.', 'calendar.pick_date': 'Выбрать дату',
     'calendar.for_month': 'За месяц', 'calendar.for_week': 'За неделю',
     'calendar.for_period': 'За период: {time} · {money}',
@@ -162,7 +171,7 @@ export const T = {
     'auth.google_btn': 'Войти через Google', 'auth.or_divider': 'или',
     'profile.name_updated': 'Имя обновлено',
     'profile.change_name_confirm': 'Изменить имя на «{name}»?',
-    'profile.guest': 'Гость', 'profile.guest_sub': 'Ты не авторизован', 'profile.change': 'Изменить',
+    'profile.guest': 'Гость', 'profile.guest_sub': 'Вы не авторизованы', 'profile.change': 'Изменить',
     'profile.email_label': 'Email',
     'profile.change_password': 'Изменить пароль', 'profile.new_password': 'Новый пароль',
     'profile.confirm_password': 'Повторите пароль', 'profile.password_updated': 'Пароль обновлён',
@@ -495,7 +504,7 @@ export const T = {
     'search.nothing_found': 'Нічого не знайдено',
     'search.projects_group': 'Проєкти',
     'search.tasks_group': 'Завдання',
-    'nav.home': 'Головна', 'nav.calendar': 'Календар',
+    'nav.home': 'Огляд', 'nav.calendar': 'Календар',
     'nav.stats': 'Статистика',
     'nav.language': 'Мова',
     'stats.worked': 'всього відпрацьовано', 'stats.earned': 'всього зароблено',
@@ -512,7 +521,7 @@ export const T = {
     'project.new_title': 'Новий проєкт', 'project.edit_title': 'Редагувати проєкт',
     'project.summary': 'Проєкт: {time} · {money}',
     'filter.done': 'Готово',
-    'sidebar.empty_default': 'У цьому проєкті ще немає завдань.\nНатисни «+ Нове».',
+    'sidebar.empty_default': 'У цьому проєкті ще немає завдань.\nНатисніть «+ Нове».',
     'task.rate_label': 'Ставка на годину', 'task.earned_label': 'Зароблено',
     'task.title_ph': 'Назва завдання',
     'task.delete_title': 'Видалити завдання',
@@ -534,7 +543,7 @@ export const T = {
     'session.recovered': ' · відновлено', 'session.manual': ' · вручну',
     'session.delete_title': 'Видалити запис', 'session.today': 'сьогодні {time}',
     'calendar.month': 'Місяць', 'calendar.week': 'Тиждень', 'calendar.day': 'День', 'calendar.today': 'Сьогодні',
-    'calendar.choose_period': 'Обрати період', 'calendar.pick_day': 'Обери день',
+    'calendar.choose_period': 'Обрати період', 'calendar.pick_day': 'Оберіть день',
     'calendar.day_empty': 'Цього дня записів не було.', 'calendar.pick_date': 'Обрати дату',
     'calendar.for_month': 'За місяць', 'calendar.for_week': 'За тиждень',
     'calendar.for_period': 'За період: {time} · {money}',
@@ -552,7 +561,7 @@ export const T = {
     'auth.google_btn': 'Увійти через Google', 'auth.or_divider': 'або',
     'profile.name_updated': "Ім'я оновлено",
     'profile.change_name_confirm': "Змінити ім'я на «{name}»?",
-    'profile.guest': 'Гість', 'profile.guest_sub': 'Ти не авторизований', 'profile.change': 'Змінити',
+    'profile.guest': 'Гість', 'profile.guest_sub': 'Ви не авторизовані', 'profile.change': 'Змінити',
     'profile.email_label': 'Email',
     'profile.change_password': 'Змінити пароль', 'profile.new_password': 'Новий пароль',
     'profile.confirm_password': 'Повторіть пароль', 'profile.password_updated': 'Пароль оновлено',
@@ -790,23 +799,9 @@ export const T = {
   },
 };
 
-/** t('ru', 'key', {a:1}) — перевод с подстановкой {a}; откат на русский, затем на сам ключ. */
-export function t(langCode, key, vars) {
-  const dict = T[langCode] || T.ru;
-  let s = dict[key] !== undefined ? dict[key] : (T.ru[key] !== undefined ? T.ru[key] : key);
-  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, v);
-  return s;
-}
+/** t('ru', 'key', {a:1}) — перевод с подстановкой {a}; откат на русский,
+ *  затем на сам ключ. Правило — в ядре, здесь подставляется словарь. */
+export const t = (langCode, key, vars) => Lang.translate(T, langCode, key, vars);
 
-/** Число + правильная форма слова под текущий язык. */
-export function pluralForm(langCode, n, baseKey) {
-  const forms = (T[langCode] && T[langCode][baseKey]) || T.ru[baseKey];
-  if (langCode === 'en') return forms[n === 1 ? 0 : 1];
-  if (langCode === 'kk') return forms[0];
-  // ru / uk — общее славянское правило
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return forms[0];
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
-  return forms[2];
-}
+/** Правильная форма слова под число и язык. */
+export const pluralForm = (langCode, n, baseKey) => Lang.pluralForm(T, langCode, n, baseKey);

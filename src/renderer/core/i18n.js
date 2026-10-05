@@ -1,21 +1,19 @@
-/* Переводы интерфейса и разбор ключей — чистые данные и чистые функции.
+/* Словарь интерфейса десктопа и веба — чистые данные, без единой функции.
  *
- * Словарь вынесен сюда не только ради функций: главный тест на нём —
- * проверка, что во всех четырёх языках один и тот же набор ключей.
- * Пропущенный перевод не роняет приложение, он молча показывает русскую
- * строку посреди английского интерфейса, и заметить это руками почти
- * невозможно.
+ * Главный тест на нём — проверка, что во всех четырёх языках один и тот же
+ * набор ключей. Пропущенный перевод не роняет приложение, он молча
+ * показывает русскую строку посреди английского интерфейса, и заметить это
+ * руками почти невозможно.
  *
- * Язык приходит параметром: раньше функции читали его из state.
+ * Машинка перевода лежит отдельно, в core/lang.js: она у десктопа и телефона
+ * общая, а словари разные — у телефона свои экраны и строки короче.
  */
 (function (global) {
-  const LOCALE_MAP = { ru: 'ru-RU', en: 'en-US', uk: 'uk-UA', kk: 'kk-KZ' };
-  const LANG_NAMES = { ru: 'Русский', en: 'English', uk: 'Українська', kk: 'Қазақша' };
   const T = {
     ru: {
       'app.default_project_name': 'Мои задачи',
       'search.placeholder': 'Поиск',
-      'search.start_typing': 'Начни вводить название проекта или задачи',
+      'search.start_typing': 'Начните вводить название проекта или задачи',
       'search.nothing_found': 'Ничего не найдено',
       'search.projects_group': 'Проекты',
       'search.tasks_group': 'Задачи',
@@ -25,7 +23,7 @@
       'nav.language': 'Язык', 'nav.account': 'Аккаунт',
       'update.available': 'Доступно обновление', 'update.downloading': 'Скачивание…', 'update.ready': 'Установить и перезапустить',
       'nav.theme_system': 'Системная', 'nav.theme_light': 'Светлая', 'nav.theme_dark': 'Тёмная',
-      'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'settings.section_statuses': 'Статусы задач', 'settings.section_tags': 'Теги', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Склад идей', 'status.kind_todo': 'Запланировано', 'status.kind_progress': 'В работе', 'status.kind_done': 'Сделано', 'status.kind_cancelled': 'Отменено', 'status.add': 'Новый статус', 'status.builtin_hint': 'Встроенный статус можно переименовать и перекрасить, но не удалить', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.pick': 'Теги', 'tag.dialog_new': 'Новый тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Название тега', 'tag.search_ph': 'Найти или создать', 'tag.create_named': 'Создать тег «{name}»', 'tag.name_taken': 'Тег с таким названием уже есть', 'tag.unused': 'не используется', 'tag.used_projects': 'проектов: {n}', 'tag.used_tasks': 'задач: {n}', 'tag.delete_confirm': 'Удалить тег «{name}»?', 'tag.delete_used': 'Тег «{name}» используется ({n}). Он будет снят со всех и удалён. Продолжить?', 'tag.empty_hint': 'Теги общие для всего приложения: один тег можно повесить и на проект, и на задачу в любом другом проекте.', 'version.none': 'Без версии', 'version.add': 'Новая версия', 'repeat.label': 'Повторение', 'repeat.freq_year': 'Год', 'repeat.none': 'Не повторяется', 'repeat.daily': 'Каждый день', 'repeat.weekly': 'Каждую неделю', 'repeat.monthly': 'Каждый месяц', 'repeat.yearly': 'Каждый год', 'repeat.weekdays_preset': 'По будням, Пн–Пт', 'repeat.custom': 'Настроить…', 'repeat.dialog_title': 'Повторение задачи', 'repeat.every': 'Повторять каждые', 'repeat.unit_day': 'дн.', 'repeat.unit_week': 'нед.', 'repeat.unit_month': 'мес.', 'repeat.unit_year': 'г.', 'repeat.on_days': 'В дни', 'repeat.month_mode_day': 'По числу месяца', 'repeat.month_mode_weekday': 'По дню недели', 'repeat.from_label': 'Отсчёт', 'repeat.from_schedule': 'По расписанию', 'repeat.from_done': 'От дня закрытия', 'repeat.keep_history': 'Оставлять выполненные копии', 'repeat.keep_history_hint': 'Каждый раз в списке останется завершённая задача со своим временем', 'repeat.ends_label': 'Окончание', 'repeat.ends_never': 'Никогда', 'repeat.ends_after': 'После', 'repeat.ends_times': 'раз', 'repeat.ends_on': 'До даты', 'repeat.desc_day': 'каждый день', 'repeat.desc_day_n': 'каждые {n} дн.', 'repeat.desc_week': 'каждую неделю', 'repeat.desc_week_n': 'каждые {n} нед.', 'repeat.desc_month': 'каждый месяц', 'repeat.desc_month_n': 'каждые {n} мес.', 'repeat.desc_year': 'каждый год', 'repeat.desc_year_n': 'каждые {n} г.', 'repeat.desc_week_days': 'по {days}', 'repeat.desc_week_days_n': 'каждые {n} нед., по {days}', 'repeat.next': 'следующий раз {date}', 'repeat.series_done': 'Повторение закончилось', 'repeat.moved': 'Следующий срок: {date}', 'repeat.needs_due': 'Повторение считается от дедлайна — сначала поставьте его', 'agenda.days4': '4 дня', 'agenda.schedule': 'Расписание', 'agenda.calendars': 'Мои проекты', 'agenda.all_day': 'Весь день', 'agenda.entry': 'Запись', 'agenda.new_entry': 'Новая запись', 'agenda.create_title': 'Создать задачу', 'agenda.task_name_ph': 'Название задачи', 'agenda.create_btn': 'Создать', 'agenda.or_existing': 'Или добавить время к задаче', 'agenda.no_projects': 'Сначала нужен проект', 'agenda.empty': 'За этот период записей нет', 'agenda.deadline': 'Дедлайн', 'agenda.now': 'Сейчас', 'agenda.open_task': 'Открыть задачу', 'agenda.delete_entry': 'Удалить запись', 'version.all': 'Все версии', 'version.filter_reset': 'Сбросить', 'stats.by_version': 'По версиям', 'filter.project': 'Проект', 'filter.all_projects': 'Все проекты', 'xlsx.version': 'Версия', 'status.section': 'Статусы', 'version.section': 'Версии', 'version.label': 'Версия', 'version.manage': 'Настроить версии…', 'version.name_ph': 'Название версии', 'version.in_progress': 'в работе', 'version.released_on': 'выпущена {date}', 'version.mark_released': 'Отметить выпущенной…', 'version.mark_open': 'Вернуть в работу', 'version.tasks_n': 'задач: {n}', 'version.name_taken': 'Версия с таким названием уже есть в проекте', 'version.delete_confirm': 'Удалить версию «{name}»?', 'version.delete_used': 'У версии «{name}» есть задачи ({n}). Задачи останутся, но версия с них снимется. Продолжить?', 'version.empty_hint': 'Версии свои у каждого проекта. У задачи версия одна, а на доске версии показываются дорожками.', 'version.lane_toggle': 'Свернуть или развернуть дорожку', 'nav.board': 'Доска', 'board.add_task': 'Добавить задачу', 'board.statuses': 'Статусы и версии', 'board.pick_project': 'Выбрать проект', 'status.dialog_title': 'Настройки проекта', 'status.name_ph': 'Название', 'status.delete_last_done': 'Это последний статус, завершающий задачу — его нельзя удалить', 'status.delete_last': 'Должен остаться хотя бы один статус', 'status.move_tasks': 'Задачи из этого статуса переедут в «{name}». Продолжить?', 'task.status_label': 'Статус', 'stats.by_status': 'По статусам', 'board.empty': 'Сначала создайте проект.', 'about.us': 'О нас', 'about.blog': 'Блог',
+      'settings.section_main': 'Основное', 'settings.section_data': 'Данные', 'settings.section_work': 'Работа', 'settings.section_about': 'О приложении', 'settings.section_statuses': 'Статусы задач', 'settings.section_tags': 'Теги', 'status.default_backlog': 'Backlog', 'status.default_todo': 'To do', 'status.default_progress': 'In progress', 'status.default_checking': 'Checking', 'status.default_done': 'Done', 'status.default_cancelled': 'Cancelled', 'status.kind_backlog': 'Склад идей', 'status.kind_todo': 'Запланировано', 'status.kind_progress': 'В работе', 'status.kind_done': 'Сделано', 'status.kind_cancelled': 'Отменено', 'status.add': 'Новый статус', 'status.builtin_hint': 'Встроенный статус можно переименовать и перекрасить, но не удалить', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.pick': 'Теги', 'tag.dialog_new': 'Новый тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Название тега', 'tag.search_ph': 'Найти или создать', 'tag.create_named': 'Создать тег «{name}»', 'tag.name_taken': 'Тег с таким названием уже есть', 'tag.unused': 'не используется', 'tag.used_projects': 'проектов: {n}', 'tag.used_tasks': 'задач: {n}', 'tag.delete_confirm': 'Удалить тег «{name}»?', 'tag.delete_used': 'Тег «{name}» используется ({n}). Он будет снят со всех и удалён. Продолжить?', 'tag.empty_hint': 'Теги общие для всего приложения: один тег можно повесить и на проект, и на задачу в любом другом проекте.', 'version.none': 'Без версии', 'version.add': 'Новая версия', 'repeat.label': 'Повторение', 'repeat.freq_year': 'Год', 'repeat.none': 'Не повторяется', 'repeat.daily': 'Каждый день', 'repeat.weekly': 'Каждую неделю', 'repeat.monthly': 'Каждый месяц', 'repeat.yearly': 'Каждый год', 'repeat.weekdays_preset': 'По будням, Пн–Пт', 'repeat.custom': 'Настроить…', 'repeat.dialog_title': 'Повторение задачи', 'repeat.every': 'Повторять каждые', 'repeat.unit_day': 'дн.', 'repeat.unit_week': 'нед.', 'repeat.unit_month': 'мес.', 'repeat.unit_year': 'г.', 'repeat.on_days': 'В дни', 'repeat.month_mode_day': 'По числу месяца', 'repeat.month_mode_weekday': 'По дню недели', 'repeat.from_label': 'Отсчёт', 'repeat.from_schedule': 'По расписанию', 'repeat.from_done': 'От дня закрытия', 'repeat.keep_history': 'Оставлять выполненные копии', 'repeat.keep_history_hint': 'Каждый раз в списке останется завершённая задача со своим временем', 'repeat.ends_label': 'Окончание', 'repeat.ends_never': 'Никогда', 'repeat.ends_after': 'После', 'repeat.ends_times': 'раз', 'repeat.ends_on': 'До даты', 'repeat.desc_day': 'каждый день', 'repeat.desc_day_n': 'каждые {n} дн.', 'repeat.desc_week': 'каждую неделю', 'repeat.desc_week_n': 'каждые {n} нед.', 'repeat.desc_month': 'каждый месяц', 'repeat.desc_month_n': 'каждые {n} мес.', 'repeat.desc_year': 'каждый год', 'repeat.desc_year_n': 'каждые {n} г.', 'repeat.desc_week_days': 'по {days}', 'repeat.desc_week_days_n': 'каждые {n} нед., по {days}', 'repeat.next': 'следующий раз {date}', 'repeat.series_done': 'Повторение закончилось', 'repeat.moved': 'Следующий дедлайн: {date}', 'repeat.needs_due': 'Повторение считается от дедлайна — сначала поставьте его', 'agenda.days4': '4 дня', 'agenda.schedule': 'Расписание', 'agenda.calendars': 'Мои проекты', 'agenda.all_day': 'Весь день', 'agenda.entry': 'Запись', 'agenda.new_entry': 'Новая запись', 'agenda.create_title': 'Создать задачу', 'agenda.task_name_ph': 'Название задачи', 'agenda.create_btn': 'Создать', 'agenda.or_existing': 'Или добавить время к задаче', 'agenda.no_projects': 'Сначала нужен проект', 'agenda.empty': 'За этот период записей нет', 'agenda.deadline': 'Дедлайн', 'agenda.now': 'Сейчас', 'agenda.open_task': 'Открыть задачу', 'agenda.delete_entry': 'Удалить запись', 'version.all': 'Все версии', 'version.filter_reset': 'Сбросить', 'stats.by_version': 'По версиям', 'filter.project': 'Проект', 'filter.all_projects': 'Все проекты', 'xlsx.version': 'Версия', 'status.section': 'Статусы', 'version.section': 'Версии', 'version.label': 'Версия', 'version.manage': 'Настроить версии…', 'version.name_ph': 'Название версии', 'version.in_progress': 'в работе', 'version.released_on': 'выпущена {date}', 'version.mark_released': 'Отметить выпущенной…', 'version.mark_open': 'Вернуть в работу', 'version.tasks_n': 'задач: {n}', 'version.name_taken': 'Версия с таким названием уже есть в проекте', 'version.delete_confirm': 'Удалить версию «{name}»?', 'version.delete_used': 'У версии «{name}» есть задачи ({n}). Задачи останутся, но версия с них снимется. Продолжить?', 'version.empty_hint': 'Версии свои у каждого проекта. У задачи версия одна, а на доске версии показываются дорожками.', 'version.lane_toggle': 'Свернуть или развернуть дорожку', 'nav.board': 'Доска', 'board.add_task': 'Добавить задачу', 'board.statuses': 'Статусы и версии', 'board.pick_project': 'Выбрать проект', 'status.dialog_title': 'Настройки проекта', 'status.name_ph': 'Название', 'status.delete_last_done': 'Это последний статус, завершающий задачу — его нельзя удалить', 'status.delete_last': 'Должен остаться хотя бы один статус', 'status.move_tasks': 'Задачи из этого статуса переедут в «{name}». Продолжить?', 'task.status_label': 'Статус', 'stats.by_status': 'По статусам', 'board.empty': 'Сначала создайте проект.', 'about.us': 'О нас', 'about.blog': 'Блог',
       'settings.theme_label': 'Тема', 'settings.currency_label': 'Валюта',
       'settings.section_account': 'Аккаунт', 'profile.name_label': 'Имя', 'profile.no_name': 'Не указано',
       'profile.name_updated': 'Имя обновлено', 'profile.change_password': 'Изменить пароль',
@@ -43,13 +41,13 @@
       'export.period_day': 'День', 'export.period_half_year': 'Полгода', 'export.period_year': 'Год', 'export.period_custom': 'Свой',
       'home.title': 'Проекты', 'home.create': 'Создать проект', 'home.pinned': 'Закреплённые',
       'home.other': 'Остальные', 'home.recent': 'Недавние задачи',
-      'home.empty': 'Пока нет ни одного проекта. Создай первый.', 'home.calendar_link': 'Календарь',
+      'home.empty': 'Пока нет ни одного проекта. Создайте первый.', 'home.calendar_link': 'Календарь',
       'home.created_on': 'создан {date}', 'home.new_project_title': 'Создать проект',
       'weekday.mon': 'Пн', 'weekday.tue': 'Вт', 'weekday.wed': 'Ср', 'weekday.thu': 'Чт',
       'weekday.fri': 'Пт', 'weekday.sat': 'Сб', 'weekday.sun': 'Вс',
       'project.all': 'Все проекты', 'project.tasks': 'Задачи',
       'project.new_task_title': 'Новая задача (Ctrl+N)', 'project.new_task_label': 'Создать задачу',
-      'project.pick_task': 'Выбери задачу слева или создай новую.',
+      'project.pick_task': 'Выберите задачу слева или создайте новую.',
       'project.opts': 'Опции', 'project.opts_menu': 'Опции проекта',
       'project.open': 'Открыть', 'project.edit': 'Редактировать…', 'project.pin': 'Закрепить на главной',
       'project.unpin': 'Открепить с главной', 'project.excel': 'Скачать Excel',
@@ -57,7 +55,7 @@
       'project.new_title': 'Новый проект', 'project.edit_title': 'Редактировать проект',
       'project.summary': 'Проект: {time} · {money}',
       'filter.all': 'Все', 'filter.active': 'В работе', 'filter.done': 'Готово',
-      'sidebar.empty_default': 'В этом проекте пока нет задач.<br />Нажми «+ Новая».',
+      'sidebar.empty_default': 'В этом проекте пока нет задач.<br />Нажмите «+ Новая».',
       'sidebar.no_match': 'Ничего не подходит под фильтр.',
       'sep.pinned': 'Закреплённые', 'sep.rest': 'Остальные', 'sep.done': 'Выполненные',
       'rate.default_label': 'Ставка по умолчанию', 'rate.per_hour': '/ч',
@@ -70,10 +68,10 @@
       'settings.section_notifications': 'Уведомления',
       'notif.system_hint': 'Разрешение на уведомления меняется в настройках браузера для этого сайта.', 'notif.enable': 'Напоминания о дедлайнах',
       'notif.system': 'Уведомления в системе', 'notif.perm_granted': 'разрешены',
-      'notif.perm_denied': 'запрещены', 'notif.perm_ask': 'разрешить', 'notif.empty': 'Сроков и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
-      'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро срок', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.set': 'Поставить дедлайн', 'due.clear': 'Убрать срок', 'due.remind_at': 'Напомнить',
+      'notif.perm_denied': 'запрещены', 'notif.perm_ask': 'разрешить', 'notif.empty': 'Дедлайнов и напоминаний пока нет.', 'notif.mark_seen': 'Прочитано',
+      'notif.overdue': 'Просрочена', 'notif.soon': 'Скоро дедлайн', 'notif.reminder': 'Напоминание', 'due.none': 'не задан', 'due.set': 'Поставить дедлайн', 'due.clear': 'Убрать дедлайн', 'due.remind_at': 'Напомнить',
       'due.overdue': 'просрочено', 'due.today': 'сегодня', 'due.tomorrow': 'завтра', 'due.in_days': 'через {n} дн.',
-      'remind.none': 'Без напоминания', 'remind.at': 'В момент срока', 'remind.15m': 'За 15 минут',
+      'remind.none': 'Без напоминания', 'remind.at': 'В момент дедлайна', 'remind.15m': 'За 15 минут',
       'remind.1h': 'За час', 'remind.3h': 'За 3 часа', 'remind.1d': 'За день', 'remind.custom': 'Своё время',
       'tabs.notes': 'Заметки', 'tabs.settings': 'Настройки', 'tabs.history': 'История',
       'timer.sub_default': 'общее время по задаче', 'timer.start': 'Старт', 'timer.stop': 'Стоп',
@@ -91,7 +89,7 @@
       'session.recovered': ' · восстановлено', 'session.manual': ' · вручную',
       'session.edit_title': 'Изменить запись', 'session.delete_title': 'Удалить запись', 'session.today': 'сегодня {time}',
       'calendar.month': 'Месяц', 'calendar.week': 'Неделя', 'calendar.day': 'День', 'calendar.today': 'Сегодня',
-      'calendar.choose_period': 'Выбрать период', 'calendar.pick_day': 'Выбери день',
+      'calendar.choose_period': 'Выбрать период', 'calendar.pick_day': 'Выберите день',
       'calendar.day_empty': 'В этот день записей не было.', 'calendar.pick_date': 'Выбрать дату',
       'calendar.for_month': 'За месяц', 'calendar.for_week': 'За неделю',
       'calendar.period_label': 'За период',
@@ -132,7 +130,7 @@
       'pdlg.desc_ph': 'Необязательно', 'pdlg.color_label': 'Цвет',
       'sdlg.add_title': 'Добавить запись', 'sdlg.edit_title': 'Изменить запись',
       'sdlg.date_label': 'Дата', 'sdlg.start_label': 'Начало', 'sdlg.end_label': 'Конец',
-      'sdlg.duration': 'Длительность: {time}', 'sdlg.check_datetime': 'Проверь дату и время',
+      'sdlg.duration': 'Длительность: {time}', 'sdlg.check_datetime': 'Проверьте дату и время',
       'currency.title': 'Валюта',
       'plural.task': ['задача', 'задачи', 'задач'],
       'xlsx.task': 'Задача', 'xlsx.project': 'Проект', 'xlsx.total_time': 'Всего времени', 'xlsx.sessions': 'Сессий',
@@ -283,7 +281,7 @@
     uk: {
       'app.default_project_name': 'Мої завдання',
       'search.placeholder': 'Пошук',
-      'search.start_typing': 'Почни вводити назву проєкту або завдання',
+      'search.start_typing': 'Почніть вводити назву проєкту або завдання',
       'search.nothing_found': 'Нічого не знайдено',
       'search.projects_group': 'Проєкти',
       'search.tasks_group': 'Завдання',
@@ -311,13 +309,13 @@
       'export.period_day': 'День', 'export.period_half_year': 'Півроку', 'export.period_year': 'Рік', 'export.period_custom': 'Свій',
       'home.title': 'Проєкти', 'home.create': 'Створити проєкт', 'home.pinned': 'Закріплені',
       'home.other': 'Інші', 'home.recent': 'Недавні завдання',
-      'home.empty': 'Ще немає жодного проєкту. Створи перший.', 'home.calendar_link': 'Календар',
+      'home.empty': 'Ще немає жодного проєкту. Створіть перший.', 'home.calendar_link': 'Календар',
       'home.created_on': 'створено {date}', 'home.new_project_title': 'Створити проєкт',
       'weekday.mon': 'Пн', 'weekday.tue': 'Вт', 'weekday.wed': 'Ср', 'weekday.thu': 'Чт',
       'weekday.fri': 'Пт', 'weekday.sat': 'Сб', 'weekday.sun': 'Нд',
       'project.all': 'Усі проєкти', 'project.tasks': 'Завдання',
       'project.new_task_title': 'Нове завдання (Ctrl+N)', 'project.new_task_label': 'Створити завдання',
-      'project.pick_task': 'Вибери завдання зліва або створи нове.',
+      'project.pick_task': 'Виберіть завдання зліва або створіть нове.',
       'project.opts': 'Опції', 'project.opts_menu': 'Опції проєкту',
       'project.open': 'Відкрити', 'project.edit': 'Редагувати…', 'project.pin': 'Закріпити на головній',
       'project.unpin': 'Відкріпити з головної', 'project.excel': 'Завантажити Excel',
@@ -325,7 +323,7 @@
       'project.new_title': 'Новий проєкт', 'project.edit_title': 'Редагувати проєкт',
       'project.summary': 'Проєкт: {time} · {money}',
       'filter.all': 'Усі', 'filter.active': 'В роботі', 'filter.done': 'Готово',
-      'sidebar.empty_default': 'У цьому проєкті ще немає завдань.<br />Натисни «+ Нове».',
+      'sidebar.empty_default': 'У цьому проєкті ще немає завдань.<br />Натисніть «+ Нове».',
       'sidebar.no_match': 'Нічого не підходить під фільтр.',
       'sep.pinned': 'Закріплені', 'sep.rest': 'Інші', 'sep.done': 'Виконані',
       'rate.default_label': 'Ставка за замовчуванням', 'rate.per_hour': '/год',
@@ -359,7 +357,7 @@
       'session.recovered': ' · відновлено', 'session.manual': ' · вручну',
       'session.edit_title': 'Змінити запис', 'session.delete_title': 'Видалити запис', 'session.today': 'сьогодні {time}',
       'calendar.month': 'Місяць', 'calendar.week': 'Тиждень', 'calendar.day': 'День', 'calendar.today': 'Сьогодні',
-      'calendar.choose_period': 'Обрати період', 'calendar.pick_day': 'Обери день',
+      'calendar.choose_period': 'Обрати період', 'calendar.pick_day': 'Оберіть день',
       'calendar.day_empty': 'Цього дня записів не було.', 'calendar.pick_date': 'Обрати дату',
       'calendar.for_month': 'За місяць', 'calendar.for_week': 'За тиждень',
       'calendar.period_label': 'За період',
@@ -400,7 +398,7 @@
       'pdlg.desc_ph': 'Необов’язково', 'pdlg.color_label': 'Колір',
       'sdlg.add_title': 'Додати запис', 'sdlg.edit_title': 'Змінити запис',
       'sdlg.date_label': 'Дата', 'sdlg.start_label': 'Початок', 'sdlg.end_label': 'Кінець',
-      'sdlg.duration': 'Тривалість: {time}', 'sdlg.check_datetime': 'Перевір дату й час',
+      'sdlg.duration': 'Тривалість: {time}', 'sdlg.check_datetime': 'Перевірте дату й час',
       'currency.title': 'Валюта',
       'plural.task': ['завдання', 'завдання', 'завдань'],
       'xlsx.task': 'Завдання', 'xlsx.project': 'Проєкт', 'xlsx.total_time': 'Загальний час', 'xlsx.sessions': 'Сесій',
@@ -552,27 +550,7 @@
 
   /** t(T, lang, key, {a:1}) — перевод с подстановкой {a}; откат на русский,
    *  затем на сам ключ: показать ключ лучше, чем пустое место. */
-  function translate(T, lang, key, vars) {
-    const dict = T[lang] || T.ru;
-    let s = dict[key] !== undefined ? dict[key] : (T.ru[key] !== undefined ? T.ru[key] : key);
-    if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, v);
-    return s;
-  }
-
-  /** Правильная форма слова под число и язык. */
-  function pluralForm(T, lang, n, baseKey) {
-    const forms = (T[lang] && T[lang][baseKey]) || T.ru[baseKey];
-    if (lang === 'en') return forms[n === 1 ? 0 : 1];
-    if (lang === 'kk') return forms[0];
-    // ru / uk — общее славянское правило
-    const m10 = n % 10;
-    const m100 = n % 100;
-    if (m10 === 1 && m100 !== 11) return forms[0];
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
-    return forms[2];
-  }
-
-  const api = { T, LOCALE_MAP, LANG_NAMES, translate, pluralForm };
+  const api = { T };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);

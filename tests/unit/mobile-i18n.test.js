@@ -19,8 +19,11 @@ function loadMobileDict() {
     .replace(/^import .*$/gm, '')
     .replace(/export /g, '');
   const box = {};
+  // Машинка перевода приезжает из ядра — импорт мы вырезали, значит её надо
+  // подставить. Берём настоящую, а не заглушку: подделка проверяла бы себя.
+  const Lang = require('../../src/renderer/core/lang.js');
   // eslint-disable-next-line no-new-func
-  new Function('module', `${src};module.exports = { T, LOCALE_MAP, LANG_NAMES };`)(box);
+  new Function('module', 'Lang', `${src};module.exports = { T, LOCALE_MAP, LANG_NAMES, t, pluralForm };`)(box, Lang);
   return box.exports;
 }
 

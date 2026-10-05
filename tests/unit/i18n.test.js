@@ -4,15 +4,18 @@
 // Запуск: npm run test:unit
 const test = require('node:test');
 const assert = require('node:assert/strict');
+// Словарь и машинка лежат в разных файлах: словари у платформ разные, а
+// правила перевода и склонения — общие (core/lang.js).
 const I = require('../../src/renderer/core/i18n.js');
+const L = require('../../src/renderer/core/lang.js');
 
 const LANGS = Object.keys(I.T);
 
 test('языков четыре и у каждого есть название и локаль', () => {
   assert.deepEqual(LANGS.sort(), ['en', 'kk', 'ru', 'uk']);
   for (const l of LANGS) {
-    assert.ok(I.LANG_NAMES[l], `нет названия языка ${l}`);
-    assert.ok(I.LOCALE_MAP[l], `нет локали для ${l}`);
+    assert.ok(L.LANG_NAMES[l], `нет названия языка ${l}`);
+    assert.ok(L.LOCALE_MAP[l], `нет локали для ${l}`);
   }
 });
 
@@ -68,23 +71,23 @@ test('формы слов заданы как массивы одинаково�
 
 test('translate подставляет значения и откатывается на русский', () => {
   const T = { ru: { hi: 'Привет, {name}', only: 'Только тут' }, en: { hi: 'Hello, {name}' } };
-  assert.equal(I.translate(T, 'en', 'hi', { name: 'Иван' }), 'Hello, Иван');
-  assert.equal(I.translate(T, 'en', 'only'), 'Только тут', 'нет перевода — берётся русский');
-  assert.equal(I.translate(T, 'fr', 'hi', { name: 'Иван' }), 'Привет, Иван', 'неизвестный язык — русский');
+  assert.equal(L.translate(T, 'en', 'hi', { name: 'Иван' }), 'Hello, Иван');
+  assert.equal(L.translate(T, 'en', 'only'), 'Только тут', 'нет перевода — берётся русский');
+  assert.equal(L.translate(T, 'fr', 'hi', { name: 'Иван' }), 'Привет, Иван', 'неизвестный язык — русский');
 });
 
 test('translate показывает сам ключ, если строки нет нигде', () => {
   // Показать ключ лучше, чем пустое место: по нему видно, чего не хватает.
-  assert.equal(I.translate({ ru: {} }, 'ru', 'нет.такого'), 'нет.такого');
+  assert.equal(L.translate({ ru: {} }, 'ru', 'нет.такого'), 'нет.такого');
 });
 
 test('translate подставляет значение во все вхождения', () => {
   const T = { ru: { x: '{n} из {n}' } };
-  assert.equal(I.translate(T, 'ru', 'x', { n: 3 }), '3 из 3');
+  assert.equal(L.translate(T, 'ru', 'x', { n: 3 }), '3 из 3');
 });
 
 test('склонения русского языка', () => {
-  const форма = (n) => I.pluralForm(I.T, 'ru', n, 'plural.task');
+  const форма = (n) => L.pluralForm(I.T, 'ru', n, 'plural.task');
   assert.equal(форма(1), 'задача');
   assert.equal(форма(2), 'задачи');
   assert.equal(форма(5), 'задач');
@@ -97,14 +100,14 @@ test('склонения русского языка', () => {
 });
 
 test('склонения английского: только единственное и множественное', () => {
-  const form = (n) => I.pluralForm(I.T, 'en', n, 'plural.task');
+  const form = (n) => L.pluralForm(I.T, 'en', n, 'plural.task');
   assert.equal(form(1), I.T.en['plural.task'][0]);
   assert.equal(form(0), I.T.en['plural.task'][1]);
   assert.equal(form(21), I.T.en['plural.task'][1], 'в английском 21 — тоже множественное');
 });
 
 test('склонения казахского: форма всегда одна', () => {
-  const form = (n) => I.pluralForm(I.T, 'kk', n, 'plural.task');
+  const form = (n) => L.pluralForm(I.T, 'kk', n, 'plural.task');
   const one = I.T.kk['plural.task'][0];
   assert.equal(form(1), one);
   assert.equal(form(5), one);

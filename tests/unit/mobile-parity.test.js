@@ -187,3 +187,58 @@ test('обёртки сроков подставляют «сейчас» и я�
   assert.equal(mobileDue.dueShort(soon, 'en'), 'due.today|en|undefined');
   assert.ok(mobileDue.dueShort(later, 'kk').startsWith('дата|kk|'));
 });
+
+// --- машинка перевода --------------------------------------------------------
+
+const CoreLang = require('../../src/renderer/core/lang.js');
+
+const mobileI18n = (() => {
+  const src = fs.readFileSync(path.join(MOBILE, 'i18n.js'), 'utf8')
+    .replace(/^import[\s\S]*?from '[^']+';$/gm, '')
+    .replace(/^export /gm, '');
+  const box = {};
+  // eslint-disable-next-line no-new-func
+  new Function('module', 'Lang', `${src};module.exports = { T, LOCALE_MAP, LANG_NAMES, t, pluralForm };`)(box, CoreLang);
+  return box.exports;
+})();
+
+test('карта локалей и названия языков — те же объекты, что в ядре', () => {
+  assert.equal(mobileI18n.LOCALE_MAP, CoreLang.LOCALE_MAP);
+  assert.equal(mobileI18n.LANG_NAMES, CoreLang.LANG_NAMES);
+});
+
+test('телефон не переписывает правило склонения заново', () => {
+  // Проверка по тексту, а не по поведению: заново написанная копия вела бы
+  // себя так же, и поведенческий тест её бы пропустил. Ровно этим правило и
+  // разошлось в прошлый раз — комментарий про славянское правило лежал в
+  // двух файлах слово в слово.
+  // Комментарии вычёркиваем: в шапке файла как раз написано, что машинка
+  // уехала в ядро, и искать там нечего. Проверка про код, а не про прозу.
+  const src = fs.readFileSync(path.join(MOBILE, 'i18n.js'), 'utf8')
+    .split('\n')
+    .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
+    .join('\n');
+  for (const mark of ['m100', 'славянское правило', 'n === 1 ? 0 : 1']) {
+    assert.ok(!src.includes(mark), `в словаре телефона снова своя машинка: «${mark}»`);
+  }
+});
+
+test('перевод и склонение на телефоне считают ровно то же, что ядро', () => {
+  const { T } = mobileI18n;
+  for (const lang of Object.keys(T)) {
+    for (const key of ['nav.home', 'common.cancel', 'нет.такого.ключа']) {
+      assert.equal(
+        mobileI18n.t(lang, key),
+        CoreLang.translate(T, lang, key),
+        `${lang}/${key}: обёртка считает не то же, что ядро`,
+      );
+    }
+    for (const n of [0, 1, 2, 5, 11, 21, 101]) {
+      assert.equal(
+        mobileI18n.pluralForm(lang, n, 'plural.task'),
+        CoreLang.pluralForm(T, lang, n, 'plural.task'),
+        `${lang}/${n}: форма слова расходится с ядром`,
+      );
+    }
+  }
+});
