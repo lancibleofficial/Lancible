@@ -27,6 +27,15 @@ const PRIVATE = ['logs', 'architecture', 'graph'];
 
 const read = (name) => fs.readFileSync(path.join(LANDING, name), 'utf8');
 
+/** CSS, который действует на страницу: общий landing.css (если подключён),
+ *  затем её собственный <style> — в том порядке, в каком их читает браузер. */
+function stylesOf(page) {
+  const html = read(page);
+  const own = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
+  const shared = html.includes('href="landing.css"') ? read('landing.css') : '';
+  return `${shared}\n${own}`;
+}
+
 /** Содержимое единственного блока <tag>…</tag>. Падает, если блоков не один:
  *  «одна шапка на страницу» — это тоже инвариант, а не допущение. */
 function onlyBlock(html, tag, page) {
@@ -86,6 +95,19 @@ test('в шапке каждой страницы один и тот же наб
   }
 });
 
+test('каждая страница подключает landing.css раньше своего <style>', () => {
+  // Порядок и есть смысл: общее идёт первым, чтобы страница могла его
+  // подправить. Подключи общий файл после своего <style> — и он молча
+  // перебьёт правки страницы.
+  for (const page of PAGES) {
+    const html = read(page);
+    const link = html.indexOf('<link rel="stylesheet" href="landing.css">');
+    const style = html.indexOf('<style');
+    assert.ok(link !== -1, `${page}: не подключает landing.css`);
+    assert.ok(style === -1 || link < style, `${page}: landing.css подключён после своего <style>`);
+  }
+});
+
 // --- правила вёрстки шапки и подвала ---------------------------------------
 
 /** Классы, из которых собраны шапка и подвал. Правила про них обязаны
@@ -94,9 +116,7 @@ test('в шапке каждой страницы один и тот же наб
 const CHROME = /(^|[\s,>+~])(header|footer)\b|\.(header-row|header-actions|brand|gh-link|status-pill|status-dot|footer-brand|footer-links)\b/;
 
 function chromeCss(page) {
-  const html = read(page);
-  const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n');
-  return cssRules(styles)
+  return cssRules(stylesOf(page))
     .filter((r) => CHROME.test(r.sel))
     .map(ruleText)
     .sort();
@@ -144,9 +164,7 @@ test('все ссылки внутри сайта ведут в существу
 test('в разметке нет классов, которых никто не описывает', () => {
   // Мёртвый класс — это не опечатка в стилях, а ложное обещание: кто-то
   // прочтёт разметку и решит, что элемент как-то оформлен.
-  const allCss = PAGES
-    .map((p) => [...read(p).matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].map((m) => m[1]).join('\n'))
-    .join('\n');
+  const allCss = PAGES.map(stylesOf).join('\n');
   const described = new Set([...allCss.matchAll(/\.([a-z][a-z0-9_-]*)/gi)].map((m) => m[1]));
   // Классы, которые ставит и ищет сам скрипт страницы, в стилях не обязаны
   // встречаться — проверяем по тексту всей страницы, а не только по <style>.

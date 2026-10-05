@@ -186,7 +186,7 @@ test('styles.css: слои по порядку, общие детали — то
 
 const LANDING_PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html'];
 
-test('лендинг: общее — в landing.css, у страниц только своё', { todo: 'переезд: landing.css' }, () => {
+test('лендинг: общее — в landing.css, у страниц только своё', () => {
   assert.ok(fs.existsSync(path.join(ROOT, 'landing', 'landing.css')), 'landing/landing.css нет');
   for (const page of LANDING_PAGES) {
     const html = read(`landing/${page}`);

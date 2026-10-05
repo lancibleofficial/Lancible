@@ -11,126 +11,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700;800;900&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="landing.css">
 <style>
   /* Устройство Lancible. Служебная страница, как и журнал: её нет в меню и
    * она закрыта от поисковиков, но открыть по адресу может кто угодно.
+   * Общее (токены, шапка, подвал, шапка служебной страницы, плитки с
+   * числами) — в landing.css; здесь разделы, таблицы и схема.
    *
-   * Токены, базовые стили, шапка страницы, кнопки и подвал взяты из
-   * logs.html дословно — лендинг требует одинаковых шапки и подвала на
-   * всех страницах. Меняешь палитру или шапку — правь все четыре файла.
-   *
-   * Числа в тексте — замеры по коду, а не оценки. Устаревают вместе с
-   * кодом, поэтому рядом в репозитории лежит ARCHITECTURE.md с теми же
-   * числами: правишь одно — правь и второе. */
-  /* Журнал работы. Служебная страница: её не видно из меню сайта и она закрыта
-   * от поисковиков, но открыть по адресу может кто угодно — паролей здесь нет.
-   * Оформление то же, что у index.html и blog.html: токены, шапка, подвал и
-   * фильтр скопированы оттуда. Меняешь палитру или шапку — правь все три файла.
-   *
-   * В отличие от блога, записи сюда не лежат в репозитории: страница читает их
-   * из Supabase при каждой загрузке, поэтому новая запись видна сразу и деплой
-   * для этого не нужен. */
-  :root{
-    --bg:#181a20; --bg-deep:#121317;
-    --panel:#22252c; --panel-2:#2b2e37;
-    --border:#383c46; --border-soft:#2f333c;
-    --accent:#87ff65; --accent-deep:#57d637; --accent-text:#0f1c08;
-    --text:#f2f4ef; --text-dim:#9a9fac; --text-faint:#6a707d;
-    /* Два цвета сверх палитры лендинга: журналу нужно отличать поломку от того,
-     * что просто в работе, а зелёный в этой палитре занят успехом. */
-    --danger:#ff8674; --warn:#ffc95c;
-    --radius-lg:20px; --radius-md:14px; --radius-sm:9px;
-    --maxw:1120px;
-    color-scheme: dark;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0; padding:0;}
-  body{
-    background:var(--bg); color:var(--text);
-    font-family:'Sora', system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing:antialiased; overflow-x:hidden;
-    display:flex; flex-direction:column; min-height:100vh;
-  }
-  @media (prefers-reduced-motion: reduce){
-    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important;}
-  }
-  h1,h2,h3{font-family:'Unbounded', system-ui, sans-serif; margin:0; text-wrap:balance; letter-spacing:-0.01em;}
-  p{margin:0;}
-  a{color:inherit; text-decoration:none;}
-  img{max-width:100%;}
-  .wrap{max-width:var(--maxw); margin:0 auto; padding-inline:24px; width:100%;}
-  .mono{font-family:'JetBrains Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums;}
-  :focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px;}
-
-  /* ---------- header ---------- */
-  header{
-    position:sticky; top:0; z-index:40;
-    background:rgba(24,26,32,.72); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-    border-bottom:1px solid var(--border-soft);
-  }
-  .header-row{display:flex; align-items:center; justify-content:space-between; height:68px; gap:16px;}
-  .brand{display:flex; align-items:center; gap:10px; font-family:'Unbounded'; font-weight:700; font-size:1.05rem;}
-  .brand svg{width:26px; height:26px; flex:none;}
-  .status-pill{
-    display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--text-dim);
-    border:1px solid var(--border); border-radius:999px; padding:7px 14px 7px 10px;
-    white-space:nowrap;
-  }
-  .status-dot{width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 0 rgba(135,255,101,.55); animation:pulse-dot 2.2s ease-out infinite;}
-  @keyframes pulse-dot{
-    0%{box-shadow:0 0 0 0 rgba(135,255,101,.55);}
-    70%{box-shadow:0 0 0 8px rgba(135,255,101,0);}
-    100%{box-shadow:0 0 0 0 rgba(135,255,101,0);}
-  }
-  .gh-link{display:flex; align-items:center; gap:7px; font-size:.85rem; color:var(--text-dim); border:1px solid var(--border); border-radius:999px; padding:7px 14px; transition:border-color .2s, color .2s;}
-  .gh-link:hover{color:var(--text); border-color:var(--accent);}
-  .header-actions{display:flex; align-items:center; gap:10px;}
-
-  /* ---------- шапка страницы ---------- */
-  main{flex:1 0 auto;}
-  .log-hero{padding-block:64px 40px; border-bottom:1px solid var(--border-soft); background:var(--bg-deep);}
-  .eyebrow{
-    display:inline-flex; align-items:center; gap:8px; font-size:.74rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--accent); margin-bottom:18px;
-  }
-  .eyebrow::before{content:''; width:16px; height:1.5px; background:var(--accent);}
-  h1.log-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-height:1.1;}
-  .log-lede{margin-top:18px; font-size:1.02rem; line-height:1.65; color:var(--text-dim); max-width:58ch;}
-  .log-hero-row{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
-  .log-refresh{display:flex; align-items:center; gap:12px; flex:none; font-size:.8rem; color:var(--text-faint);}
-  .log-refresh button{
-    font-family:'Sora', system-ui, sans-serif; font-size:.8rem; font-weight:600;
-    padding:8px 16px; border-radius:999px; cursor:pointer;
-    background:transparent; color:var(--text-dim); border:1px solid var(--border);
-    transition:border-color .2s, color .2s;
-  }
-  .log-refresh button:hover{color:var(--text); border-color:var(--accent);}
-
-  /* Фильтр по виду события — тот же компонент, что фильтр по типу записи в
-   * блоге. Без него быстро найти в длинной ленте именно ошибки невозможно. */
-  .log-filter{display:flex; gap:8px; flex-wrap:wrap; margin-top:30px;}
-  .log-filter button{
-    font-family:'Sora', system-ui, sans-serif; font-size:.82rem; font-weight:600;
-    display:inline-flex; align-items:center; gap:7px;
-    padding:8px 15px; border-radius:999px; cursor:pointer;
-    background:transparent; color:var(--text-dim); border:1px solid var(--border);
-    transition:border-color .2s, color .2s, background .2s;
-  }
-  .log-filter button:hover{color:var(--text); border-color:var(--accent);}
-  .log-filter button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
-  .filter-count{font-size:.74rem; opacity:.7; font-variant-numeric:tabular-nums;}
-
-  .btn{
-    display:inline-flex; align-items:center; gap:9px; font-family:'Sora'; font-weight:600; font-size:.94rem;
-    padding:13px 22px; border-radius:999px; cursor:pointer; border:1px solid transparent;
-    transition:transform .22s cubic-bezier(.16,1,.3,1), border-color .22s, color .22s;
-  }
-  .btn:active{transform:scale(.97);}
-  .btn-ghost{background:transparent; color:var(--text); border-color:var(--border);}
-  .btn-ghost:hover{border-color:var(--accent); color:var(--accent); transform:translateY(-2px);}
-  .log-back{display:flex; justify-content:center; margin-top:48px;}
-
-/* ---------- устройство ---------- */
+   * Числа в тексте — замеры по коду. Число файлов ядра сторожит
+   * tests/unit/architecture.test.js, строки и функции app.js пересчитывает
+   * npm run site:refresh перед выкатом. */
+  /* ---------- устройство ---------- */
   .arch-body{padding-block:52px 72px;}
   .arch-sec + .arch-sec{margin-top:56px;}
   .arch-sec h2{font-size:1.5rem; font-weight:700; margin-bottom:8px;}
@@ -142,21 +33,7 @@
     background:var(--panel-2); padding:.12em .4em; border-radius:5px; color:var(--text);
   }
   .arch-sec b{color:var(--text); font-weight:600;}
-
   /* Числа-плитки: не украшение, а то, на чём держатся выводы ниже. */
-  .arch-stats{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
-    gap:1px; margin-top:34px; background:var(--border-soft);
-    border:1px solid var(--border-soft); border-radius:var(--radius-md); overflow:hidden;
-  }
-  .arch-stat{background:var(--panel); padding:18px 20px; min-width:0;}
-  .arch-stat b{
-    display:block; font-family:'JetBrains Mono', ui-monospace, monospace;
-    font-size:1.55rem; font-weight:700; line-height:1.1; letter-spacing:-.02em;
-    font-variant-numeric:tabular-nums; color:var(--text);
-  }
-  .arch-stat span{display:block; font-size:.8rem; color:var(--text-dim); margin-top:6px;}
-
   .arch-scroll{overflow-x:auto; border:1px solid var(--border-soft); border-radius:var(--radius-md);}
   .arch-scroll table{border-collapse:collapse; width:100%; font-size:.89rem;}
   .arch-scroll th, .arch-scroll td{
@@ -171,16 +48,13 @@
   .arch-scroll td.mono{font-size:.82rem; white-space:nowrap; color:var(--text);}
   .mark{font-weight:700; white-space:nowrap;}
   .mark.ok{color:var(--accent);}
-  .mark.no{color:var(--danger);}
   .mark.part{color:var(--text-dim);}
-
   .arch-shape{
     background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius-md);
     padding:18px 20px; overflow-x:auto; white-space:pre; color:var(--text);
     font-family:'JetBrains Mono', ui-monospace, monospace; font-size:.8rem; line-height:1.75;
   }
   .arch-shape .k{color:var(--accent);}
-
   figure{margin:0;}
   figure svg{width:100%; max-width:100%; height:auto; display:block;}
   figcaption{color:var(--text-faint); font-size:.82rem; margin-top:12px; max-width:62ch; line-height:1.6;}
@@ -192,13 +66,11 @@
   .dg-line{stroke:var(--border); stroke-width:1.4; fill:none;}
   .dg-line-acc{stroke:var(--accent); stroke-width:1.8; fill:none;}
   .dg-lbl{fill:var(--text-faint); font-family:'JetBrains Mono', ui-monospace, monospace; font-size:10px;}
-
   .arch-todo{display:flex; flex-direction:column; gap:14px; counter-reset:todo;}
   .arch-item{
     background:var(--panel); border:1px solid var(--border-soft);
     border-left:3px solid var(--accent); border-radius:var(--radius-sm); padding:18px 20px;
   }
-  .arch-item.minor{border-left-color:var(--border);}
   .arch-item h3{
     margin:0 0 8px; font-size:1.02rem; font-weight:700;
     display:flex; gap:10px; align-items:baseline; flex-wrap:wrap;
@@ -207,38 +79,11 @@
     counter-increment:todo; content:counter(todo);
     font-family:'JetBrains Mono', ui-monospace, monospace; font-size:.76rem; color:var(--accent);
   }
-  .arch-item.minor h3::before{color:var(--text-faint);}
   .arch-item p{margin:0; font-size:.92rem;}
   .arch-item ol, .arch-item ul{margin:10px 0 0; padding-left:1.3em; color:var(--text-dim); font-size:.92rem; line-height:1.7;}
   .arch-item li{margin-bottom:5px;}
-
   @media (max-width:640px){
     .arch-sec h2{font-size:1.3rem;}
-  }
-  /* ---------- footer ---------- */
-  footer{padding-block:44px; border-top:1px solid var(--border-soft); flex:none;}
-  .footer-row{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
-  .footer-brand{display:flex; align-items:center; gap:9px; color:var(--text-dim); font-size:.86rem;}
-  .footer-brand svg{width:18px; height:18px;}
-  .footer-links{display:flex; gap:22px; font-size:.86rem; color:var(--text-dim);}
-  .footer-links a:hover{color:var(--accent);}
-
-  @media (max-width: 860px){
-    .log-hero-row{align-items:flex-start; flex-direction:column; gap:22px;}
-  }
-  @media (max-width: 640px){
-    .header-row{height:60px;}
-    .gh-link span.long{display:none;}
-    .status-pill{display:none;}
-    .log-hero{padding-block:44px 32px;}
-    .log-task-head{padding:18px 16px;}
-    /* На узком экране три колонки не помещаются. Вид события и время встают
-     * одной строкой — слева ярлык, справа время, — а текст уходит под них во
-     * всю ширину: так заголовок события не зажат в остаток строки. */
-    .log-event{grid-template-columns:auto 1fr; gap:9px 12px; padding:14px 16px;}
-    .log-time{grid-row:1; grid-column:2; justify-self:end;}
-    .log-event > div:nth-child(2){grid-row:1; grid-column:1;}
-    .log-event-main{grid-row:2; grid-column:1 / -1;}
   }
 </style>
 </head>
