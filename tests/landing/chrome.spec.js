@@ -13,7 +13,7 @@
 // ширине 561 правый блок шапки вылезал за поле страницы на 22 px.
 const { test, expect } = require('@playwright/test');
 
-const PAGES = ['/index.html', '/blog.html', '/logs.html', '/architecture.html'];
+const PAGES = ['/index.html', '/blog.html', '/logs.html', '/architecture.html', '/graph.html'];
 
 // Порог сужения шапки. Замер: в полном составе ей нужно 583 px (герб 125 +
 // правый блок 394 + поля 48 + зазор 16), поэтому 640 с запасом, а 560 — уже
@@ -128,7 +128,7 @@ test('служебные страницы отдаются по коротком
   // Локальный сервер повторяет rewrite Vercel: /logs открывается так же, как
   // /logs.html. Если это разъедется, ссылка в адресной строке перестанет
   // работать на сайте, а узнаем мы об этом от пользователя.
-  for (const name of ['logs', 'architecture']) {
+  for (const name of ['logs', 'architecture', 'graph']) {
     const res = await page.request.get(`${baseURL}/${name}`);
     expect(res.status(), `/${name}: код ответа`).toBe(200);
     expect(await res.text(), `/${name}: отдалась не та страница`).toContain('<footer>');

@@ -602,6 +602,24 @@
       "at": "L115"
     },
     {
+      "id": "scripts_publish_site_publishgraph",
+      "label": "publishGraph()",
+      "file": "scripts/publish-site.js",
+      "at": "L77"
+    },
+    {
+      "id": "scripts_publish_site_rebuildgraph",
+      "label": "rebuildGraph()",
+      "file": "scripts/publish-site.js",
+      "at": "L33"
+    },
+    {
+      "id": "scripts_publish_site_refreshnumbers",
+      "label": "refreshNumbers()",
+      "file": "scripts/publish-site.js",
+      "at": "L156"
+    },
+    {
       "id": "scripts_shot_capture",
       "label": "capture()",
       "file": "scripts/shot.js",
@@ -617,7 +635,7 @@
       "id": "scripts_watch_touched",
       "label": "touched()",
       "file": "scripts/watch.js",
-      "at": "L179"
+      "at": "L185"
     },
     {
       "id": "scripts_worklog_main",
@@ -1136,6 +1154,18 @@
       "at": "L8"
     },
     {
+      "id": "tests_unit_architecture_test_marks",
+      "label": "marks()",
+      "file": "tests/unit/architecture.test.js",
+      "at": "L104"
+    },
+    {
+      "id": "tests_unit_architecture_test_word",
+      "label": "word()",
+      "file": "tests/unit/architecture.test.js",
+      "at": "L46"
+    },
+    {
       "id": "tests_unit_due_test_duein",
       "label": "dueIn()",
       "file": "tests/unit/due.test.js",
@@ -1289,13 +1319,13 @@
       "id": "tests_visual_landing_spec_onlychrome",
       "label": "onlyChrome()",
       "file": "tests/visual/landing.spec.js",
-      "at": "L44"
+      "at": "L45"
     },
     {
       "id": "tests_visual_landing_spec_ready",
       "label": "ready()",
       "file": "tests/visual/landing.spec.js",
-      "at": "L30"
+      "at": "L31"
     },
     {
       "id": "tests_visual_web_spec_busycalendar",

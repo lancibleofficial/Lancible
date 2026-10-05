@@ -68,6 +68,8 @@ const ROUTES = [
   // Скрипты сборки и синхронизации ядра: их ломает тот же юнит-набор.
   [/^scripts[\\/]/, ['unit']],
   [/^playwright\.config\.js$/, ['web', 'landing', 'visual']],
+  // Документ архитектуры называет число файлов ядра, и это сверяет юнит.
+  [/^ARCHITECTURE\.md$/, ['unit']],
 ];
 
 // Куда не смотреть вовсе. web/ почти целиком собирается из src/ — если
@@ -86,6 +88,10 @@ const IGNORE = [
 ];
 
 const WATCH_DIRS = ['src', 'web', 'mobile/src', 'mobile/tests', 'landing', 'tests', 'scripts'];
+
+// Файлы в корне, которые проверяет набор. За корнем целиком не следим — там
+// node_modules и выход сборки, — поэтому только они, поимённо.
+const ROOT_FILES = ['ARCHITECTURE.md', 'playwright.config.js'];
 
 // --- вывод ------------------------------------------------------------------
 
@@ -199,6 +205,13 @@ for (const dir of WATCH_DIRS) {
   });
 }
 
-say(`сторож смотрит за: ${WATCH_DIRS.join(', ')}`);
+// Сам корень — без recursive: иначе сюда пошли бы все события node_modules.
+// Редактор нередко сохраняет файл через переименование, и слежка за самим
+// файлом после этого глохнет; за папкой — нет.
+fs.watch(ROOT, (_event, name) => {
+  if (name && ROOT_FILES.includes(name)) touched(name);
+});
+
+say(`сторож смотрит за: ${[...WATCH_DIRS, ...ROOT_FILES].join(', ')}`);
 say(FAST_ONLY ? 'режим --fast: только юниты, таблицы и телефон' : 'браузерные слои включены (быстрее — npm run watch -- --fast)');
 say('остановить — Ctrl+C');

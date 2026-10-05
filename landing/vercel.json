@@ -13,6 +13,10 @@
       "destination": "/architecture.html"
     },
     {
+      "source": "/graph",
+      "destination": "/graph.html"
+    },
+    {
       "source": "/logs",
       "destination": "/logs.html"
     },
@@ -40,6 +44,18 @@
     },
     {
       "source": "/architecture.html",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/graph",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/graph.html",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/graph-view.html",
       "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
     }
   ]

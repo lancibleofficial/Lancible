@@ -19,11 +19,11 @@ const path = require('node:path');
 const { cssRules, ruleText } = require('../css');
 
 const LANDING = path.join(__dirname, '..', '..', 'landing');
-const PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html'];
+const PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html'];
 
 // Страницы, которых не должно быть в поиске. Они открыты по прямому адресу —
 // закрывает их не пароль, а отсутствие ссылок и запрет индексации.
-const PRIVATE = ['logs', 'architecture'];
+const PRIVATE = ['logs', 'architecture', 'graph'];
 
 const read = (name) => fs.readFileSync(path.join(LANDING, name), 'utf8');
 
@@ -195,6 +195,9 @@ test('служебные страницы закрыты от поисковик
     assert.ok(new RegExp(`^Disallow: /${name}$`, 'm').test(robots),
       `нет строки Disallow: /${name} в robots.txt`);
   }
+  // Сам граф лежит отдельным файлом и открывается из /graph во фрейме — и
+  // напрямую, кнопкой «во весь экран». Его адрес тоже должен быть закрыт.
+  assert.ok(noindex.has('/graph-view.html'), 'нет X-Robots-Tag для /graph-view.html');
 });
 
 test('на служебные страницы нет ссылок с сайта', () => {
