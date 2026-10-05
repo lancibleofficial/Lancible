@@ -27,6 +27,10 @@ data.json
 # Отчёты и следы браузерных тестов — не исходники
 playwright-report/
 test-results/
+# Сторож (npm run watch) пишет сюда, а не в test-results/: Playwright
+# вычищает свою выходную папку в начале прогона, и ручной npm test сносил бы
+# следы сторожа прямо посреди его работы.
+test-results-watch/
 
 # ОС/редакторы
 .DS_Store

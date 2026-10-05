@@ -30,14 +30,20 @@ const FAST_ONLY = process.argv.includes('--fast');
 // аргументов. Вторая — так быстрее: каждый npm run это ещё один процесс
 // оболочки поверх настоящей работы.
 const PLAYWRIGHT = 'node_modules/@playwright/test/cli.js';
+// Своя папка следов, и обязательно РЯДОМ с test-results/, а не внутри:
+// Playwright вычищает свою выходную папку целиком в начале прогона, так что
+// ручной npm test сносил бы следы сторожа прямо посреди его работы. Внутренний
+// test-results/watch именно так и падал — browserContext.close: ENOENT на
+// файле трассы, которого уже нет.
+const PW_OUT = '--output=test-results-watch';
 
 const LAYERS = [
   { id: 'unit', title: 'юниты', args: ['--test', 'tests/unit/*.test.js'], fast: true },
   { id: 'xlsx', title: 'таблицы', args: ['scripts/xlsx-check.js'], fast: true },
   { id: 'mobile', title: 'телефон', args: ['node_modules/jest/bin/jest.js'], cwd: 'mobile', fast: true },
-  { id: 'web', title: 'браузер: веб', args: [PLAYWRIGHT, 'test', '--project=web'], fast: false, build: true },
-  { id: 'landing', title: 'браузер: лендинг', args: [PLAYWRIGHT, 'test', '--project=landing'], fast: false },
-  { id: 'visual', title: 'снимки', args: [PLAYWRIGHT, 'test', '--project=visual'], fast: false },
+  { id: 'web', title: 'браузер: веб', args: [PLAYWRIGHT, 'test', '--project=web', PW_OUT], fast: false, build: true },
+  { id: 'landing', title: 'браузер: лендинг', args: [PLAYWRIGHT, 'test', '--project=landing', PW_OUT], fast: false },
+  { id: 'visual', title: 'снимки', args: [PLAYWRIGHT, 'test', '--project=visual', PW_OUT], fast: false },
 ];
 
 // Сборка web/ из src/ — её же делает npm run build:web.
@@ -100,6 +106,10 @@ function run(args, cwd) {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, args, {
       cwd: cwd ? path.join(ROOT, cwd) : ROOT,
+      // Своя пара портов для браузерных прогонов: иначе сторож и ручной
+      // npm test делят сервер, который Playwright гасит, закончив, — прямо
+      // из-под соседа. См. tests/ports.js.
+      env: { ...process.env, LANCIBLE_TEST_PORTS: 'watch' },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let output = '';

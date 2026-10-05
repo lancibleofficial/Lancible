@@ -58,6 +58,12 @@ for (const width of [1280, NARROW_AT + 1, NARROW_AT - 1, 375]) {
     const seen = {};
     for (const url of PAGES) {
       await page.goto(url);
+      // Шрифты приезжают с Google Fonts, то есть позже разметки. Померить до
+      // них — значит померить запасной шрифт: у него другие метрики, и высота
+      // подвала выходит другая. Под нагрузкой (например, когда рядом гоняет
+      // сторож) разница вылезает, а в тишине её не видно — ровно тот сорт
+      // плавающего теста, из-за которого перестают верить набору.
+      await page.evaluate(() => document.fonts.ready);
       seen[url] = await chrome(page);
     }
     // Образец — страница с самым полным подвалом: на главной одного пункта
@@ -69,7 +75,17 @@ for (const width of [1280, NARROW_AT + 1, NARROW_AT - 1, 375]) {
       const got = seen[url];
       expect(got.header, `${url}: высота шапки`).toEqual(base.header);
       expect(got.row, `${url}: строка шапки`).toEqual(base.row);
-      expect(got.footer.h, `${url}: высота подвала`).toEqual(base.footer.h);
+      // Высоту подвала сравниваем только у страниц с одинаковым числом
+      // ссылок. На главной ссылок на одну меньше (нет пункта «Главная»), и
+      // на узком экране строка ссылок из-за этого переносится по-другому:
+      // подвал законно ниже. Требовать там равенства — значит требовать,
+      // чтобы лишний пункт не занимал места.
+      if (got.footerLinks.length === base.footerLinks.length) {
+        expect(got.footer.h, `${url}: высота подвала`).toEqual(base.footer.h);
+      } else {
+        expect(got.footer.h, `${url}: подвал с меньшим числом ссылок выше полного`)
+          .toBeLessThanOrEqual(base.footer.h);
+      }
       expect(got.pill, `${url}: таблетка состояния`).toBe(base.pill);
       expect(got.ghLabel, `${url}: подпись GitHub`).toBe(base.ghLabel);
       const self = url.replace(/^\//, '');
@@ -82,6 +98,7 @@ for (const width of [1280, NARROW_AT + 1, NARROW_AT - 1, 375]) {
     await page.setViewportSize({ width, height: 900 });
     for (const url of PAGES) {
       await page.goto(url);
+      await page.evaluate(() => document.fonts.ready);
       const got = await chrome(page);
       expect(got.overrun, `${url}: правый блок шапки торчит за поле`).toBeLessThanOrEqual(0);
       expect(got.pageScrollsSideways, `${url}: страницу можно утащить вбок`).toBe(false);
@@ -95,6 +112,7 @@ test(`шапка сужается ровно на ${NARROW_AT}, и ни пикс
   for (const url of PAGES) {
     await page.setViewportSize({ width: NARROW_AT + 1, height: 900 });
     await page.goto(url);
+    await page.evaluate(() => document.fonts.ready);
     const wide = await chrome(page);
     expect(wide.pill, `${url}: при ${NARROW_AT + 1} таблетка должна быть видна`).not.toBe('none');
     expect(wide.ghLabel, `${url}: при ${NARROW_AT + 1} подпись GitHub должна быть видна`).not.toBe('none');
