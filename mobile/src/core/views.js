@@ -27,6 +27,7 @@
   const F = isNode ? require('./format.js') : global.Core;
   const D = isNode ? require('./due.js') : global.Core;
   const A = isNode ? require('./agenda.js') : global.Core;
+  const M = isNode ? require('./money.js') : global.Core;
 
   /**
    * Строка задачи в списке.
@@ -186,7 +187,75 @@
     };
   }
 
-  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView };
+  // --- экран проекта --------------------------------------------------------
+
+  /**
+   * Группы списка задач проекта. Сверху закреплённые — как и раньше, они
+   * важнее статуса. Дальше группы по статусам в порядке столбцов доски:
+   * список и доска читаются одинаково. Пустых групп нет. Свёрнутая группа
+   * всё равно отдаёт свои задачи: счётчик и время видны и в свёрнутой.
+   *
+   * Задача, чей статус не нашёлся (удалили, или он чужого проекта), стоит
+   * там, куда её поставил бы defaultStatusId, — не теряется из списка.
+   *
+   * @param {object[]} tasks — задачи проекта, уже прошедшие фильтр
+   * @param {object} ctx — { statuses (все), projectId, collapsed (ключи
+   *   свёрнутых групп), activeTimer, now }
+   */
+  function projectListGroups(tasks, ctx) {
+    const { statuses, projectId, collapsed = [], activeTimer, now } = ctx;
+    const shut = new Set(collapsed);
+    const msOf = (list) => list.reduce((a, t) => a + F.taskElapsedMs(t, activeTimer, now), 0);
+    const group = (key, status, list) => ({ key, status, tasks: list, ms: msOf(list), collapsed: shut.has(key) });
+    const groups = [];
+
+    const pinned = tasks.filter((t) => t.pinnedAt)
+      .sort((a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt));
+    if (pinned.length) groups.push(group('pinned', null, pinned));
+
+    const own = S.orderedStatuses(statuses, projectId);
+    const known = new Set(own.map((st) => st.id));
+    const slotOf = (t) => (known.has(t.statusId) ? t.statusId : S.defaultStatusId(statuses, projectId, !!t.done));
+    const rest = tasks.filter((t) => !t.pinnedAt);
+    for (const st of own) {
+      const list = rest.filter((t) => slotOf(t) === st.id);
+      if (list.length) groups.push(group(st.id, { name: st.name, color: st.color, kind: st.kind }, list));
+    }
+    // У проекта нет ни одного статуса — одна группа без заголовка.
+    if (!own.length && rest.length) groups.push(group('all', null, rest));
+    return groups;
+  }
+
+  /**
+   * Строки вкладки «Версии»: у каждой версии — сколько задач и сколько из
+   * них готово, время и заработанное. Порядок — как у дорожек доски: сначала
+   * то, над чем работают, потом выпущенное. Задачи без версии — отдельной
+   * строкой в конце, если такие есть.
+   *
+   * @param {object} ctx — { defaultRate, activeTimer, now }
+   */
+  function versionRows(tasks, versions, projectId, ctx) {
+    const { defaultRate, activeTimer, now } = ctx;
+    const own = tasks.filter((t) => t.projectId === projectId);
+    const row = (id, name, releasedAt, list) => ({
+      id,
+      name,
+      released: !!releasedAt,
+      releasedAt: releasedAt || null,
+      total: list.length,
+      done: list.filter((t) => t.done).length,
+      ms: list.reduce((a, t) => a + F.taskElapsedMs(t, activeTimer, now), 0),
+      money: list.reduce((a, t) => a + M.earnedOf(t, defaultRate, activeTimer, now), 0),
+    });
+    const rows = V.laneVersions(versions, projectId)
+      .map((v) => row(v.id, v.name, v.releasedAt, own.filter((t) => t.versionId === v.id)));
+    const ids = new Set(rows.map((r) => r.id));
+    const none = own.filter((t) => !t.versionId || !ids.has(t.versionId));
+    if (none.length) rows.push(row(null, null, null, none));
+    return rows;
+  }
+
+  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView, projectListGroups, versionRows };
 
   if (isNode) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);

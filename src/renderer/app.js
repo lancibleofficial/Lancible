@@ -173,15 +173,18 @@ const el = {
   miniCalTitle: $('mini-cal-title'), miniCalTot: $('mini-cal-tot'),
   miniCal: $('mini-cal'), sideToday: $('side-today'), openCalendarBtn: $('open-calendar'),
 
-  backHome: $('back-home'), phDot: $('ph-dot'), phName: $('ph-name'),
-  phDesc: $('ph-desc'), projectMenuBtn: $('project-menu-btn'),
-  boardView: $('board-view'), boardProject: $('board-project'), boardProjectName: $('board-project-name'), boardCols: $('board-cols'),
+  phDot: $('ph-dot'), phName: $('ph-name'), projectMenuBtn: $('project-menu-btn'),
+  projTabs: [...document.querySelectorAll('#proj-tabs button')], projList: $('proj-list'),
+  projBoard: $('proj-board'), projVersions: $('proj-versions'), ptabVerCount: $('ptab-ver-count'),
+  pverList: $('pver-list'), pverEmpty: $('pver-empty'), toggleListBtn: $('toggle-list-btn'),
+  navProjects: $('nav-projects'), navNewProject: $('nav-new-project'),
+  boardCols: $('board-cols'),
   boardStatuses: $('board-statuses'), stdlgBackdrop: $('stdlg-backdrop'), stList: $('st-list'), stAdd: $('st-add'), stdlgClose: $('stdlg-close'),
   verList: $('ver-list'), verAdd: $('ver-add'),
-  boardSum: $('board-sum'), boardEmpty: $('board-empty'),
+  boardEmpty: $('board-empty'),
 
   taskList: $('task-list'), sidebarEmpty: $('sidebar-empty'), newTaskBtn: $('new-task-btn'),
-  defaultRate: $('default-rate'), currency: $('currency'), projectEarned: $('project-earned'),
+  projectEarned: $('project-earned'),
 
   tfStatus: [...document.querySelectorAll('.tf-status button')],
 
@@ -1271,21 +1274,27 @@ window.addEventListener('beforeunload', () => { if (savePending) window.api.save
 // ---------------------------------------------------------------------------
 
 function render() {
+  // Отдельного вида «Доска» с 6 октября 2026 нет: доска — вкладка проекта.
+  // Сохранённое когда-то «board» открывается как проект на этой вкладке.
+  if (state.ui.view === 'board') {
+    const pid = boardProjectId();
+    state.ui.view = pid ? 'project' : 'home';
+    if (pid) { state.ui.projectId = pid; state.ui.projectTab = 'board'; }
+  }
   if (state.ui.view === 'project' && !getProject(state.ui.projectId)) state.ui.view = 'home';
   const v = state.ui.view;
 
   document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
-  document.body.classList.toggle('has-selected-task', v === 'project' && !!selectedId);
+  document.body.classList.toggle('has-selected-task', v === 'project' && projectTab() === 'list' && !!selectedId);
   renderStats();
   renderNotifBadge();
   el.topbar.hidden = v !== 'home';
 
-  el.navItems.forEach((tab) => {
-    const active = tab.dataset.view === v || (tab.dataset.view === 'home' && v === 'project');
-    tab.classList.toggle('active', active);
-  });
+  // Открытый проект подсвечен в меню сам — «Обзор» при этом не горит.
+  el.navItems.forEach((tab) => tab.classList.toggle('active', tab.dataset.view === v));
+  renderNavProjects();
 
-  const views = { home: el.homeView, project: el.projectView, board: el.boardView, calendar: el.calendarView, stats: el.statsView, settings: el.settingsView };
+  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView, stats: el.statsView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1293,8 +1302,7 @@ function render() {
   }
 
   if (v === 'home') renderHome();
-  else if (v === 'project') { renderProjectHeader(); renderSidebar(); renderDetail(); renderFooter(); }
-  else if (v === 'board') renderBoardPage();
+  else if (v === 'project') renderProjectPage();
   else if (v === 'calendar') renderAgendaPage();
   // В «Статистике» остался прежний календарь: он про деньги и итоги,
   // а страница «Календарь» — про расписание.
@@ -2108,6 +2116,7 @@ function renderPeriodSummary() {
  *  проекта. Выбор живёт в ui, а не в данных: это способ смотреть, а не
  *  свойство проекта, и он не должен уезжать в синхронизацию. */
 function boardProjectId() {
+  if (state.ui.view === 'project' && getProject(state.ui.projectId)) return state.ui.projectId;
   if (state.ui.boardProjectId && getProject(state.ui.boardProjectId)) return state.ui.boardProjectId;
   return state.projects[0] ? state.projects[0].id : null;
 }
@@ -2115,18 +2124,9 @@ function boardProjectId() {
 function renderBoardPage() {
   const pid = boardProjectId();
   state.ui.boardProjectId = pid;
-  const has = !!pid;
-  el.boardEmpty.hidden = has;
-  el.boardCols.hidden = !has;
-  el.boardProject.hidden = !has;
-  el.boardSum.hidden = !has;
-  if (!has) { el.boardCols.innerHTML = ''; return; }
-
-  const cur = getProject(pid);
-  el.boardProjectName.textContent = cur ? cur.name : '';
-  const tasks = tasksOf(pid);
-  const done = tasks.filter((t2) => t2.done).length;
-  el.boardSum.textContent = `${done}/${tasks.length}`;
+  el.boardEmpty.hidden = !!pid;
+  el.boardCols.hidden = !pid;
+  if (!pid) { el.boardCols.innerHTML = ''; return; }
   renderBoard();
 }
 
@@ -2762,74 +2762,165 @@ function boardCard(task) {
   return card;
 }
 
+const projectTab = () => (['board', 'versions'].includes(state.ui.projectTab) ? state.ui.projectTab : 'list');
+
+/** Экран проекта: шапка и одна из трёх вкладок. */
+function renderProjectPage() {
+  renderProjectHeader();
+  const tab = projectTab();
+  el.projTabs.forEach((b) => b.classList.toggle('on', b.dataset.ptab === tab));
+  el.projList.hidden = tab !== 'list';
+  el.projBoard.hidden = tab !== 'board';
+  el.projVersions.hidden = tab !== 'versions';
+  if (tab === 'list') {
+    const hidden = !!state.ui.listHidden;
+    el.projList.classList.toggle('list-hidden', hidden);
+    el.toggleListBtn.classList.toggle('on', hidden);
+    el.toggleListBtn.title = t(hidden ? 'task.show_list' : 'task.hide_list');
+    renderSidebar();
+    renderDetail();
+  } else if (tab === 'board') {
+    renderBoardPage();
+  } else {
+    renderVersionsTab();
+  }
+}
+
+/** Шапка одной строкой: название, вкладки, итоги. Описание — подсказкой на
+ *  названии: в строке ему места нет, а терять его не хочется. */
 function renderProjectHeader() {
   const p = getProject(state.ui.projectId);
   if (!p) return;
   el.phName.textContent = p.name;
+  el.phName.title = p.description || '';
   el.phDot.style.background = p.color || PALETTE[0];
-  el.phDesc.textContent = p.description || '';
-  el.phDesc.hidden = !p.description;
-  // Теги проекта — под названием. Здесь они только показываются: менять их
+  // Теги проекта — рядом с названием. Здесь они только показываются: менять их
   // логично там же, где название и цвет, то есть в окне проекта.
   renderTagChips(el.phTags, p.tagIds);
   el.phTags.hidden = !tagsOf(p.tagIds).length;
+  el.ptabVerCount.textContent = versionsOf(p.id).length || '';
+
+  const tasks = visibleTasks();
+  el.projectEarned.textContent = '';
+  if (!tasks.length) return;
+  const done = tasks.filter((t2) => t2.done).length;
+  el.projectEarned.append(
+    elt('b', null, fmtDur(projectMs(p.id))),
+    elt('b', 'kpi-money', fmtMoney(projectMoney(p.id))),
+    elt('span', null, t('project.done_of', { done, total: tasks.length })),
+  );
 }
 
-function renderFooter() {
-  if (document.activeElement !== el.defaultRate) {
-    el.defaultRate.value = state.settings.hourlyRate ? String(state.settings.hourlyRate) : '';
+/** Проекты в левом меню — в том же порядке, что на «Обзоре»: закреплённые
+ *  сверху. Рядом — сколько задач ещё не готово. */
+function renderNavProjects() {
+  const pinned = state.projects.filter((p) => p.pinnedAt).sort(byPinned);
+  const rest = state.projects.filter((p) => !p.pinnedAt);
+  el.navProjects.textContent = '';
+  for (const p of [...pinned, ...rest]) {
+    const b = elt('button', 'nav-item nav-project');
+    b.type = 'button';
+    b.title = p.name;
+    b.dataset.projectId = p.id;
+    b.classList.toggle('active', state.ui.view === 'project' && state.ui.projectId === p.id);
+    const dot = elt('span', 'nav-pdot');
+    dot.style.background = p.color || PALETTE[0];
+    const open = tasksOf(p.id).filter((t2) => !t2.done).length;
+    b.append(dot, elt('span', 'nav-label nav-pname', p.name), elt('span', 'nav-pcount', open ? String(open) : ''));
+    b.addEventListener('click', () => openProject(p.id));
+    el.navProjects.appendChild(b);
   }
-  renderCurrency();
-  const tasks = visibleTasks();
-  el.projectEarned.textContent = tasks.length
-    ? t('project.summary', { time: fmtDur(projectMs(state.ui.projectId)), money: fmtMoney(projectMoney(state.ui.projectId)) })
-    : '';
 }
+
+/** Вкладка «Версии»: по каждой — готовые из всех, время и деньги. Что
+ *  сколько стоит, считает ядро (versionRows); щелчок по версии открывает
+ *  список, отфильтрованный по ней. */
+function renderVersionsTab() {
+  const pid = state.ui.projectId;
+  const rows = Core.versionRows(state.tasks, state.versions, pid, {
+    defaultRate: defaultRate(), activeTimer: state.activeTimer, now: Date.now(),
+  });
+  el.pverList.textContent = '';
+  el.pverEmpty.hidden = versionsOf(pid).length > 0;
+  for (const r of rows) {
+    const li = elt('li', 'pver-row' + (r.released ? ' released' : ''));
+    const head = elt('div', 'pver-head');
+    head.append(
+      elt('span', 'pver-name', r.id ? (r.name || t('task.no_name')) : t('version.none')),
+      elt('span', 'pver-state', r.id ? (r.released ? t('version.released_on', { date: fmtDateShort(r.releasedAt) }) : t('version.in_progress')) : ''),
+    );
+    const bar = elt('div', 'pver-bar');
+    const fill = elt('span', 'pver-fill');
+    fill.style.width = `${r.total ? Math.round((r.done / r.total) * 100) : 0}%`;
+    bar.appendChild(fill);
+    const meta = elt('div', 'pver-meta');
+    meta.append(
+      elt('span', null, t('project.done_of', { done: r.done, total: r.total })),
+      elt('span', null, fmtDur(r.ms)),
+      elt('b', 'kpi-money', fmtMoney(r.money)),
+    );
+    li.append(head, bar, meta);
+    li.addEventListener('click', () => {
+      taskFilter = { status: 'all', versionId: r.id || 'none' };
+      state.ui.projectTab = 'list';
+      render();
+      scheduleSave();
+    });
+    el.pverList.appendChild(li);
+  }
+}
+
 
 function renderSidebar() {
   el.tfStatus.forEach((b) => b.classList.toggle('on', b.dataset.status === taskFilter.status));
   renderTaskVersionFilter();
   el.taskList.innerHTML = '';
 
-  if (isFilterActive()) {
-    // Фильтр активен: плоский список по фильтру, группы игнорируются
-    // (но пин остаётся виден и работает у каждой задачи).
-    const list = filteredProjectTasks();
-    el.sidebarEmpty.hidden = list.length > 0;
-    if (list.length === 0 && visibleTasks().length > 0) {
-      el.sidebarEmpty.hidden = false;
-      el.sidebarEmpty.innerHTML = escapeHtml(t('sidebar.no_match'));
-    } else {
-      el.sidebarEmpty.innerHTML = t('sidebar.empty_default');
-    }
-    list.forEach((t2, i) => el.taskList.appendChild(taskItem(t2, i)));
-    return;
-  }
+  // Группы — по статусам в порядке столбцов доски, закреплённые сверху;
+  // решает ядро (projectListGroups). Фильтр сужает задачи, группы остаются.
+  const list = isFilterActive() ? filteredProjectTasks() : visibleTasks();
+  el.sidebarEmpty.innerHTML = list.length === 0 && visibleTasks().length > 0
+    ? escapeHtml(t('sidebar.no_match'))
+    : t('sidebar.empty_default');
+  el.sidebarEmpty.hidden = list.length > 0;
 
-  el.sidebarEmpty.innerHTML = t('sidebar.empty_default');
-  const { pinned, rest, done } = sortedProjectTasks();
-  el.sidebarEmpty.hidden = pinned.length + rest.length + done.length > 0;
-  const multi = [pinned.length, rest.length, done.length].filter((n) => n > 0).length > 1;
-
+  const groups = Core.projectListGroups(list, {
+    statuses: state.statuses,
+    projectId: state.ui.projectId,
+    collapsed: state.ui.collapsedGroups || [],
+    activeTimer: state.activeTimer,
+    now: Date.now(),
+  });
   let i = 0;
-  if (pinned.length) {
-    if (multi) el.taskList.appendChild(taskSep(t('sep.pinned')));
-    pinned.forEach((t2) => el.taskList.appendChild(taskItem(t2, i++)));
-  }
-  if (rest.length) {
-    if (multi) el.taskList.appendChild(taskSep(t('sep.rest')));
-    rest.forEach((t2) => el.taskList.appendChild(taskItem(t2, i++)));
-  }
-  if (done.length) {
-    if (multi) el.taskList.appendChild(taskSep(t('sep.done')));
-    done.forEach((t2) => el.taskList.appendChild(taskItem(t2, i++)));
+  for (const g of groups) {
+    if (g.key !== 'all') el.taskList.appendChild(taskGroupHead(g));
+    if (!g.collapsed) g.tasks.forEach((t2) => el.taskList.appendChild(taskItem(t2, i++)));
   }
 }
 
-function taskSep(text) {
-  const li = document.createElement('li');
-  li.className = 'task-sep';
-  li.textContent = text;
+/** Заголовок группы: цвет и имя статуса, сколько задач и сколько времени.
+ *  Щелчок сворачивает группу; свёрнутые запоминаются. */
+function taskGroupHead(g) {
+  const li = elt('li', 'task-group' + (g.collapsed ? ' collapsed' : ''));
+  li.dataset.group = g.key;
+  const chev = elt('span', 'tg-chev');
+  chev.innerHTML = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>';
+  const dot = elt('span', 'tg-dot');
+  if (g.status) dot.style.background = g.status.color;
+  else dot.hidden = true;
+  li.append(
+    chev, dot,
+    elt('span', 'tg-name', g.status ? g.status.name : t('sep.pinned')),
+    elt('span', 'tg-count', String(g.tasks.length)),
+    elt('span', 'tg-time', fmtShort(g.ms)),
+  );
+  li.addEventListener('click', () => {
+    const shut = new Set(state.ui.collapsedGroups || []);
+    if (shut.has(g.key)) shut.delete(g.key); else shut.add(g.key);
+    state.ui.collapsedGroups = [...shut];
+    renderSidebar();
+    scheduleSave();
+  });
   return li;
 }
 
@@ -2890,27 +2981,24 @@ function taskItem(task, i) {
   pin.title = v.pinTitle;
   pin.addEventListener('click', (e) => { e.stopPropagation(); togglePinTask(task.id); });
 
-  const top = elt('div', 'ti-top');
-  top.append(cb, name, pin);
-
-  const bottom = elt('div', 'ti-bottom');
-  if (v.status) {
-    const chip = elt('span', 'task-status');
-    chip.style.setProperty('--sc', v.status.color);
-    chip.innerHTML = `<span class="st-swatch"></span>${escapeHtml(v.status.name)}`;
-    bottom.appendChild(chip);
-  }
-  if (v.version) bottom.appendChild(elt('span', 'task-version' + (v.version.released ? ' released' : ''), v.version.name));
+  // Одна строка: статус уже сказан заголовком группы, поэтому его здесь нет.
+  // Срок — точкой с подсказкой: в узком списке текст срока съедал название.
+  const meta = elt('span', 'ti-meta');
+  if (v.version) meta.appendChild(elt('span', 'task-version' + (v.version.released ? ' released' : ''), v.version.name));
   if (v.repeat) {
     const rep = elt('span', 'task-repeat-mark', '↻');
     rep.title = v.repeat.title;
-    bottom.appendChild(rep);
+    meta.appendChild(rep);
   }
-  if (v.due) bottom.appendChild(elt('span', `task-due ${v.due.state}`, v.due.text));
-  if (v.running) bottom.appendChild(elt('span', 'running-dot', '●'));
-  bottom.appendChild(elt('span', 'task-time', v.time));
+  if (v.due) {
+    const due = elt('span', `task-due ${v.due.state}`, v.due.text);
+    due.title = v.due.text;
+    meta.appendChild(due);
+  }
+  if (v.running) meta.appendChild(elt('span', 'running-dot', '●'));
+  meta.appendChild(elt('span', 'task-time', v.time));
 
-  li.append(top, bottom);
+  li.append(cb, name, pin, meta);
   li.addEventListener('click', () => selectTask(task.id));
   return li;
 }
@@ -3252,13 +3340,6 @@ function openProject(id) {
   scheduleSave();
 }
 
-function backHome() {
-  flushEditor();
-  closeMenu();
-  state.ui.view = 'home';
-  render();
-  scheduleSave();
-}
 
 function togglePinProject(id) {
   const p = getProject(id);
@@ -3354,6 +3435,8 @@ function openProjectMenu(p, anchor) {
   const items = [];
   if (!inProject) items.push({ label: t('project.open'), onClick: () => openProject(p.id) });
   items.push({ label: t('project.edit'), onClick: () => openProjectDialog(p) });
+  // Статусы и версии — и в меню: на телефонной ширине шестерёнки в шапке нет.
+  if (inProject) items.push({ label: t('board.statuses'), onClick: openStatusDialog });
   // Закрепление здесь больше не дублируется — для него есть своя кнопка на
   // карточке, слева от этого меню.
   items.push({ sep: true });
@@ -3945,7 +4028,7 @@ setInterval(() => {
     if (task && task.id === selectedId) { renderTimer(task); renderMoney(task); }
     const li = el.taskList.querySelector(`.task-item[data-id="${state.activeTimer.taskId}"] .task-time`);
     if (li && task) li.textContent = fmtShort(taskElapsedMs(task));
-    renderFooter();
+    renderProjectHeader();
   }
   renderStats();
 }, 250);
@@ -4000,7 +4083,6 @@ el.searchInput.addEventListener('keydown', (e) => {
 });
 el.openCalendarBtn.addEventListener('click', () => openView('calendar'));
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
-el.backHome.addEventListener('click', backHome);
 el.boardStatuses.addEventListener('click', openStatusDialog);
 el.stAdd.addEventListener('click', addStatus);
 el.stdlgClose.addEventListener('click', closeStatusDialog);
@@ -4038,12 +4120,18 @@ el.pdlgTagsAdd.addEventListener('click', () => {
   });
 });
 
-el.boardProject.addEventListener('click', () => {
-  openMenu(el.boardProject, state.projects.map((p) => ({
-    label: p.name,
-    selected: p.id === boardProjectId(),
-    onClick: () => { state.ui.boardProjectId = p.id; renderBoardPage(); },
-  })));
+el.projTabs.forEach((b) => b.addEventListener('click', () => {
+  flushEditor();
+  closeMenu();
+  state.ui.projectTab = b.dataset.ptab;
+  render();
+  scheduleSave();
+}));
+el.navNewProject.addEventListener('click', () => openProjectDialog(null));
+el.toggleListBtn.addEventListener('click', () => {
+  state.ui.listHidden = !state.ui.listHidden;
+  render();
+  scheduleSave();
 });
 
 el.projectMenuBtn.addEventListener('click', (e) => {
@@ -4204,18 +4292,9 @@ el.taskRate.addEventListener('input', () => {
   task.rate = v === '' ? null : parseNum(v);
   task.updatedAt = new Date().toISOString();
   renderMoney(task);
-  renderFooter();
+  renderProjectHeader();
   scheduleSave();
 });
-el.defaultRate.addEventListener('input', () => {
-  state.settings.hourlyRate = parseNum(el.defaultRate.value);
-  const task = getTask(selectedId);
-  if (task) renderMoney(task);
-  renderFooter();
-  renderStats();
-  scheduleSave();
-});
-el.currency.addEventListener('click', () => openCurrencyMenu(el.currency));
 
 el.title.addEventListener('input', () => {
   const task = getTask(selectedId);
@@ -4284,7 +4363,7 @@ function openCurrencyMenu(anchor) {
 /** Обе кнопки показывают одно и то же — валюта в приложении одна. */
 function renderCurrency() {
   const label = currencyLabel(state.settings.currency);
-  for (const btn of [el.currency, el.settingsCurrency]) {
+  for (const btn of [el.settingsCurrency]) {
     btn.textContent = label;
     btn.title = t('currency.title');
   }

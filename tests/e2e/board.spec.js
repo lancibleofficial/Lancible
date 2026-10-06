@@ -141,18 +141,16 @@ test('карточка доски поднята над столбцом, а н�
   }
 });
 
-test('шапка доски: название без подложки, стрелка и шестерёнка', async ({ page }) => {
+test('доска — вкладка проекта: проект назван в шапке, шестерёнка рядом', async ({ page }) => {
+  // С 6 октября 2026 у доски нет своей страницы с выбором проекта: она
+  // вкладка проекта, а проекты переключаются в левом меню.
   await seed(page);
   await openBoard(page);
 
-  const btn = page.locator('#board-project');
-  await expect(btn.locator('#board-project-name')).toHaveText('Сайт клиента');
-  await expect(btn.locator('.board-chev')).toBeVisible();
-  // Подложка убрана: название читается как заголовок, а не как поле ввода.
-  await expect(btn).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-  await expect(btn).toHaveCSS('border-style', 'none');
-  // Кнопка одна на название и стрелку, поэтому зона клика у них общая.
-  await expect(page.locator('#board-project-name')).toHaveCount(1);
+  await expect(page.locator('#project-view')).toBeVisible();
+  await expect(page.locator('#proj-tabs button.on')).toHaveText('Доска');
+  await expect(page.locator('#ph-name')).toHaveText('Сайт клиента');
+  await expect(page.locator('.nav-item[data-view="board"]')).toHaveCount(0);
 
   const gear = page.locator('#board-statuses');
   await expect(gear).toBeVisible();
@@ -160,12 +158,14 @@ test('шапка доски: название без подложки, стре�
   await expect(gear).not.toHaveText(/Статус/);
 });
 
-test('клик по названию проекта открывает выбор проекта', async ({ page }) => {
+test('сохранённый когда-то вид «Доска» открывается как проект на вкладке доски', async ({ page }) => {
   await seed(page);
-  await openBoard(page);
-  await page.locator('#board-project').click();
-  await expect(page.locator('#ctx-menu .ctx-item')).toHaveCount(1);
-  await expect(page.locator('#ctx-menu .ctx-item').first()).toHaveText('Сайт клиента');
+  const got = await page.evaluate(() => {
+    state.ui.view = 'board';
+    render();
+    return { view: state.ui.view, tab: state.ui.projectTab, project: state.ui.projectId === state.projects[0].id };
+  });
+  expect(got).toEqual({ view: 'project', tab: 'board', project: true });
 });
 
 test('закреплённая задача не заливается цветом — её отмечает только пин', async ({ page }) => {

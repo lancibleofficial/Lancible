@@ -244,11 +244,13 @@ test('версия задачи видна в списке и в её настр
   await expect(page.locator('#task-version-row')).toBeVisible();
   await expect(page.locator('#task-version')).toHaveText('v1.3');
 
-  const badges = page.locator('#task-list .task-item');
-  await expect(badges.nth(0).locator('.task-version')).toHaveText('v1.3');
-  await expect(badges.nth(3).locator('.task-version')).toHaveText('v1.1');
-  await expect(badges.nth(3).locator('.task-version')).toHaveClass(/released/);
-  await expect(badges.nth(4).locator('.task-version')).toHaveCount(0);
+  // Строки ищем по названию: с 6 октября 2026 список сгруппирован по
+  // статусам, и порядок строк — это порядок столбцов доски.
+  const row = (title) => page.locator('#task-list .task-item', { hasText: title });
+  await expect(row('Вёрстка карточек').locator('.task-version')).toHaveText('v1.3');
+  await expect(row('Старый импорт').locator('.task-version')).toHaveText('v1.1');
+  await expect(row('Старый импорт').locator('.task-version')).toHaveClass(/released/);
+  await expect(row('Без версии пока').locator('.task-version')).toHaveCount(0);
 });
 
 test('без версий в проекте строка версии в задаче не показывается', async ({ page }) => {

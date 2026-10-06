@@ -36,7 +36,7 @@ test('обычный путь: задача создаётся со статус
   await createProject(page, 'Сайт клиента');
   await page.locator('#new-task-btn').click();
 
-  await expect(page.locator('#task-list li')).toHaveCount(1);
+  await expect(page.locator('#task-list .task-item')).toHaveCount(1);
   await expect(page.locator('#task-title')).toBeFocused();
 
   const task = await page.evaluate(() => {

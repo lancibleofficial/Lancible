@@ -1,11 +1,6 @@
 /* Адаптивные брейкпоинты для веб-версии — накладываются поверх styles.css,
    сам styles.css не трогаем (нулевой риск для десктоп-приложения). */
 
-/* Текстовая подпись у кнопки "+Новая задача" — только у веб-разметки
-   (web/index.html), на десктопе такого span вообще нет. Скрыта по
-   умолчанию, показывается только на телефонной ширине ниже. */
-.new-task-label { display: none; }
-
 /* =========================================================================
    ≤860px — "узкий/планшет"
    ========================================================================= */
@@ -80,8 +75,12 @@
   #navrail:not([data-user-expanded]) {
     width: var(--nav-w-collapsed);
   }
-  #navrail:not([data-user-expanded]) .nav-label {
+  #navrail:not([data-user-expanded]) .nav-label,
+  #navrail:not([data-user-expanded]) .nav-pcount {
     opacity: 0;
+  }
+  #navrail:not([data-user-expanded]) .nav-sec-add {
+    display: none;
   }
   /* Сдвигается только основная область — шапка идёт во всю ширину окна и не
      зависит от того, свёрнут рейл или нет. Раньше .tb-rest уезжал вместе с
@@ -206,7 +205,7 @@
     transition: transform 0.15s var(--ease);
   }
   #mobile-tabbar .nav-item.active {
-    color: var(--accent);
+    color: var(--accent-ink);
     background: none;
   }
   #mobile-tabbar .nav-item.active .icon {
@@ -327,9 +326,6 @@
   #topbar {
     padding: 12px 0 10px;
   }
-  .sidebar-footer {
-    padding: 10px 12px 12px;
-  }
 
   /* --- 8/10. Иконки и табы крупнее везде --- */
   .icon {
@@ -354,30 +350,45 @@
     flex: 1;
   }
 
-  /* --- 9. "Создать задачу" — крупная кнопка с текстом --- */
-  #new-task-btn {
-    width: auto;
+  /* --- 9. Шапка проекта: в строку не помещается — переносится. Вкладки
+     встают отдельной строкой во всю ширину, итоги прячутся (они есть на
+     «Обзоре»), кнопка «скрыть список» не нужна: список и задача и так
+     показываются по одному. --- */
+  .proj-head {
+    flex-wrap: wrap;
     height: auto;
-    padding: 11px 18px;
-    border-radius: 12px;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 400;
-    font-family: inherit;
+    padding: 8px 12px 0;
+    row-gap: 2px;
   }
-  #new-task-btn .icon {
-    width: 16px;
-    height: 16px;
+  .ph-name {
+    max-width: none;
+    flex: 1;
   }
-  #new-task-btn .new-task-label {
-    display: inline;
+  /* Распорка делила бы свободное место с названием пополам. */
+  .proj-head > .spacer {
+    display: none;
+  }
+  .proj-tabs {
+    order: 3;
+    width: 100%;
+    height: 42px;
+  }
+  .proj-tabs button {
+    flex: 1;
+    justify-content: center;
+  }
+  .proj-kpis,
+  #toggle-list-btn,
+  #board-statuses,
+  #export-project-btn {
+    display: none;
   }
 
   /* Проект: список задач и деталь — по одному пейну за раз (master-detail).
      flex, а не block — иначе #sidebar/#detail теряют высотное растяжение,
      которое на десктопе давал grid-template-columns, и редактор перестаёт
      дотягиваться до низа страницы. */
-  #project-view {
+  .proj-list {
     display: flex;
   }
   #sidebar,

@@ -184,7 +184,6 @@
 .home-head h1,
 #task-title,
 #mini-cal-title,
-.sidebar-header h1,
 .history-head h2,
 .modal-title,
 .ph-name,
@@ -422,13 +421,13 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
    настройках и в повторении. Новое поле берёт класс .field или .field-sm.
    Поле ссылки в редакторе — виджет Quill со своей высотой; у него наши только
    цвета (раздел «Редактор»). */
-.field, .field-sm, #modal-input, #modal-input2, .modal-lg input[type='text'], .modal-lg textarea, #sdlg-backdrop input, #auth-backdrop input, .rate-row input, .settings-row-input input, .rpdlg input.rp-num[type='text'] {
+.field, .field-sm, #modal-input, #modal-input2, .modal-lg input[type='text'], .modal-lg textarea, #sdlg-backdrop input, #auth-backdrop input, .settings-row-input input, .rpdlg input.rp-num[type='text'] {
   background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
   font-family: inherit; outline: none; transition: border-color 0.12s var(--ease);
 }
 .field, #modal-input, #modal-input2, .modal-lg input[type='text'], .modal-lg textarea, #sdlg-backdrop input, #auth-backdrop input { padding: 8px 10px; font-size: 14px; }
-.field-sm, .rate-row input, .settings-row-input input, .rpdlg input.rp-num[type='text'] { padding: 5px 8px; font-size: 13px; }
-.field:focus, .field-sm:focus, #modal-input:focus, #modal-input2:focus, .modal-lg input:focus, .modal-lg textarea:focus, #sdlg-backdrop input:focus, #auth-backdrop input:focus, .rate-row input:focus, .settings-row-input input:focus, .rpdlg input.rp-num[type='text']:focus { border-color: var(--accent); }
+.field-sm, .settings-row-input input, .rpdlg input.rp-num[type='text'] { padding: 5px 8px; font-size: 13px; }
+.field:focus, .field-sm:focus, #modal-input:focus, #modal-input2:focus, .modal-lg input:focus, .modal-lg textarea:focus, #sdlg-backdrop input:focus, #auth-backdrop input:focus, .settings-row-input input:focus, .rpdlg input.rp-num[type='text']:focus { border-color: var(--accent); }
 
 /* ---------- Меню / модалки ---------- */
 
@@ -921,6 +920,29 @@ body.nav-collapsed .nav-item .nav-label { opacity: 0; }
 }
 
 .nav-items { display: flex; flex-direction: column; gap: 3px; }
+
+/* Проекты в меню. Открыть проект — один щелчок с любого экрана, а отдельный
+   пункт «Доска» не нужен: доска стала вкладкой проекта. В свёрнутом меню
+   остаются цветные квадраты проектов. */
+.nav-sec {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 28px; padding: 12px 6px 2px 10px;
+  font-size: 12px; font-weight: 600; color: var(--text-faint); white-space: nowrap;
+}
+body.nav-collapsed .nav-sec .nav-label { opacity: 0; }
+.nav-sec-add {
+  flex: none; display: grid; place-items: center; width: 24px; height: 24px;
+  border: none; border-radius: 6px; background: none; color: var(--icon); cursor: pointer;
+}
+.nav-sec-add .icon { width: 12px; height: 12px; }
+.nav-sec-add:hover { background: var(--panel-2); color: var(--text); }
+body.nav-collapsed .nav-sec-add { display: none; }
+.nav-projects { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto; }
+.nav-project { padding-top: 7px; padding-bottom: 7px; }
+.nav-pdot { flex: none; width: 10px; height: 10px; margin: 0 3px; border-radius: 3px; }
+.nav-pname { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.nav-pcount { margin-left: auto; font-size: 12px; font-weight: var(--fw-text); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+body.nav-collapsed .nav-pcount { opacity: 0; }
 .nav-spacer { flex: 1; }
 
 .theme-tabs { align-items: center; margin: 2px 0; }
@@ -991,7 +1013,8 @@ body.nav-collapsed #main { margin-left: var(--nav-w-collapsed); }
 /* .view только растягивается по высоте; этим двум нужен свой скролл,
    иначе длинный список просто обрезается снизу. */
 #settings-view, #stats-view { overflow-y: auto; }
-#project-view { display: grid; grid-template-columns: 270px 1fr; }
+/* Экран проекта: шапка одной строкой, под ней одна из трёх вкладок. */
+#project-view { display: flex; flex-direction: column; overflow: hidden; }
 #project-view[hidden] { display: none !important; }
 
 /* Обзор: центральная колонка (контент + прикреплённые снизу "Недавние задачи")
@@ -1227,7 +1250,69 @@ body.platform-web .tb-account {
 .st-running .r-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-running .r-time { font-size: 12px; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
 
-/* ---------- Sidebar проекта ---------- */
+/* ---------- Шапка проекта ----------
+   Одной строкой: название, вкладки «Список / Доска / Версии», итоги и
+   действия. Раньше шапка жила в узкой колонке списка тремя строками и
+   отнимала у задач высоту; описание проекта теперь — подсказкой на
+   названии, общая ставка и валюта — на странице «Настройки». */
+.proj-head {
+  flex: none; display: flex; align-items: center; gap: 6px;
+  height: 52px; padding: 0 14px 0 18px;
+  border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.ph-dot { flex: none; width: 11px; height: 11px; border-radius: 3.5px; background: var(--accent); }
+.ph-name {
+  margin: 0 12px 0 3px; min-width: 0; max-width: 28%;
+  font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.proj-head .ph-tags { flex: none; margin: 0 8px 0 0; }
+.proj-tabs { display: flex; align-self: stretch; gap: 2px; }
+.proj-tabs button {
+  display: flex; align-items: center; gap: 7px; padding: 0 10px;
+  border: none; border-bottom: 2px solid transparent; background: none;
+  color: var(--text-dim); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: color 0.12s var(--ease), border-color 0.12s var(--ease);
+}
+.proj-tabs button .icon { color: inherit; }
+.proj-tabs button:hover { color: var(--text); }
+.proj-tabs button.on { color: var(--text); border-bottom-color: var(--accent); }
+.ptab-count { font-size: 12px; font-weight: var(--fw-text); color: var(--text-faint); }
+.proj-kpis { display: flex; gap: 14px; margin-right: 6px; font-size: 13px; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proj-kpis b { font-weight: 600; color: var(--text); }
+.proj-kpis .kpi-money { color: var(--accent-ink); }
+.proj-new { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; }
+.proj-new .icon { width: 13px; height: 13px; color: inherit; }
+
+/* Вкладка «Список»: узкий список слева, задача — всё остальное. Кнопка в
+   строке названия задачи прячет список, и задача берёт всю ширину. */
+.proj-list { flex: 1; min-height: 0; display: grid; grid-template-columns: 340px 1fr; }
+.proj-list.list-hidden { grid-template-columns: 1fr; }
+.proj-list.list-hidden #sidebar { display: none; }
+#toggle-list-btn.on { color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* Вкладка «Доска» — столбцы во всю ширину под шапкой. */
+.proj-board { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Вкладка «Версии»: по строке на версию — готовые из всех, время, деньги.
+   Щелчок открывает список, отфильтрованный по версии. */
+.proj-versions { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px; }
+.pver-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-width: 760px; }
+.pver-row {
+  padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel);
+  cursor: pointer; transition: border-color 0.12s var(--ease);
+}
+.pver-row:hover { border-color: var(--border-strong); }
+.pver-head { display: flex; align-items: baseline; gap: 10px; }
+.pver-name { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.pver-state { font-size: 12px; color: var(--text-faint); }
+.pver-row.released .pver-state { color: var(--accent-ink); }
+.pver-bar { height: 6px; margin: 10px 0 8px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.pver-fill { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
+.pver-meta { display: flex; gap: 16px; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.pver-meta .kpi-money { margin-left: auto; color: var(--accent-ink); font-weight: 600; }
+.pver-empty { max-width: 560px; font-size: 13px; line-height: 1.5; }
+
+/* ---------- Список задач проекта ---------- */
 
 #sidebar {
   background: var(--panel);
@@ -1236,87 +1321,57 @@ body.platform-web .tb-account {
   flex-direction: column;
   min-height: 0;
 }
-#project-header { padding: 10px 12px; border-bottom: 1px solid var(--border); }
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  border: none;
-  background: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0 0 6px;
-  transition: color 0.12s var(--ease);
-}
-.back-btn .icon { width: 12px; height: 12px; }
-.back-btn:hover { color: var(--accent-ink); }
-.ph-row { display: flex; align-items: center; gap: 7px; }
-.ph-dot { flex: none; width: 9px; height: 9px; border-radius: 3px; background: var(--accent); }
-.ph-name { flex: 1; min-width: 0; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ph-desc { margin-top: 5px; font-size: 12px; line-height: 1.4; max-height: 3.2em; overflow: hidden; }
 
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px 10px;
-}
-.sidebar-header h1 { font-size: 15px; margin: 0; letter-spacing: 0.2px; }
 
-.task-filter { display: flex; align-items: center; gap: 6px; padding: 0 14px 8px; }
+.task-filter { display: flex; align-items: center; gap: 6px; padding: 10px 12px 6px; }
 .tf-status { flex: 1; }
 .tf-status button { flex: 1; }
 
 #task-list { list-style: none; margin: 0; padding: 4px 8px 12px; overflow-y: auto; flex: 1; }
 
-/* Две строки: сверху чекбокс + название + закрепить, снизу дедлайн и
-   потраченное время. В один ряд название делило ширину со всеми метриками
-   и обрезалось уже на втором слове. */
+/* Одна строка: чекбокс, название, справа версия, повтор, срок точкой и
+   время. Статус сказан заголовком группы. Срок — точкой с подсказкой: в
+   узком списке его текст съедал название. Пин виден при наведении и у
+   закреплённой задачи. */
 .task-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 9px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid transparent;
+  display: flex; align-items: center; gap: 9px;
+  height: 36px; padding: 0 8px 0 10px;
+  border-radius: 7px; cursor: pointer; border: 1px solid transparent;
   transition: background 0.12s var(--ease);
   animation: tileIn 0.2s var(--ease) backwards;
 }
-.ti-top { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
-/* Переносится: в строке теперь и статус, и срок, и время — в узкой боковой
-   панели они в одну строку не помещаются, и срок просто выдавливался за край. */
-.ti-bottom {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  row-gap: 4px;
-  padding-left: 23px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-dim);
+.ti-meta { flex: none; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.ti-meta .task-time { min-width: 34px; text-align: right; color: var(--text-faint); }
+.task-item .task-due {
+  width: 7px; height: 7px; padding: 0; border-radius: 50%; overflow: hidden;
+  color: transparent; font-size: 0; background: var(--border-strong);
 }
-.ti-bottom .task-time { margin-left: auto; }
+.task-item .task-due.soon { background: var(--accent); }
+.task-item .task-due.overdue { background: var(--danger); }
 .task-item:hover { background: var(--panel-2); }
-.task-item.selected { background: var(--panel-2); border-color: var(--border); }
+.task-item.selected { background: var(--panel-2); box-shadow: inset 2px 0 0 var(--accent); }
 /* Закрепление показывает только иконка пина справа: заливка целой строки
    красила треть списка в акцентный цвет и читалась как выделение, а не как
    пометка. Выделение остаётся за .selected, и теперь они не спорят. */
 .task-item .task-done { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
-.task-item .task-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.task-item .task-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .task-item.done .task-name { text-decoration: line-through; color: var(--text-dim); }
 .running-dot { color: var(--running); font-size: 10px; animation: pulse 1.4s ease-in-out infinite; }
 
-.task-sep {
-  list-style: none;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  padding: 8px 9px 4px;
+/* Заголовок группы: статус, сколько задач, сколько времени. Щелчок
+   сворачивает группу. */
+.task-group {
+  list-style: none; display: flex; align-items: center; gap: 7px;
+  margin-top: 6px; padding: 6px 8px 4px; border-radius: 6px;
+  font-size: 12.5px; font-weight: 600; color: var(--text-dim); cursor: pointer; user-select: none;
 }
+.task-group:first-child { margin-top: 0; }
+.task-group:hover { color: var(--text); }
+.tg-chev .icon { width: 12px; height: 12px; transition: transform 0.12s var(--ease); }
+.task-group.collapsed .tg-chev .icon { transform: rotate(-90deg); }
+.tg-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.tg-count { font-weight: var(--fw-text); color: var(--text-faint); }
+.tg-time { margin-left: auto; font-weight: var(--fw-text); color: var(--text-faint); font-variant-numeric: tabular-nums; }
 .task-pin {
   border: none;
   background: none;
@@ -1334,21 +1389,6 @@ body.platform-web .tb-account {
 
 #sidebar-empty { padding: 8px 16px 4px; font-size: 13px; line-height: 1.5; }
 
-.sidebar-footer {
-  border-top: 1px solid var(--border);
-  padding: 10px 14px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.sidebar-footer label { font-size: 12px; }
-.rate-row { display: flex; align-items: center; gap: 6px; }
-#default-rate { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
-/* Кнопка выбора валюты — общий .dp-btn, ей нужен только размер по месту:
-   рядом со ставкой в узком подвале боковой панели. */
-#currency { min-width: 0; padding: 5px 8px; font-size: 12px; }
-.rate-row .muted { font-size: 12px; }
-.project-earned { font-size: 12px; font-variant-numeric: tabular-nums; min-height: 1em; }
 
 /* ---------- Деталь задачи ---------- */
 
@@ -2239,44 +2279,6 @@ body.platform-web .tb-account {
 
 /* ---------- Проект: доска ---------- */
 
-/* Доска — самостоятельная страница: у каждого проекта своя, поэтому наверху
-   выбор проекта, а ниже столбцы во всю ширину. */
-#board-view { display: flex; flex-direction: column; overflow: hidden; }
-#board-view[hidden] { display: none !important; }
-.board-head {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px 0;
-}
-/* Название проекта — заголовок, который можно нажать, а не поле ввода.
-   Подложка-пилюля делала его похожей именно на поле и спорила с тем, что это
-   главная надпись на странице. Осталась одна стрелка: она и сообщает, что
-   тут есть выбор. Кнопка одна на название и стрелку, поэтому зона клика у
-   них общая сама собой. */
-.board-project {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: -6px;
-  padding: 3px 6px;
-  border: none;
-  border-radius: 7px;
-  background: none;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  transition: background 0.12s var(--ease);
-}
-.board-project:hover { background: var(--panel-2); }
-.board-chev { width: 12px; height: 12px; flex: none; color: var(--text-dim); transition: color 0.12s var(--ease); }
-.board-project:hover .board-chev { color: var(--text); }
-.board-head-sum { color: var(--text-dim); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-#board-statuses { margin-left: auto; }
 .board-empty { padding: 40px 16px; text-align: center; font-size: 13px; }
 /* Колонки без собственной рамки и подложки: видимую форму держат карточки,
    а колонка — это только заголовок и отступ. Так доска остаётся спокойной

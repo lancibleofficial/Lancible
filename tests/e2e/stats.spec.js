@@ -231,9 +231,12 @@ test('фильтр версии в списке задач отбирает и �
   await expect(page.locator('#task-list .task-item')).toHaveCount(3);
 });
 
-test('выбор версии стоит под названием проекта и выглядит выбором', async ({ page }) => {
-  // В ряду с пилюлями «Все / В работе / Готово» кнопка сжимала их до
-  // переноса текста, а рамка поля ввода без стрелки читалась подписью.
+test('выбор версии стоит в строке фильтра и выглядит выбором', async ({ page }) => {
+  // Раньше кнопка в ряду с пилюлями «Все / В работе / Готово» сжимала их до
+  // переноса текста, и её унесли под название проекта. С 6 октября 2026
+  // название — в шапке, а список стал шире (340 px): версия снова стоит в
+  // строке фильтра справа от пилюль, и места хватает обоим. Рамка поля
+  // ввода без стрелки читалась подписью — её по-прежнему нет.
   await seed(page);
   await page.evaluate(() => { openProject(state.projects[0].id); });
   await expect(page.locator('#tf-version')).toBeVisible();
@@ -246,8 +249,10 @@ test('выбор версии стоит под названием проект�
     };
     const cs = (sel, prop) => getComputedStyle(document.querySelector(sel)).getPropertyValue(prop);
     return {
-      name: r('.ph-row'),
+      pillsBox: r('.tf-status'),
       version: r('#tf-version'),
+      versionLeft: Math.round(document.querySelector('#tf-version').getBoundingClientRect().left),
+      pillsRight: Math.round(document.querySelector('.tf-status').getBoundingClientRect().right),
       filter: r('.task-filter'),
       border: cs('#tf-version', 'border-style'),
       background: cs('#tf-version', 'background-color'),
@@ -257,8 +262,9 @@ test('выбор версии стоит под названием проект�
     };
   });
 
-  expect(m.version.top, 'версия должна быть под названием проекта').toBeGreaterThanOrEqual(m.name.bottom);
-  expect(m.version.bottom, 'и выше пилюль статуса').toBeLessThanOrEqual(m.filter.top);
+  expect(m.versionLeft, 'версия — справа от пилюль статуса').toBeGreaterThanOrEqual(m.pillsRight);
+  expect(m.version.top, 'и в той же строке фильтра').toBeGreaterThanOrEqual(m.filter.top);
+  expect(m.version.bottom).toBeLessThanOrEqual(m.filter.bottom);
   // Ни рамки, ни подложки: это не поле ввода, а подпись, по которой кликают.
   expect(m.border).toBe('none');
   expect(m.background).toBe('rgba(0, 0, 0, 0)');
