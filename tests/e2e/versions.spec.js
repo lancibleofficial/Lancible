@@ -239,7 +239,6 @@ test('версия задачи видна в списке и в её настр
     selectedId = task.id;
     loadEditor(task);
     render();
-    setTaskTab('settings');
   });
 
   await expect(page.locator('#task-version-row')).toBeVisible();
@@ -276,7 +275,6 @@ test('без версий в проекте строка версии в зад�
     selectedId = task.id;
     loadEditor(task);
     render();
-    setTaskTab('settings');
   });
   await expect(page.locator('#task-version-row')).toBeHidden();
 });
@@ -289,14 +287,13 @@ test('выбор версии — свой выпадающий список, б
     selectedId = task.id;
     loadEditor(task);
     render();
-    setTaskTab('settings');
   });
   await page.locator('#task-version').click();
 
   const items = page.locator('#ctx-menu .ctx-item');
   await expect(items.first()).toHaveText('Без версии');
   await expect(items).toHaveCount(6); // «Без версии» + четыре версии + «Настроить версии…»
-  await expect(page.locator('#tab-settings select')).toHaveCount(0);
+  await expect(page.locator('#task-props select')).toHaveCount(0);
 
   await items.nth(4).click(); // v1.4
   await expect(page.locator('#task-version')).toHaveText('v1.4');

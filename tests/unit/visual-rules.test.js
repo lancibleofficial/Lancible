@@ -256,7 +256,10 @@ test('зелёный текстом — через --accent-ink, а не --accen
   // остаётся на --accent.
   const desktop = [];
   for (const r of cssRules(read('src/renderer/styles.css'))) {
-    if (declarations(r.body).color === 'var(--accent)') desktop.push(r.sel);
+    // --accent-hover и --running — тоже заливочные оттенки зелёного; текстом на
+    // белом они читаются не лучше. Точка «таймер идёт» — знак, а не текст.
+    const c = declarations(r.body).color;
+    if (['var(--accent)', 'var(--accent-hover)', 'var(--running)'].includes(c) && r.sel !== '.running-dot') desktop.push(r.sel);
   }
   assert.deepEqual(desktop, [], 'styles.css: color: var(--accent) — возьмите var(--accent-ink)');
 
@@ -270,7 +273,7 @@ test('зелёный текстом — через --accent-ink, а не --accen
   for (const file of walk(base)) {
     if (!file.endsWith('.js')) continue;
     read(path.relative(ROOT, file)).split('\n').forEach((line, i) => {
-      if (/colors\.accent(?![A-Za-z])/.test(line) && !fill.test(line)) {
+      if (/colors\.accent(Hover)?(?![A-Za-z])/.test(line) && !fill.test(line)) {
         mobile.push(`${path.relative(base, file)}:${i + 1}`);
       }
     });

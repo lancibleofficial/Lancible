@@ -187,9 +187,9 @@ const el = {
 
   emptyState: $('empty-state'), detail: $('task-detail'),
   title: $('task-title'), pinTaskBtn: $('pin-task-btn'),
-  taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), tabSettings: $('tab-settings'), tabHistory: $('tab-history'),
+  taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), taskProps: $('task-props'), tabHistory: $('tab-history'),
   // Узел параметров задачи ездит между вкладкой и модалкой с календаря.
-  taskParams: document.querySelector('#tab-settings .task-params'),
+  taskParams: document.querySelector('#task-props .task-params'),
   tmdlgBackdrop: $('tmdlg-backdrop'), tmdlgDot: $('tmdlg-dot'), tmdlgTitle: $('tmdlg-title'),
   tmdlgProj: $('tmdlg-proj'), tmdlgTot: $('tmdlg-tot'), tmdlgEntry: $('tmdlg-entry'),
   tmdlgDate: $('tmdlg-date'), tmdlgStart: $('tmdlg-start'), tmdlgEnd: $('tmdlg-end'),
@@ -3106,6 +3106,9 @@ function renderTimer(task) {
   } else {
     el.timerSub.textContent = t('timer.sub_default');
   }
+  // В полосе подпись нужна, только когда таймер где-то идёт: «общее время
+  // по задаче» рядом с самим временем ничего не добавляло.
+  el.timerSub.hidden = !state.activeTimer;
 }
 
 function renderSessions(task) {
@@ -3159,10 +3162,12 @@ function renderSessions(task) {
 
 let activeTaskTab = 'notes';
 function setTaskTab(tab) {
+  // Вкладки «Настройки» с 6 октября 2026 нет: свойства задачи стоят фишками
+  // под названием и видны всегда. Всё, кроме «Истории», — это «Заметки».
+  if (tab !== 'history') tab = 'notes';
   activeTaskTab = tab;
   el.taskTabs.forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
   el.tabNotes.hidden = tab !== 'notes';
-  el.tabSettings.hidden = tab !== 'settings';
   el.tabHistory.hidden = tab !== 'history';
 }
 
@@ -5283,7 +5288,7 @@ function openAgendaDraft(span) {
 // --- Задача с календаря -----------------------------------------------------
 
 /** Настройки задачи в модалке не написаны заново: сюда на время переезжает
- *  тот же узел .task-params, что живёт во вкладке задачи. Значит совпадение
+ *  тот же узел .task-params, что живёт под названием задачи (#task-props). Значит совпадение
  *  окна и вкладки не нужно поддерживать — оно устроено так по построению, а
  *  все обработчики (статус, теги, ставка, срок, повторение) работают как
  *  были: они берут задачу из selectedId, который мы и подменяем. */
@@ -5318,9 +5323,9 @@ function closeTaskModal(discard) {
   if (el.tmdlgBackdrop.hidden) return;
   const draftId = tmdlg.fresh && discard ? tmdlg.taskId : null;
   el.tmdlgBackdrop.hidden = true;
-  // Узел возвращается во вкладку задачи. Не вернуть — и страница задачи
-  // останется без параметров до перезагрузки.
-  el.tabSettings.appendChild(el.taskParams);
+  // Узел возвращается под название задачи. Не вернуть — и страница задачи
+  // останется без свойств до перезагрузки.
+  el.taskProps.appendChild(el.taskParams);
   tmdlg.taskId = null;
   tmdlg.fresh = false;
   closeDatePicker();
@@ -5588,6 +5593,8 @@ function renderTaskRepeat(task) {
   if (!has) return;
   const rule = Core.normalizeRepeat(task.repeat);
   el.taskRepeat.textContent = rule ? repeatLabel(rule) : t('repeat.none');
+  // Без повторения фишка тихая — как пустой срок.
+  el.taskRepeat.classList.toggle('is-empty', !rule);
   // Класс .on тут не годится: у dp-btn он значит «список открыт».
   // Что повторение включено, видно по самой подписи.
 

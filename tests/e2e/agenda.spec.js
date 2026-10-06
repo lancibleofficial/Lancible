@@ -367,8 +367,8 @@ test('«Отмена» убирает черновик, будто его и н�
   await expect(page.locator('#tmdlg-backdrop')).toBeHidden();
   expect(await page.evaluate(() => state.tasks.length)).toBe(before);
   await expect(page.locator('.ag-ev-name', { hasText: 'Передумал' })).toHaveCount(0);
-  // И узел настроек всё равно вернулся во вкладку задачи.
-  await expect(page.locator('#tab-settings .task-params')).toBeAttached();
+  // И узел свойств всё равно вернулся под название задачи.
+  await expect(page.locator('#task-props .task-params')).toBeAttached();
 });
 
 test('проект выбирается в самом окне и запоминается до следующего раза', async ({ page }) => {

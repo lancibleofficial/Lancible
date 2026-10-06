@@ -96,16 +96,16 @@ test('параметры переезжают в модалку и возвра�
   const ids = await seed(page);
   await clickBlock(page, 'Главная страница');
   await expect(page.locator('#tmdlg-params .task-params')).toBeAttached();
-  expect(await page.locator('#tab-settings .task-params').count()).toBe(0);
+  expect(await page.locator('#task-props .task-params').count()).toBe(0);
 
   await page.locator('#tmdlg-done').click();
   await expect(page.locator('#tmdlg-backdrop')).toBeHidden();
-  await expect(page.locator('#tab-settings .task-params')).toBeAttached();
+  await expect(page.locator('#task-props .task-params')).toBeAttached();
   expect(await page.locator('#tmdlg-params .task-params').count()).toBe(0);
 
   // И страница задачи после этого работает как прежде.
-  await page.evaluate((id) => { openProject(state.projects[0].id); selectTask(id); setTaskTab('settings'); }, ids.withEntry);
-  await expect(page.locator('#tab-settings #task-status')).toBeVisible();
+  await page.evaluate((id) => { openProject(state.projects[0].id); selectTask(id); }, ids.withEntry);
+  await expect(page.locator('#task-props #task-status')).toBeVisible();
 });
 
 test('статус, поменянный в модалке, доходит до задачи', async ({ page }) => {

@@ -114,7 +114,7 @@ const makeStyles = (colors) => StyleSheet.create({
   dueBadge: { backgroundColor: colors.panel2, borderRadius: radius.pill, paddingHorizontal: 7, paddingVertical: 1 },
   dueText: { color: colors.textDim, fontSize: 11 },
   soon: { backgroundColor: colors.accentMuted },
-  soonText: { color: colors.accentHover },
+  soonText: { color: colors.accentInk },
   overdue: { backgroundColor: colors.dangerMuted },
   overdueText: { color: colors.danger },
   later: {},

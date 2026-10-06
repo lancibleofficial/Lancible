@@ -85,9 +85,8 @@ test('тег вешается на задачу через пикер и сни�
     selectedId = task.id;
     loadEditor(task);
     render();
-    setTaskTab('settings');
   });
-  await expect(page.locator('#tab-settings')).toBeVisible();
+  await expect(page.locator('#task-props')).toBeVisible();
 
   await page.locator('#task-tags-add').click();
   await expect(page.locator('.tag-pop')).toBeVisible();
@@ -113,7 +112,6 @@ test('в пикере ищут по имени и оттуда же заводя
     selectedId = state.tasks[0].id;
     loadEditor(state.tasks[0]);
     render();
-    setTaskTab('settings');
   });
 
   await page.locator('#task-tags-add').click();

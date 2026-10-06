@@ -187,7 +187,8 @@ test('закреплённая задача не заливается цвето
   await expect(plain).toBeVisible();
 });
 
-test('параметры задачи выстроены в одну колонку', async ({ page }) => {
+test('свойства задачи — строкой фишек под названием, без вкладки «Настройки»', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await seed(page);
   await page.evaluate(() => {
     const task = state.tasks[0];
@@ -196,21 +197,48 @@ test('параметры задачи выстроены в одну колон�
     selectedId = task.id;
     loadEditor(task);
     render();
-    setTaskTab('settings');
   });
-  await expect(page.locator('#tab-settings')).toBeVisible();
+  // Свойства видны сразу, вкладки две: «Заметки» и «История».
+  await expect(page.locator('#task-props #task-status')).toBeVisible();
+  await expect(page.locator('#task-tabs button')).toHaveText(['Заметки', 'История']);
 
-  // Разнобой в этой панели и был жалобой: поле ставки имело свои размеры,
-  // остальные — свои. Проверяем не «красиво», а измеримое: одна левая
-  // граница у всего управления и одна высота у полей.
+  // Фишки стоят под названием и над полосой таймера, у всех одна высота,
+  // и подложка у заданного свойства есть, а у пустого — нет.
   const m = await page.evaluate(() => {
-    const left = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().left);
-    const height = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().height);
+    const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+    const chips = [...document.querySelectorAll('#task-props .task-params > div')].filter((d) => !d.hidden);
+    const bg = (d) => getComputedStyle(d).backgroundColor;
+    const status = document.querySelector('#task-props .status-bar');
+    const repeat = document.querySelector('#task-props .repeat-bar');
     return {
-      lefts: ['#task-status', '#task-rate', '#due-date-btn', '#money-calc'].map(left),
-      heights: ['#task-status', '#task-rate', '#due-date-btn'].map(height),
+      title: r('#task-title').bottom,
+      chipsTop: Math.min(...chips.map((d) => d.getBoundingClientRect().top)),
+      chipsBottom: Math.max(...chips.map((d) => d.getBoundingClientRect().bottom)),
+      timerTop: r('.timer-bar').top,
+      heights: [...new Set(chips.map((d) => Math.round(d.getBoundingClientRect().height)))],
+      statusBg: bg(status),
+      repeatBg: bg(repeat),
+      labelWidth: r('#task-props .status-bar .due-label').width,
     };
   });
+  expect(m.chipsTop, 'фишки под названием').toBeGreaterThanOrEqual(m.title);
+  expect(m.chipsBottom, 'и над полосой таймера').toBeLessThanOrEqual(m.timerTop);
+  expect(m.heights, `у фишек разная высота: ${m.heights}`).toHaveLength(1);
+  expect(m.statusBg, 'у заданного свойства подложка').not.toBe('rgba(0, 0, 0, 0)');
+  expect(m.repeatBg, 'у пустого — нет').toBe('rgba(0, 0, 0, 0)');
+  expect(m.labelWidth, 'подпись спрятана — говорит иконка').toBeLessThanOrEqual(1);
+});
+
+test('в окне задачи из календаря свойства остаются колонкой с подписями', async ({ page }) => {
+  // Узел .task-params один: его одалживает окно задачи из календаря. Строка
+  // фишек ограничена #task-props, и в окне раскладка прежняя.
+  await seed(page);
+  const m = await page.evaluate(() => {
+    openTaskModal(state.tasks[0], null);
+    const left = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().left);
+    const label = document.querySelector('#tmdlg-params .status-bar .due-label').getBoundingClientRect();
+    return { lefts: ['#task-status', '#task-rate', '#due-date-btn'].map(left), labelWidth: label.width };
+  });
   expect(new Set(m.lefts).size, `левые границы разошлись: ${m.lefts}`).toBe(1);
-  expect(new Set(m.heights).size, `высоты полей разошлись: ${m.heights}`).toBe(1);
+  expect(m.labelWidth, 'подписи видны').toBeGreaterThan(10);
 });

@@ -255,47 +255,12 @@
               <button id="delete-task-btn" class="icon-btn icon-btn-danger" data-i18n-title="task.delete_title" title="Удалить задачу">
                 <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
               </button>
-              <div class="task-tabs segmented" id="task-tabs">
-                <button type="button" data-tab="notes" class="on" data-i18n="tabs.notes">Заметки</button>
-                <button type="button" data-tab="settings" data-i18n="tabs.settings">Настройки</button>
-                <button type="button" data-tab="history" data-i18n="tabs.history">История</button>
-              </div>
             </div>
 
-            <div class="tab-panel" id="tab-notes">
-              <div class="timer-bar">
-                <div class="timer-block">
-                  <div class="timer-line">
-                    <div class="timer-display" id="timer-display">00:00:00</div>
-                    <span class="timer-earned" id="timer-earned" hidden></span>
-                  </div>
-                  <div class="timer-sub" id="timer-sub" data-i18n="timer.sub_default">общее время по задаче</div>
-                </div>
-                <button id="timer-btn" class="timer-btn"><span id="timer-btn-icon">▶</span> <span id="timer-btn-label" data-i18n="timer.start">Старт</span></button>
-              </div>
-
-              <div id="editor-wrap">
-                <div id="editor"></div>
-                <div id="table-tools" hidden>
-                  <button data-tt="rowBelow" data-i18n="table.add_row">+ строка</button>
-                  <button data-tt="colRight" data-i18n="table.add_col">+ столбец</button>
-                  <button data-tt="rowDel" data-i18n="table.del_row">− строка</button>
-                  <button data-tt="colDel" data-i18n="table.del_col">− столбец</button>
-                  <span class="tt-div"></span>
-                  <span class="tt-fill-label" data-i18n="table.fill_label">залить:</span>
-                  <div class="tt-scope">
-                    <button data-scope="cell" class="on" data-i18n="table.scope_cell">ячейку</button>
-                    <button data-scope="row" data-i18n="table.scope_row">строку</button>
-                    <button data-scope="col" data-i18n="table.scope_col">столбец</button>
-                  </div>
-                  <div class="tt-swatches" id="tt-swatches"></div>
-                  <span class="tt-div"></span>
-                  <button data-tt="tableDel" class="tt-danger" data-i18n="table.del_table">удалить таблицу</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="tab-panel" id="tab-settings" hidden>
+            <!-- Свойства задачи — строкой фишек под названием, всегда на виду.
+                 Это тот же узел .task-params, что одалживает окно задачи из
+                 календаря (#tmdlg-params): там он раскладывается колонкой. -->
+            <div class="task-props" id="task-props">
               <div class="task-params">
                 <div class="due-bar status-bar">
                   <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a6.6 6.6 0 100 13.2A6.6 6.6 0 008 1.4zm0 2a4.6 4.6 0 110 9.2 4.6 4.6 0 010-9.2zm0 1.9a2.7 2.7 0 100 5.4 2.7 2.7 0 000-5.4z"/></svg>
@@ -343,6 +308,46 @@
                 <span class="due-label" data-i18n="due.remind_at">Напомнить</span>
                 <button type="button" class="dp-btn" id="remind-date-btn"></button>
                 <button type="button" class="dp-btn" id="remind-time-btn"></button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Полоса: старт, время и заработанное, справа — вкладки. Стоит над
+                 вкладками, чтобы время было видно и в «Истории». -->
+            <div class="timer-bar">
+              <button id="timer-btn" class="timer-btn"><span id="timer-btn-icon">▶</span> <span id="timer-btn-label" data-i18n="timer.start">Старт</span></button>
+              <div class="timer-block">
+                <div class="timer-line">
+                  <div class="timer-display" id="timer-display">00:00:00</div>
+                  <span class="timer-earned" id="timer-earned" hidden></span>
+                </div>
+                <div class="timer-sub" id="timer-sub" data-i18n="timer.sub_default">общее время по задаче</div>
+              </div>
+              <span class="spacer"></span>
+              <div class="task-tabs segmented" id="task-tabs">
+                <button type="button" data-tab="notes" class="on" data-i18n="tabs.notes">Заметки</button>
+                <button type="button" data-tab="history" data-i18n="tabs.history">История</button>
+              </div>
+            </div>
+
+            <div class="tab-panel" id="tab-notes">
+              <div id="editor-wrap">
+                <div id="editor"></div>
+                <div id="table-tools" hidden>
+                  <button data-tt="rowBelow" data-i18n="table.add_row">+ строка</button>
+                  <button data-tt="colRight" data-i18n="table.add_col">+ столбец</button>
+                  <button data-tt="rowDel" data-i18n="table.del_row">− строка</button>
+                  <button data-tt="colDel" data-i18n="table.del_col">− столбец</button>
+                  <span class="tt-div"></span>
+                  <span class="tt-fill-label" data-i18n="table.fill_label">залить:</span>
+                  <div class="tt-scope">
+                    <button data-scope="cell" class="on" data-i18n="table.scope_cell">ячейку</button>
+                    <button data-scope="row" data-i18n="table.scope_row">строку</button>
+                    <button data-scope="col" data-i18n="table.scope_col">столбец</button>
+                  </div>
+                  <div class="tt-swatches" id="tt-swatches"></div>
+                  <span class="tt-div"></span>
+                  <button data-tt="tableDel" class="tt-danger" data-i18n="table.del_table">удалить таблицу</button>
                 </div>
               </div>
             </div>

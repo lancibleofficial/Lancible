@@ -82,5 +82,5 @@ const makeStyles = (colors) => StyleSheet.create({
   whenSoon: { backgroundColor: colors.accentMuted },
   whenText: { color: colors.textDim, fontSize: 11 },
   whenTextOverdue: { color: colors.danger },
-  whenTextSoon: { color: colors.accentHover },
+  whenTextSoon: { color: colors.accentInk },
 });

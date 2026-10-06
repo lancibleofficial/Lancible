@@ -46,7 +46,6 @@ async function seed(page) {
     selectedId = withDue;
     loadEditor(getTask(withDue));
     render();
-    setTaskTab('settings');
     return { pid, withDue, noDue };
   });
 }
@@ -55,7 +54,6 @@ const openTask = (page, id) => page.evaluate((id) => {
   selectedId = id;
   loadEditor(getTask(id));
   render();
-  setTaskTab('settings');
 }, id);
 
 const taskState = (page, title) => page.evaluate((title) => {
