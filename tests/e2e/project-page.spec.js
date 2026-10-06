@@ -72,9 +72,14 @@ test('итоги проекта — в шапке: время, деньги, г�
   await expect(kpis).toContainText('8 000 ₽');
   await expect(kpis).toContainText('1 из 4 готово');
   await expect(page.locator('#ph-name')).toHaveAttribute('title', 'Описание проекта');
-  // Шапка — одна строка.
-  const h = await page.locator('#project-header').evaluate((n) => n.getBoundingClientRect().height);
-  expect(h).toBeLessThanOrEqual(53);
+  // Шапка — две строки: сверху название и «+ Задача», ниже вкладки и итоги.
+  const m = await page.evaluate(() => {
+    const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+    return { head: r('#project-header'), name: r('#ph-name'), tabs: r('#proj-tabs'), add: r('#new-task-btn') };
+  });
+  expect(m.head.height).toBeLessThanOrEqual(92);
+  expect(m.tabs.top, 'вкладки под названием').toBeGreaterThanOrEqual(m.name.bottom);
+  expect(m.head.right - m.add.right, '«+ Задача» у правого края').toBeLessThanOrEqual(16);
 });
 
 test('вкладки «Список / Доска / Версии» переключают экран и запоминаются', async ({ page }) => {
@@ -113,13 +118,19 @@ test('список сгруппирован по статусам в поряд�
   await expect(page.locator('#task-list .task-item', { hasText: 'Логотип' })).toHaveCount(1);
 });
 
-test('строка задачи — одна линия: статус сказан группой, срок — точкой', async ({ page }) => {
+test('строка задачи: название целиком сверху, мета тихой строкой снизу', async ({ page }) => {
   await seed(page);
   const row = page.locator('#task-list .task-item', { hasText: 'Главная' });
-  const h = await row.evaluate((n) => n.getBoundingClientRect().height);
-  expect(h).toBeLessThanOrEqual(38);
+  // Статус не повторяется — он сказан заголовком группы.
   await expect(row.locator('.task-status')).toHaveCount(0);
-  await expect(row.locator('.task-version')).toHaveText('1.0');
+  await expect(row.locator('.ti-bottom .task-version')).toHaveText('1.0');
+  const m = await row.evaluate((n) => {
+    const name = n.querySelector('.task-name').getBoundingClientRect();
+    const meta = n.querySelector('.ti-meta').getBoundingClientRect();
+    return { nameBottom: name.bottom, metaTop: meta.top, height: n.getBoundingClientRect().height };
+  });
+  expect(m.metaTop, 'мета под названием').toBeGreaterThanOrEqual(m.nameBottom);
+  expect(m.height).toBeLessThanOrEqual(52);
 });
 
 test('кнопка в строке задачи прячет список — задача берёт всю ширину', async ({ page }) => {

@@ -128,3 +128,22 @@ for (const mode of ['month', 'week']) {
     });
   });
 }
+
+// --- проект на крайних данных ---------------------------------------------------
+//
+// Замеры в tests/e2e/edge.spec.js говорят, что ничего не вылезло; снимок —
+// чтобы посмотреть, хорошо ли это выглядит. Данные те же (edge-seed.js).
+const { seedEdge } = require('../e2e/edge-seed');
+
+for (const theme of ['dark', 'light']) {
+  test(`проект на крайних данных, тема ${theme === 'dark' ? 'тёмная' : 'светлая'}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await seeded(page, theme);
+    await page.evaluate(`(${seedEdge.toString()})()`);
+    await page.evaluate(() => { openProject('p-edge'); });
+    await expectShot(page, test, `веб-проект-крайний-${theme}.png`, {
+      fullPage: true,
+      mask: [page.locator('.tb-timer')],
+    });
+  });
+}

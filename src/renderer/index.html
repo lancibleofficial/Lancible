@@ -198,29 +198,38 @@
         <!-- Шапка проекта — одной строкой: название, вкладки, итоги, действия.
              Описание проекта — подсказкой на названии. Общая ставка и валюта
              живут на странице «Настройки» (здесь они были её копией). -->
+        <!-- Шапка проекта — две строки. Сверху то, что про сам проект:
+             цвет, название целиком, теги и «+ Задача» у правого края. Ниже
+             вкладки «Список / Доска / Версии», итоги и действия. Описание
+             проекта — подсказкой на названии. -->
         <header class="proj-head" id="project-header">
-          <span class="ph-dot" id="ph-dot"></span>
-          <h1 class="ph-name" id="ph-name"></h1>
-          <div class="tag-chips ph-tags" id="ph-tags" hidden></div>
-          <div class="proj-tabs" id="proj-tabs">
-            <button type="button" data-ptab="list" class="on"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 3h9.3v1.6H5.2zm0 4.2h9.3v1.6H5.2zm0 4.2h9.3V13H5.2zM1.5 2.7h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5z"/></svg><span data-i18n="project.tab_list">Список</span></button>
-            <button type="button" data-ptab="board"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h3.4v12H2zm4.3 0h3.4v8H6.3zm4.3 0H14v10h-3.4z"/></svg><span data-i18n="nav.board">Доска</span></button>
-            <button type="button" data-ptab="versions"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.55 1.5a1 1 0 01.9 0l5.4 2.8a.8.8 0 010 1.42l-5.4 2.8a1 1 0 01-.9 0l-5.4-2.8a.8.8 0 010-1.42zM2.6 8.36l1.9.99L8 11.2l3.5-1.85 1.9-.99a.8.8 0 01.74 1.42l-5.69 2.99a1 1 0 01-.9 0L1.86 9.78a.8.8 0 01.74-1.42z"/></svg><span data-i18n="version.section">Версии</span><span class="ptab-count" id="ptab-ver-count"></span></button>
-          </div>
-          <span class="spacer"></span>
-          <span class="proj-kpis" id="project-earned"></span>
-          <button type="button" class="icon-btn" id="board-statuses" data-i18n-title="board.statuses" data-i18n-aria="board.statuses" title="Статусы и версии" aria-label="Статусы и версии">
-            <svg class="icon" viewBox="0 0 16 16" fill-rule="evenodd" aria-hidden="true"><path d="M6.82 1.4a.9.9 0 01.89-.75h.58a.9.9 0 01.89.75l.15.94c.4.13.77.29 1.12.5l.77-.55a.9.9 0 011.14.1l.41.41a.9.9 0 01.1 1.14l-.55.77c.21.35.37.72.5 1.12l.94.15a.9.9 0 01.75.89v.58a.9.9 0 01-.75.89l-.94.15c-.13.4-.29.77-.5 1.12l.55.77a.9.9 0 01-.1 1.14l-.41.41a.9.9 0 01-1.14.1l-.77-.55c-.35.21-.72.37-1.12.5l-.15.94a.9.9 0 01-.89.75h-.58a.9.9 0 01-.89-.75l-.15-.94c-.4-.13-.77-.29-1.12-.5l-.77.55a.9.9 0 01-1.14-.1l-.41-.41a.9.9 0 01-.1-1.14l.55-.77c-.21-.35-.37-.72-.5-1.12l-.94-.15a.9.9 0 01-.75-.89v-.58a.9.9 0 01.75-.89l.94-.15c.13-.4.29-.77.5-1.12l-.55-.77a.9.9 0 01.1-1.14l.41-.41a.9.9 0 011.14-.1l.77.55c.35-.21.72-.37 1.12-.5l.15-.94zM8 5.55a2.45 2.45 0 100 4.9 2.45 2.45 0 000-4.9z"/></svg>
-          </button>
-          <button id="export-project-btn" class="icon-btn" data-i18n-title="project.excel" title="Скачать Excel">
-            <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
-          </button>
-          <button id="project-menu-btn" class="icon-btn" aria-label="Опции проекта">
-            <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
-          </button>
-          <button id="new-task-btn" class="btn-accent proj-new" data-i18n-title="project.new_task_title" title="Новая задача (Ctrl+N)">
-            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="project.new_task_short">Задача</span>
-          </button>
+          <div class="ph-line">
+            <span class="ph-dot" id="ph-dot"></span>
+            <h1 class="ph-name" id="ph-name"></h1>
+            <div class="tag-chips ph-tags" id="ph-tags" hidden></div>
+            <span class="spacer"></span>
+            <button id="new-task-btn" class="btn-accent proj-new" data-i18n-title="project.new_task_title" title="Новая задача (Ctrl+N)">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="project.new_task_short">Задача</span>
+            </button>
+            </div>
+          <div class="ph-line ph-line-2">
+            <div class="proj-tabs" id="proj-tabs">
+              <button type="button" data-ptab="list" class="on"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 3h9.3v1.6H5.2zm0 4.2h9.3v1.6H5.2zm0 4.2h9.3V13H5.2zM1.5 2.7h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5z"/></svg><span data-i18n="project.tab_list">Список</span></button>
+              <button type="button" data-ptab="board"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h3.4v12H2zm4.3 0h3.4v8H6.3zm4.3 0H14v10h-3.4z"/></svg><span data-i18n="nav.board">Доска</span></button>
+              <button type="button" data-ptab="versions"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.55 1.5a1 1 0 01.9 0l5.4 2.8a.8.8 0 010 1.42l-5.4 2.8a1 1 0 01-.9 0l-5.4-2.8a.8.8 0 010-1.42zM2.6 8.36l1.9.99L8 11.2l3.5-1.85 1.9-.99a.8.8 0 01.74 1.42l-5.69 2.99a1 1 0 01-.9 0L1.86 9.78a.8.8 0 01.74-1.42z"/></svg><span data-i18n="version.section">Версии</span><span class="ptab-count" id="ptab-ver-count"></span></button>
+            </div>
+              <span class="spacer"></span>
+            <span class="proj-kpis" id="project-earned"></span>
+            <button type="button" class="icon-btn" id="board-statuses" data-i18n-title="board.statuses" data-i18n-aria="board.statuses" title="Статусы и версии" aria-label="Статусы и версии">
+              <svg class="icon" viewBox="0 0 16 16" fill-rule="evenodd" aria-hidden="true"><path d="M6.82 1.4a.9.9 0 01.89-.75h.58a.9.9 0 01.89.75l.15.94c.4.13.77.29 1.12.5l.77-.55a.9.9 0 011.14.1l.41.41a.9.9 0 01.1 1.14l-.55.77c.21.35.37.72.5 1.12l.94.15a.9.9 0 01.75.89v.58a.9.9 0 01-.75.89l-.94.15c-.13.4-.29.77-.5 1.12l.55.77a.9.9 0 01-.1 1.14l-.41.41a.9.9 0 01-1.14.1l-.77-.55c-.35.21-.72.37-1.12.5l-.15.94a.9.9 0 01-.89.75h-.58a.9.9 0 01-.89-.75l-.15-.94c-.4-.13-.77-.29-1.12-.5l-.77.55a.9.9 0 01-1.14-.1l-.41-.41a.9.9 0 01-.1-1.14l.55-.77c-.21-.35-.37-.72-.5-1.12l-.94-.15a.9.9 0 01-.75-.89v-.58a.9.9 0 01.75-.89l.94-.15c.13-.4.29-.77.5-1.12l-.55-.77a.9.9 0 01.1-1.14l.41-.41a.9.9 0 011.14-.1l.77.55c.35-.21.72-.37 1.12-.5l.15-.94zM8 5.55a2.45 2.45 0 100 4.9 2.45 2.45 0 000-4.9z"/></svg>
+            </button>
+              <button id="export-project-btn" class="icon-btn" data-i18n-title="project.excel" title="Скачать Excel">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+            </button>
+              <button id="project-menu-btn" class="icon-btn" aria-label="Опции проекта">
+              <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
+            </button>
+            </div>
         </header>
 
         <div class="proj-list" id="proj-list">
@@ -228,10 +237,14 @@
             <div class="task-filter">
               <div class="tf-status segmented segmented-sm">
                 <button data-status="all" class="on" data-i18n="filter.all">Все</button>
-                <button data-status="active" data-i18n="filter.active">В работе</button>
-                <button data-status="done" data-i18n="filter.done">Готово</button>
+                <button data-status="active" data-i18n="filter.active">Не выполнено</button>
+                <button data-status="done" data-i18n="filter.done">Выполнено</button>
               </div>
-              <button type="button" class="ph-version" id="tf-version" hidden></button>
+            </div>
+            <!-- Версия — своей строкой под фильтром: рядом с тремя подписями
+                 в узком списке ей не хватало места, и подписи переносились. -->
+            <div class="task-filter-version" id="task-filter-version" hidden>
+              <button type="button" class="ph-version" id="tf-version"></button>
             </div>
             <div id="sidebar-empty" class="muted"></div>
             <ul id="task-list"></ul>
@@ -289,7 +302,6 @@
                   <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
                   <span class="due-label" data-i18n="due.label">Срок</span>
                   <button type="button" class="dp-btn" id="due-date-btn"></button>
-                  <button type="button" class="dp-btn" id="due-time-btn" hidden></button>
                   <span class="due-state" id="due-state" hidden></span>
                   <button type="button" class="dp-btn" id="due-remind" hidden></button>
                   <button type="button" class="icon-btn" id="due-clear-btn" hidden data-i18n-title="due.clear" title="Убрать срок">
@@ -306,7 +318,6 @@
                   <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
                   <span class="due-label" data-i18n="due.remind_at">Напомнить</span>
                   <button type="button" class="dp-btn" id="remind-date-btn"></button>
-                  <button type="button" class="dp-btn" id="remind-time-btn"></button>
                   </div>
                 </div>
               </div>
@@ -359,7 +370,7 @@
                     <button id="export-task-btn" class="ghost" data-i18n="history.excel" data-i18n-title="history.excel_title" title="Выгрузить логи времени этой задачи в Excel">⬇ Excel</button>
                   </div>
                 </div>
-                <ul id="session-list"></ul>
+                <ul id="session-list" class="island"></ul>
                 <p id="session-empty" class="muted" data-i18n="history.empty">Ещё не было ни одного запуска таймера.</p>
               </div>
             </section>
@@ -659,6 +670,16 @@
       <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
     </div>
     <div class="dp-days" id="dp-days"></div>
+    <!-- Время — под календарём, когда оно нужно (дедлайн, напоминание):
+         часы и минуты двумя полями, в каждое можно вписать руками, а по
+         стрелке выбрать из списка. -->
+    <div class="dp-time" id="dp-time" hidden>
+      <span class="dp-time-label" data-i18n="due.time">Время</span>
+      <span class="dp-combo"><input id="dp-hours" class="field-sm dp-tf" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Часы" /><button type="button" id="dp-hours-pick" class="dp-combo-btn" aria-label="Выбрать часы"><svg class="icon" viewBox="0 0 16 16"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg></button></span>
+      <span class="dp-time-colon">:</span>
+      <span class="dp-combo"><input id="dp-minutes" class="field-sm dp-tf" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Минуты" /><button type="button" id="dp-minutes-pick" class="dp-combo-btn" aria-label="Выбрать минуты"><svg class="icon" viewBox="0 0 16 16"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg></button></span>
+      <button type="button" class="dp-done" id="dp-done" data-i18n="common.done">Готово</button>
+    </div>
   </div>
 
   <!-- Кастомный выбор времени (часы/минуты) -->
@@ -865,7 +886,7 @@
     <div class="modal modal-lg">
       <div class="modal-title" id="pdlg-title">Проект</div>
       <label for="pdlg-name" data-i18n="pdlg.name_label">Название</label>
-      <input id="pdlg-name" type="text" autocomplete="off" data-i18n-ph="pdlg.name_ph" placeholder="Название проекта" />
+      <input id="pdlg-name" type="text" maxlength="60" autocomplete="off" data-i18n-ph="pdlg.name_ph" placeholder="Название проекта" />
       <label for="pdlg-desc" data-i18n="pdlg.desc_label">Описание</label>
       <textarea id="pdlg-desc" rows="3" data-i18n-ph="pdlg.desc_ph" placeholder="Необязательно"></textarea>
       <label data-i18n="pdlg.color_label">Цвет</label>

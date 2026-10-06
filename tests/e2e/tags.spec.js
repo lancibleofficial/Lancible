@@ -270,3 +270,22 @@ test('у неиспользуемого тега удаление не пуга�
   await page.locator('#tagdlg-delete').click();
   await expect(page.locator('#confirm-text')).toHaveText('Удалить тег «Черновик»?');
 });
+
+test('пикер тегов в окне проекта не ложится на его кнопки', async ({ page }) => {
+  // 7 октября 2026: список открывался вниз от «+» и накрывал «Отмена» и
+  // «Сохранить». Внутри окна край — низ самого окна: не помещается снизу —
+  // открывается вверх.
+  const pid = await seedProject(page);
+  await createTag(page, 'Срочное');
+  await page.evaluate((id) => openProjectDialog(getProject(id)), pid);
+  await page.locator('#pdlg-tags-add').click();
+  const m = await page.evaluate(() => {
+    const pop = document.querySelector('.tag-pop').getBoundingClientRect();
+    const modal = document.querySelector('#pdlg-backdrop .modal').getBoundingClientRect();
+    const buttons = document.querySelector('#pdlg-backdrop .modal-buttons').getBoundingClientRect();
+    return { popBottom: pop.bottom, popTop: pop.top, modalBottom: modal.bottom, buttonsTop: buttons.top };
+  });
+  expect(m.popBottom, 'список внутри окна').toBeLessThanOrEqual(m.modalBottom);
+  expect(m.popBottom, 'и не поверх кнопок').toBeLessThanOrEqual(m.buttonsTop + 1);
+  expect(m.popTop).toBeGreaterThanOrEqual(0);
+});

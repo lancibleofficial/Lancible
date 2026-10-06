@@ -28,13 +28,14 @@
   const D = isNode ? require('./due.js') : global.Core;
   const A = isNode ? require('./agenda.js') : global.Core;
   const M = isNode ? require('./money.js') : global.Core;
+  const T = isNode ? require('./tags.js') : global.Core;
 
   /**
    * Строка задачи в списке.
    *
    * @param {object} task
    * @param {object} ctx — {
-   *   statuses, versions,          данные
+   *   statuses, versions, tags,    данные (tags — не обязателен)
    *   selectedId, activeTimer, now, состояние
    *   lang, t, fmtDateShort,        язык и формат
    *   repeatLabel?                  подпись правила повторения; у телефона
@@ -43,7 +44,7 @@
    * }
    */
   function taskRowView(task, ctx) {
-    const { statuses, versions, selectedId, activeTimer, now, lang, t, fmtDateShort, repeatLabel } = ctx;
+    const { statuses, versions, tags, selectedId, activeTimer, now, lang, t, fmtDateShort, repeatLabel } = ctx;
     const status = S.getStatus(statuses, task.statusId);
     const version = task.versionId ? V.getVersion(versions, task.versionId) : null;
     const rule = R.normalizeRepeat(task.repeat);
@@ -63,6 +64,9 @@
       version: version ? { name: version.name || t('task.no_name'), released: !!version.releasedAt } : null,
       repeat: rule ? { title: repeatLabel ? repeatLabel(rule) : null } : null,
       due: due ? { state: due, text: D.dueShort(task, now, t, fmtDateShort) } : null,
+      // Теги — цветными точками после названия: цвет узнаётся быстрее
+      // подписи, а подпись всплывает по наведению.
+      tags: tags ? T.tagsOf(tags, task.tagIds).map((tg) => ({ name: tg.name, color: tg.color })) : [],
       running: !!(activeTimer && activeTimer.taskId === task.id),
       time: F.fmtShort(F.taskElapsedMs(task, activeTimer, now), lang),
     };

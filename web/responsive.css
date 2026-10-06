@@ -41,15 +41,6 @@
     border-top: 1px solid var(--border);
   }
 
-  /* Статистика в 2 колонки вместо одного сминающегося ряда */
-  .stat-cards {
-    flex-wrap: wrap;
-  }
-  .stat-card {
-    flex: 1 1 calc(50% - 5px);
-    min-width: 140px;
-  }
-
   /* Календарь: день/период-панель уезжает под сетку. Тот же приём —
      flex-column + min-height:100%, чтобы .cal-day растягивался своим фоном
      до низа, а не оставлял серую прогалину другого цвета над таббаром. */
@@ -355,23 +346,19 @@
      «Обзоре»), кнопка «скрыть список» не нужна: список и задача и так
      показываются по одному. --- */
   .proj-head {
-    flex-wrap: wrap;
-    height: auto;
     padding: 8px 12px 0;
-    row-gap: 2px;
   }
   .ph-name {
+    flex: 1 1 auto;
     max-width: none;
-    flex: 1;
   }
-  /* Распорка делила бы свободное место с названием пополам. */
-  .proj-head > .spacer {
+  /* Тегам на телефоне места нет — они видны в окне проекта. */
+  .proj-head .ph-tags,
+  .ph-line > .spacer {
     display: none;
   }
   .proj-tabs {
-    order: 3;
     width: 100%;
-    height: 42px;
   }
   .proj-tabs button {
     flex: 1;

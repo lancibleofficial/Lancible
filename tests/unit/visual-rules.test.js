@@ -164,7 +164,7 @@ const COMPONENTS = [
   'modal', 'modal-lg', 'modal-buttons', 'modal-error', 'ctx-menu', 'ctx-item', 'ctx-sep', 'ctx-check',
   'st-swatch', 'task-status', 'board-dot', 'task-version',
   'segmented', 'segmented-sm', 'segmented-rows', 'segmented-row', 'field', 'field-sm',
-  'period-head', 'period-nav', 'period-title',
+  'period-head', 'period-nav', 'period-title', 'island', 'settings-card',
 ];
 
 test('styles.css: слои по порядку, общие детали — только в слое «Компоненты»', () => {

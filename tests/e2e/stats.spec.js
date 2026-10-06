@@ -149,7 +149,7 @@ test('подписи карточек видны целиком — перено
 test('фильтр «проект → версия» сужает и цифры, и календарь, и панель', async ({ page }) => {
   await seed(page);
 
-  await expect(page.locator('#sf-project')).toHaveText('Все проекты');
+  await expect(page.locator('#sf-project')).toHaveText(/Все проекты/);
   await expect(page.locator('#sf-version')).toBeHidden();
   await expect(page.locator('#sf-reset')).toBeHidden();
   await expect(page.locator('#cal-day-list .cdl-group')).toHaveCount(2);
@@ -158,7 +158,7 @@ test('фильтр «проект → версия» сужает и цифры,
   await page.locator('#ctx-menu .ctx-item', { hasText: 'Сайт клиента' }).click();
 
   await expect(page.locator('#sf-version')).toBeVisible();
-  await expect(page.locator('#sf-version')).toHaveText('Все версии');
+  await expect(page.locator('#sf-version')).toHaveText(/Все версии/);
   await expect(page.locator('#sf-reset')).toBeVisible();
   expect((await cards(page)).time).toMatch(/3ч 45м/);   // 2 + 0.75 + 1
   await expect(page.locator('#cal-day-list .cdl-group')).toHaveCount(1);
@@ -169,7 +169,7 @@ test('фильтр «проект → версия» сужает и цифры,
   expect((await cards(page)).done).toBe('0 / 2');
 
   await page.locator('#sf-reset').click();
-  await expect(page.locator('#sf-project')).toHaveText('Все проекты');
+  await expect(page.locator('#sf-project')).toHaveText(/Все проекты/);
   await expect(page.locator('#sf-version')).toBeHidden();
   expect((await cards(page)).time).toMatch(/5ч/);
 });
@@ -180,11 +180,11 @@ test('смена проекта сбрасывает версию — она п�
   await page.locator('#ctx-menu .ctx-item', { hasText: 'Сайт клиента' }).click();
   await page.locator('#sf-version').click();
   await page.locator('#ctx-menu .ctx-item', { hasText: 'v1.3' }).click();
-  await expect(page.locator('#sf-version')).toHaveText('v1.3');
+  await expect(page.locator('#sf-version .fchip-v')).toHaveText('v1.3');
 
   await page.locator('#sf-project').click();
   await page.locator('#ctx-menu .ctx-item', { hasText: 'Лендинг' }).click();
-  await expect(page.locator('#sf-version')).toHaveText('Все версии');
+  await expect(page.locator('#sf-version')).toHaveText(/Все версии/);
   // Иначе экран был бы пуст: версии «Сайта клиента» в «Лендинге» нет.
   await expect(page.locator('#cal-day-list .cdl-group')).toHaveCount(1);
 });
@@ -218,7 +218,7 @@ test('фильтр версии в списке задач отбирает и �
   expect(ids).toBe(null);
 
   await expect(page.locator('#tf-version')).toBeVisible();
-  await expect(page.locator('#tf-version')).toHaveText('Все версии');
+  await expect(page.locator('#tf-version')).toHaveText(/Все версии/);
   await expect(page.locator('#task-list .task-item')).toHaveCount(3);
 
   await page.locator('#tf-version').click();
@@ -231,12 +231,10 @@ test('фильтр версии в списке задач отбирает и �
   await expect(page.locator('#task-list .task-item')).toHaveCount(3);
 });
 
-test('выбор версии стоит в строке фильтра и выглядит выбором', async ({ page }) => {
-  // Раньше кнопка в ряду с пилюлями «Все / В работе / Готово» сжимала их до
-  // переноса текста, и её унесли под название проекта. С 6 октября 2026
-  // название — в шапке, а список стал шире (340 px): версия снова стоит в
-  // строке фильтра справа от пилюль, и места хватает обоим. Рамка поля
-  // ввода без стрелки читалась подписью — её по-прежнему нет.
+test('выбор версии стоит своей строкой под фильтром и выглядит выбором', async ({ page }) => {
+  // В ряду с пилюлями «Все / Не выполнено / Выполнено» кнопке версии не
+  // хватало места, и подписи переносились. Теперь она под ними, своей
+  // строкой. Рамка поля ввода без стрелки читалась подписью — её нет.
   await seed(page);
   await page.evaluate(() => { openProject(state.projects[0].id); });
   await expect(page.locator('#tf-version')).toBeVisible();
@@ -251,8 +249,7 @@ test('выбор версии стоит в строке фильтра и вы�
     return {
       pillsBox: r('.tf-status'),
       version: r('#tf-version'),
-      versionLeft: Math.round(document.querySelector('#tf-version').getBoundingClientRect().left),
-      pillsRight: Math.round(document.querySelector('.tf-status').getBoundingClientRect().right),
+      pillHeights: [...document.querySelectorAll('.tf-status button')].map((b) => Math.round(b.getBoundingClientRect().height)),
       filter: r('.task-filter'),
       border: cs('#tf-version', 'border-style'),
       background: cs('#tf-version', 'background-color'),
@@ -262,9 +259,7 @@ test('выбор версии стоит в строке фильтра и вы�
     };
   });
 
-  expect(m.versionLeft, 'версия — справа от пилюль статуса').toBeGreaterThanOrEqual(m.pillsRight);
-  expect(m.version.top, 'и в той же строке фильтра').toBeGreaterThanOrEqual(m.filter.top);
-  expect(m.version.bottom).toBeLessThanOrEqual(m.filter.bottom);
+  expect(m.version.top, 'версия — под строкой фильтра').toBeGreaterThanOrEqual(m.filter.bottom);
   // Ни рамки, ни подложки: это не поле ввода, а подпись, по которой кликают.
   expect(m.border).toBe('none');
   expect(m.background).toBe('rgba(0, 0, 0, 0)');

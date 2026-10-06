@@ -205,7 +205,7 @@ const el = {
   exportProjectBtn: $('export-project-btn'), exportCalendarBtn: $('export-calendar-btn'),
   statsView: $('stats-view'), spTime: $('sp-time'), spMoney: $('sp-money'),
   spMonth: $('sp-month'), spDone: $('sp-done'), spRunning: $('sp-running'),
-  tfVersion: $('tf-version'),
+  tfVersion: $('tf-version'), tfVersionRow: $('task-filter-version'),
   sfProject: $('sf-project'), sfVersion: $('sf-version'), sfReset: $('sf-reset'),
   exportAllBtn: $('export-all-btn'),
   exportPeriodBtn: $('export-period-btn'),
@@ -228,9 +228,9 @@ const el = {
   settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
   settingsNotifState: $('settings-notif-state'),
   notifList: $('notif-list'), notifEmpty: $('notif-empty'), notifSeen: $('notif-seen'),
-  dueDateBtn: $('due-date-btn'), dueTimeBtn: $('due-time-btn'), dueState: $('due-state'),
+  dueDateBtn: $('due-date-btn'), dueState: $('due-state'),
   dueRemind: $('due-remind'), dueClearBtn: $('due-clear-btn'), dueCustomRow: $('due-custom-row'),
-  remindDateBtn: $('remind-date-btn'), remindTimeBtn: $('remind-time-btn'),
+  remindDateBtn: $('remind-date-btn'),
   tableTools: $('table-tools'), ttSwatches: $('tt-swatches'),
   sessionList: $('session-list'), sessionCount: $('session-count'),
   sessionEmpty: $('session-empty'), addSessionBtn: $('add-session-btn'),
@@ -242,6 +242,7 @@ const el = {
   calPeriodToggle: $('cal-period-toggle'),
   rangeFrom: $('range-from'), rangeTo: $('range-to'),
   dpPop: $('dp-pop'), dpTitle: $('dp-title'), dpDays: $('dp-days'), dpPrev: $('dp-prev'), dpNext: $('dp-next'),
+  dpTime: $('dp-time'), dpHours: $('dp-hours'), dpMinutes: $('dp-minutes'), dpHoursPick: $('dp-hours-pick'), dpMinutesPick: $('dp-minutes-pick'), dpDone: $('dp-done'),
   tpPop: $('tp-pop'), tpHours: $('tp-hours'), tpMinutes: $('tp-minutes'),
   calViewTot: $('cal-view-tot'),
   calDayHead: $('cal-day-head'), calDayTot: $('cal-day-tot'),
@@ -1781,13 +1782,26 @@ function fmtDpBtn(key) {
   return text.replace(/\s*г\.$/, '');
 }
 
-/** Открывает попап у anchor, показывая value ('YYYY-MM-DD' или null); onPick(key) вызывается при клике по дню. */
-function openDatePicker(anchorEl, value, onPick) {
+/** Открывает попап у anchor, показывая value ('YYYY-MM-DD' или null);
+ *  onPick(key) вызывается при клике по дню.
+ *
+ *  С временем (opts.time = 'HH:MM', opts.onTime) под календарём появляется
+ *  строка часов и минут, и окно не закрывается по выбору дня: дата и время
+ *  задаются вместе, закрывает его «Готово» или щелчок мимо. */
+function openDatePicker(anchorEl, value, onPick, opts) {
   closeTimePicker();
   dp.anchor = anchorEl;
   dp.value = value || null;
   dp.view = value ? keyToDate(value) : new Date();
   dp.onPick = onPick;
+  dp.withTime = !!(opts && opts.time);
+  dp.onTime = dp.withTime ? opts.onTime : null;
+  el.dpTime.hidden = !dp.withTime;
+  if (dp.withTime) {
+    const [h, m] = opts.time.split(':');
+    el.dpHours.value = h;
+    el.dpMinutes.value = m;
+  }
   dp.open = true;
   anchorEl.classList.add('on');
   renderDatePicker();
@@ -1805,7 +1819,35 @@ function closeDatePicker() {
   document.removeEventListener('pointerdown', dpOutside, true);
 }
 function dpOutside(e) {
+  // Список часов или минут — это общее меню поверх окна; щелчок по нему —
+  // не «мимо».
+  if (el.ctxMenu.contains(e.target)) return;
   if (!el.dpPop.contains(e.target) && e.target !== dp.anchor) closeDatePicker();
+}
+
+/** Время из полей, если оба числа в пределах суток; иначе null. */
+function dpTimeValue() {
+  const h = Number(el.dpHours.value);
+  const m = Number(el.dpMinutes.value);
+  if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return `${pad2(h)}:${pad2(m)}`;
+}
+function dpCommitTime() {
+  const v = dpTimeValue();
+  if (!v || !dp.onTime) return;
+  const [h, m] = v.split(':');
+  el.dpHours.value = h;
+  el.dpMinutes.value = m;
+  dp.onTime(v);
+}
+/** Список значений для поля: часы — все 24, минуты — через пять. Руками
+ *  можно вписать любую минуту. */
+function dpPickFrom(btn, input, values) {
+  openMenu(btn, values.map((v) => ({
+    label: pad2(v),
+    selected: Number(input.value) === v,
+    onClick: () => { input.value = pad2(v); dpCommitTime(); },
+  })));
 }
 function renderDatePicker() {
   const y = dp.view.getFullYear();
@@ -1829,7 +1871,7 @@ function renderDatePicker() {
     b.textContent = String(d);
     b.addEventListener('click', () => {
       dp.value = key;
-      closeDatePicker();
+      if (dp.withTime) renderDatePicker(); else closeDatePicker();
       if (dp.onPick) dp.onPick(key);
     });
     el.dpDays.appendChild(b);
@@ -2399,6 +2441,30 @@ function renderTagChips(box, ids, onRemove) {
   for (const tag of tagsOf(ids)) box.appendChild(tagChip(tag, onRemove));
 }
 
+/** Теги в шапке: первые три, а если не помещаются рядом с названием —
+ *  меньше, вплоть до одного «+N». Название важнее тегов, поэтому уступают
+ *  они. Меряется после отрисовки: ширина зависит и от окна, и от имён. */
+function fitHeaderTags(p) {
+  let cap = 3;
+  renderTagChipsCapped(el.phTags, p.tagIds, cap);
+  while (cap > 0 && el.phTags.scrollWidth > el.phTags.clientWidth + 1) {
+    cap -= 1;
+    renderTagChipsCapped(el.phTags, p.tagIds, cap);
+  }
+}
+
+/** Первые max чипов и «+N» за остальные; имена остальных — подсказкой. */
+function renderTagChipsCapped(box, ids, max) {
+  box.innerHTML = '';
+  const all = tagsOf(ids);
+  for (const tag of all.slice(0, max)) box.appendChild(tagChip(tag));
+  if (all.length > max) {
+    const more = elt('span', 'tag-chip tag-more', `+${all.length - max}`);
+    more.title = all.slice(max).map((tg) => tg.name).join(', ');
+    box.appendChild(more);
+  }
+}
+
 /** Список тегов в настройках. Счётчик использований здесь не украшение: по
  *  нему видно, какие теги живые, а какие можно убрать. */
 function renderTagsSettings() {
@@ -2564,9 +2630,13 @@ function openTagPicker(anchor, getIds, setIds) {
 
   const r = anchor.getBoundingClientRect();
   pop.style.left = `${Math.max(8, Math.min(r.left, innerWidth - pop.offsetWidth - 8))}px`;
-  // Если внизу не помещается — открываем вверх, а не за краем окна.
+  // Если внизу не помещается — открываем вверх, а не за краем. Внутри окна
+  // край — низ самого окна: иначе список ложился поверх его кнопок, и
+  // «Сохранить» приходилось искать под ним.
+  const modal = anchor.closest('.modal');
+  const floor = (modal ? modal.getBoundingClientRect().bottom : innerHeight) - 8;
   const below = r.bottom + 6;
-  pop.style.top = below + pop.offsetHeight > innerHeight - 8
+  pop.style.top = below + pop.offsetHeight > floor
     ? `${Math.max(8, r.top - pop.offsetHeight - 6)}px`
     : `${below}px`;
 
@@ -2796,8 +2866,8 @@ function renderProjectHeader() {
   el.phDot.style.background = p.color || PALETTE[0];
   // Теги проекта — рядом с названием. Здесь они только показываются: менять их
   // логично там же, где название и цвет, то есть в окне проекта.
-  renderTagChips(el.phTags, p.tagIds);
   el.phTags.hidden = !tagsOf(p.tagIds).length;
+  fitHeaderTags(p);
   el.ptabVerCount.textContent = versionsOf(p.id).length || '';
 
   const tasks = visibleTasks();
@@ -2939,6 +3009,7 @@ function elt(tag, className, text) {
 const taskRowCtx = () => ({
   statuses: state.statuses,
   versions: state.versions,
+  tags: state.tags,
   selectedId,
   activeTimer: state.activeTimer,
   now: Date.now(),
@@ -2981,8 +3052,16 @@ function taskItem(task, i) {
   pin.title = v.pinTitle;
   pin.addEventListener('click', (e) => { e.stopPropagation(); togglePinTask(task.id); });
 
-  // Одна строка: статус уже сказан заголовком группы, поэтому его здесь нет.
-  // Срок — точкой с подсказкой: в узком списке текст срока съедал название.
+  // Две строки: сверху название целиком (в узком списке ему нужна вся
+  // ширина) и пин, снизу тихая мета — точки тегов, версия, повтор, срок,
+  // время. Статус не повторяется: он уже сказан заголовком группы.
+  const dots = elt('span', 'ti-tags');
+  for (const tg of v.tags) {
+    const d = elt('span', 'tag-dot');
+    d.style.setProperty('--sc', tg.color);
+    d.title = tg.name;
+    dots.appendChild(d);
+  }
   const meta = elt('span', 'ti-meta');
   if (v.version) meta.appendChild(elt('span', 'task-version' + (v.version.released ? ' released' : ''), v.version.name));
   if (v.repeat) {
@@ -2998,7 +3077,12 @@ function taskItem(task, i) {
   if (v.running) meta.appendChild(elt('span', 'running-dot', '●'));
   meta.appendChild(elt('span', 'task-time', v.time));
 
-  li.append(cb, name, pin, meta);
+  const top = elt('div', 'ti-top');
+  top.append(cb, name, pin);
+  if (v.tags.length) meta.prepend(dots);
+  const bottom = elt('div', 'ti-bottom');
+  bottom.append(meta);
+  li.append(top, bottom);
   li.addEventListener('click', () => selectTask(task.id));
   return li;
 }
@@ -3102,11 +3186,9 @@ function renderDue(task) {
   if (el.repeatRow) renderTaskRepeat(task);
   const has = !!task.dueAt;
   const due = has ? new Date(task.dueAt) : null;
-  el.dueDateBtn.textContent = has ? fmtDpBtn(dayKey(due)) : t('due.set');
+  el.dueDateBtn.textContent = has ? `${fmtDpBtn(dayKey(due))}, ${pad2(due.getHours())}:${pad2(due.getMinutes())}` : t('due.set');
   el.dueDateBtn.classList.toggle('is-empty', !has);
   el.dueDateBtn.classList.toggle('muted-btn', !has);
-  el.dueTimeBtn.hidden = !has;
-  if (has) el.dueTimeBtn.textContent = `${pad2(due.getHours())}:${pad2(due.getMinutes())}`;
   el.dueClearBtn.hidden = !has;
   el.dueRemind.hidden = !has;
 
@@ -3120,8 +3202,7 @@ function renderDue(task) {
   el.dueCustomRow.hidden = !has || !isCustom;
   if (isCustom) {
     const r = new Date(task.remindAt);
-    el.remindDateBtn.textContent = fmtDpBtn(dayKey(r));
-    el.remindTimeBtn.textContent = `${pad2(r.getHours())}:${pad2(r.getMinutes())}`;
+    el.remindDateBtn.textContent = `${fmtDpBtn(dayKey(r))}, ${pad2(r.getHours())}:${pad2(r.getMinutes())}`;
   }
 }
 
@@ -3396,7 +3477,8 @@ function openMenu(anchor, items) {
     if (it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); continue; }
     const b = document.createElement('button');
     b.className = 'ctx-item' + (it.danger ? ' danger' : '') + (it.selected ? ' sel' : '');
-    b.innerHTML = `<span>${escapeHtml(it.label)}</span>` +
+    const dot = it.dot ? `<span class="ctx-dot" style="--sc:${escapeHtml(it.dot)}"></span>` : '';
+    b.innerHTML = `<span class="ctx-main">${dot}<span>${escapeHtml(it.label)}</span></span>` +
       (it.selected ? `<svg class="icon ctx-check" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS.check}"/></svg>` : '');
     b.addEventListener('click', () => { closeMenu(); it.onClick(); });
     m.appendChild(b);
@@ -4128,6 +4210,7 @@ el.projTabs.forEach((b) => b.addEventListener('click', () => {
   scheduleSave();
 }));
 el.navNewProject.addEventListener('click', () => openProjectDialog(null));
+window.addEventListener('resize', () => { if (state.ui.view === 'project') renderProjectHeader(); });
 el.toggleListBtn.addEventListener('click', () => {
   state.ui.listHidden = !state.ui.listHidden;
   render();
@@ -4183,28 +4266,37 @@ el.notifPanel.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => { if (!el.notifPanel.hidden) closeNotifPanel(); });
 setInterval(checkReminders, 30000);
 
+/** Дата и время дедлайна — одним окном. Пока даты нет, время по умолчанию
+ *  18:00: срок обычно «к концу дня», а не к полуночи. */
 el.dueDateBtn.addEventListener('click', () => {
   const task = getTask(selectedId);
   if (!task) return;
-  openDatePicker(el.dueDateBtn, task.dueAt ? dayKey(new Date(task.dueAt)) : dayKey(new Date()), (key) => {
+  const cur = task.dueAt ? new Date(task.dueAt) : null;
+  openDatePicker(el.dueDateBtn, cur ? dayKey(cur) : dayKey(new Date()), (key) => {
     const prev = task.dueAt ? new Date(task.dueAt) : null;
     const d = keyToDate(key);
     d.setHours(prev ? prev.getHours() : 18, prev ? prev.getMinutes() : 0, 0, 0);
     task.dueAt = d.toISOString();
     touchTask(task);
+  }, {
+    time: cur ? `${pad2(cur.getHours())}:${pad2(cur.getMinutes())}` : '18:00',
+    onTime: (val) => {
+      const [h, m] = val.split(':').map(Number);
+      const d = task.dueAt ? new Date(task.dueAt) : keyToDate(dp.value || dayKey(new Date()));
+      d.setHours(h, m, 0, 0);
+      task.dueAt = d.toISOString();
+      touchTask(task);
+    },
   });
 });
-el.dueTimeBtn.addEventListener('click', () => {
-  const task = getTask(selectedId);
-  if (!task || !task.dueAt) return;
-  const d = new Date(task.dueAt);
-  openTimePicker(el.dueTimeBtn, `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, (val) => {
-    const [h, m] = val.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
-    task.dueAt = d.toISOString();
-    touchTask(task);
-  });
-});
+el.dpHours.addEventListener('change', dpCommitTime);
+el.dpMinutes.addEventListener('change', dpCommitTime);
+for (const input of [el.dpHours, el.dpMinutes]) {
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { dpCommitTime(); closeDatePicker(); } });
+}
+el.dpHoursPick.addEventListener('click', () => dpPickFrom(el.dpHoursPick, el.dpHours, Array.from({ length: 24 }, (_, i) => i)));
+el.dpMinutesPick.addEventListener('click', () => dpPickFrom(el.dpMinutesPick, el.dpMinutes, Array.from({ length: 12 }, (_, i) => i * 5)));
+el.dpDone.addEventListener('click', () => { dpCommitTime(); closeDatePicker(); });
 el.dueClearBtn.addEventListener('click', () => {
   const task = getTask(selectedId);
   if (!task) return;
@@ -4242,23 +4334,22 @@ el.dueRemind.addEventListener('click', () => {
 el.remindDateBtn.addEventListener('click', () => {
   const task = getTask(selectedId);
   if (!task || !task.remindAt) return;
-  openDatePicker(el.remindDateBtn, dayKey(new Date(task.remindAt)), (key) => {
+  const cur = new Date(task.remindAt);
+  openDatePicker(el.remindDateBtn, dayKey(cur), (key) => {
     const prev = new Date(task.remindAt);
     const d = keyToDate(key);
     d.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
     task.remindAt = d.toISOString();
     touchTask(task);
-  });
-});
-el.remindTimeBtn.addEventListener('click', () => {
-  const task = getTask(selectedId);
-  if (!task || !task.remindAt) return;
-  const d = new Date(task.remindAt);
-  openTimePicker(el.remindTimeBtn, `${pad2(d.getHours())}:${pad2(d.getMinutes())}`, (val) => {
-    const [h, m] = val.split(':').map(Number);
-    d.setHours(h, m, 0, 0);
-    task.remindAt = d.toISOString();
-    touchTask(task);
+  }, {
+    time: `${pad2(cur.getHours())}:${pad2(cur.getMinutes())}`,
+    onTime: (val) => {
+      const [h, m] = val.split(':').map(Number);
+      const d = new Date(task.remindAt);
+      d.setHours(h, m, 0, 0);
+      task.remindAt = d.toISOString();
+      touchTask(task);
+    },
   });
 });
 el.exportProjectBtn.addEventListener('click', exportProject);
@@ -4663,7 +4754,7 @@ function filterSuffix(filter) {
 function renderTaskVersionFilter() {
   const pid = state.ui.projectId;
   const has = !!pid && versionsOf(pid).length > 0;
-  el.tfVersion.hidden = !has;
+  el.tfVersionRow.hidden = !has;
   if (!has) return;
   el.tfVersion.innerHTML = `<span class="ph-version-name">${escapeHtml(versionFilterLabel(pid, taskFilter.versionId))}</span>${icon('chev')}`;
   el.tfVersion.classList.toggle('on', taskFilter.versionId !== 'all');
@@ -4681,7 +4772,7 @@ el.tfVersion.addEventListener('click', () => {
 function projectMenuItems(current, onPick) {
   const items = [{ label: t('filter.all_projects'), selected: current === 'all', onClick: () => onPick('all') }];
   for (const p of state.projects) {
-    items.push({ label: p.name, selected: current === p.id, onClick: () => onPick(p.id) });
+    items.push({ label: p.name, dot: p.color || PALETTE[0], selected: current === p.id, onClick: () => onPick(p.id) });
   }
   return items;
 }
@@ -4698,14 +4789,17 @@ function renderFilterBar(nodes, filter, onChange) {
   // Проект мог исчезнуть, пока фильтр держал на него ссылку.
   if (filter.projectId !== 'all' && !p) { filter.projectId = 'all'; filter.versionId = 'all'; }
 
-  nodes.project.textContent = p ? p.name : t('filter.all_projects');
+  const chip = (label, dotColor, value) => `<span class="fchip-k">${escapeHtml(label)}</span>`
+    + (dotColor ? `<span class="tag-dot" style="--sc:${escapeHtml(dotColor)}"></span>` : '')
+    + `<span class="fchip-v">${escapeHtml(value)}</span>${icon('chev')}`;
+  nodes.project.innerHTML = chip(t('filter.project'), p ? (p.color || PALETTE[0]) : null, p ? p.name : t('filter.all_projects'));
   nodes.project.classList.toggle('on', !!p);
 
   // Версия появляется, только когда проект выбран и версии у него есть.
   const versions = p ? versionsOf(p.id) : [];
   nodes.version.hidden = !versions.length;
   if (versions.length) {
-    nodes.version.textContent = versionFilterLabel(filter.projectId, filter.versionId);
+    nodes.version.innerHTML = chip(t('version.label'), null, versionFilterLabel(filter.projectId, filter.versionId));
     nodes.version.classList.toggle('on', filter.versionId !== 'all');
   }
   nodes.reset.hidden = !Core.filterActive(filter);

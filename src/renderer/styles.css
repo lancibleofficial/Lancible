@@ -456,6 +456,8 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-item.danger { color: var(--danger); border: none; padding: 7px 9px; }
 .ctx-item.sel { color: var(--accent-ink); font-weight: 500; }
 .ctx-item .ctx-check { color: var(--accent-ink); flex: none; }
+.ctx-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ctx-dot { flex: none; width: 9px; height: 9px; border-radius: 3px; background: var(--sc, var(--accent)); }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
 #modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #stdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop {
@@ -540,6 +542,16 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .modal-error { margin-top: 8px; color: var(--danger); font-size: 12.5px; }
 .modal input + label { margin-top: 12px; }
+
+/* ---------- Остров ----------
+   Группа строк одним блоком с разделителями внутри: настройки, история
+   записей. Строки — свои у каждого экрана, рамка и подложка — общие. */
+.island, .settings-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
 
 /* ---------- Toast ---------- */
 
@@ -1202,8 +1214,15 @@ body.platform-web .tb-account {
   gap: 12px;
   padding: 20px 0 16px;
   margin-bottom: 12px;
+  container-type: inline-size;
 }
-.stat-cards { flex: 1; display: flex; gap: 10px; overflow: hidden; }
+/* Четыре карточки в ряд, пока им хватает места; в узком окне — два на два.
+   Решает ширина того, в чём они лежат (контейнерный запрос), а не окна:
+   на «Обзоре» рядом с ними стоит идущий таймер, в статистике — нет. */
+.stat-cards { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@container (max-width: 720px) {
+  .stat-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .stat-card {
   flex: 1;
   min-width: 0;
@@ -1256,19 +1275,26 @@ body.platform-web .tb-account {
    отнимала у задач высоту; описание проекта теперь — подсказкой на
    названии, общая ставка и валюта — на странице «Настройки». */
 .proj-head {
-  flex: none; display: flex; align-items: center; gap: 6px;
-  height: 52px; padding: 0 14px 0 18px;
+  flex: none; display: flex; flex-direction: column;
+  padding: 10px 14px 0 18px;
   border-bottom: 1px solid var(--border); background: var(--panel);
 }
+.ph-line { display: flex; align-items: center; gap: 6px; min-height: 32px; }
+.ph-line-2 { margin-top: 2px; }
 .ph-dot { flex: none; width: 11px; height: 11px; border-radius: 3.5px; background: var(--accent); }
+/* Название — целиком: оно важнее тегов и ужимает их, а не наоборот. Длина
+   ограничена 60 знаками в окне проекта, на окне от 1024 px они помещаются. */
 .ph-name {
-  margin: 0 12px 0 3px; min-width: 0; max-width: 28%;
+  flex: 0 0 auto; margin: 0 10px 0 3px; min-width: 0; max-width: calc(100% - 150px);
   font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.proj-head .ph-tags { flex: none; margin: 0 8px 0 0; }
+/* Теги — первые три и «+N» за остальные: восемь чипов в строке читались
+   как ещё одно название. */
+.proj-head .ph-tags { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+.tag-chip.tag-more { color: var(--text-dim); background: var(--panel-2); }
 .proj-tabs { display: flex; align-self: stretch; gap: 2px; }
 .proj-tabs button {
-  display: flex; align-items: center; gap: 7px; padding: 0 10px;
+  display: flex; align-items: center; gap: 7px; padding: 0 10px 0 8px; height: 36px;
   border: none; border-bottom: 2px solid transparent; background: none;
   color: var(--text-dim); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
   transition: color 0.12s var(--ease), border-color 0.12s var(--ease);
@@ -1323,9 +1349,10 @@ body.platform-web .tb-account {
 }
 
 
-.task-filter { display: flex; align-items: center; gap: 6px; padding: 10px 12px 6px; }
+.task-filter { display: flex; align-items: center; gap: 6px; padding: 10px 12px 2px; }
 .tf-status { flex: 1; }
-.tf-status button { flex: 1; }
+.tf-status button { flex: 1; white-space: nowrap; }
+.task-filter-version { display: flex; padding: 4px 12px 2px; }
 
 #task-list { list-style: none; margin: 0; padding: 4px 8px 12px; overflow-y: auto; flex: 1; }
 
@@ -1334,20 +1361,31 @@ body.platform-web .tb-account {
    узком списке его текст съедал название. Пин виден при наведении и у
    закреплённой задачи. */
 .task-item {
-  display: flex; align-items: center; gap: 9px;
-  height: 36px; padding: 0 8px 0 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 5px 8px 6px 10px;
   border-radius: 7px; cursor: pointer; border: 1px solid transparent;
   transition: background 0.12s var(--ease);
   animation: tileIn 0.2s var(--ease) backwards;
 }
-.ti-meta { flex: none; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.ti-meta .task-time { min-width: 34px; text-align: right; color: var(--text-faint); }
-.task-item .task-due {
-  width: 7px; height: 7px; padding: 0; border-radius: 50%; overflow: hidden;
-  color: transparent; font-size: 0; background: var(--border-strong);
-}
-.task-item .task-due.soon { background: var(--accent); }
-.task-item .task-due.overdue { background: var(--danger); }
+.ti-top { display: flex; align-items: center; gap: 9px; }
+.ti-bottom { padding-left: 24px; }
+.ti-meta { display: flex; align-items: center; gap: 8px; min-height: 16px; line-height: 1.3; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Мета — одной строкой: время не уезжает вниз, длинная версия ужимается. */
+.ti-meta > * { flex: none; }
+.ti-meta .task-version { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.ti-meta .task-due { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ti-meta .task-time { margin-left: auto; color: var(--text-faint); }
+/* Чип версии в мете — в высоту строки, иначе он один тянет строку задачи
+   на пять пикселей выше соседних. */
+.ti-meta .task-version { height: 16px; line-height: 16px; padding: 0 5px; }
+/* Точки тегов — сразу после названия; название их не сдвигает, пока ему
+   хватает места, а при нехватке режется оно, а не теги. */
+.ti-tags { flex: none; display: inline-flex; gap: 3px; }
+.ti-tags .tag-dot { width: 7px; height: 7px; border-radius: 50%; }
+/* Срок — текстом, но тихо: без подложки, цветом состояния. */
+.task-item .task-due { padding: 0; background: none; color: var(--text-dim); }
+.task-item .task-due.soon { color: var(--accent-ink); }
+.task-item .task-due.overdue { color: var(--danger); font-weight: 600; }
 .task-item:hover { background: var(--panel-2); }
 .task-item.selected { background: var(--panel-2); box-shadow: inset 2px 0 0 var(--accent); }
 /* Закрепление показывает только иконка пина справа: заливка целой строки
@@ -1644,16 +1682,18 @@ body.platform-web .tb-account {
 .history-head .h-count { font-size: 12.5px; font-weight: 500; color: var(--text-dim); margin-left: 4px; }
 .history-actions { display: flex; gap: 8px; }
 
+/* Записи — одним островом с разделителями, как строки в настройках:
+   карточка на каждую запись делала из десяти записей десять рамок. */
 #session-list { list-style: none; margin: 0; padding: 0; }
 .session-item {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 11px 14px; margin-bottom: 8px; font-size: 13px;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-  transition: border-color 0.12s var(--ease);
+  padding: 11px 14px; font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s var(--ease);
   animation: tileIn 0.18s var(--ease) backwards;
 }
-.session-item:last-child { margin-bottom: 0; }
-.session-item:hover { border-color: var(--border-strong); }
+.session-item:last-child { border-bottom: none; }
+.session-item:hover { background: var(--panel-2); }
 .session-when { color: var(--text-dim); cursor: pointer; transition: color 0.1s var(--ease); }
 .session-when:hover { color: var(--text); }
 .session-side { display: flex; align-items: center; gap: 8px; }
@@ -1945,6 +1985,18 @@ body.platform-web .tb-account {
 .dp-day:hover:not(.empty) { background: var(--border); }
 .dp-day.today { outline: 1px solid var(--accent); }
 .dp-day.sel { background: var(--accent); color: var(--accent-text); font-weight: 500; }
+/* Время под календарём: часы и минуты — два поля с кнопкой-списком. */
+.dp-time { display: flex; align-items: center; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.dp-time-label { font-size: 12px; color: var(--text-dim); margin-right: 4px; }
+.dp-time-colon { color: var(--text-dim); }
+.dp-combo { display: inline-flex; align-items: center; gap: 1px; }
+/* Поле — обычное компактное (.field-sm), ему здесь только ширина. */
+.dp-tf { width: 40px; padding-left: 4px; padding-right: 4px; text-align: center; font-variant-numeric: tabular-nums; }
+.dp-combo-btn { width: 18px; height: 26px; border: none; background: none; color: var(--icon); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.dp-combo-btn .icon { width: 11px; height: 11px; color: inherit; }
+.dp-combo-btn:hover { color: var(--text); }
+.dp-done { margin-left: auto; border: none; border-radius: 7px; padding: 5px 10px; background: var(--accent); color: var(--accent-text); font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.dp-done:hover { background: var(--accent-hover); }
 .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 12px; color: var(--text-dim); padding: 0 2px 6px; }
 .cal-days {
   flex: 1;
@@ -1995,8 +2047,10 @@ body.platform-web .tb-account {
 .cal-cell.range-end { outline: 2px solid var(--accent); outline-offset: -1px; }
 .cc-num { font-size: 12px; font-weight: 500; color: var(--text-dim); }
 .cal-cell.today .cc-num { color: var(--accent-ink); }
-.cc-time { font-size: 12px; font-variant-numeric: tabular-nums; }
-.cc-money { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+/* Время и сумма в клетке — одной строкой каждое: в узкой клетке сумма
+   ломалась на «3 750» и «₽» по разным строкам. Не влезло — обрезается. */
+.cc-time { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cc-money { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cc-bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); transition: width 0.3s var(--ease); }
 .cc-done-badge {
   position: absolute; top: 6px; right: 7px;
@@ -2184,7 +2238,7 @@ body.platform-web .tb-account {
 
 /* ---------- Страница статистики ---------- */
 
-.stats-wrap { max-width: 760px; margin: 0 auto; padding: 24px 24px 40px; }
+.stats-wrap { max-width: 760px; margin: 0 auto; padding: 24px 24px 40px; container-type: inline-size; }
 .stats-wrap .stat-cards { margin-bottom: 14px; }
 .stats-actions { display: flex; gap: 8px; margin-bottom: 18px; }
 .stats-wrap .st-running { margin-bottom: 18px; }
@@ -2236,12 +2290,6 @@ body.platform-web .tb-account {
 .settings-section-label {
   font-size: 12px; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-dim);
   margin: 18px 2px 8px;
-}
-.settings-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
 }
 .settings-row {
   display: flex;
@@ -2590,7 +2638,14 @@ body.platform-web .tb-account {
 .board-lane-head:hover { background: color-mix(in srgb, var(--text) 7%, var(--board-col)); }
 
 /* ---------- Полоска фильтров ---------- */
+/* Фильтр статистики: кнопка читается как выбор — подпись «Проект», цвет
+   и имя проекта, стрелка. Серая пилюля с одним именем выбором не читалась. */
 .filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.filter-bar .dp-btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 9px 0 10px; border-radius: 8px; font-size: 13px; }
+.filter-bar .fchip-k { color: var(--text-faint); }
+.filter-bar .fchip-v { font-weight: 500; }
+.filter-bar .dp-btn .icon { width: 12px; height: 12px; color: var(--text-faint); }
+.filter-bar .dp-btn.on { background: var(--panel); }
 .filter-reset {
   border: none; background: none; border-radius: 6px;
   padding: 5px 8px; color: var(--text-dim);
