@@ -136,6 +136,20 @@ test('DESIGN.md называет те же числа, что списки в э
   for (const row of rows) assert.ok(doc.includes(row), `в DESIGN.md нет строки: ${row}`);
 });
 
+test('блок «Дизайн» на /architecture называет те же числа', () => {
+  // Тот же урок, вторая копия: таблица «что сторожит тест» есть и на
+  // странице архитектуры.
+  const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
+  const page = read('landing/architecture.html');
+  assert.ok(page.includes('<div class="arch-sec" id="design">'), 'на /architecture нет блока «Дизайн»');
+  const cells = [
+    `Цвета мимо палитры в <code>styles.css</code></td><td class="mono">${DESKTOP_TO_FIX.length} в списке «исправить»</td>`,
+    `Цвета мимо темы на телефоне</td><td class="mono">${sum(MOBILE_LEGIT)} законных, ${sum(MOBILE_TO_FIX)} в списке «исправить»</td>`,
+    `Цвета и раскладка строкой из <code>app.js</code></td><td class="mono">${JS_TO_FIX.length} в списке «исправить»</td>`,
+  ];
+  for (const cell of cells) assert.ok(page.includes(cell), `на /architecture нет строки: ${cell}`);
+});
+
 // --- после переезда ----------------------------------------------------------------
 
 const LAYERS = ['Шрифты', 'Палитра', 'Основа', 'Компоненты', 'Каркас', 'Экраны'];
@@ -201,6 +215,24 @@ test('переключатель и поле ввода оформлены то�
     }
   }
   assert.deepEqual(stray, [], 'вид переключателя или поля задан вне компонента — возьмите .segmented или .field');
+});
+
+test('поля ввода и текстовые кнопки скруглены одинаково', () => {
+  // Стоят рядом — в модалках, в параметрах задачи, — и разное скругление
+  // видно сразу: так и было, кнопки 8, поля 7. Значение одно на всех.
+  const rules = cssRules(read('src/renderer/styles.css'));
+  const radiusOf = (startsWith) => {
+    const r = rules.find((x) => x.sel.startsWith(startsWith) && /border-radius/.test(x.body));
+    assert.ok(r, `нет правила со скруглением: ${startsWith}…`);
+    return declarations(r.body)['border-radius'];
+  };
+  const got = {
+    'поле ввода (.field)': radiusOf('.field, .field-sm'),
+    'кнопка ghost/danger': radiusOf('button.danger, button.ghost'),
+    'кнопка модалки': radiusOf('.modal-buttons button'),
+    'вторичная кнопка (.btn-soft)': radiusOf('.btn-soft'),
+  };
+  assert.equal(new Set(Object.values(got)).size, 1, `скругления разные: ${JSON.stringify(got)}`);
 });
 
 const LANDING_PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html'];

@@ -389,13 +389,14 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .segmented-sm > button { font-size: 11px; padding: 4px 6px; border-radius: 5px; }
 
 /* ---------- Поле ввода ----------
-   Один вид: заливка, рамка, скругление 7, акцентная рамка в фокусе. Обычный
+   Один вид: заливка, рамка, скругление 8 (как у текстовых кнопок), акцентная
+   рамка в фокусе. Обычный
    размер — поля модалок; компактный — поле в строке: ставка, число в
    настройках и в повторении. Новое поле берёт класс .field или .field-sm.
    Поле ссылки в редакторе — виджет Quill со своей высотой; у него наши только
    цвета (раздел «Редактор»). */
 .field, .field-sm, #modal-input, #modal-input2, .modal-lg input[type='text'], .modal-lg textarea, #sdlg-backdrop input, #auth-backdrop input, .rate-row input, .settings-row-input input, .rpdlg input.rp-num[type='text'] {
-  background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 7px;
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
   font-family: inherit; outline: none; transition: border-color 0.12s var(--ease);
 }
 .field, #modal-input, #modal-input2, .modal-lg input[type='text'], .modal-lg textarea, #sdlg-backdrop input, #auth-backdrop input { padding: 8px 10px; font-size: 14px; }
@@ -1437,7 +1438,7 @@ body.platform-web .tb-account {
   min-width: 132px;
   padding: 0 10px;
   font-size: 12.5px;
-  border-radius: 7px;
+  border-radius: 8px;
 }
 .task-params #task-rate { width: 132px; text-align: left; }
 /* Цветная точка статуса стоит перед колонкой управления, а не внутри неё:
@@ -1460,7 +1461,7 @@ body.platform-web .tb-account {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 5px 8px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
