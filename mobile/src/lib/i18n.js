@@ -209,7 +209,7 @@ export const T = {
     'export.period_month': 'Месяц', 'export.period_week': 'Неделя', 'export.period_day': 'День', 'export.period_custom': 'Свой',
     'export.period_half_year': 'Полгода', 'export.period_year': 'Год',
     'export.period_all': 'Всё время', 'export.from': 'С', 'export.to': 'По', 'export.share_title': 'Поделиться отчётом',
-    'export.pick_period': 'Выбрать период',
+    'export.pick_period': 'Excel за период',
     'plural.task': ['задача', 'задачи', 'задач'],
   },
   en: {
@@ -404,7 +404,7 @@ export const T = {
     'export.period_month': 'Month', 'export.period_week': 'Week', 'export.period_day': 'Day', 'export.period_custom': 'Custom',
     'export.period_half_year': 'Six months', 'export.period_year': 'Year',
     'export.period_all': 'All time', 'export.from': 'From', 'export.to': 'To', 'export.share_title': 'Share report',
-    'export.pick_period': 'Choose period',
+    'export.pick_period': 'Excel for a period',
     'plural.task': ['task', 'tasks', 'tasks'],
   },
   uk: {
@@ -599,7 +599,7 @@ export const T = {
     'export.period_month': 'Місяць', 'export.period_week': 'Тиждень', 'export.period_day': 'День', 'export.period_custom': 'Свій',
     'export.period_half_year': 'Півроку', 'export.period_year': 'Рік',
     'export.period_all': 'Весь час', 'export.from': 'Від', 'export.to': 'До', 'export.share_title': 'Поділитися звітом',
-    'export.pick_period': 'Обрати період',
+    'export.pick_period': 'Excel за період',
     'plural.task': ['завдання', 'завдання', 'завдань'],
   },
   kk: {
@@ -794,7 +794,7 @@ export const T = {
     'export.period_month': 'Ай', 'export.period_week': 'Апта', 'export.period_day': 'Күн', 'export.period_custom': 'Өз',
     'export.period_half_year': 'Жарты жыл', 'export.period_year': 'Жыл',
     'export.period_all': 'Барлық уақыт', 'export.from': 'Бастап', 'export.to': 'Дейін', 'export.share_title': 'Есеппен бөлісу',
-    'export.pick_period': 'Кезеңді таңдау',
+    'export.pick_period': 'Кезең бойынша Excel',
     'plural.task': ['тапсырма', 'тапсырма', 'тапсырма'],
   },
 };

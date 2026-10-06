@@ -25,7 +25,7 @@ export const {
   fmtClock, fmtShort, fmtDur, parseNum, hoursOf, capFirst, fmtDate, fmtTime,
 } = CoreFormat;
 
-export const { effectiveRate, sessionRate, sessionMoney } = CoreMoney;
+export const { effectiveRate, sessionRate, sessionMoney, earnedShown } = CoreMoney;
 
 // --- обёртки: ядру нужны локаль, перевод и «сейчас» --------------------------
 

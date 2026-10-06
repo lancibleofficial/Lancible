@@ -38,6 +38,13 @@
     return money;
   }
 
+  /** Показывать ли заработанное рядом с таймером. Да, если у задачи есть
+   *  ставка (своя или общая) — сумма растёт, пока идёт таймер, и ноль тоже
+   *  ответ; и да, если заработанное уже есть, даже когда ставку потом сняли:
+   *  у прошлых записей своя ставка, и деньги за них никуда не делись. Нет —
+   *  только когда и ставки нет, и заработанного нет: там «0 ₽» был бы шумом. */
+  const earnedShown = (task, defaultRate, earned) => earned > 0 || effectiveRate(task, defaultRate) > 0;
+
   /** Все пары «задача + запись времени» одним списком — основа любой сводки. */
   function allSessionPairs(tasks) {
     const out = [];
@@ -114,7 +121,7 @@
   }
 
   const api = {
-    effectiveRate, hasOwnRate, sessionRate, sessionMoney, earnedOf,
+    effectiveRate, hasOwnRate, sessionRate, sessionMoney, earnedOf, earnedShown,
     allSessionPairs, aggregateDays, rangeAgg, tasksDoneOnDay,
     projectMoney, projectMs, planSessionEdit,
   };

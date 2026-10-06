@@ -128,6 +128,24 @@ test('четыре карточки считают то же, что и данн
   expect(c.done).toBe('0 / 4');
 });
 
+test('подписи карточек видны целиком — переносятся, а не режутся', async ({ page }) => {
+  // С редизайна 6 октября мелкий текст не меньше 12 px, и «заработано в этом
+  // месяце» перестала влезать в карточку одной строкой — резалась
+  // многоточием. Проверяем на самом узком окне десктопа и на всех языках:
+  // казахские подписи длиннее русских.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await seed(page);
+  for (const code of ['ru', 'en', 'uk', 'kk']) {
+    const cut = await page.evaluate((c) => {
+      setLang(c);
+      return [...document.querySelectorAll('.stat-card span')]
+        .filter((s) => s.scrollWidth > s.clientWidth + 1 || s.scrollHeight > s.clientHeight + 1)
+        .map((s) => s.textContent);
+    }, code);
+    expect(cut, `${code}: обрезаны подписи`).toEqual([]);
+  }
+});
+
 test('фильтр «проект → версия» сужает и цифры, и календарь, и панель', async ({ page }) => {
   await seed(page);
 

@@ -53,7 +53,7 @@ test('теги на телефоне — это ровно функции ядр
 
 const NAMES = [
   'fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'fmtDate', 'fmtTime',
-  'effectiveRate', 'sessionRate', 'sessionMoney',
+  'effectiveRate', 'sessionRate', 'sessionMoney', 'earnedShown',
   'taskElapsedMs', 'earnedOf', 'fmtWhen',
   'fmtTimeShort', 'fmtDateShort', 'monthLabel', 'moneyFmt', 'fmtMoney', 'CURRENCY_SYMBOLS',
 ];
@@ -75,7 +75,7 @@ test('форматирование берётся у ядра, а не пере�
 });
 
 test('деньги берутся у ядра', () => {
-  for (const name of ['effectiveRate', 'sessionRate', 'sessionMoney']) {
+  for (const name of ['effectiveRate', 'sessionRate', 'sessionMoney', 'earnedShown']) {
     assert.equal(mobile[name], CoreMoney[name], `${name} — не функция ядра`);
   }
 });
@@ -140,7 +140,7 @@ test('список своего не разрастается молча', () =>
   const wrapped = ['taskElapsedMs', 'earnedOf', 'fmtWhen'];
   const checked = [
     'fmtClock', 'fmtShort', 'fmtDur', 'parseNum', 'hoursOf', 'capFirst', 'fmtDate', 'fmtTime',
-    'effectiveRate', 'sessionRate', 'sessionMoney',
+    'effectiveRate', 'sessionRate', 'sessionMoney', 'earnedShown',
   ];
   const unexplained = fromCore.filter((n) => !checked.includes(n) && !wrapped.includes(n));
   assert.deepEqual(unexplained, [], `необъявленные совпадения имён: ${unexplained.join(', ')}`);

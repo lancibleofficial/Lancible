@@ -6,6 +6,7 @@ import RichTextEditor, { LinkPromptSheet } from '../components/RichTextEditor';
 import EditorToolbar from '../components/EditorToolbar';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
 import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney, capFirst } from '../lib/format';
+import TaskClock from '../components/TaskClock';
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
@@ -23,7 +24,7 @@ import { tagsOf } from '../lib/tags';
 import { dueShort, remindKey, REMIND_LABEL } from '../lib/due';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
-import { useColors, spacing, radius, fontSize, typography, displayFamily } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 // Дни недели в подписи правила: 0 — воскресенье, как в Date.getDay().
@@ -358,7 +359,7 @@ export default function TaskDetailScreen({ route, navigation }) {
           />
 
           <View style={styles.timerCard}>
-            <Text style={styles.clock}>{fmtClock(elapsedMs)}</Text>
+            <TaskClock task={task} elapsedMs={elapsedMs} />
             <Pressable
               style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
               onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
@@ -548,7 +549,6 @@ const makeStyles = (colors) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg,
   },
-  clock: { color: colors.text, fontSize: 26, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
   timerBtn: {
     width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.panel2,
     alignItems: 'center', justifyContent: 'center',

@@ -272,7 +272,10 @@
             <div class="tab-panel" id="tab-notes">
               <div class="timer-bar">
                 <div class="timer-block">
-                  <div class="timer-display" id="timer-display">00:00:00</div>
+                  <div class="timer-line">
+                    <div class="timer-display" id="timer-display">00:00:00</div>
+                    <span class="timer-earned" id="timer-earned" hidden></span>
+                  </div>
                   <div class="timer-sub" id="timer-sub" data-i18n="timer.sub_default">общее время по задаче</div>
                 </div>
                 <button id="timer-btn" class="timer-btn"><span id="timer-btn-icon">▶</span> <span id="timer-btn-label" data-i18n="timer.start">Старт</span></button>
@@ -392,13 +395,13 @@
           </aside>
 
           <div class="ag-main">
-            <div class="ag-head">
+            <div class="period-head">
               <button type="button" id="ag-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
-              <div class="ag-nav">
+              <div class="period-nav">
                 <button type="button" id="ag-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
                 <button type="button" id="ag-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
               </div>
-              <span class="ag-title" id="ag-title"></span>
+              <span class="period-title" id="ag-title"></span>
               <span class="spacer"></span>
               <span class="ag-total" id="ag-total"></span>
               <div class="ag-modes segmented" id="ag-modes">
@@ -477,28 +480,28 @@
                 <span data-i18n="export.all_excel">Скачать всё в Excel</span>
               </button>
               <button id="export-period-btn" class="ghost">
-                <span data-i18n="export.pick_period">Выбрать период</span>
+                <span data-i18n="export.pick_period">Excel за период</span>
               </button>
             </div>
             <button id="sp-running" class="st-running" hidden></button>
           </div>
-            <div class="cal-head">
-              <div class="cal-modes segmented">
-                <button data-mode="month" class="on" data-i18n="calendar.month">Месяц</button>
-                <button data-mode="week" data-i18n="calendar.week">Неделя</button>
-                <button data-mode="day" data-i18n="calendar.day">День</button>
-              </div>
-              <div class="cal-nav">
+            <div class="period-head">
+              <button id="cal-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
+              <div class="period-nav">
                 <button id="cal-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-                <span id="cal-title"></span>
                 <button id="cal-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
               </div>
-              <span class="spacer"></span>
-              <button id="cal-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
+              <span class="period-title" id="cal-title"></span>
               <button id="cal-period-toggle" class="switch" aria-pressed="false">
                 <span class="switch-track"><span class="switch-thumb"></span></span>
                 <span data-i18n="calendar.choose_period">Выбрать период</span>
               </button>
+              <span class="spacer"></span>
+              <div class="cal-modes segmented">
+                <button data-mode="day" data-i18n="calendar.day">День</button>
+                <button data-mode="week" data-i18n="calendar.week">Неделя</button>
+                <button data-mode="month" class="on" data-i18n="calendar.month">Месяц</button>
+              </div>
             </div>
             <div class="cal-weekdays" id="cal-weekdays">
               <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>

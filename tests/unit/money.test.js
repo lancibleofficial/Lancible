@@ -18,6 +18,21 @@ test('нулевая ставка задачи — это ноль, а не «н
   assert.equal(M.effectiveRate({ rate: 0 }, 1000), 0);
 });
 
+test('сумма у таймера: есть ставка — показываем, даже ноль', () => {
+  assert.equal(M.earnedShown({ rate: 2000 }, 0, 0), true, 'своя ставка');
+  assert.equal(M.earnedShown({}, 1500, 0), true, 'общая ставка');
+});
+
+test('сумма у таймера: заработанное есть — показываем и без ставки', () => {
+  // Ставку сняли, а прошлые записи несут свою — деньги за них остались.
+  assert.equal(M.earnedShown({ rate: 0 }, 0, 1250), true);
+});
+
+test('сумма у таймера: ни ставки, ни денег — прячем', () => {
+  assert.equal(M.earnedShown({}, 0, 0), false);
+  assert.equal(M.earnedShown({ rate: 0 }, 1000, 0), false, 'явный ноль у задачи сильнее общей ставки');
+});
+
 test('без общей ставки всё считается по нулю, а не падает', () => {
   assert.equal(M.effectiveRate({}, undefined), 0);
   assert.equal(M.effectiveRate({}, null), 0);

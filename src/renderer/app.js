@@ -196,7 +196,7 @@ const el = {
   tmdlgDur: $('tmdlg-dur'), tmdlgDel: $('tmdlg-del'), tmdlgParams: $('tmdlg-params'),
   tmdlgOpen: $('tmdlg-open'), tmdlgDone: $('tmdlg-done'), tmdlgKicker: $('tmdlg-kicker'),
   tmdlgFound: $('tmdlg-found'), tmdlgFoundList: $('tmdlg-found-list'),
-  timerDisplay: $('timer-display'), timerSub: $('timer-sub'), timerBtn: $('timer-btn'),
+  timerDisplay: $('timer-display'), timerEarned: $('timer-earned'), timerSub: $('timer-sub'), timerBtn: $('timer-btn'),
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
   exportProjectBtn: $('export-project-btn'), exportCalendarBtn: $('export-calendar-btn'),
@@ -408,6 +408,7 @@ const hasOwnRate = Core.hasOwnRate;
 const sessionRate = (s, task) => Core.sessionRate(s, task, defaultRate());
 const sessionMoney = (s, task) => Core.sessionMoney(s, task, defaultRate());
 const earnedOf = (task) => Core.earnedOf(task, defaultRate(), state.activeTimer, Date.now());
+const earnedShown = (task, earned) => Core.earnedShown(task, defaultRate(), earned);
 const allSessionPairs = () => Core.allSessionPairs(state.tasks);
 const aggregateDays = () => Core.aggregateDays(state.tasks, defaultRate());
 const rangeAgg = (from, to) => Core.rangeAgg(state.tasks, from, to, defaultRate());
@@ -3089,6 +3090,11 @@ function renderMoney(task) {
 function renderTimer(task) {
   const running = state.activeTimer && state.activeTimer.taskId === task.id;
   el.timerDisplay.textContent = fmtClock(taskElapsedMs(task));
+  // Заработанное — справа от времени, по его нижнему краю, без подписи:
+  // рядом с часами сумма читается сама. Растёт вместе с идущим таймером.
+  const earned = earnedOf(task);
+  el.timerEarned.hidden = !earnedShown(task, earned);
+  el.timerEarned.textContent = fmtMoney(earned);
   el.timerBtnIcon.textContent = running ? '■' : '▶';
   el.timerBtnLabel.textContent = running ? t('timer.stop') : t('timer.start');
   el.timerBtn.classList.toggle('running', running);
