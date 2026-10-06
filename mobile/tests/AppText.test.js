@@ -8,9 +8,10 @@
 //      начертание сам, не находит и откатывается на системный шрифт. Поэтому
 //      вес из итогового стиля убирается целиком, а начертание выбирается
 //      семейством.
-//   2. Глифы ₸ ₴ ₺, которых в Gravity нет. Без явной подмены iOS подставляет
-//      случайный шрифт с засечками. Рубль ₽ в Gravity есть и подменяться не
-//      должен — иначе самый частый символ в приложении поедет.
+//   2. Знаки валют ₽ ₸ ₴ ₺, которых нет в Basique Pro, а ею набираются
+//      крупные суммы. Без явной подмены iOS подставляет случайный шрифт с
+//      засечками. В Onest они есть — там подменять нечего, и текст
+//      резаться не должен.
 // render в этой версии библиотеки асинхронный — отсюда await в каждом тесте.
 import { render } from '@testing-library/react-native';
 import Text from '../src/components/AppText';
@@ -29,13 +30,13 @@ function styleOf(node) {
 test('вес убирается, а начертание выбирается семейством', async () => {
   const { getByText } = await render(<Text style={{ fontWeight: '700' }}>жирный</Text>);
   const style = styleOf(getByText('жирный'));
-  expect(style.fontFamily).toBe('Gravity-Bold');
+  expect(style.fontFamily).toBe('Onest-SemiBold');
   expect(style.fontWeight).toBeUndefined();
 });
 
 test('без веса берётся обычное начертание', async () => {
   const { getByText } = await render(<Text>обычный</Text>);
-  expect(styleOf(getByText('обычный')).fontFamily).toBe('Gravity-Book');
+  expect(styleOf(getByText('обычный')).fontFamily).toBe('Onest-Regular');
 });
 
 test('явный fontFamily сильнее веса', async () => {
@@ -52,14 +53,17 @@ test('курсив переживает подмену веса', async () => {
   expect(styleOf(getByText('наклонный')).fontStyle).toBe('italic');
 });
 
-test('тенге уходит в запасной шрифт, а рубль остаётся в своём', async () => {
+test('знак валюты в Basique Pro уходит в Onest того же веса', async () => {
   // Текст разрезается на куски, и отсутствующий глиф оборачивается во
-  // вложенный Text с системным шрифтом. Значит, у «1000 ₸» внутри появится
-  // отдельный узел, а у «1000 ₽» — нет.
-  const tenge = await render(<Text>1000 ₸</Text>);
-  expect(tenge.queryByText('₸')).not.toBeNull();
+  // вложенный Text с Onest. Значит, у суммы, набранной Basique Pro, знак
+  // окажется отдельным узлом.
+  const { getByText } = await render(<Text style={{ fontFamily: 'BasiquePro-Bold' }}>6 250 ₽</Text>);
+  expect(styleOf(getByText('₽')).fontFamily).toBe('Onest-Bold');
+});
 
-  const rouble = await render(<Text>1000 ₽</Text>);
-  expect(rouble.queryByText('₽')).toBeNull();
-  expect(rouble.queryByText('1000 ₽')).not.toBeNull();
+test('в Onest знаки валют свои, и текст не режется', async () => {
+  const { queryByText } = await render(<Text>1000 ₸ · 2500 ₽</Text>);
+  expect(queryByText('₸')).toBeNull();
+  expect(queryByText('₽')).toBeNull();
+  expect(queryByText('1000 ₸ · 2500 ₽')).not.toBeNull();
 });

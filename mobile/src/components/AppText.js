@@ -1,4 +1,4 @@
-// Обёртка над RN Text, проставляющая Basique Pro по умолчанию.
+// Обёртка над RN Text, проставляющая шрифт приложения по умолчанию.
 //
 // Почему не глобальный патч: в этой версии React Native (0.86, новый
 // синтаксис `component`) Text — обычная функция, а не класс, у неё нет
@@ -29,52 +29,50 @@
 // алиас, а RN на iOS резолвит такое имя напрямую в один файл, минуя подбор
 // по весу внутри семейства.
 import { Children, forwardRef } from 'react';
-import { Text as RNText, StyleSheet, Platform } from 'react-native';
+import { Text as RNText, StyleSheet } from 'react-native';
 
-// Текст набирает Gravity — у него ровнее строчные на мелком кегле, а
-// телефон это сплошь мелкий кегль. Basique Pro остался фирменной нотой:
-// лого, заголовки экранов, крупные числа (theme.displayFamily).
+// Текст набирает Onest, Basique Pro остался фирменной нотой: лого,
+// заголовки экранов, крупные числа (theme.displayFamily).
 //
-// У Gravity четыре начертания: Light, Book, Regular, Bold. Раскладка ниже
-// прежняя по духу — номинальный вес на ступень тише, чтобы текст не
-// выглядел жирным, — но начертаний теперь хватает на всю лесенку.
-const FAMILY_BY_WEIGHT = {
-  100: 'Gravity-Light', 200: 'Gravity-Light', 300: 'Gravity-Light',
-  400: 'Gravity-Book', normal: 'Gravity-Book',
-  500: 'Gravity-Regular', 600: 'Gravity-Regular',
-  700: 'Gravity-Bold', bold: 'Gravity-Bold',
-  800: 'Gravity-Bold', 900: 'Gravity-Bold',
+// У Onest пять начертаний в приложении: Light, Regular, Medium, SemiBold,
+// Bold. Раскладка по весу — на ступень тише номинала начиная с 700: жирный
+// на маленьком экране быстро становится тяжёлым, поэтому 700 — это
+// SemiBold, а Bold достаётся только 800 и 900.
+export const FAMILY_BY_WEIGHT = {
+  100: 'Onest-Light', 200: 'Onest-Light', 300: 'Onest-Light',
+  400: 'Onest-Regular', normal: 'Onest-Regular',
+  500: 'Onest-Medium', 600: 'Onest-SemiBold',
+  700: 'Onest-SemiBold', bold: 'Onest-SemiBold',
+  800: 'Onest-Bold', 900: 'Onest-Bold',
 };
+export const DEFAULT_FAMILY = 'Onest-Regular';
 
-// В Gravity нет глифов ₸ ₴ ₺ (проверено по cmap всех четырёх файлов).
-// Рубль ₽ у неё, в отличие от Basique Pro, есть — и это самый частый символ
-// в приложении, так что подменять его чужим шрифтом больше не нужно.
-//
-// Без явного фолбэка iOS подставляет для недостающих случайный шрифт с
-// засечками, что выглядит чужеродно рядом с цифрами. Такие символы
-// оборачиваются во вложенный Text с системным шрифтом (SF на iOS, Roboto на
-// Android) того же визуального веса — ближайший по духу гротеск из
-// гарантированно доступных.
-const MISSING_GLYPHS = /([₸₴₺])/;
-const FALLBACK_FAMILY = Platform.select({ ios: 'System', default: 'sans-serif' });
-const FALLBACK_WEIGHT = {
-  'Gravity-Light': '300', 'Gravity-Book': '400', 'Gravity-Regular': '500', 'Gravity-Bold': '700',
-  'BasiquePro-Light': '300', 'BasiquePro-Regular': '500', 'BasiquePro-Bold': '700', 'BasiquePro-Black': '900',
+// В Basique Pro нет знаков валют ₽ ₸ ₴ ₺ (проверено по файлам в
+// assets/fonts), а набираются ею как раз крупные суммы. Без подмены Android
+// берёт системный шрифт, а iOS — случайный с засечками. Такие символы
+// оборачиваются во вложенный Text с Onest того же веса: в нём все четыре
+// знака есть, и сумма читается одной гарнитурой с остальным текстом.
+// Сам Onest подмен не требует.
+const MISSING_GLYPHS = /([₽₸₴₺])/;
+const GLYPH_FALLBACK = {
+  'BasiquePro-Light': 'Onest-Light', 'BasiquePro-Regular': 'Onest-Medium',
+  'BasiquePro-Bold': 'Onest-Bold', 'BasiquePro-Black': 'Onest-Bold',
 };
 
 function withGlyphFallback(children, family) {
-  const fallbackStyle = { fontFamily: FALLBACK_FAMILY, fontWeight: FALLBACK_WEIGHT[family] || '400' };
+  const fallback = GLYPH_FALLBACK[family];
+  if (!fallback) return children;
   return Children.map(children, (child) => {
     if (typeof child !== 'string' || !MISSING_GLYPHS.test(child)) return child;
     return child.split(MISSING_GLYPHS).map((part, i) => (
-      MISSING_GLYPHS.test(part) ? <RNText key={i} style={fallbackStyle}>{part}</RNText> : part
+      MISSING_GLYPHS.test(part) ? <RNText key={i} style={{ fontFamily: fallback }}>{part}</RNText> : part
     ));
   });
 }
 
 const Text = forwardRef(({ style, children, ...props }, ref) => {
   const flat = StyleSheet.flatten(style) || {};
-  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'Gravity-Book';
+  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || DEFAULT_FAMILY;
   return (
     <RNText ref={ref} {...props} style={[style, { fontFamily: family, fontWeight: undefined, fontStyle: flat.fontStyle === 'italic' ? 'italic' : 'normal' }]}>
       {withGlyphFallback(children, family)}

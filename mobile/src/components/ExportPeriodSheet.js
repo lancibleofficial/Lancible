@@ -5,7 +5,7 @@ import PrimaryButton from './PrimaryButton';
 import MiniDatePicker from './MiniDatePicker';
 import { dayKey, keyToDate, mondayOf } from '../lib/calendarMath';
 import { setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 // Два ряда на одной подложке: 3 сверху, 4 снизу. В один ряд семь вариантов
@@ -129,7 +129,7 @@ export default function ExportPeriodSheet({ lang, onConfirm, onCancel }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.xs },
+  title: { color: colors.text, ...typography.title, marginBottom: spacing.xs },
   // Одна подложка на оба ряда — как у переключателя «Заметки/История»,
   // только в две строки.
   tabCard: { backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4, gap: 4 },

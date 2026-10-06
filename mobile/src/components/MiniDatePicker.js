@@ -146,6 +146,6 @@ const makeStyles = (colors, cellSize) => StyleSheet.create({
   cellMid: { backgroundColor: colors.accentMuted },
   cellEnd: { backgroundColor: colors.accentMuted, borderColor: colors.accent },
   cellNum: { color: colors.text, fontSize: fontSize.sm },
-  cellNumToday: { color: colors.accent, fontWeight: '800' },
+  cellNumToday: { color: colors.accentInk, fontWeight: '800' },
   cellNumEnd: { color: colors.text, fontWeight: '700' },
 });

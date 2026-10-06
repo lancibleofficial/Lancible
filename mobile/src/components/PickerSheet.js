@@ -2,7 +2,7 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import Icon from './Icon';
 import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 // Простой список выбора одного варианта — язык, валюта и т.п. Выбор сразу
 // закрывает лист, отдельная кнопка "Готово" не нужна.
@@ -21,7 +21,7 @@ export default function PickerSheet({ title, options, value, onSelect }) {
             style={[styles.option, active && styles.optionActive]}
           >
             <Text style={[styles.optionText, active && styles.optionTextActive]}>{opt.label}</Text>
-            {active ? <Icon name="check" size={14} color={colors.accent} /> : null}
+            {active ? <Icon name="check" size={14} color={colors.accentInk} /> : null}
           </Pressable>
         );
       })}
@@ -30,7 +30,7 @@ export default function PickerSheet({ title, options, value, onSelect }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.xs },
+  title: { color: colors.text, ...typography.title, marginBottom: spacing.xs },
   option: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.panel2, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md,

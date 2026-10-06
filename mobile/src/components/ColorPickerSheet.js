@@ -8,7 +8,7 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import { PALETTE } from '../lib/migrate';
 import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 export default function ColorPickerSheet({ title, value, onSelect }) {
   const colors = useColors();
@@ -33,7 +33,7 @@ export default function ColorPickerSheet({ title, value, onSelect }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   wrap: { gap: spacing.md, paddingBottom: spacing.lg },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   // Сетка, а не лента: цветов шестнадцать, и в строку они не помещаются —
   // а искать нужный горизонтальной прокруткой дольше, чем взглядом.
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import Text from './AppText';
 import PrimaryButton from './PrimaryButton';
 import { closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, fontSize } from '../theme';
+import { useColors, spacing, fontSize, typography } from '../theme';
 
 // Содержимое нижнего листа для меню/подтверждений — замена Alert.alert(...)
 // (см. lib/dialogs.js). actions: [{label, onPress, destructive?, cancel?}].
@@ -37,6 +37,6 @@ export default function ActionSheetContent({ title, message, actions }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   message: { color: colors.textDim, fontSize: fontSize.sm },
 });

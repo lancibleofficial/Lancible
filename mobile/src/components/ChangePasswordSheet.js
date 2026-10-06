@@ -6,7 +6,7 @@ import PrimaryButton from './PrimaryButton';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 import { setSheetFooter, closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function ChangePasswordSheet() {
@@ -67,7 +67,7 @@ export default function ChangePasswordSheet() {
 
 const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   input: {
     backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,

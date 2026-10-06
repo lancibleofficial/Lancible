@@ -13,7 +13,7 @@ import Icon from '../components/Icon';
 import PrimaryButton from '../components/PrimaryButton';
 import SearchHeader from '../components/SearchHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t, LOCALE_MAP } from '../lib/i18n';
 import ScheduleView from './ScheduleView';
@@ -498,7 +498,7 @@ const makeStyles = (colors, cellSize, insets, clearance) => StyleSheet.create({
   modeTextActive: { color: colors.text },
   navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm },
   navBtn: { padding: spacing.sm },
-  navTitle: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: '700', textAlign: 'center' },
+  navTitle: { flex: 1, color: colors.text, ...typography.title, textAlign: 'center' },
   actionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.md },
   todayBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -522,7 +522,7 @@ const makeStyles = (colors, cellSize, insets, clearance) => StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.lg, marginBottom: spacing.md,
   },
   viewTotalLabel: { flexShrink: 1, color: colors.textDim, fontSize: fontSize.md, fontWeight: '600' },
-  viewTotalValue: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  viewTotalValue: { color: colors.text, ...typography.title, fontVariant: ['tabular-nums'] },
   weekdaysRow: { flexDirection: 'row', marginBottom: spacing.xs, gap: GRID_GAP },
   weekday: { width: cellSize, textAlign: 'center', color: colors.textDim, fontSize: fontSize.xs },
   // overflow:hidden — окно, через которое видна только одна из трёх панелей
@@ -537,7 +537,7 @@ const makeStyles = (colors, cellSize, insets, clearance) => StyleSheet.create({
   cellInRange: { backgroundColor: colors.accentMuted },
   cellRangeEnd: { backgroundColor: colors.accentMuted, borderWidth: 2, borderColor: colors.accent },
   cellNum: { color: colors.text, fontSize: fontSize.sm },
-  cellNumToday: { color: colors.accent, fontWeight: '800' },
+  cellNumToday: { color: colors.accentInk, fontWeight: '800' },
   cellTime: { color: colors.textDim, fontSize: 10 },
   cellBarTrack: { width: '70%', height: 3, borderRadius: 2, backgroundColor: colors.border, overflow: 'hidden' },
   cellBar: { height: '100%', backgroundColor: colors.accent },

@@ -11,7 +11,7 @@ import { TagBadgeRow } from './TagBadge';
 import { t } from '../lib/i18n';
 import PrimaryButton from './PrimaryButton';
 import { openSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 /** Окно проекта: создание и правка одним листом.
  *
@@ -120,7 +120,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project 
 
 const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.sm },
+  title: { color: colors.text, ...typography.title, marginBottom: spacing.sm },
   input: {
     backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,

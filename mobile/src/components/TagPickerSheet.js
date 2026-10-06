@@ -10,7 +10,7 @@ import { useAppStore } from '../store/useAppStore';
 import { searchTags, exactMatch, toggleTag, tagsOf } from '../lib/tags';
 import { t } from '../lib/i18n';
 import { openSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 /** Пикер тегов — один на оба места, где теги вешают: задача и проект.
  *  Поле ввода служит и поиском, и входом в создание: если набранного имени
@@ -69,7 +69,7 @@ export default function TagPickerSheet({ value, onChange, onDone }) {
             <Pressable key={tag.id} onPress={() => apply(toggleTag(ids, tag.id))} style={styles.row}>
               <View style={[styles.dot, { backgroundColor: tag.color }]} />
               <Text style={styles.rowName} numberOfLines={1}>{tag.name}</Text>
-              {on ? <Icon name="check" size={14} color={colors.accent} /> : null}
+              {on ? <Icon name="check" size={14} color={colors.accentInk} /> : null}
             </Pressable>
           );
         })}
@@ -96,7 +96,7 @@ export default function TagPickerSheet({ value, onChange, onDone }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md, paddingBottom: spacing.lg },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   picked: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   input: {
     backgroundColor: colors.inputBg, borderRadius: radius.md,

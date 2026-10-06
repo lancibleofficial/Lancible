@@ -45,9 +45,9 @@ export default function EditorToolbar({ format, onCommand, colors }) {
         return (
           <Pressable key={i} onPress={() => onCommand(item)} style={[styles.btn, active && styles.btnActive]}>
             {item.icon ? (
-              <Icon name={item.icon} size={17} color={active ? colors.accent : colors.text} />
+              <Icon name={item.icon} size={17} color={active ? colors.accentInk : colors.text} />
             ) : (
-              <Text style={[styles.btnLabel, item.bold && styles.bold, item.italic && styles.italic, item.underline && styles.underline, item.strike && styles.strike, active && { color: colors.accent }]}>
+              <Text style={[styles.btnLabel, item.bold && styles.bold, item.italic && styles.italic, item.underline && styles.underline, item.strike && styles.strike, active && { color: colors.accentInk }]}>
                 {item.label}
               </Text>
             )}

@@ -1,4 +1,4 @@
-// Копирует внешние ассеты (Quill, шрифт Basique Pro) в src/renderer/vendor,
+// Копирует внешние ассеты (Quill, шрифты Onest и Basique Pro) в src/renderer/vendor,
 // чтобы рендерер грузил всё из своей папки — и в dev, и в собранном .exe.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -17,8 +17,8 @@ const quill = [
 ];
 
 // Имена в личной папке font/ свои: Basique_4=Thin(100) 3=Light(300)
-// 2=Regular(400) 1=Bold(700), Basique=Black(900). Gravity туда кладётся
-// в .otf, и её .woff2 берутся только из assets/fonts.
+// 2=Regular(400) 1=Bold(700), Basique=Black(900). Onest там нет — его
+// .woff2 берутся только из assets/fonts.
 const fonts = [
   ['Basique_3.woff2', 'Basique-Light.woff2'],
   ['Basique_2.woff2', 'Basique-Regular.woff2'],
@@ -35,7 +35,7 @@ try {
 
   const fontSrc = path.join(root, 'font');
   const committedFonts = path.join(root, 'assets', 'fonts'); // .woff2 в гите — есть всегда
-  // Сначала закоммиченные .woff2 целиком: они покрывают и Basique, и Gravity.
+  // Сначала закоммиченные .woff2 целиком: они покрывают и Basique, и Onest.
   let copied = 0;
   if (fs.existsSync(committedFonts)) {
     for (const name of fs.readdirSync(committedFonts).filter((n) => n.endsWith('.woff2'))) {

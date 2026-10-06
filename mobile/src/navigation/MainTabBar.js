@@ -34,7 +34,7 @@ export default function MainTabBar({ state, navigation, descriptors }) {
       <View style={styles.bar}>
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
-          const color = isFocused ? colors.accent : colors.textDim;
+          const color = isFocused ? colors.accentInk : colors.textDim;
           const label = descriptors[route.key].options.tabBarLabel ?? route.name;
           return (
             <Pressable

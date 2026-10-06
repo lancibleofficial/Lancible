@@ -108,5 +108,5 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   searchPlaceholder: { flex: 1, color: colors.textDim, fontSize: fontSize.md },
   headerBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   cancelBtn: { height: 44, justifyContent: 'center', paddingLeft: spacing.xs },
-  cancelText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700' },
+  cancelText: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: '700' },
 });

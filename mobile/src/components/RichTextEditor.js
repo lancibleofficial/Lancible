@@ -36,7 +36,7 @@ function buildHtml(colors, placeholder) {
   .ql-editor.ql-blank::before{color:${colors.textDim};font-style:normal;left:${spacing.lg}px;right:${spacing.lg}px;}
   .ql-editor blockquote{border-left:3px solid ${colors.border};color:${colors.textDim};}
   .ql-editor pre.ql-syntax{background:${colors.panel2};color:${colors.text};border-radius:8px;}
-  .ql-editor a{color:${colors.accent};}
+  .ql-editor a{color:${colors.accentInk};}
   ::selection{background:${colors.accentMuted};}
 </style>
 </head><body>

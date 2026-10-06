@@ -7,7 +7,7 @@ import PrimaryButton from './PrimaryButton';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 import { setSheetFooter, closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t } from '../lib/i18n';
 
 // Тот же четырёхцветный логотип, что в src/renderer/index.html — своя
@@ -148,7 +148,7 @@ export default function AuthSheet({ initialTab = 'signin' }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   subtitle: { color: colors.textDim, fontSize: fontSize.sm },
   googleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,

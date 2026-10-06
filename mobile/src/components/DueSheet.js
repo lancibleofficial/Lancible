@@ -7,7 +7,7 @@ import Icon from './Icon';
 import { dayKey, keyToDate } from '../lib/calendarMath';
 import { REMIND_PRESETS, REMIND_LABEL, remindKey } from '../lib/due';
 import { setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -117,7 +117,7 @@ export default function DueSheet({ task, lang, onApply, onClear }) {
             return (
               <Pressable key={key} onPress={() => setRemind(key)} style={[styles.option, active && styles.optionActive]}>
                 <Text style={[styles.optionText, active && styles.optionTextActive]}>{t(lang, REMIND_LABEL[key])}</Text>
-                {active ? <Icon name="check" size={14} color={colors.accent} /> : null}
+                {active ? <Icon name="check" size={14} color={colors.accentInk} /> : null}
               </Pressable>
             );
           })}
@@ -128,7 +128,7 @@ export default function DueSheet({ task, lang, onApply, onClear }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
   tabActive: { backgroundColor: colors.tabActiveBg },

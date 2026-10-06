@@ -533,7 +533,7 @@
       "id": "mobile_tests_apptext_test_styleof",
       "label": "styleOf()",
       "file": "mobile/tests/AppText.test.js",
-      "at": "L19"
+      "at": "L20"
     },
     {
       "id": "mobile_tests_icon_test_fillof",
@@ -1130,16 +1130,22 @@
       "at": "L65"
     },
     {
+      "id": "tests_e2e_theme_spec_contrast",
+      "label": "contrast()",
+      "file": "tests/e2e/theme.spec.js",
+      "at": "L45"
+    },
+    {
       "id": "tests_e2e_theme_spec_open",
       "label": "open()",
       "file": "tests/e2e/theme.spec.js",
-      "at": "L9"
+      "at": "L10"
     },
     {
       "id": "tests_e2e_theme_spec_paint",
       "label": "paint()",
       "file": "tests/e2e/theme.spec.js",
-      "at": "L18"
+      "at": "L19"
     },
     {
       "id": "tests_e2e_versions_spec_dropon",

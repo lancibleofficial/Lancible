@@ -6,7 +6,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useAppStore } from '../../store/useAppStore';
 import { t } from '../../lib/i18n';
 import PrimaryButton from '../../components/PrimaryButton';
-import { useColors, spacing, radius, fontSize } from '../../theme';
+import { useColors, spacing, radius, fontSize, displayFamily } from '../../theme';
 
 const USE_CASES = [
   { value: 'personal', key: 'auth.usecase_personal' },
@@ -69,7 +69,7 @@ export default function OnboardingScreen() {
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { flexGrow: 1, padding: spacing.xl, justifyContent: 'center', gap: spacing.lg },
-  title: { color: colors.text, fontSize: fontSize.xl, fontWeight: '800' },
+  title: { color: colors.text, fontSize: fontSize.xl, fontFamily: displayFamily.bold },
   field: { gap: spacing.sm },
   label: { color: colors.textDim, fontSize: fontSize.xs },
   input: {

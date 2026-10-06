@@ -117,20 +117,26 @@ test('карточка доски поднята над столбцом, а н�
       };
       const board = getComputedStyle(document.querySelector('.board-card')).backgroundColor;
       const column = getComputedStyle(document.querySelector('.board-col')).backgroundColor;
+      const page = getComputedStyle(document.body).backgroundColor;
       state.ui.view = 'home';
       render();
-      const tile = getComputedStyle(document.querySelector('.ptile')).backgroundColor;
-      return { board, tile, lift: lum(board) - lum(column) };
+      const t = getComputedStyle(document.querySelector('.ptile'));
+      return {
+        board, column, page, tile: t.backgroundColor, tileBorder: t.borderTopColor,
+        lift: lum(board) - lum(column), tileLift: lum(t.backgroundColor) - lum(page),
+      };
     }, theme);
-    // Карточка на ступень светлее того, на чём лежит. На главной она лежит на
-    // белой странице и потому чуть серая, на доске — в сером углублении
-    // столбца и потому белая. Отношение одно, цвета разные.
+    // Карточка на ступень светлее того, на чём лежит (с редизайна 6 октября
+    // в тёмной теме так устроены все слои). В светлой «Чистой» всё белое, и
+    // столбец доски — тихая серая полоса, на которой белая карточка видна.
     expect(got.lift, `в теме ${theme} карточка не светлее столбца`).toBeGreaterThan(5);
     if (theme === 'light') {
       expect(got.board, 'на светлой карточка доски белая').toBe('rgb(255, 255, 255)');
-      expect(got.tile, 'а карточка проекта на белой странице — чуть серая').not.toBe(got.board);
+      expect(got.column, 'а столбец под ней — нет').not.toBe(got.board);
+      expect(got.tile, 'карточка проекта белая, как страница').toBe(got.page);
+      expect(got.tileBorder, 'и отделена от страницы рамкой').not.toBe(got.page);
     } else {
-      expect(got.board, 'в тёмной обе карточки на одной поверхности').toBe(got.tile);
+      expect(got.tileLift, 'в тёмной карточка проекта светлее страницы').toBeGreaterThan(5);
     }
   }
 });

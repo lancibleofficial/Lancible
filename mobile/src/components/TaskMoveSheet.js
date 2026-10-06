@@ -10,7 +10,7 @@ import Icon from './Icon';
 import { useAppStore } from '../store/useAppStore';
 import { orderedStatuses } from '../lib/statuses';
 import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function TaskMoveSheet({ taskId }) {
@@ -45,7 +45,7 @@ export default function TaskMoveSheet({ taskId }) {
           >
             <View style={[styles.dot, { backgroundColor: st.color }]} />
             <Text style={[styles.rowText, active && styles.rowTextActive]} numberOfLines={1}>{st.name}</Text>
-            {active ? <Icon name="check" size={14} color={colors.accent} /> : null}
+            {active ? <Icon name="check" size={14} color={colors.accentInk} /> : null}
           </Pressable>
         );
       })}
@@ -54,7 +54,7 @@ export default function TaskMoveSheet({ taskId }) {
         style={styles.timerRow}
         onPress={() => { if (running) stopTimer(); else startTimer(task.id); closeSheet(); }}
       >
-        <Icon name={running ? 'pause' : 'play'} size={15} color={running ? colors.danger : colors.accent} />
+        <Icon name={running ? 'pause' : 'play'} size={15} color={running ? colors.danger : colors.accentInk} />
         <Text style={styles.rowText}>{t(lang, running ? 'timer.stop' : 'timer.start')}</Text>
       </Pressable>
     </View>
@@ -63,7 +63,7 @@ export default function TaskMoveSheet({ taskId }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   wrap: { gap: spacing.sm, paddingBottom: spacing.lg },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   section: { color: colors.textDim, fontSize: fontSize.xs, textTransform: 'uppercase', marginTop: spacing.sm },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

@@ -120,6 +120,6 @@ const makeStyles = (colors) => StyleSheet.create({
   later: {},
   laterText: {},
   time: { color: colors.textDim, fontSize: fontSize.xs },
-  timeRunning: { color: colors.accent, fontWeight: '700' },
+  timeRunning: { color: colors.accentInk, fontWeight: '700' },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
 });

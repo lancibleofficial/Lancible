@@ -36,7 +36,7 @@ export default function PrimaryButton({ title, onPress, disabled, loading, varia
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isGhost ? colors.accent : colors.accentText} />
+        <ActivityIndicator color={isGhost ? colors.accentInk : colors.accentText} />
       ) : (
         <View style={styles.row}>
           {icon ? <Icon name={icon} size={16} color={iconColor} /> : null}

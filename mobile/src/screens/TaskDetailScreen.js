@@ -23,7 +23,7 @@ import { tagsOf } from '../lib/tags';
 import { dueShort, remindKey, REMIND_LABEL } from '../lib/due';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography, displayFamily } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 // Дни недели в подписи правила: 0 — воскресенье, как в Date.getDay().
@@ -543,12 +543,12 @@ const makeStyles = (colors) => StyleSheet.create({
   // marginBottom меньше, чем зазор между остальными блоками ниже (timerCard/
   // splitRow/tabRow держат spacing.lg сами) — раньше был общий gap на .header,
   // одинаковый везде; тут именно название-таймер должен быть теснее.
-  titleInput: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700', paddingVertical: spacing.sm, marginBottom: spacing.xs },
+  titleInput: { color: colors.text, ...typography.title, paddingVertical: spacing.sm, marginBottom: spacing.xs },
   timerCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg,
   },
-  clock: { color: colors.text, fontSize: 26, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  clock: { color: colors.text, fontSize: 26, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
   timerBtn: {
     width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.panel2,
     alignItems: 'center', justifyContent: 'center',
@@ -570,7 +570,7 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
     paddingHorizontal: spacing.md, justifyContent: 'center',
   },
-  earnedValue: { color: colors.accent, fontSize: fontSize.md, fontWeight: '700' },
+  earnedValue: { color: colors.accentInk, fontSize: fontSize.md, fontWeight: '700' },
   dueRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.panel, borderRadius: radius.md,

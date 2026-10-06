@@ -235,6 +235,84 @@ test('поля ввода и текстовые кнопки скруглены 
   assert.equal(new Set(Object.values(got)).size, 1, `скругления разные: ${JSON.stringify(got)}`);
 });
 
+// --- редизайн 6 октября: палитра, шрифт, мелкий текст ------------------------------
+
+test('светлая тема задана двумя одинаковыми блоками', () => {
+  // Блоков два — по системе (prefers-color-scheme) и по выбору
+  // (data-theme="light"), — и правят их по очереди. Разошлись — и у того,
+  // кто выбрал светлую тему руками, она не та, что у того, кто живёт по
+  // системе.
+  const css = read('src/renderer/styles.css');
+  const bySystem = css.match(/:root:not\(\[data-theme="dark"\]\):not\(\[data-theme="light"\]\) \{([^}]*)\}/);
+  const byChoice = css.match(/^:root\[data-theme="light"\] \{([^}]*)\}/m);
+  assert.ok(bySystem && byChoice, 'не нашёл одного из блоков светлой темы');
+  assert.deepEqual(declarations(bySystem[1]), declarations(byChoice[1]));
+});
+
+test('зелёный текстом — через --accent-ink, а не --accent', () => {
+  // На белом неоновый зелёный буквами не читается (контраст 1.4:1), поэтому
+  // у текста и иконок свой токен. Заливка — кнопка, бегунок, полоска —
+  // остаётся на --accent.
+  const desktop = [];
+  for (const r of cssRules(read('src/renderer/styles.css'))) {
+    if (declarations(r.body).color === 'var(--accent)') desktop.push(r.sel);
+  }
+  assert.deepEqual(desktop, [], 'styles.css: color: var(--accent) — возьмите var(--accent-ink)');
+
+  // На телефоне: colors.accent допустим только заливкой, рамкой, дорожкой
+  // тумблера и запасным цветом проекта.
+  const base = path.join(ROOT, 'mobile', 'src');
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true })
+    .flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+  const fill = /backgroundColor|borderColor|trackColor|\.color (:|\|\|) colors\.accent/;
+  const mobile = [];
+  for (const file of walk(base)) {
+    if (!file.endsWith('.js')) continue;
+    read(path.relative(ROOT, file)).split('\n').forEach((line, i) => {
+      if (/colors\.accent(?![A-Za-z])/.test(line) && !fill.test(line)) {
+        mobile.push(`${path.relative(base, file)}:${i + 1}`);
+      }
+    });
+  }
+  assert.deepEqual(mobile, [], 'телефон: зелёный текстом или иконкой — возьмите colors.accentInk');
+});
+
+/** Мельче 12px — только то, что не читают как текст. */
+const SMALL_TEXT_ALLOWED = [
+  '.notif-badge', // цифра в кружке на колокольчике: кружок 16px
+  '.running-dot', // точка «таймер идёт» — знак, а не надпись
+];
+
+test('styles.css: текст не мельче 12px', () => {
+  // До редизайна мельче 12px были 74 правила — даты, суммы, подписи полей.
+  // Вместе с тонким начертанием это и давало «всё бледное».
+  const small = [];
+  for (const r of cssRules(read('src/renderer/styles.css'))) {
+    const size = declarations(r.body)['font-size'];
+    const px = size && size.match(/^(\d+(?:\.\d+)?)px$/);
+    if (px && +px[1] < 12) small.push(r.sel);
+  }
+  ratchet(small, SMALL_TEXT_ALLOWED, 'мелкий текст');
+});
+
+test('телефон: каждое начертание, которое называет код, загружено и лежит файлом', () => {
+  // Опечатка в имени семейства на телефоне не падает: Android молча берёт
+  // системный шрифт. Поэтому сверяем: всё, что называют AppText, тема и
+  // таббар, есть среди ключей useFonts в App.js, и за каждым ключом — файл.
+  const app = read('mobile/App.js');
+  const loaded = new Map([...app.matchAll(/'([\w-]+)': require\('\.\/(assets\/fonts\/[^']+)'\)/g)].map((m) => [m[1], m[2]]));
+  assert.ok(loaded.size >= 9, `в App.js нашлось ${loaded.size} начертаний — разбор сломался?`);
+  for (const [name, file] of loaded) {
+    assert.ok(fs.existsSync(path.join(ROOT, 'mobile', file)), `нет файла ${file} для ${name}`);
+  }
+  const named = new Set();
+  for (const src of ['mobile/src/components/AppText.js', 'mobile/src/theme.js', 'mobile/src/navigation/MainTabs.ios.js']) {
+    for (const m of read(src).matchAll(/'((?:Onest|BasiquePro|Gravity)-[\w]+)'/g)) named.add(m[1]);
+  }
+  const missing = [...named].filter((n) => !loaded.has(n));
+  assert.deepEqual(missing, [], 'эти начертания называет код, но App.js их не загружает');
+});
+
 const LANDING_PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html'];
 
 test('лендинг: общее — в landing.css, у страниц только своё', () => {

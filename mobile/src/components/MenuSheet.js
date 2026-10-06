@@ -10,7 +10,7 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import Icon from './Icon';
 import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 /**
  * @param {string} [title] — шапка листа.
@@ -44,7 +44,7 @@ export default function MenuSheet({ title, items }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   wrap: { paddingBottom: spacing.lg },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.sm },
+  title: { color: colors.text, ...typography.title, marginBottom: spacing.sm },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     // 52 — не «покрупнее»: пункты идут подряд, и соседний не должен ловить

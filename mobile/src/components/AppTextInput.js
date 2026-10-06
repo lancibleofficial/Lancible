@@ -4,18 +4,11 @@
 import { forwardRef } from 'react';
 import { TextInput as RNTextInput, StyleSheet } from 'react-native';
 
-// Сдвиг на ступень вниз — см. AppText.js.
-const FAMILY_BY_WEIGHT = {
-  100: 'Gravity-Light', 200: 'Gravity-Light', 300: 'Gravity-Light',
-  400: 'Gravity-Book', normal: 'Gravity-Book',
-  500: 'Gravity-Regular', 600: 'Gravity-Regular',
-  700: 'Gravity-Bold', bold: 'Gravity-Bold',
-  800: 'Gravity-Bold', 900: 'Gravity-Bold',
-};
+import { FAMILY_BY_WEIGHT, DEFAULT_FAMILY } from './AppText';
 
 const TextInput = forwardRef(({ style, ...props }, ref) => {
   const flat = StyleSheet.flatten(style) || {};
-  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || 'Gravity-Book';
+  const family = flat.fontFamily || FAMILY_BY_WEIGHT[flat.fontWeight] || DEFAULT_FAMILY;
   return <RNTextInput ref={ref} {...props} style={[style, { fontFamily: family, fontWeight: undefined }]} />;
 });
 

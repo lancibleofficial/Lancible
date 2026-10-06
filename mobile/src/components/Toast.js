@@ -43,5 +43,5 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
   },
   text: { flexShrink: 1, color: colors.text, fontSize: fontSize.sm },
-  action: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700' },
+  action: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: '700' },
 });

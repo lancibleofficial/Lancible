@@ -1,7 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import Text from './AppText';
 import Icon from './Icon';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 // Общая карточка "иконка + значение + подпись" — используется на Home
 // (статистика за сегодня) и на Stats (общая статистика).
@@ -19,6 +19,6 @@ export default function StatCard({ icon, label, value }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   statCard: { flex: 1, backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, gap: spacing.xs },
-  statValue: { color: colors.text, fontSize: fontSize.lg, fontWeight: '700' },
+  statValue: { color: colors.text, ...typography.title, fontVariant: ['tabular-nums'] },
   statLabel: { color: colors.textDim, fontSize: fontSize.xs },
 });

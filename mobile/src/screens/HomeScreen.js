@@ -29,7 +29,7 @@ import Icon from '../components/Icon';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useTicker } from '../hooks/useTicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t } from '../lib/i18n';
 
@@ -259,7 +259,7 @@ export default function HomeScreen({ navigation, route }) {
                 <View style={styles.projectsHead}>
                   <Text style={styles.sectionTitle}>{t(lang, 'home.title')}</Text>
                   <Pressable onPress={openNewProjectSheet} hitSlop={12} style={styles.newProjectBtn}>
-                    <Icon name="plus" size={13} color={colors.accent} />
+                    <Icon name="plus" size={13} color={colors.accentInk} />
                     <Text style={styles.newProjectText}>{t(lang, 'home.new_project')}</Text>
                   </Pressable>
                 </View>
@@ -398,14 +398,14 @@ const makeStyles = (colors, insets, clearance) => StyleSheet.create({
     marginBottom: spacing.sm, minHeight: 44,
   },
   newProjectBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm },
-  newProjectText: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700' },
+  newProjectText: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: '700' },
 
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
   emptyCard: {
     alignItems: 'center', gap: spacing.md, alignSelf: 'stretch',
     backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.xl,
   },
-  emptyTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', textAlign: 'center' },
+  emptyTitle: { color: colors.text, ...typography.title, textAlign: 'center' },
   emptyText: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', lineHeight: 20 },
 
   // Результаты кладутся поверх, а не вместо: Главная под ними остаётся жива

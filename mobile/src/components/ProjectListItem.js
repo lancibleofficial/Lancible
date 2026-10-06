@@ -3,7 +3,7 @@ import Text from './AppText';
 import { useAppStore, tasksOf, projectMs, projectMoney } from '../store/useAppStore';
 import { fmtDur, fmtMoney } from '../lib/format';
 import Icon from './Icon';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, displayFamily } from '../theme';
 
 // Кнопки-пина на карточке нет: закрепление переехало на свайп влево и в
 // меню по долгому нажатию. Здесь от пина осталась только пометка — по ней
@@ -61,7 +61,7 @@ const makeStyles = (colors) => StyleSheet.create({
   // резервировать не нужно.
   body: { flex: 1, padding: spacing.lg, gap: spacing.xs },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  name: { flexShrink: 1, color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
+  name: { flexShrink: 1, color: colors.text, fontSize: fontSize.md, fontFamily: displayFamily.bold },
   desc: { color: colors.textDim, fontSize: fontSize.sm },
   statsRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },

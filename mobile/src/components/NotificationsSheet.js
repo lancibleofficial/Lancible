@@ -5,7 +5,7 @@ import Icon from './Icon';
 import { useAppStore, getProject } from '../store/useAppStore';
 import { notificationFeed, dueShort } from '../lib/due';
 import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t } from '../lib/i18n';
 
 // Лента уведомлений. Открытие листа само отмечает всё прочитанным — как на
@@ -66,7 +66,7 @@ export default function NotificationsSheet({ navigation }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.xs },
+  title: { color: colors.text, ...typography.title, marginBottom: spacing.xs },
   empty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.xl },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

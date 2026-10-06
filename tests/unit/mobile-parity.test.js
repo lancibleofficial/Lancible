@@ -184,7 +184,10 @@ test('обёртки сроков подставляют «сейчас» и я�
   );
 
   // Язык доходит до перевода и до формата даты — обе подстановки на месте.
-  assert.equal(mobileDue.dueShort(soon, 'en'), 'due.today|en|undefined');
+  // «Через час» после 23:00 — это уже завтра: тест краснел каждый вечер,
+  // поэтому ожидаемый ключ зависит от того, попал ли срок в сегодняшний день.
+  const sameDay = new Date(soon.dueAt).toDateString() === new Date(now).toDateString();
+  assert.equal(mobileDue.dueShort(soon, 'en'), `${sameDay ? 'due.today' : 'due.tomorrow'}|en|undefined`);
   assert.ok(mobileDue.dueShort(later, 'kk').startsWith('дата|kk|'));
 });
 

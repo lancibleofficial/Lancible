@@ -108,9 +108,9 @@ export default function MainTabs() {
       // шапке: на доске или в календаре искать проекты незачем, а две
       // иконки в каждой шапке съедали место у заголовка.
         header: (props) => <AppHeader {...props} />,
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.accentInk,
         tabBarInactiveTintColor: colors.textDim,
-        tabBarLabelStyle: { fontFamily: 'Gravity-Book', fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: 'Onest-Regular', fontSize: 11 },
         tabBarStyle: legacyTabBarStyle,
         tabBarBlurEffect: HAS_LIQUID_GLASS ? undefined : 'none',
         // UIKit рисует аксессуар дважды — для развёрнутого таббара и для

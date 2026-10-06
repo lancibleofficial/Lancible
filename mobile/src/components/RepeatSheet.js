@@ -15,7 +15,7 @@ import PrimaryButton from './PrimaryButton';
 import MiniDatePicker from './MiniDatePicker';
 import Repeat from '../core/repeat.js';
 import { closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 import { dayKey, keyToDate } from '../lib/calendarMath';
 
@@ -231,7 +231,7 @@ export default function RepeatSheet({ lang, dueAt, rule: initial, onApply, onCle
       </Pressable>
 
       <View style={styles.summary}>
-        <Icon name="clock" size={14} color={colors.accent} />
+        <Icon name="clock" size={14} color={colors.accentInk} />
         <View style={{ flex: 1 }}>
           <Text style={styles.summaryText}>{summary}</Text>
           {upcoming.length ? <Text style={styles.summaryDates}>{upcoming.join(' · ')}</Text> : null}
@@ -246,7 +246,7 @@ const makeStyles = (colors) => StyleSheet.create({
   // Запас снизу: кнопки листа закреплены поверх прокрутки, и без него
   // сводка упиралась в них нижней строкой.
   content: { gap: spacing.md, paddingBottom: spacing.xxl },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
 
   seg: {
     flexDirection: 'row', gap: 3, padding: 3,

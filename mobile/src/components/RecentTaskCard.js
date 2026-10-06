@@ -39,5 +39,5 @@ const makeStyles = (colors) => StyleSheet.create({
   footer: { gap: 2 },
   project: { color: colors.textDim, fontSize: fontSize.xs },
   time: { color: colors.textDim, fontSize: fontSize.xs, fontWeight: '600' },
-  timeRunning: { color: colors.accent },
+  timeRunning: { color: colors.accentInk },
 });

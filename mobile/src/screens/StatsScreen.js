@@ -116,7 +116,7 @@ export default function StatsScreen({ navigation, route }) {
 
             {runningTask ? (
               <View style={styles.runningCard}>
-                <Icon name="clock" color={colors.accent} />
+                <Icon name="clock" color={colors.accentInk} />
                 <Text style={styles.runningName} numberOfLines={1}>{runningTask.title || t(lang, 'task.no_name')}</Text>
                 <Text style={styles.runningTime}>{fmtClock(Date.now() - new Date(activeTimer.startedAt).getTime())}</Text>
               </View>
@@ -161,7 +161,7 @@ const makeStyles = (colors, insets, clearance) => StyleSheet.create({
     backgroundColor: colors.panel2, borderRadius: radius.lg, padding: spacing.md,
   },
   runningName: { flex: 1, color: colors.text, fontSize: fontSize.sm },
-  runningTime: { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  runningTime: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: '700', fontVariant: ['tabular-nums'] },
   sectionTitle: {
     color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6,
     marginTop: spacing.lg, marginBottom: spacing.xs,

@@ -5,7 +5,7 @@ import TextInput from './AppTextInput';
 import PrimaryButton from './PrimaryButton';
 import { parseNum } from '../lib/format';
 import { setSheetFooter, closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function RateSheet({ lang, initialValue, onSave }) {
@@ -40,7 +40,7 @@ export default function RateSheet({ lang, initialValue, onSave }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800' },
+  title: { color: colors.text, ...typography.title },
   input: {
     backgroundColor: colors.inputBg, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,

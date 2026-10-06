@@ -9,7 +9,7 @@ import { nameTaken, tagUsage } from '../lib/tags';
 import { t } from '../lib/i18n';
 import { confirmSheet } from '../lib/dialogs';
 import { closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 /** Создание и правка тега. Эмодзи-иконки здесь пока нет — она отложена, и
  *  когда появится, встанет в этот же лист третьим полем.
@@ -107,7 +107,7 @@ export default function TagEditSheet({ tag, presetName, onSaved }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
-  title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '800', marginBottom: spacing.sm },
+  title: { color: colors.text, ...typography.title, marginBottom: spacing.sm },
   label: { color: colors.textDim, fontSize: fontSize.sm, marginTop: spacing.xs },
   input: {
     backgroundColor: colors.inputBg, borderRadius: radius.md,

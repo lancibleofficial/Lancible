@@ -271,7 +271,7 @@ const makeStyles = (colors) => StyleSheet.create({
   dayNames: { flexDirection: 'row' },
   dayName: { alignItems: 'center', paddingBottom: spacing.xs, gap: 2 },
   dow: { color: colors.textFaint, fontSize: 10 },
-  dowToday: { color: colors.accent },
+  dowToday: { color: colors.accentInk },
   // Фиксированный квадрат, а не minWidth: иначе двузначное число делает
   // подложку шире высоты, и кружок сегодняшнего дня превращается в овал.
   dnum: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
