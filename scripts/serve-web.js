@@ -31,6 +31,14 @@ http
     // Адрес без расширения отдаём как .html — так же, как это делает Vercel
     // по rewrite'у: /logs должен открываться локально ровно как на сайте.
     if (!path.extname(reqPath) && fs.existsSync(path.join(root, reqPath + '.html'))) reqPath += '.html';
+    // Папка — как у Vercel: без слэша — перенаправление на адрес со слэшем
+    // (иначе относительные пути внутри страницы ищутся уровнем выше), со
+    // слэшем — её index.html. Так открывается веб в лендинге: /app → /app/.
+    const asDir = path.join(root, reqPath);
+    if (fs.existsSync(asDir) && fs.statSync(asDir).isDirectory()) {
+      if (!reqPath.endsWith('/')) { res.writeHead(302, { Location: `${reqPath}/` }); res.end(); return; }
+      reqPath += 'index.html';
+    }
     const filePath = path.join(root, reqPath);
     if (!filePath.startsWith(root)) { res.writeHead(403); res.end('Forbidden'); return; }
     fs.readFile(filePath, (err, data) => {

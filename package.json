@@ -33,7 +33,8 @@
     "prepare": "node scripts/setup-hooks.js",
     "graph:baseline": "node scripts/graph-baseline.js",
     "graph:orphans": "node scripts/graph-orphans.js",
-    "site:refresh": "node scripts/publish-site.js"
+    "site:refresh": "node scripts/publish-site.js",
+    "site:app": "node scripts/build-landing-app.js"
   },
   "author": "",
   "license": "MIT",

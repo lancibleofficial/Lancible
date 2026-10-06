@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci --prefix ../web",
+  "buildCommand": "node ../scripts/build-landing-app.js",
+  "outputDirectory": ".",
   "redirects": [
     {
       "source": "/app",
@@ -19,14 +22,6 @@
     {
       "source": "/logs",
       "destination": "/logs.html"
-    },
-    {
-      "source": "/app/",
-      "destination": "https://lancible-yrkx.vercel.app/index.html"
-    },
-    {
-      "source": "/app/:path*",
-      "destination": "https://lancible-yrkx.vercel.app/:path*"
     }
   ],
   "headers": [

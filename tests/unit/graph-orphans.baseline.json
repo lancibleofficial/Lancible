@@ -566,6 +566,12 @@
       "at": "L25"
     },
     {
+      "id": "scripts_build_landing_app_build",
+      "label": "build()",
+      "file": "scripts/build-landing-app.js",
+      "at": "L44"
+    },
+    {
       "id": "scripts_check_mobile_build_main",
       "label": "main()",
       "file": "scripts/check-mobile-build.js",
@@ -1355,7 +1361,7 @@
       "id": "tests_unit_visual_rules_test_layersof",
       "label": "layersOf()",
       "file": "tests/unit/visual-rules.test.js",
-      "at": "L178"
+      "at": "L192"
     },
     {
       "id": "tests_unit_visual_rules_test_ratchet",

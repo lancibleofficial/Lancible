@@ -48,3 +48,6 @@ graphify-out/
 .claude/settings.local.json
 # Рабочая папка oh-my-claudecode: журналы сессий, его навыки, артефакты.
 .omc/
+
+# Веб-версия, собранная внутрь лендинга (scripts/build-landing-app.js) — результат сборки.
+landing/app/

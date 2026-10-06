@@ -188,6 +188,57 @@ test('в разметке нет классов, которых никто не 
 
 const vercel = () => JSON.parse(read('vercel.json'));
 
+// --- один адрес -----------------------------------------------------------------
+//
+// С 6 октября 2026 у продукта один адрес — lancible.vercel.app, и всё
+// открывается от него: лендинг, веб (/app), блог, журнал, устройство, граф.
+// До этого веб жил отдельным проектом Vercel со своим адресом, а лендинг
+// проксировал на него /app. Исключения по решению — будущая админ-панель и
+// служебные функции без страниц.
+
+test('перенаправления лендинга никуда наружу не уводят', () => {
+  const cfg = vercel();
+  for (const r of [...(cfg.rewrites || []), ...(cfg.redirects || [])]) {
+    assert.ok(r.destination.startsWith('/'), `${r.source} → ${r.destination}: ведёт на другой адрес`);
+  }
+});
+
+test('в коде и настройках из адресов Vercel — только lancible.vercel.app', () => {
+  // Документация и журнал рассказывают историю переезда и называют старый
+  // адрес — их не смотрим; код, разметку и настройки — смотрим все.
+  const ROOT = path.join(LANDING, '..');
+  const SKIP = /(^|[\\/])(node_modules|\.git|graphify-out|test-results[\w-]*|dist|logs|vendor|\.vercel)([\\/]|$)|^landing[\\/](app[\\/]|graph-view\.html$)|^web[\\/](app\.js|styles\.css|xlsx\.js|core[\\/])/;
+  const EXT = /\.(js|json|html|css|yml)$/;
+  const found = [];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = path.join(dir, e.name);
+      if (SKIP.test(rel)) continue;
+      if (e.isDirectory()) { walk(rel); continue; }
+      if (!EXT.test(e.name) || /package-lock\.json$/.test(e.name)) continue;
+      const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+      for (const m of text.matchAll(/[a-z0-9-]+\.vercel\.app/g)) if (m[0] !== 'lancible.vercel.app') found.push(`${rel}: ${m[0]}`);
+    }
+  };
+  for (const dir of ['src', 'web', 'mobile', 'landing', 'scripts', 'tests', '.github']) walk(dir);
+  assert.deepEqual(found, [], 'чужие адреса Vercel');
+});
+
+test('веб собирается внутрь лендинга целиком', () => {
+  // Сборку делает проект лендинга: ставит пакеты веба и зовёт скрипт сборки.
+  const cfg = vercel();
+  assert.match(cfg.installCommand || '', /--prefix \.\.\/web/, 'лендинг не ставит пакеты веба');
+  assert.match(cfg.buildCommand || '', /build-landing-app\.js/, 'лендинг не собирает веб');
+  // Всё, что подключает страница веба, должно доехать в /app: служебное, что
+  // сборка выбрасывает, не может быть ничем из этого.
+  const { EXCLUDE } = require('../../scripts/build-landing-app.js');
+  const html = fs.readFileSync(path.join(LANDING, '..', 'web', 'index.html'), 'utf8');
+  const refs = [...html.matchAll(/(?:src|href)="([^"#:]+)"/g)].map((m) => m[1]);
+  assert.ok(refs.length > 10, 'страница веба почти ничего не подключает — разбор промахнулся');
+  const lost = refs.filter((r) => EXCLUDE.has(r.replace(/^\.\//, '').split('/')[0]));
+  assert.deepEqual(lost, [], 'сборка выбросит то, что страница веба подключает');
+});
+
 test('каждый rewrite ведёт в существующий файл или наружу', () => {
   for (const r of vercel().rewrites) {
     if (/^https?:/.test(r.destination)) continue;
