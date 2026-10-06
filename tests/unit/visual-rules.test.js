@@ -148,6 +148,8 @@ const COMPONENTS = [
   'primary', 'ghost', 'danger', 'icon-btn', 'icon-btn-accent', 'dp-btn', 'dp-btn-wide',
   'switch', 'switch-track', 'switch-thumb',
   'modal', 'modal-lg', 'modal-buttons', 'modal-error', 'ctx-menu', 'ctx-item', 'ctx-sep', 'ctx-check',
+  'st-swatch', 'task-status', 'board-dot', 'task-version',
+  'segmented', 'segmented-sm', 'segmented-rows', 'segmented-row', 'field', 'field-sm',
 ];
 
 test('styles.css: слои по порядку, общие детали — только в слое «Компоненты»', () => {
@@ -170,6 +172,35 @@ test('styles.css: слои по порядку, общие детали — то
     for (const r of cssRules(chunk)) if (owns(r.sel)) stray.push(`${m[1]}: ${r.sel}`);
   });
   assert.deepEqual(stray, [], 'общие детали описаны вне слоя «Компоненты»');
+});
+
+/** Куски styles.css по слоям: [[имя слоя, текст], …]. */
+function layersOf(css) {
+  const marks = [...css.matchAll(/^\/\* =+ Слой: (.+?) =+ \*\/$/gm)];
+  return marks.map((m, i) => [m[1], css.slice(m.index, i + 1 < marks.length ? marks[i + 1].index : css.length)]);
+}
+
+test('переключатель и поле ввода оформлены только в компонентах', () => {
+  // До 6 октября сегментный переключатель был сделан заново семь раз, поле
+  // ввода — четыре, каждый раз с чуть другими отступами и скруглением.
+  // Теперь вид у каждой детали один, и он в слое «Компоненты». Признак
+  // самодельной копии вне его: выбранная кнопка с фоном --tab-active-bg или
+  // поле ввода, которому задают и заливку, и рамку.
+  const isField = (sel) => sel.split(',').some((part) => {
+    const subject = part.trim().split(/\s*[ >+~]\s*/).pop() || '';
+    return /^(input|textarea)(\[[^\]]*\]|\.[\w-]+|:[\w-]+)*$/.test(subject);
+  });
+  const stray = [];
+  for (const [layer, chunk] of layersOf(read('src/renderer/styles.css'))) {
+    if (layer === 'Компоненты' || layer === 'Палитра') continue;
+    for (const r of cssRules(chunk)) {
+      if (/var\(--tab-active-bg\)/.test(r.body)) stray.push(`${layer}: ${r.sel} — переключатель`);
+      if (isField(r.sel) && /(^|;)\s*background(-color)?\s*:/.test(r.body) && /(^|;)\s*border\s*:/.test(r.body)) {
+        stray.push(`${layer}: ${r.sel} — поле ввода`);
+      }
+    }
+  }
+  assert.deepEqual(stray, [], 'вид переключателя или поля задан вне компонента — возьмите .segmented или .field');
 });
 
 const LANDING_PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html'];

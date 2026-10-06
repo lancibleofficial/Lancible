@@ -1250,6 +1250,12 @@
       "at": "L18"
     },
     {
+      "id": "tests_unit_mobile_core_test_mobilepalettes",
+      "label": "mobilePalettes()",
+      "file": "tests/unit/mobile-core.test.js",
+      "at": "L49"
+    },
+    {
       "id": "tests_unit_mobile_i18n_test_loadmobiledict",
       "label": "loadMobileDict()",
       "file": "tests/unit/mobile-i18n.test.js",
@@ -1344,6 +1350,12 @@
       "label": "expand()",
       "file": "tests/unit/visual-rules.test.js",
       "at": "L106"
+    },
+    {
+      "id": "tests_unit_visual_rules_test_layersof",
+      "label": "layersOf()",
+      "file": "tests/unit/visual-rules.test.js",
+      "at": "L178"
     },
     {
       "id": "tests_unit_visual_rules_test_ratchet",

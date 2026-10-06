@@ -220,7 +220,7 @@
           </div>
 
           <div class="task-filter">
-            <div class="tf-status">
+            <div class="tf-status segmented segmented-sm">
               <button data-status="all" class="on" data-i18n="filter.all">Все</button>
               <button data-status="active" data-i18n="filter.active">В работе</button>
               <button data-status="done" data-i18n="filter.done">Готово</button>
@@ -255,7 +255,7 @@
               <button id="delete-task-btn" class="icon-btn icon-btn-danger" data-i18n-title="task.delete_title" title="Удалить задачу">
                 <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
               </button>
-              <div class="task-tabs" id="task-tabs">
+              <div class="task-tabs segmented" id="task-tabs">
                 <button type="button" data-tab="notes" class="on" data-i18n="tabs.notes">Заметки</button>
                 <button type="button" data-tab="settings" data-i18n="tabs.settings">Настройки</button>
                 <button type="button" data-tab="history" data-i18n="tabs.history">История</button>
@@ -394,7 +394,7 @@
               <span class="ag-title" id="ag-title"></span>
               <span class="spacer"></span>
               <span class="ag-total" id="ag-total"></span>
-              <div class="ag-modes" id="ag-modes">
+              <div class="ag-modes segmented" id="ag-modes">
                 <button type="button" data-mode="day" data-i18n="calendar.day">День</button>
                 <button type="button" data-mode="days4" data-i18n="agenda.days4">4 дня</button>
                 <button type="button" data-mode="week" class="on" data-i18n="calendar.week">Неделя</button>
@@ -476,7 +476,7 @@
             <button id="sp-running" class="st-running" hidden></button>
           </div>
             <div class="cal-head">
-              <div class="cal-modes">
+              <div class="cal-modes segmented">
                 <button data-mode="month" class="on" data-i18n="calendar.month">Месяц</button>
                 <button data-mode="week" data-i18n="calendar.week">Неделя</button>
                 <button data-mode="day" data-i18n="calendar.day">День</button>
@@ -544,7 +544,7 @@
             <div class="settings-row settings-row-last">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
               <span class="settings-row-label" data-i18n="settings.theme_label">Тема</span>
-              <div class="theme-tabs">
+              <div class="theme-tabs segmented">
                 <button type="button" class="theme-tab" data-theme="system" data-i18n-title="nav.theme_system" title="Системная">
                   <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
                 </button>
@@ -754,7 +754,7 @@
     <div class="modal modal-lg rpdlg">
       <div class="modal-title" data-i18n="repeat.dialog_title">Повторение задачи</div>
 
-      <div class="rp-seg rp-seg-4" id="rp-freq-seg">
+      <div class="rp-seg rp-seg-4 segmented" id="rp-freq-seg">
         <button type="button" data-freq="day" data-i18n="calendar.day">День</button>
         <button type="button" data-freq="week" data-i18n="calendar.week">Неделя</button>
         <button type="button" data-freq="month" data-i18n="calendar.month">Месяц</button>
@@ -769,14 +769,14 @@
 
       <div class="rp-days" id="rp-days" hidden></div>
 
-      <div class="rp-seg rp-seg-2" id="rp-month-seg" hidden>
+      <div class="rp-seg rp-seg-2 segmented" id="rp-month-seg" hidden>
         <button type="button" data-mode="day" data-i18n="repeat.month_mode_day">По числу месяца</button>
         <button type="button" data-mode="weekday" data-i18n="repeat.month_mode_weekday">По дню недели</button>
       </div>
 
       <div class="rp-field">
         <span class="rp-field-label" data-i18n="repeat.from_label">Отсчёт</span>
-        <div class="rp-seg rp-seg-2" id="rp-from-seg">
+        <div class="rp-seg rp-seg-2 segmented" id="rp-from-seg">
           <button type="button" data-from="schedule" data-i18n="repeat.from_schedule">По расписанию</button>
           <button type="button" data-from="done" data-i18n="repeat.from_done">От дня закрытия</button>
         </div>
@@ -784,7 +784,7 @@
 
       <div class="rp-field">
         <span class="rp-field-label" data-i18n="repeat.ends_label">Окончание</span>
-        <div class="rp-seg rp-seg-3" id="rp-ends-seg">
+        <div class="rp-seg rp-seg-3 segmented" id="rp-ends-seg">
           <button type="button" data-ends="never" data-i18n="repeat.ends_never">Никогда</button>
           <button type="button" data-ends="after" data-i18n="repeat.ends_after">После</button>
           <button type="button" data-ends="on" data-i18n="repeat.ends_on">До даты</button>
@@ -820,7 +820,7 @@
     <div class="modal">
       <div class="modal-title" data-i18n="export.title">Экспорт в Excel</div>
       <label data-i18n="export.period_label">Период</label>
-      <div class="exp-pills" id="exp-pills"></div>
+      <div class="exp-pills segmented segmented-rows" id="exp-pills"></div>
             <div class="exp-range" id="exp-range" hidden>
         <div class="exp-range-vals">
           <span class="cal-range-val" id="exp-from"></span>

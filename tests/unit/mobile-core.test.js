@@ -45,10 +45,8 @@ test('копии грузятся как обычный CommonJS и отдают
   }
 });
 
-test('светлая и тёмная палитры телефона объявляют один и тот же набор токенов', () => {
-  // Добавил токен в одну тему и забыл во второй — приложение не падает, а
-  // молча рисует undefined: в React Native это «цвета нет», то есть чёрный
-  // текст на чёрном фоне или прозрачная подложка.
+/** Палитры телефона из theme.js — без React Native: импорты и export вычеркнуты. */
+function mobilePalettes() {
   const file = path.join(ROOT, 'mobile', 'src', 'theme.js');
   const src = fs.readFileSync(file, 'utf8')
     .replace(/^import .*$/gm, '')
@@ -56,7 +54,32 @@ test('светлая и тёмная палитры телефона объяв�
   const box = {};
   // eslint-disable-next-line no-new-func
   new Function('module', `${src};module.exports = { dark, light };`)(box);
-  const { dark, light } = box.exports;
+  return box.exports;
+}
+
+test('приглушённый цвет телефона — основной цвет своей темы с прозрачностью', () => {
+  // accentMuted светлой темы — светлый зелёный с прозрачностью, тёмной —
+  // тёмный. dangerMuted светлой темы до 6 октября был от тёмного красного:
+  // токен переезжал из компонентов как есть. Правило проверяется для всех
+  // …Muted разом — новый приглушённый цвет его тоже не обойдёт.
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(',');
+  const bad = [];
+  for (const [theme, colors] of Object.entries(mobilePalettes())) {
+    for (const [key, value] of Object.entries(colors)) {
+      if (!key.endsWith('Muted')) continue;
+      const base = colors[key.slice(0, -'Muted'.length)];
+      const m = String(value).match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*[\d.]+\)$/);
+      if (!base || !m || `${m[1]},${m[2]},${m[3]}` !== rgb(base)) bad.push(`${theme}.${key} = ${value}, а ${key.slice(0, -5)} = ${base}`);
+    }
+  }
+  assert.deepEqual(bad, []);
+});
+
+test('светлая и тёмная палитры телефона объявляют один и тот же набор токенов', () => {
+  // Добавил токен в одну тему и забыл во второй — приложение не падает, а
+  // молча рисует undefined: в React Native это «цвета нет», то есть чёрный
+  // текст на чёрном фоне или прозрачная подложка.
+  const { dark, light } = mobilePalettes();
 
   const a = Object.keys(dark).sort();
   const b = Object.keys(light).sort();

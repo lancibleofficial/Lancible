@@ -3582,7 +3582,7 @@ function renderExpdlg() {
   el.expPills.innerHTML = '';
   for (const row of EXPORT_PRESET_ROWS) {
     const line = document.createElement('div');
-    line.className = 'exp-tab-row';
+    line.className = 'exp-tab-row segmented-row';
     for (const p of row) {
       const b = document.createElement('button');
       b.type = 'button';
