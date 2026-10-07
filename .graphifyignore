@@ -1,0 +1,5 @@
+# Сборка редактора — производная и минифицированная (scripts/build-editor.js):
+# в графе она дала бы тысячи узлов без имён и «мёртвый код» на каждом.
+# Исходники редактора — src/editor/, их граф видит.
+src/renderer/editor.js
+mobile/src/editor/editorBundle.js

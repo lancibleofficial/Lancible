@@ -129,7 +129,7 @@ export default function MainTabs() {
           // Same nested-route hide as Android -- see the detailed comment in
           // MainTabs.android.js for why this has to be recomputed here
           // rather than left to the nested stack.
-          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route));
+          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents'].includes(getFocusedRouteNameFromRoute(route));
           return {
             headerShown: false,
             tabBarLabel: t(lang, 'nav.home'),
@@ -149,7 +149,7 @@ export default function MainTabs() {
         name="Board"
         component={BoardStack}
         options={({ route, navigation }) => {
-          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route));
+          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents'].includes(getFocusedRouteNameFromRoute(route));
           return {
             headerShown: false,
             tabBarLabel: t(lang, 'nav.board'),

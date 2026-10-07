@@ -89,11 +89,6 @@ const MOBILE_LEGIT = {
   'components/AuthSheet.js "#34A853"': 1,
   'components/AuthSheet.js "#FBBC05"': 1,
   'components/AuthSheet.js "#EA4335"': 1,
-  // Красный экран внутри WebView — сигнал, что Quill не загрузился. Это
-  // страница внутри WebView, темы приложения она не знает.
-  "components/RichTextEditor.js '#c0392b'": 3,
-  // Прозрачный фон самого WebView, чтобы просвечивала тема.
-  "components/RichTextEditor.js '#0000'": 1,
   // Тень панели вкладок чёрная в обеих темах.
   "navigation/MainTabBar.js '#000'": 1,
   // Подложка тега считается из цвета, который выбрал пользователь.
@@ -287,6 +282,7 @@ test('зелёный текстом — через --accent-ink, а не --accen
 const SMALL_TEXT_ALLOWED = [
   '.notif-badge', // цифра в кружке на колокольчике: кружок 16px
   '.running-dot', // точка «таймер идёт» — знак, а не надпись
+  ".led-btn[data-count]:not([data-count=''])::after", // число на кнопке комментариев редактора: кружок 14px, как у колокольчика
 ];
 
 test('styles.css: текст не мельче 12px', () => {

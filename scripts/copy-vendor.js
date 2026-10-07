@@ -1,4 +1,4 @@
-// Копирует внешние ассеты (Quill, шрифты Onest и Basique Pro) в src/renderer/vendor,
+// Копирует внешние ассеты (Supabase, шрифты Onest и Basique Pro) в src/renderer/vendor,
 // чтобы рендерер грузил всё из своей папки — и в dev, и в собранном .exe.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -8,9 +8,9 @@ const dest = path.join(root, 'src', 'renderer', 'vendor');
 const fontDest = path.join(dest, 'fonts');
 
 // [источник, назначение]
-const quill = [
-  [path.join(root, 'node_modules', 'quill', 'dist', 'quill.js'), 'quill.js'],
-  [path.join(root, 'node_modules', 'quill', 'dist', 'quill.snow.css'), 'quill.snow.css'],
+// Редактор текста собирается отдельно (scripts/build-editor.js) и лежит рядом
+// с app.js, а не здесь.
+const vendor = [
   // UMD-сборка supabase-js — рендерер грузит её как обычный <script> (contextIsolation
   // не даёт require() из node_modules напрямую), даёт глобальный window.supabase.createClient().
   [path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'supabase.js'],
@@ -29,7 +29,7 @@ const fonts = [
 try {
   fs.mkdirSync(fontDest, { recursive: true });
 
-  for (const [from, name] of quill) {
+  for (const [from, name] of vendor) {
     fs.copyFileSync(from, path.join(dest, name));
   }
 
@@ -52,7 +52,7 @@ try {
     }
   }
   if (copied) {
-    console.log(`[copy-vendor] Quill + шрифты (${copied} начертаний) скопированы в`, dest);
+    console.log(`[copy-vendor] Supabase + шрифты (${copied} начертаний) скопированы в`, dest);
   } else {
     console.warn('[copy-vendor] Шрифты не найдены — интерфейс на системном шрифте.');
   }

@@ -32,12 +32,14 @@ let state = {
   statuses: [],
   tags: [],
   versions: [],
+  // Документы — раздел «Документы»: тексты отдельно от задач, общие или
+  // проекта. Формат текста тот же, что у заметок (core/doc.js).
+  documents: [],
   activeTimer: null,
   ui: { view: 'home', projectId: null, navCollapsed: false },
   settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, syncResolvedFor: null },
 };
 let selectedId = null;
-let quill = null;
 
 // Палитра, валюты и ключ имени проекта по умолчанию — в core/catalog.js:
 // это свойства продукта, а не платформы, и лежали они в двух экземплярах.
@@ -47,8 +49,6 @@ const { DEFAULT_PROJECT_NAME_KEY, PALETTE, CURRENCIES, SYM2CODE } = Core;
 // есть тест, проверяющий, что набор ключей во всех языках одинаковый.
 const { T, LOCALE_MAP, LANG_NAMES } = Core;
 const HEARTBEAT_MS = 15000;
-const TEXT_COLORS = ['', '#ecedef', '#87ff65', '#5ec8f2', '#b98cf0', '#f5c451', '#f0736b', '#a4c2a8', '#767b86'];
-const FILL_COLORS = ['', '#3a4a34', '#2f4653', '#43385a', '#544a30', '#5a3a37', '#3e4a40'];
 
 // Виды статусов, набор по умолчанию и разбор — в core/status.js.
 const { STATUS_KINDS, CLOSING_KINDS, DEFAULT_STATUSES } = Core;
@@ -248,7 +248,11 @@ const el = {
   dueDateBtn: $('due-date-btn'), dueState: $('due-state'),
   dueRemind: $('due-remind'), dueClearBtn: $('due-clear-btn'), dueCustomRow: $('due-custom-row'),
   remindDateBtn: $('remind-date-btn'),
-  tableTools: $('table-tools'), ttSwatches: $('tt-swatches'),
+  editorWrap: $('editor-wrap'),
+  docsView: $('docs-view'), docList: $('doc-list'), docListEmpty: $('doc-list-empty'), docSearch: $('doc-search'),
+  docNewBtn: $('doc-new'), docFilterBtn: $('doc-filter'), docTitle: $('doc-title'), docProjectBtn: $('doc-project'),
+  docPinBtn: $('doc-pin'), docMoreBtn: $('doc-more'), docEmpty: $('doc-empty'), docEmptyNew: $('doc-empty-new'),
+  docMain: $('doc-main'), docEditorWrap: $('doc-editor-wrap'),
   sessionList: $('session-list'), sessionCount: $('session-count'),
   sessionEmpty: $('session-empty'), addSessionBtn: $('add-session-btn'),
 
@@ -1227,6 +1231,7 @@ function syncPayload() {
     statuses: state.statuses,
     tags: state.tags,
     versions: state.versions,
+    documents: state.documents || [],
   };
 }
 
@@ -1272,6 +1277,9 @@ function applyRemoteData(data) {
   if (Array.isArray(data && data.statuses)) state.statuses = data.statuses;
   if (Array.isArray(data && data.tags)) state.tags = data.tags;
   if (Array.isArray(data && data.versions)) state.versions = data.versions;
+  // Версии до «Документов» поля не шлют вовсе — своё тогда не трогаем
+  // (правило в core/sync.js: pickDocuments).
+  state.documents = Core.pickDocuments(state.documents, data);
   migrate();
   if (selectedId && !getTask(selectedId)) selectedId = null;
   if (state.ui.projectId && !getProject(state.ui.projectId)) {
@@ -1280,6 +1288,7 @@ function applyRemoteData(data) {
   }
   lastSyncedJSON = JSON.stringify(syncPayload());
   render();
+  refreshEditorsFromRemote();
   scheduleSave(); // сохраняем локально; pushSyncState сам не отправит лишнего — см. lastSyncedJSON
 }
 
@@ -1451,7 +1460,7 @@ function render() {
   el.navItems.forEach((tab) => tab.classList.toggle('active', tab.dataset.view === v));
   renderNavProjects();
 
-  const views = { home: el.homeView, projects: el.projectsView, project: el.projectView, task: el.taskView, time: el.timeView, settings: el.settingsView };
+  const views = { home: el.homeView, projects: el.projectsView, project: el.projectView, task: el.taskView, docs: el.docsView, time: el.timeView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1462,6 +1471,7 @@ function render() {
   else if (v === 'projects') renderProjects();
   else if (v === 'project') renderProjectPage();
   else if (v === 'task') renderTaskPage();
+  else if (v === 'docs') renderDocsPage();
   else if (v === 'time') renderTimePage();
   else if (v === 'settings') renderSettings();
 
@@ -3805,6 +3815,8 @@ async function deleteProject(id) {
   if (activeTask && activeTask.projectId === id) state.activeTimer = null;
   state.tasks = state.tasks.filter((t2) => t2.projectId !== id);
   state.projects = state.projects.filter((p) => p.id !== id);
+  // Документы проекта не удаляются вместе с ним — становятся общими.
+  for (const d of state.documents || []) if (d.projectId === id) d.projectId = null;
   if (state.ui.projectId === id) {
     state.ui.view = 'home';
     state.ui.projectId = state.projects[0] ? state.projects[0].id : null;
@@ -4332,197 +4344,318 @@ function stopTimer() {
 }
 
 // ---------------------------------------------------------------------------
-// Редактор (Quill) — текст-цвет + таблицы + заливка ячеек
+// Редактор — свой, на ProseMirror (исходники src/editor/, сборка editor.js)
 // ---------------------------------------------------------------------------
+//
+// Два экземпляра одного редактора: заметки задачи и раздел «Документы». У
+// обоих один формат (core/doc.js): контейнер { v, doc, comments, ink }. В
+// задаче он лежит в notes рядом с Delta для старых версий приложения
+// (writeNotes), у документа — в body как есть.
+//
+// Вид (ширина полосы, шрифт, режим фокуса) и настройки пера — в
+// state.settings.editor: это настройки устройства, а не данные, и в
+// синхронизацию они не уходят — планшет со стилусом и ноутбук с мышью
+// настраивают по-разному.
 
-const tableModule = () => { try { return quill.getModule('table'); } catch { return null; } };
-let ttScope = 'cell';
+let editor = null;      // заметки задачи
+let docEditor = null;   // документ
+let editorTaskId = null;
+let editorLoadedJSON = null;
+let docLoadedJSON = null;
 
-// Панель инструментов редактора. Порядок групп — порядок на экране.
-const EDITOR_TOOLBAR = [
-  [{ header: [1, 2, 3, false] }],
-  ['bold', 'italic', 'underline', 'strike'],
-  [{ color: TEXT_COLORS }, { background: TEXT_COLORS }],
-  [{ list: 'check' }, { list: 'bullet' }, { list: 'ordered' }],
-  [{ indent: '-1' }, { indent: '+1' }],
-  ['blockquote', 'code-block', 'link'],
-  ['clean'],
-];
+// Токен входа для облачного хранилища картинок: хранилище спрашивает его
+// синхронно, а supabase-js отдаёт сессию только через await.
+let assetAuth = null;
+sb.auth.onAuthStateChange((_event, session) => {
+  assetAuth = session ? { token: session.access_token, userId: session.user.id } : null;
+  if (assetAuth && editorAssets) editorAssets.flush();
+});
 
-// Кнопки инструментов таблицы (data-tt в разметке) → метод модуля таблиц
-// Quill. Неизвестная кнопка не делает ничего — как и цепочка if/else,
-// которую эта таблица заменила.
-const TABLE_OPS = {
-  rowBelow: 'insertRowBelow',
-  colRight: 'insertColumnRight',
-  rowDel: 'deleteRow',
-  colDel: 'deleteColumn',
-  tableDel: 'deleteTable',
-};
+const editorAssets = window.LancibleEditor ? LancibleEditor.createAssetStore({
+  remote: () => (assetAuth && state.settings.syncEnabled !== false
+    ? { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY, accessToken: assetAuth.token, userId: assetAuth.userId }
+    : null),
+}) : null;
 
-/** Фон ячейки таблицы: блочный атрибут, чтобы стиль лёг на <td> и попал в
- *  Delta, а значит — в заметки и синхронизацию. */
-function registerCellBackground() {
-  try {
-    const Parchment = Quill.import('parchment');
-    const CellBg = new Parchment.StyleAttributor('cellBg', 'background-color', { scope: Parchment.Scope.BLOCK });
-    Quill.register(CellBg, true);
-  } catch (e) { console.error('cellBg attributor:', e); }
+/** Что у редакторов общее: язык, автор комментариев, вид, картинки. */
+function editorOptions(extra) {
+  return Object.assign({
+    lang,
+    user: () => (currentUser ? { id: currentUser.id, name: currentUser.name || currentUser.email || '' } : null),
+    settings: () => state.settings.editor || {},
+    onSettings: (patch) => {
+      state.settings.editor = Object.assign({}, state.settings.editor || {}, patch);
+      scheduleSave();
+      // Второй редактор подхватит вид, когда его откроют: настройки одни.
+      for (const ed of [editor, docEditor]) if (ed) ed.applySettings();
+    },
+    assets: editorAssets,
+    toast,
+    openUrl: (href) => openExternalUrl(href),
+    // Веб на телефоне — тот же режим, что в приложении для телефона: кнопки
+    // крупнее, панель одной строкой, без ручки блока.
+    mobile: !!(window.matchMedia && window.matchMedia('(pointer: coarse) and (max-width: 760px)').matches),
+  }, extra);
 }
 
-/** Любая правка таблицы — одной обвязкой: вернуть фокус редактору, править,
- *  записать заметки в задачу и показать или спрятать панель таблицы. */
-function editTable(edit) {
-  quill.focus();
-  try { edit(); } catch (e) { console.error(e); }
-  persistNotes();
-  updateTableTools();
-}
-
-/** Кнопка «▦» в панели инструментов: вставляет таблицу три на три. */
-function addTableInsertButton(tm) {
-  const group = document.createElement('span');
-  group.className = 'ql-formats';
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ql-table-insert';
-  btn.title = t('table.insert_title');
-  btn.textContent = '▦';
-  btn.addEventListener('click', () => editTable(() => tm.insertTable(3, 3)));
-  group.appendChild(btn);
-  quill.getModule('toolbar').container.appendChild(group);
-}
-
-/** Панель таблицы: строки и столбцы, удаление и что заливать цветом. */
-function setupTableTools(tm) {
-  el.tableTools.querySelectorAll('button[data-tt]').forEach((b) => {
-    b.addEventListener('click', () => editTable(() => {
-      const method = TABLE_OPS[b.dataset.tt];
-      if (method) tm[method]();
-    }));
-  });
-  el.tableTools.querySelectorAll('button[data-scope]').forEach((b) => {
-    b.addEventListener('click', () => {
-      ttScope = b.dataset.scope;
-      el.tableTools.querySelectorAll('button[data-scope]').forEach((x) => x.classList.toggle('on', x === b));
-    });
-  });
-  buildFillSwatches();
+function openExternalUrl(href) {
+  if (window.api && window.api.openExternal) window.api.openExternal(href);
+  else window.open(href, '_blank', 'noopener');
 }
 
 /** Редактор заметок. Закрыт, пока не выбрана задача: писать некуда. */
 function setupEditor() {
-  registerCellBackground();
-  quill = new Quill('#editor', {
-    theme: 'snow',
-    placeholder: t('editor.placeholder'),
-    bounds: '#editor-wrap',
-    modules: { table: true, toolbar: EDITOR_TOOLBAR },
-  });
-
-  const tm = tableModule();
-  if (tm) {
-    addTableInsertButton(tm);
-    setupTableTools(tm);
-  }
-
-  quill.on('text-change', (_d, _o, source) => { if (source === 'user' && selectedId) persistNotes(); });
-  quill.on('editor-change', () => updateTableTools());
-  quill.enable(false);
+  if (!window.LancibleEditor) return;
+  editor = LancibleEditor.create(el.editorWrap, editorOptions({
+    ariaLabel: t('tabs.notes'),
+    title: () => { const task = getTask(editorTaskId); return task ? task.title : ''; },
+    onChange: (container) => persistNotes(container),
+  }));
+  editor.setEditable(false);
 }
 
-function buildFillSwatches() {
-  el.ttSwatches.innerHTML = '';
-  for (const c of FILL_COLORS) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tt-sw' + (c ? '' : ' none');
-    if (c) b.style.background = c;
-    b.title = c ? t('table.fill_title') : t('table.unfill_title');
-    b.addEventListener('click', () => applyCellFill(c || null));
-    el.ttSwatches.appendChild(b);
-  }
-}
-
-function cellsForScope(tm, scope) {
-  const range = quill.getSelection();
-  if (!range) return [];
-  let info;
-  try { info = tm.getTable(range); } catch { return []; }
-  const [table, row, cell] = info || [];
-  if (!cell) return [];
-  if (scope === 'cell') return [cell];
-  if (scope === 'row') return [...(row.children ? childList(row) : [])];
-  if (scope === 'col') {
-    let ci = 0;
-    let c = cell;
-    while (c.prev) { c = c.prev; ci++; }
-    const out = [];
-    for (const r of childList(table)) {
-      const cc = childAt(r, ci);
-      if (cc) out.push(cc);
-    }
-    return out;
-  }
-  return [];
-}
-function childList(blot) {
-  const out = [];
-  blot.children.forEach((c) => out.push(c));
-  return out;
-}
-function childAt(blot, i) {
-  let n = 0;
-  let res = null;
-  blot.children.forEach((c) => { if (n === i) res = c; n++; });
-  return res;
-}
-
-function applyCellFill(color) {
-  const tm = tableModule();
-  if (!tm || !quill) return;
-  const cells = cellsForScope(tm, ttScope);
-  if (!cells.length) { toast(t('toast.put_cursor_table')); return; }
-  for (const c of cells) {
-    try {
-      const idx = c.offset(quill.scroll);
-      const len = c.length();
-      quill.formatLine(idx, Math.max(1, len), 'cellBg', color);
-    } catch (e) { console.error(e); }
-  }
-  persistNotes();
-}
-
-function persistNotes() {
-  const task = getTask(selectedId);
+function persistNotes(container) {
+  const task = getTask(editorTaskId);
   if (!task) return;
-  task.notes = quill.getContents();
+  task.notes = Core.writeNotes(container);
+  editorLoadedJSON = JSON.stringify(task.notes);
   task.updatedAt = new Date().toISOString();
   scheduleSave();
 }
 
-function updateTableTools() {
-  if (!quill || !el.tableTools) return;
-  const tm = tableModule();
-  let inTable = false;
-  try {
-    const range = quill.getSelection();
-    if (tm && range && tm.getTable) inTable = !!tm.getTable(range)[0];
-  } catch { inTable = false; }
-  el.tableTools.hidden = !inTable;
+function loadEditor(task) {
+  if (!editor) return;
+  editor.flush();
+  editorTaskId = task ? task.id : null;
+  editorLoadedJSON = task ? JSON.stringify(task.notes || null) : null;
+  editor.setContent(task ? Core.readNotes(task.notes) : null);
+  editor.setEditable(!!task);
 }
 
-function loadEditor(task) {
-  if (!quill) return;
-  if (!task) { quill.setContents([], 'silent'); quill.enable(false); return; }
-  quill.enable(true);
-  quill.setContents(task.notes || [{ insert: '\n' }], 'silent');
-  updateTableTools();
-}
+/** Дописать в задачу то, что ещё не ушло из редактора (он ждёт 150 мс). */
 function flushEditor() {
-  if (!quill || !selectedId) return;
-  const task = getTask(selectedId);
-  if (task) task.notes = quill.getContents();
+  if (editor) editor.flush();
+  if (docEditor) docEditor.flush();
+}
+
+/** Пришли данные с другого устройства. Открытый текст перечитываем, если
+ *  его поменяли там, а здесь в нём сейчас не пишут: иначе следующая буква
+ *  отсюда затёрла бы чужую правку. */
+function refreshEditorsFromRemote() {
+  const task = editor && getTask(editorTaskId);
+  if (task && JSON.stringify(task.notes || null) !== editorLoadedJSON && !editor.view.hasFocus()) loadEditor(task);
+  const d = docEditor && getDocument(state.ui.docId);
+  if (d && JSON.stringify(d.body || null) !== docLoadedJSON && !docEditor.view.hasFocus()) loadDocEditor(d);
+}
+
+// ---------------------------------------------------------------------------
+// Документы
+// ---------------------------------------------------------------------------
+
+const getDocument = (id) => (state.documents || []).find((d) => d.id === id) || null;
+let docQuery = '';
+let docFilter = 'all'; // all | none | <projectId>
+
+function setupDocEditor() {
+  if (!window.LancibleEditor || docEditor) return;
+  docEditor = LancibleEditor.create(el.docEditorWrap, editorOptions({
+    ariaLabel: t('docs.title'),
+    placeholder: t('docs.placeholder'),
+    title: () => { const d = getDocument(state.ui.docId); return d ? docTitle(d) : ''; },
+    onChange: (container) => persistDoc(container),
+  }));
+  docEditor.setEditable(false);
+}
+
+const docTitle = (d) => d.title || Core.docTitleGuess(Core.readNotes(d.body).doc) || t('docs.untitled');
+
+function persistDoc(container) {
+  const d = getDocument(state.ui.docId);
+  if (!d) return;
+  d.body = Core.normalizeContainer(container);
+  docLoadedJSON = JSON.stringify(d.body);
+  d.updatedAt = new Date().toISOString();
+  renderDocList();
+  scheduleSave();
+}
+
+function loadDocEditor(d) {
+  setupDocEditor();
+  if (!docEditor) return;
+  docEditor.flush();
+  docLoadedJSON = d ? JSON.stringify(d.body || null) : null;
+  docEditor.setContent(d ? Core.readNotes(d.body) : null);
+  docEditor.setEditable(!!d);
+}
+
+function openDocs(id) {
+  flushEditor();
+  closeMenu();
+  closeSearch();
+  if (id !== undefined) state.ui.docId = id;
+  state.ui.view = 'docs';
+  render();
+  scheduleSave();
+}
+
+function renderDocsPage() {
+  setupDocEditor();
+  const docs = state.documents || [];
+  if (!getDocument(state.ui.docId)) state.ui.docId = Core.sortDocuments(docs)[0] ? Core.sortDocuments(docs)[0].id : null;
+  renderDocList();
+  renderDocHead();
+  const d = getDocument(state.ui.docId);
+  if (docEditor && (docEditor.loadedFor !== (d ? d.id : null))) {
+    loadDocEditor(d);
+    docEditor.loadedFor = d ? d.id : null;
+  }
+  el.docEmpty.hidden = !!d;
+  el.docMain.hidden = !d;
+}
+
+function docsShown() {
+  let list = Core.sortDocuments(state.documents || []);
+  if (docFilter === 'none') list = list.filter((d) => !d.projectId);
+  else if (docFilter !== 'all') list = list.filter((d) => d.projectId === docFilter);
+  return Core.searchDocuments(list, docQuery);
+}
+
+function renderDocList() {
+  if (!el.docList) return;
+  const list = docsShown();
+  el.docFilterBtn.textContent = docFilter === 'all' ? t('docs.filter_all')
+    : docFilter === 'none' ? t('docs.no_project') : ((getProject(docFilter) || {}).name || t('docs.filter_all'));
+  el.docList.innerHTML = '';
+  for (const d of list) {
+    const p = d.projectId && getProject(d.projectId);
+    const st = Core.docStats(Core.readNotes(d.body).doc);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'doc-item' + (d.id === state.ui.docId ? ' active' : '');
+    b.dataset.id = d.id;
+    b.innerHTML = `<span class="doc-item-title">${d.pinnedAt ? `<svg class="icon doc-pin" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS.pin || ''}"/></svg>` : ''}${escapeHtml(docTitle(d))}</span>`
+      + `<span class="doc-item-meta">${p ? `<span class="ctx-dot" style="--sc:${escapeHtml(p.color || '')}"></span>${escapeHtml(p.name)} · ` : ''}${escapeHtml(t('docs.words_n', { n: st.words }))} · ${escapeHtml(fmtWhenShort(d.updatedAt))}</span>`;
+    b.addEventListener('click', () => { if (d.id !== state.ui.docId) { flushEditor(); state.ui.docId = d.id; renderDocsPage(); scheduleSave(); } });
+    b.addEventListener('contextmenu', (e) => { e.preventDefault(); openDocMenu(d, b); });
+    el.docList.appendChild(b);
+  }
+  el.docListEmpty.hidden = list.length > 0;
+  el.docListEmpty.textContent = (state.documents || []).length ? t('docs.nothing_found') : t('docs.empty_list');
+}
+
+function fmtWhenShort(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  return sameDay
+    ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+    : d.toLocaleDateString(LOCALE_MAP[lang()] || 'ru-RU', { day: 'numeric', month: 'short' });
+}
+
+function renderDocHead() {
+  const d = getDocument(state.ui.docId);
+  if (!d) return;
+  if (document.activeElement !== el.docTitle) el.docTitle.value = d.title || '';
+  el.docTitle.placeholder = Core.docTitleGuess(Core.readNotes(d.body).doc) || t('docs.untitled');
+  const p = d.projectId && getProject(d.projectId);
+  el.docProjectBtn.textContent = p ? p.name : t('docs.no_project');
+  el.docProjectBtn.classList.toggle('empty', !p);
+  el.docPinBtn.classList.toggle('on', !!d.pinnedAt);
+  el.docPinBtn.title = d.pinnedAt ? t('docs.unpin') : t('docs.pin');
+}
+
+function newDocument(projectId) {
+  flushEditor();
+  const d = Core.newDocument({
+    id: uid(),
+    projectId: projectId !== undefined ? projectId : (docFilter !== 'all' && docFilter !== 'none' ? docFilter : null),
+  });
+  state.documents = state.documents || [];
+  state.documents.unshift(d);
+  state.ui.docId = d.id;
+  docQuery = '';
+  if (el.docSearch) el.docSearch.value = '';
+  openDocs(d.id);
+  el.docTitle.focus();
+}
+
+async function deleteDocument(id) {
+  const d = getDocument(id);
+  if (!d) return;
+  const ok = await confirmDialog(t('docs.delete_confirm', { name: docTitle(d) }));
+  if (!ok) return;
+  state.documents = state.documents.filter((x) => x.id !== id);
+  if (state.ui.docId === id) { state.ui.docId = null; if (docEditor) docEditor.loadedFor = undefined; }
+  render();
+  scheduleSave();
+}
+
+function togglePinDocument(id) {
+  const d = getDocument(id);
+  if (!d) return;
+  d.pinnedAt = d.pinnedAt ? null : new Date().toISOString();
+  renderDocList();
+  renderDocHead();
+  scheduleSave();
+}
+
+function pickDocProject(d, anchor) {
+  openMenu(anchor, [
+    { label: t('docs.no_project'), selected: !d.projectId, onClick: () => { d.projectId = null; d.updatedAt = new Date().toISOString(); renderDocsPage(); scheduleSave(); } },
+    ...state.projects.map((p) => ({
+      label: p.name, dot: p.color, selected: d.projectId === p.id,
+      onClick: () => { d.projectId = p.id; d.updatedAt = new Date().toISOString(); renderDocsPage(); scheduleSave(); },
+    })),
+  ]);
+}
+
+function openDocFilterMenu(anchor) {
+  openMenu(anchor, [
+    { label: t('docs.filter_all'), selected: docFilter === 'all', onClick: () => { docFilter = 'all'; renderDocList(); } },
+    { label: t('docs.no_project'), selected: docFilter === 'none', onClick: () => { docFilter = 'none'; renderDocList(); } },
+    ...state.projects.map((p) => ({ label: p.name, dot: p.color, selected: docFilter === p.id, onClick: () => { docFilter = p.id; renderDocList(); } })),
+  ]);
+}
+
+function openDocMenu(d, anchor) {
+  openMenu(anchor, [
+    { label: d.pinnedAt ? t('docs.unpin') : t('docs.pin'), onClick: () => togglePinDocument(d.id) },
+    { label: t('docs.duplicate'), onClick: () => duplicateDocument(d.id) },
+    { sep: true },
+    { label: t('docs.delete'), danger: true, onClick: () => deleteDocument(d.id) },
+  ]);
+}
+
+function duplicateDocument(id) {
+  const d = getDocument(id);
+  if (!d) return;
+  flushEditor();
+  const copy = Object.assign(Core.newDocument({ id: uid(), projectId: d.projectId }), {
+    title: d.title ? `${d.title} ${t('docs.copy_suffix')}` : '',
+    body: JSON.parse(JSON.stringify(d.body || null)),
+  });
+  state.documents.unshift(copy);
+  openDocs(copy.id);
+}
+
+function setupDocsView() {
+  el.docNewBtn.addEventListener('click', () => newDocument());
+  el.docEmptyNew.addEventListener('click', () => newDocument());
+  el.docSearch.addEventListener('input', () => { docQuery = el.docSearch.value; renderDocList(); });
+  el.docFilterBtn.addEventListener('click', () => openDocFilterMenu(el.docFilterBtn));
+  el.docTitle.addEventListener('input', () => {
+    const d = getDocument(state.ui.docId);
+    if (!d) return;
+    d.title = el.docTitle.value;
+    d.updatedAt = new Date().toISOString();
+    renderDocList();
+    scheduleSave();
+  });
+  el.docTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (docEditor) docEditor.focus(); } });
+  el.docProjectBtn.addEventListener('click', () => { const d = getDocument(state.ui.docId); if (d) pickDocProject(d, el.docProjectBtn); });
+  el.docPinBtn.addEventListener('click', () => togglePinDocument(state.ui.docId));
+  el.docMoreBtn.addEventListener('click', () => { const d = getDocument(state.ui.docId); if (d) openDocMenu(d, el.docMoreBtn); });
 }
 
 // ---------------------------------------------------------------------------
@@ -4847,7 +4980,7 @@ el.title.addEventListener('input', () => {
   if (nameEl) nameEl.textContent = task.title || t('task.no_name');
   scheduleSave();
 });
-el.title.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); quill.focus(); } });
+el.title.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (editor) editor.focus(); } });
 
 el.pdlgSave.addEventListener('click', saveProjectDialog);
 el.pdlgCancel.addEventListener('click', closeProjectDialog);
@@ -4867,7 +5000,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && dp.open) { closeDatePicker(); return; }
   if (e.key === 'Escape' && tp.open) { closeTimePicker(); return; }
   if (e.key === 'Escape' && !el.tmdlgBackdrop.hidden) { closeTaskModal(true); return; }
-  if ((e.ctrlKey || e.metaKey) && k === 'f') {
+  // Ctrl+F внутри редактора — его собственный поиск по тексту (он уже
+  // обработал клавишу и отменил действие по умолчанию).
+  if ((e.ctrlKey || e.metaKey) && k === 'f' && !e.defaultPrevented) {
     e.preventDefault();
     el.searchInput.focus();
     el.searchInput.select();
@@ -4936,6 +5071,7 @@ function migrate() {
 
 async function init() {
   setupEditor();
+  setupDocsView();
   renderCurrency();
   buildSwatches();
 

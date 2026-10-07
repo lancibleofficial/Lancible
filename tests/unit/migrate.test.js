@@ -271,3 +271,15 @@ test('ставка и валюта проекта: пусто — общие, с
   }, deps());
   assert.deepEqual(s.projects.map((p) => [p.rate, p.currency]), [[null, null], [2500, 'USD'], [null, null]]);
 });
+
+test('документы: без поля — пустой список, битые выброшены, сирота — общий', () => {
+  const run = (st) => require('../../src/renderer/core/migrate.js').migrate(st, deps());
+  const a = run({ projects: [], tasks: [] });
+  assert.deepEqual(a.documents, []);
+  const b = run({ projects: [{ id: 'p1', name: 'X' }], tasks: [], documents: [null, { title: 'без id' }, { id: 'd1', projectId: 'gone' }, { id: 'd2', projectId: 'p1', title: 'Ок' }] });
+  assert.deepEqual(b.documents.map((d) => [d.id, d.projectId, d.title]), [['d1', null, ''], ['d2', 'p1', 'Ок']]);
+  // Повторный прогон ничего не меняет.
+  const again = JSON.stringify(b.documents);
+  run(b);
+  assert.equal(JSON.stringify(b.documents), again);
+});

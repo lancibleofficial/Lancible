@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import BoardScreen from '../screens/BoardScreen';
 import TaskDetailScreen from '../screens/TaskDetailScreen';
+import EditorScreen from '../screens/EditorScreen';
 import ProjectStatusesScreen from '../screens/ProjectStatusesScreen';
 import AppHeader from '../components/AppHeader';
 import { useAppStore } from '../store/useAppStore';
@@ -32,6 +33,7 @@ export default function BoardStack() {
       {/* Шапка доски — общая SearchHeader внутри экрана, как на Главной. */}
       <Stack.Screen name="BoardMain" component={BoardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: '' }} />
+      <Stack.Screen name="Editor" component={EditorScreen} options={{ title: '' }} />
       <Stack.Screen
         name="ProjectStatuses"
         component={ProjectStatusesScreen}

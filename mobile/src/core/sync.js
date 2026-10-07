@@ -14,7 +14,8 @@
    *  выбранным языком — это всё равно пустой аккаунт, и спрашивать о нём
    *  «чьи данные оставить» бессмысленно. */
   const hasData = (data) => !!(data
-    && (((data.projects || []).length > 0) || ((data.tasks || []).length > 0)));
+    && (((data.projects || []).length > 0) || ((data.tasks || []).length > 0)
+      || ((data.documents || []).length > 0)));
 
   /** Что делать при входе в аккаунт.
    *
@@ -39,7 +40,20 @@
     return s && s.resolved ? 'none' : 'ask';
   }
 
-  const api = { hasData, planSignInSync };
+  /** Документы из пришедшего с сервера набора.
+   *
+   *  Раздел «Документы» появился 7 октября 2026, и версии приложения до
+   *  него шлют набор без поля documents вовсе. Принять такой набор как «у
+   *  пользователя ноль документов» значило бы стереть их правкой с
+   *  телефона, на котором просто не обновили приложение. Поэтому
+   *  отсутствие поля — «не знаю», и своё остаётся; пустой массив — это
+   *  уже настоящее «удалил все». */
+  function pickDocuments(localDocs, remoteData) {
+    if (remoteData && Array.isArray(remoteData.documents)) return remoteData.documents;
+    return Array.isArray(localDocs) ? localDocs : [];
+  }
+
+  const api = { hasData, planSignInSync, pickDocuments };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);

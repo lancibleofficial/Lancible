@@ -115,3 +115,24 @@ test('аноним не может вызвать удаление аккаун�
   assert.notEqual(code, 'PGRST202', 'функции delete_my_account нет — выполните supabase/legal.sql');
   assert.equal(code, '42501', `ожидали отказ в праве, получили ${res.status} ${code}: ${body.slice(0, 200)}`);
 });
+
+// --- хранилище картинок редактора (supabase/storage.sql) ---------------------------
+//
+// Корзина doc-assets приватная: папка — id пользователя. Аноним не должен ни
+// класть туда файлы, ни читать чужие. Пока storage.sql не выполнен, корзины
+// нет вовсе — ответ тоже «нельзя», и тест остаётся честным.
+test('аноним не может положить картинку в чужую папку doc-assets', async () => {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/doc-assets/${NOWHERE_UUID}/probe.png`, {
+    method: 'POST',
+    headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, 'Content-Type': 'image/png' },
+    body: new Uint8Array([137, 80, 78, 71]),
+  });
+  assert.ok(!res.ok, `загрузка прошла: ${res.status} ${await res.text()}`);
+});
+
+test('аноним не может прочитать картинку из doc-assets', async () => {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/authenticated/doc-assets/${NOWHERE_UUID}/probe.png`, {
+    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+  });
+  assert.ok(!res.ok, `чтение прошло: ${res.status}`);
+});

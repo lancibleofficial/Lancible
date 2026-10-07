@@ -58,6 +58,9 @@ const ROUTES = [
   // Ядро общее у всех трёх поверхностей — задевает и телефон, и браузер.
   [/^src[\\/]renderer[\\/]core[\\/]/, ['unit', 'mobile', 'web']],
   [/^src[\\/]xlsx\.js$/, ['unit', 'xlsx', 'web']],
+  // Исходники редактора: юниты скажут, что сборка отстала (npm run
+  // build:editor), веб и снимки — что она делает в браузере.
+  [/^src[\\/]editor[\\/]/, ['unit', 'web', 'visual']],
   [/^src[\\/]renderer[\\/]/, ['unit', 'web', 'visual']],
   [/^web[\\/]index\.html$/, ['unit', 'web', 'visual']],
   [/^mobile[\\/]/, ['unit', 'mobile']],

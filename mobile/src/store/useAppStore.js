@@ -18,6 +18,7 @@ import { seedProjectStatuses, defaultStatusId, getStatus, orderedStatuses, planS
 import { t } from '../lib/i18n';
 import Repeat from '../core/repeat.js';
 import Versions from '../core/versions.js';
+import DocCore from '../core/doc.js';
 
 export const useAppStore = create(
   persist(
@@ -83,9 +84,31 @@ export const useAppStore = create(
           return {
             tasks: s.tasks.filter((task) => task.projectId !== id),
             projects: s.projects.filter((p) => p.id !== id),
+            // Документы проекта не удаляются вместе с ним — становятся общими.
+            documents: (s.documents || []).map((d) => (d.projectId === id ? { ...d, projectId: null } : d)),
             activeTimer: dropActiveTimer ? null : s.activeTimer,
           };
         });
+      },
+
+      // --- документы ---
+      createDocument(projectId) {
+        const doc = DocCore.newDocument({ id: uid(), projectId: projectId || null });
+        set((s) => ({ documents: [doc, ...(s.documents || [])] }));
+        return doc.id;
+      },
+      updateDocument(id, patch) {
+        set((s) => ({
+          documents: (s.documents || []).map((d) => (d.id === id ? { ...d, ...patch, updatedAt: new Date().toISOString() } : d)),
+        }));
+      },
+      deleteDocument(id) {
+        set((s) => ({ documents: (s.documents || []).filter((d) => d.id !== id) }));
+      },
+      togglePinDocument(id) {
+        set((s) => ({
+          documents: (s.documents || []).map((d) => (d.id === id ? { ...d, pinnedAt: d.pinnedAt ? null : new Date().toISOString() } : d)),
+        }));
       },
 
       // --- задачи ---
@@ -531,7 +554,7 @@ export const useAppStore = create(
       // первой синхронизации, а без учётной записи — навсегда.
       partialize: (s) => ({
         projects: s.projects, tasks: s.tasks, tags: s.tags,
-        statuses: s.statuses, versions: s.versions,
+        statuses: s.statuses, versions: s.versions, documents: s.documents,
         activeTimer: s.activeTimer, ui: s.ui, settings: s.settings,
       }),
       onRehydrateStorage: () => () => {

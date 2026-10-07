@@ -169,13 +169,15 @@ app.whenReady().then(async () => {
   await new Promise((r) => setTimeout(r, 250));
   await win.webContents.executeJavaScript(`
     try {
-      const q = Quill.find(document.getElementById('editor'));
-      q.setText('Заметка про API\\n');
-      q.formatText(7, 5, 'color', '#87ff65');
-      q.getModule('table').insertTable(2, 3);
-      const td = document.querySelector('#editor .ql-editor table td');
-      q.setSelection(Quill.find(td).offset(q.scroll) + 1, 0);
-      q.formatLine(Quill.find(td).offset(q.scroll), 1, 'cellBg', '#3a4a34');
+      // Свой редактор (src/editor/): текст с цветной меткой и таблица.
+      editor.setContent(Core.readNotes({ ops: [
+        { insert: 'Заметка про ' }, { insert: 'API', attributes: { color: 'green', bold: true } }, { insert: '\\n' },
+      ] }));
+      editor.focus();
+      // Курсор — в конец текста: таблица встанет под ним.
+      const st = editor.view.state;
+      editor.view.dispatch(st.tr.setSelection(st.selection.constructor.atEnd(st.doc)));
+      editor.exec('table', { rows: 2, cols: 3, header: true });
     } catch (e) { console.log('shot editor err', e.message); }
     document.getElementById('task-title').focus();
   `).catch(() => {});
@@ -200,15 +202,18 @@ app.whenReady().then(async () => {
   await capture(win, 'preview-timepicker.png');
   await win.webContents.executeJavaScript(`document.getElementById('sdlg-cancel').click()`);
 
-  // Подсказка ссылки в редакторе больше не обрезается
+  // Правка ссылки в редакторе — своя панель у курсора, не обрезается краем.
   await win.webContents.executeJavaScript(`document.querySelector('.task-tabs button[data-tab="notes"]').click()`);
   await new Promise((r) => setTimeout(r, 150));
   await win.webContents.executeJavaScript(`
     try {
-      const q = Quill.find(document.getElementById('editor'));
-      q.setText('Ссылка на детальное ТЗ проекта: подробности здесь\\n', 'user');
-      q.formatText(33, 17, 'link', 'https://example.com/very/long/path/to/spec/document', 'user');
-      q.setSelection(38, 0, 'user');
+      editor.setContent(Core.readNotes({ ops: [
+        { insert: 'Ссылка на детальное ТЗ проекта: ' },
+        { insert: 'подробности здесь', attributes: { link: 'https://example.com/very/long/path/to/spec/document' } },
+        { insert: '\\n' },
+      ] }));
+      editor.focus();
+      editor.exec('link');
     } catch (e) { console.log('shot link err', e.message); }
   `).catch(() => {});
   await new Promise((r) => setTimeout(r, 250));

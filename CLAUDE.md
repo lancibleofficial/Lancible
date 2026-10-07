@@ -189,6 +189,12 @@ Node и `test.fail(...)` в Playwright. Такой тест виден в отч
 ## Что ещё стоит помнить
 
 - Десктоп собирается под Windows и macOS вместе и должен оставаться одинаковым.
+- Редактор текста — `src/editor/` (ProseMirror). После правки в нём —
+  `npm run build:editor`: сборка (`src/renderer/editor.js` и
+  `mobile/src/editor/editorBundle.js`) закоммичена, Vercel и EAS её не
+  собирают. Отставшую сборку ловит `tests/unit/editor-bundle.test.js`.
+- Картинки редактора уходят в облако только после разового
+  `supabase/storage.sql` в SQL Editor; до этого они живут на устройстве.
 - `web/index.html` написан руками, а стили тянет общие с десктопом — после
   правки разметки в `src/renderer/index.html` его нужно править следом.
 - Лендинг и веб деплоятся из `main` автоматически одним проектом Vercel: веб

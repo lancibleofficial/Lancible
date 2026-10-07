@@ -39,7 +39,7 @@ export default function MainTabs() {
           // tabBarStyle родительского Tab.Screen по имени сфокусированного
           // вложенного роута (setOptions из самого экрана на это НЕ влияет,
           // несмотря на то что можно было бы предположить обратное).
-          tabBarStyle: ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
+          tabBarStyle: ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
         })}
       />
       <Tab.Screen
@@ -48,7 +48,7 @@ export default function MainTabs() {
         options={({ route }) => ({
           headerShown: false,
           tabBarLabel: t(lang, 'nav.board'),
-          tabBarStyle: ['Project', 'TaskDetail', 'ProjectStatuses'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
+          tabBarStyle: ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents'].includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined,
         })}
       />
       <Tab.Screen name="Calendar" component={CalendarScreen} options={{ headerShown: false, tabBarLabel: t(lang, 'nav.calendar') }} />

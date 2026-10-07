@@ -37,6 +37,7 @@ export default function SettingsScreen({ navigation }) {
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const settings = useAppStore((s) => s.settings);
+  const documentsCount = useAppStore((s) => (s.documents || []).length);
   const setNotifyEnabled = useAppStore((s) => s.setNotifyEnabled);
   const setSettings = useAppStore((s) => s.setSettings);
   const tags = useAppStore((s) => s.tags);
@@ -196,6 +197,11 @@ export default function SettingsScreen({ navigation }) {
             </View>
           </View>
         )}
+
+        {/* Документы — тексты отдельно от задач; экран живёт в стеке «Главной». */}
+        <SettingsCard>
+          <SettingsRow icon="doc" label={t(settings.lang, 'nav.docs')} value={documentsCount ? String(documentsCount) : ''} onPress={() => navigation.navigate('Home', { screen: 'Documents' })} last />
+        </SettingsCard>
 
         <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_main')}</Text>
         <SettingsCard>

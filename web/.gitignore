@@ -4,5 +4,6 @@ node_modules/
 app.js
 styles.css
 xlsx.js
+editor.js
 core/
 vendor/

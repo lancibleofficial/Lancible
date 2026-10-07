@@ -35,8 +35,8 @@ function syncPayload() {
   // Раньше пакет состоял только из projects и tasks, и запись с телефона
   // затирала на сервере всё остальное: само мобильное приложение статусов не
   // показывает, но новое устройство скачало бы данные уже без них.
-  const { projects, tasks, tags, statuses, versions } = useAppStore.getState();
-  return { projects, tasks, tags, statuses, versions };
+  const { projects, tasks, tags, statuses, versions, documents } = useAppStore.getState();
+  return { projects, tasks, tags, statuses, versions, documents: documents || [] };
 }
 
 export async function pushSyncState() {
@@ -84,11 +84,13 @@ function applyRemoteData(data) {
     if (Array.isArray(data && data.tags)) next.tags = data.tags;
     if (Array.isArray(data && data.statuses)) next.statuses = data.statuses;
     if (Array.isArray(data && data.versions)) next.versions = data.versions;
+    // Версии до «Документов» поля не шлют — своё тогда остаётся (core/sync.js).
+    next.documents = CoreSync.pickDocuments(s.documents, data);
     return next;
   });
   const s = useAppStore.getState();
   lastSyncedJSON = JSON.stringify({
-    projects, tasks, tags: s.tags, statuses: s.statuses, versions: s.versions,
+    projects, tasks, tags: s.tags, statuses: s.statuses, versions: s.versions, documents: s.documents || [],
   });
 }
 

@@ -38,8 +38,9 @@ async function seed(page) {
 }
 
 test('на странице не осталось ни одного видимого системного select', async ({ page }) => {
-  // Три <select> на странице всё же есть — скрытые внутренности панели Quill,
-  // которую он сам подменяет своими .ql-picker. Проверяем именно видимые.
+  // Проверяем именно видимые: со своим редактором (src/editor/) скрытых
+  // <select> от чужой панели больше нет, но правило «видимых нет» — то, что
+  // видит человек.
   await seed(page);
   const stray = await page.evaluate(() => [...document.querySelectorAll('select')]
     .filter((n) => n.offsetParent !== null)

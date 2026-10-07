@@ -393,11 +393,4 @@
   .session-item {
     flex-wrap: wrap;
   }
-
-  /* Тулбар редактора — горизонтальный скролл вместо переполнения */
-  .ql-toolbar.ql-snow {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-  }
 }

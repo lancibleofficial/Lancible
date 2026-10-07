@@ -1,6 +1,7 @@
 // Собирает web/ из общих исходников перед деплоем на Vercel (Build Command
 // в web/package.json). Копирует общий с десктопом код (app.js/styles.css/
-// xlsx.js) и вендорные библиотеки (Quill, Supabase UMD — из web/node_modules,
+// xlsx.js), собранный редактор (editor.js, scripts/build-editor.js) и
+// вендорные библиотеки (Supabase UMD — из web/node_modules,
 // куда их кладёт обычный `npm install` внутри web/, т.к. Root Directory на
 // Vercel — web/, и корневой node_modules там недоступен) + закоммиченные
 // шрифты Basique Pro. web/index.html, web/api-shim.js, web/responsive.css —
@@ -21,6 +22,8 @@ try {
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'app.js'), path.join(webDir, 'app.js'));
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'styles.css'), path.join(webDir, 'styles.css'));
   fs.copyFileSync(path.join(root, 'src', 'xlsx.js'), path.join(webDir, 'xlsx.js'));
+  // Редактор собран заранее и лежит в репозитории — Vercel его не собирает.
+  fs.copyFileSync(path.join(root, 'src', 'renderer', 'editor.js'), path.join(webDir, 'editor.js'));
 
   // Чистая логика из src/renderer/core — те же файлы, что тестируются в Node.
   // Копируется вся папка целиком, чтобы новый модуль не пришлось дописывать
@@ -32,15 +35,7 @@ try {
     fs.copyFileSync(path.join(coreSrc, name), path.join(coreDest, name));
   }
 
-  // Quill + Supabase UMD — из web/node_modules (свои зависимости в web/package.json).
-  fs.copyFileSync(
-    path.join(webNodeModules, 'quill', 'dist', 'quill.js'),
-    path.join(vendorDest, 'quill.js'),
-  );
-  fs.copyFileSync(
-    path.join(webNodeModules, 'quill', 'dist', 'quill.snow.css'),
-    path.join(vendorDest, 'quill.snow.css'),
-  );
+  // Supabase UMD — из web/node_modules (свои зависимости в web/package.json).
   fs.copyFileSync(
     path.join(webNodeModules, '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'),
     path.join(vendorDest, 'supabase.js'),
@@ -54,7 +49,7 @@ try {
     fs.copyFileSync(path.join(fontSrc, name), path.join(fontDest, name));
   }
 
-  console.log('[sync-web-assets] app.js/styles.css/xlsx.js/core/vendor скопированы в', webDir);
+  console.log('[sync-web-assets] app.js/styles.css/xlsx.js/editor.js/core/vendor скопированы в', webDir);
 } catch (err) {
   console.error('[sync-web-assets] Ошибка синхронизации:', err.message);
   process.exitCode = 1;

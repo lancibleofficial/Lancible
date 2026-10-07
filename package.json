@@ -34,7 +34,8 @@
     "graph:baseline": "node scripts/graph-baseline.js",
     "graph:orphans": "node scripts/graph-orphans.js",
     "site:refresh": "node scripts/publish-site.js",
-    "site:app": "node scripts/build-landing-app.js"
+    "site:app": "node scripts/build-landing-app.js",
+    "build:editor": "node scripts/build-editor.js"
   },
   "author": "",
   "license": "MIT",
@@ -42,8 +43,24 @@
     "@playwright/test": "^1.63.0",
     "electron": "^33.2.1",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "lucide": "^1.52.0",
+    "markdown-it": "^14.3.2",
+    "perfect-freehand": "^1.2.3",
     "png-to-ico": "^3.0.2",
-    "quill": "^2.0.3"
+    "prosemirror-commands": "^1.7.2",
+    "prosemirror-dropcursor": "^1.8.4",
+    "prosemirror-gapcursor": "^1.4.1",
+    "prosemirror-history": "^1.5.1",
+    "prosemirror-inputrules": "^1.5.1",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-markdown": "^1.13.8",
+    "prosemirror-model": "^1.25.12",
+    "prosemirror-schema-list": "^1.5.1",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-tables": "^1.8.5",
+    "prosemirror-transform": "^1.12.2",
+    "prosemirror-view": "^1.42.6"
   },
   "allowScripts": {
     "electron@33.4.11": true,

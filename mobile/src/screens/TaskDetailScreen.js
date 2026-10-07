@@ -2,8 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
-import RichTextEditor, { LinkPromptSheet } from '../components/RichTextEditor';
-import EditorToolbar from '../components/EditorToolbar';
+import DocEditor from '../components/DocEditor';
+import DocCore from '../core/doc.js';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
 import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney, capFirst } from '../lib/format';
 import TaskClock from '../components/TaskClock';
@@ -82,19 +82,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   const [tab, setTab] = useState('notes');
   const [title, setTitle] = useState(task ? task.title : '');
   const [rateText, setRateText] = useState(task && task.rate != null ? String(task.rate) : '');
-  const [format, setFormat] = useState({});
   const titleTimer = useRef(null);
-  const notesTimer = useRef(null);
-  const editorRef = useRef(null);
-
-  // Автопрокрутка страницы, чтобы курсор в заметках не уезжал под клавиатуру
-  // (сам WebView этого не умеет — RN не видит, что происходит внутри него).
-  // scrollY/editorY/scrollViewH — три числа, из которых считаем, перекрывает
-  // ли клавиатура текущую позицию каретки, и на сколько доскроллить.
-  const scrollRef = useRef(null);
-  const scrollYRef = useRef(0);
-  const editorYRef = useRef(0);
-  const [scrollViewHeight, setScrollViewHeight] = useState(0);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -103,24 +91,11 @@ export default function TaskDetailScreen({ route, navigation }) {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  function onCaret({ bottom }) {
-    if (!keyboardHeight || !scrollViewHeight) return;
-    const visibleBottom = scrollViewHeight - keyboardHeight;
-    const caretBottomInScroll = editorYRef.current + bottom - scrollYRef.current;
-    const overflow = caretBottomInScroll - visibleBottom;
-    if (overflow > 0) {
-      scrollRef.current?.scrollTo({ y: scrollYRef.current + overflow + spacing.md, animated: true });
-    }
-  }
-
-  function onToolbarCommand(item) {
-    if (item.type === 'link') {
-      openSheet(
-        <LinkPromptSheet lang={LANG} initialValue={format.link} onConfirm={(url) => editorRef.current?.send({ type: 'link', value: url })} />,
-      );
-      return;
-    }
-    editorRef.current?.send(item);
+  // Заметки пишутся в полноэкранном редакторе (EditorScreen): там у
+  // редактора вся высота, своя прокрутка и рисование пером без спора с
+  // прокруткой страницы. Здесь — предпросмотр, касание открывает редактор.
+  function openEditor() {
+    navigation.navigate('Editor', { kind: 'task', id: taskId });
   }
 
   function onExport() {
@@ -210,10 +185,6 @@ export default function TaskDetailScreen({ route, navigation }) {
     setTitle(v);
     clearTimeout(titleTimer.current);
     titleTimer.current = setTimeout(() => updateTask(taskId, { title: v }), 400);
-  }
-  function onNotesChange(ops) {
-    clearTimeout(notesTimer.current);
-    notesTimer.current = setTimeout(() => updateTask(taskId, { notes: ops }), 400);
   }
   function onRateChange(v) {
     setRateText(v);
@@ -307,7 +278,7 @@ export default function TaskDetailScreen({ route, navigation }) {
     );
   }
 
-  useEffect(() => () => { clearTimeout(titleTimer.current); clearTimeout(notesTimer.current); }, []);
+  useEffect(() => () => { clearTimeout(titleTimer.current); }, []);
 
   if (!task) return null;
 
@@ -327,18 +298,14 @@ export default function TaskDetailScreen({ route, navigation }) {
   // ни от какого manifest/resize-режима — просто сдвигает контент на
   // измеренную высоту клавиатуры, минуя автоматику совсем.
   const isIOS = Platform.OS === 'ios';
-  const androidKeyboardOffset = !isIOS && tab === 'notes' ? keyboardHeight : 0;
+  const androidKeyboardOffset = !isIOS && tab === 'settings' ? keyboardHeight : 0;
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={isIOS ? 'padding' : undefined}>
       <ScrollView
-        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, androidKeyboardOffset ? { paddingBottom: androidKeyboardOffset } : null]}
         keyboardShouldPersistTaps="handled"
-        onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
-        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
-        scrollEventThrottle={16}
       >
         <View style={styles.header}>
           {/* Из какого проекта задача — первое, что нужно знать, открыв её
@@ -385,16 +352,18 @@ export default function TaskDetailScreen({ route, navigation }) {
         </View>
 
         {tab === 'notes' ? (
-          <View onLayout={(e) => { editorYRef.current = e.nativeEvent.layout.y; }}>
-            <RichTextEditor
-              ref={editorRef}
-              value={task.notes}
-              onChange={onNotesChange}
-              onFormatChange={setFormat}
-              onCaret={onCaret}
-              placeholder={t(LANG, 'editor.placeholder')}
-              lang={LANG}
-            />
+          <View style={styles.notes}>
+            {DocCore.isDocEmpty(DocCore.readNotes(task.notes)) ? (
+              <Pressable style={styles.notesEmpty} onPress={openEditor}>
+                <Text style={styles.notesEmptyText}>{t(LANG, 'editor.empty')}</Text>
+              </Pressable>
+            ) : (
+              <DocEditor preview content={DocCore.readNotes(task.notes)} lang={LANG} onOpen={openEditor} />
+            )}
+            <Pressable style={styles.openEditor} onPress={openEditor}>
+              <Text style={styles.openEditorText}>{t(LANG, 'editor.open')}</Text>
+              <Icon name="chevron-right" size={12} color={colors.accentInk} />
+            </Pressable>
           </View>
         ) : tab === 'settings' ? (
           <View style={styles.settingsPanel}>
@@ -518,11 +487,6 @@ export default function TaskDetailScreen({ route, navigation }) {
         )}
       </ScrollView>
 
-      {tab === 'notes' ? (
-        <View style={androidKeyboardOffset ? { marginBottom: androidKeyboardOffset } : null}>
-          <EditorToolbar format={format} onCommand={onToolbarCommand} colors={colors} />
-        </View>
-      ) : null}
     </KeyboardAvoidingView>
   );
 }
@@ -532,6 +496,11 @@ const makeStyles = (colors) => StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   header: { padding: spacing.lg, paddingBottom: spacing.sm },
+  notes: { marginHorizontal: spacing.lg, marginBottom: spacing.lg, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.panel, gap: spacing.sm },
+  notesEmpty: { paddingVertical: spacing.xl, alignItems: 'center' },
+  notesEmptyText: { color: colors.textFaint, fontSize: fontSize.sm, textAlign: 'center' },
+  openEditor: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 44, borderRadius: radius.md, backgroundColor: colors.panel2 },
+  openEditorText: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: '600' },
   menuBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   // Высота 44 — не для красоты: строка узкая, а промахиваться по ней
   // означает уехать в чужой проект.

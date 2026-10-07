@@ -31,6 +31,17 @@
     if (!Array.isArray(state.statuses)) state.statuses = [];
     if (!Array.isArray(state.tags)) state.tags = [];
     if (!Array.isArray(state.versions)) state.versions = [];
+    // Документы (с 7 октября 2026). Документ без id не открыть и не удалить —
+    // такой выбрасываем; ссылка на исчезнувший проект делает его общим.
+    if (!Array.isArray(state.documents)) state.documents = [];
+    state.documents = state.documents.filter((d) => d && typeof d === 'object' && d.id);
+    {
+      const alive = new Set(state.projects.map((p) => p.id));
+      for (const d of state.documents) {
+        if (d.projectId && !alive.has(d.projectId)) d.projectId = null;
+        if (typeof d.title !== 'string') d.title = '';
+      }
+    }
     if (!state.ui || typeof state.ui !== 'object') state.ui = {};
     if (!state.settings || typeof state.settings !== 'object') state.settings = {};
     if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;

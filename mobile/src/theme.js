@@ -89,6 +89,58 @@ export function useThemeMode() {
   return resolveTheme(themeSetting, systemScheme);
 }
 
+// Редактор текста (src/editor/) живёт в WebView и красится CSS-переменными
+// с теми же именами, что в src/renderer/styles.css. Значения — отсюда: у
+// телефона свой источник токенов (DESIGN.md). Оттенки --led-c-* и заливки
+// маркера --led-hl-* — те же, что на десктопе: документ хранит имя цвета,
+// и «жёлтый маркер» должен быть одним жёлтым на всех устройствах.
+const editorHues = {
+  dark: {
+    gray: '#9aa0aa', red: '#ff7b72', orange: '#ffa657', yellow: '#f2cc60', green: '#7ee787',
+    teal: '#56d4c4', blue: '#79b8ff', purple: '#c297ff', pink: '#ff8fc7',
+  },
+  light: {
+    gray: '#5f6670', red: '#c8281e', orange: '#b04a00', yellow: '#8a6100', green: '#1a7f37',
+    teal: '#0b7369', blue: '#0a64c8', purple: '#7c4bd6', pink: '#b8337f',
+  },
+};
+const editorHighlights = {
+  dark: {
+    gray: 'rgba(154,160,170,0.24)', red: 'rgba(255,123,114,0.26)', orange: 'rgba(255,166,87,0.26)',
+    yellow: 'rgba(242,204,96,0.3)', green: 'rgba(126,231,135,0.22)', teal: 'rgba(86,212,196,0.22)',
+    blue: 'rgba(121,184,255,0.24)', purple: 'rgba(194,151,255,0.24)', pink: 'rgba(255,143,199,0.24)',
+  },
+  light: {
+    gray: '#e5e7ea', red: '#ffdcd7', orange: '#ffe3c6', yellow: '#fff0a6', green: '#d5f3d3',
+    teal: '#ccefea', blue: '#d9e9ff', purple: '#e9defe', pink: '#ffdcee',
+  },
+};
+const editorShadows = {
+  dark: { pop: '0 10px 28px rgba(0,0,0,0.5)', modal: '0 16px 44px rgba(0,0,0,0.55)', codeBg: '#0f1012' },
+  light: { pop: '0 8px 24px rgba(9,9,11,0.16)', modal: '0 18px 48px rgba(9,9,11,0.22)', codeBg: '#232428' },
+};
+
+/** CSS-переменные для редактора в WebView: :root { --bg: …; … }. */
+export function editorCssVars(mode) {
+  const c = mode === 'light' ? light : dark;
+  const m = mode === 'light' ? 'light' : 'dark';
+  const sh = editorShadows[m];
+  const vars = {
+    '--bg': c.bg, '--panel': c.panel, '--panel-2': c.panel2, '--raise': c.panel2,
+    '--line': c.borderSoft, '--border': c.border, '--border-soft': c.borderSoft, '--border-strong': c.borderStrong,
+    '--text': c.text, '--text-dim': c.textDim, '--text-faint': c.textFaint, '--icon': c.textDim,
+    '--accent': c.accent, '--accent-hover': c.accentHover, '--accent-text': c.accentText, '--accent-ink': c.accentInk,
+    '--link': c.accentInk, '--danger': c.danger, '--text-on-color': c.textOnColor, '--scrim': c.scrim,
+    '--code-bg': sh.codeBg, '--tab-active-bg': c.tabActiveBg, '--nav-active-bg': c.panel2, '--sel': c.accentMuted,
+    '--shadow-pop': sh.pop, '--shadow-modal': sh.modal,
+    '--ease': 'cubic-bezier(0.22, 0.61, 0.36, 1)', '--radius': '14px', '--radius-sm': '10px',
+    '--font-ui': "'Onest', -apple-system, Roboto, 'Segoe UI', sans-serif", '--font-display': 'var(--font-ui)', '--fw-text': '400',
+  };
+  for (const [k, v] of Object.entries(editorHues[m])) vars[`--led-c-${k}`] = v;
+  for (const [k, v] of Object.entries(editorHighlights[m])) vars[`--led-hl-${k}`] = v;
+  return `:root{color-scheme:${m};${Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';')}}`;
+}
+
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 
 // Кастомный таббар (MainTabBar.js) не сообщает React Navigation свою

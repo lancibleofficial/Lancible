@@ -7,7 +7,6 @@
     "build": "node ../scripts/sync-web-assets.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.116.0",
-    "quill": "^2.0.3"
+    "@supabase/supabase-js": "^2.116.0"
   }
 }
