@@ -60,7 +60,11 @@ table.table.toDOM = (node) => ['table', node.attrs.bid ? { 'data-bid': node.attr
 const CALLOUT_TONES = ['info', 'warn', 'ok', 'idea'];
 
 export const nodes = {
-  doc: { content: 'block+' },
+  // attrs.ink — пометки от руки поверх текста. Лежат в документе, чтобы
+  // отмена (Ctrl+Z, кнопки отмены) шла по ним в общем порядке с текстом
+  // (круг 4, 7 октября 2026). В сохранённом контейнере они по-прежнему
+  // отдельным полем ink: getContent снимает их с документа.
+  doc: { content: 'block+', attrs: { ink: { default: null } } },
 
   paragraph: {
     group: 'block',
@@ -299,6 +303,21 @@ function colorMark(tag, styleProp, cls, skip) {
   };
 }
 
+// Размер и гарнитура выделенного текста (круг 4, 7 октября 2026). Значения —
+// именованные ступени, не пиксели: размер — доля от размера текста в
+// настройках вида, гарнитура — та же тройка, что в меню «Вид». Вид держат
+// классы .led-fs-* и .led-ff-* в styles.css.
+export const FONT_SIZES = ['xs', 's', 'l', 'xl', 'xxl'];
+export const FONT_FAMILIES = ['sans', 'serif', 'mono'];
+
+function stepMark(attr, cls, values) {
+  return {
+    attrs: { [attr]: {} },
+    parseDOM: [{ tag: `span[data-${cls}]`, getAttrs: (dom) => (values.includes(dom.getAttribute(`data-${cls}`)) ? { [attr]: dom.getAttribute(`data-${cls}`) } : false) }],
+    toDOM: (mark) => ['span', { class: `led-${cls}-${mark.attrs[attr]}`, [`data-${cls}`]: mark.attrs[attr] }, 0],
+  };
+}
+
 export const marks = {
   link: {
     attrs: { href: {}, title: { default: null } },
@@ -335,6 +354,8 @@ export const marks = {
   sup: { excludes: 'sub', parseDOM: [{ tag: 'sup' }], toDOM: () => ['sup', 0] },
   textColor: colorMark('span', 'color', 'led-tc', /^(inherit|initial|currentcolor|rgb\(0, 0, 0\)|#000(000)?|black)$/i),
   highlight: colorMark('mark', 'background-color', 'led-hl', /^(inherit|initial|transparent|rgba\(0, 0, 0, 0\)|rgb\(255, 255, 255\)|#fff(fff)?|white)$/i),
+  fontSize: stepMark('size', 'fs', FONT_SIZES),
+  fontFamily: stepMark('family', 'ff', FONT_FAMILIES),
   // Комментарий. excludes: '' — на одном слове может висеть несколько веток.
   comment: {
     attrs: { id: {} },

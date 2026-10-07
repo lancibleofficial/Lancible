@@ -156,6 +156,8 @@ export class BubbleMenu {
       strike: btn('strike', `${t('fmt.strike')} (${keyLabel('Mod-Shift-x')})`, run(C.toggle('strike'))),
       code: btn('code', `${t('fmt.code')} (${keyLabel('Mod-e')})`, run(C.toggle('code'))),
       link: btn('link', `${t('fmt.link')} (${keyLabel('Mod-k')})`, () => ed.editLink(this.buttons.link)),
+      fontSize: btn('fontSize', t('fmt.font_size'), () => ed.fontSizeMenu(this.buttons.fontSize)),
+      fontFamily: btn('fontFamily', t('fmt.font_family'), () => ed.fontFamilyMenu(this.buttons.fontFamily)),
       color: btn('color', t('fmt.text_color'), () => this.colorMenu('tc', this.buttons.color)),
       highlight: btn('highlight', `${t('fmt.highlight')} (${keyLabel('Mod-Shift-h')})`, () => this.colorMenu('hl', this.buttons.highlight)),
       comment: btn('comment', `${t('comments.add')} (${keyLabel('Mod-Alt-m')})`, () => ed.addComment()),
@@ -195,6 +197,8 @@ export class BubbleMenu {
     for (const k of ['strong', 'em', 'underline', 'strike', 'code']) this.buttons[k].classList.toggle('on', !!fs[k]);
     this.buttons.link.classList.toggle('on', !!fs.link);
     this.buttons.color.classList.toggle('on', !!fs.textColor);
+    this.buttons.fontSize.classList.toggle('on', !!fs.fontSize);
+    this.buttons.fontFamily.classList.toggle('on', !!fs.fontFamily);
     this.buttons.highlight.classList.toggle('on', !!fs.highlight);
     const label = this.buttons.turn.querySelector('.led-turn-label');
     label.textContent = this.ed.t(`turn.${fs.list || (fs.quote ? 'quote' : fs.block)}`);

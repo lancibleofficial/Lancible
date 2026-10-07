@@ -1,13 +1,13 @@
 // Ручки таблицы на разделителях — как в YouTrack.
 //
 // Навели на вертикальную линию между столбцами — она загорается акцентом, а
-// над таблицей у её верхнего конца появляется шестерёнка: вставить столбец
-// на месте линии, удалить столбец слева или справа от неё. С горизонтальной
-// линией то же для строк: шестерёнка слева у её начала.
+// рядом с указателем, чуть правее линии, появляется шестерёнка: вставить
+// столбец на месте линии, удалить столбец слева или справа от неё. С
+// горизонтальной линией то же для строк: шестерёнка чуть ниже линии.
 //
-// Шестерёнка стоит снаружи таблицы, а не на линии: на самой вертикальной
-// линии живёт перетаскивание ширины столбца (prosemirror-tables), и щелчок
-// по ней должен оставаться щелчком по ней.
+// Шестерёнка стоит рядом с линией, а не на ней: на самой вертикальной линии
+// живёт перетаскивание ширины столбца (prosemirror-tables), и щелчок по ней
+// должен оставаться щелчком по ней.
 import { TextSelection } from 'prosemirror-state';
 import { TableMap, addColumnBefore, addColumnAfter, deleteColumn, addRowBefore, addRowAfter, deleteRow } from 'prosemirror-tables';
 import { h, icon } from './util.js';
@@ -66,7 +66,7 @@ export class TableHandles {
       ? (dl < dr ? info.rect.left : info.rect.right)
       : (dt < db ? info.rect.top : info.rect.bottom);
     this.target = { kind, index, tablePos: info.tablePos };
-    this.place(cell, kind, kind === 'col' ? (dl < dr ? r.left : r.right) : (dt < db ? r.top : r.bottom));
+    this.place(cell, kind, kind === 'col' ? (dl < dr ? r.left : r.right) : (dt < db ? r.top : r.bottom), e);
   }
 
   /** Ячейка DOM → её прямоугольник в карте таблицы и позиция таблицы. */
@@ -89,7 +89,10 @@ export class TableHandles {
     return { rect, tablePos, map, table };
   }
 
-  place(cell, kind, at) {
+  /** Линия — во всю длину таблицы, шестерёнка — рядом с указателем, сбоку
+   *  от линии (круг 4: у конца линии до неё было далеко тянуться). На самой
+   *  линии её не ставим: там перетаскивают ширину столбца. */
+  place(cell, kind, at, e) {
     const wrap = this.line.parentElement;
     if (!wrap) return;
     const w = wrap.getBoundingClientRect();
@@ -99,12 +102,16 @@ export class TableHandles {
     this.gear.hidden = false;
     this.line.dataset.kind = kind;
     this.gear.dataset.kind = kind;
+    const GEAR = 22;
+    const GAP = 7;
     if (kind === 'col') {
       Object.assign(this.line.style, { left: `${at - w.left - 1}px`, top: `${tbl.top - w.top}px`, width: '2px', height: `${tbl.height}px` });
-      Object.assign(this.gear.style, { left: `${at - w.left - 11}px`, top: `${tbl.top - w.top - 26}px` });
+      const y = Math.min(Math.max(e.clientY, tbl.top + GEAR / 2), tbl.bottom - GEAR / 2);
+      Object.assign(this.gear.style, { left: `${at - w.left + GAP}px`, top: `${y - w.top - GEAR / 2}px` });
     } else {
       Object.assign(this.line.style, { left: `${Math.max(t.left, tbl.left) - w.left}px`, top: `${at - w.top - 1}px`, width: `${Math.min(t.width, tbl.width)}px`, height: '2px' });
-      Object.assign(this.gear.style, { left: `${tbl.left - w.left - 28}px`, top: `${at - w.top - 11}px` });
+      const x = Math.min(Math.max(e.clientX, Math.max(t.left, tbl.left) + GEAR / 2), Math.min(t.right, tbl.right) - GEAR / 2);
+      Object.assign(this.gear.style, { left: `${x - w.left - GEAR / 2}px`, top: `${at - w.top + GAP}px` });
     }
   }
 

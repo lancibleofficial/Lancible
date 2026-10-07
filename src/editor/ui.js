@@ -133,6 +133,42 @@ export function modal(root, title, body, buttons, opts) {
   return { close, box };
 }
 
+/** Нижний лист — телефонная замена всплывашке, когда настроек много:
+ *  поднимается снизу на всю ширину, закрывается крестиком, касанием мимо,
+ *  Esc или жестом вниз за ручку. */
+export function sheet(root, title, body, opts) {
+  closePopup();
+  const o = opts || {};
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    backdrop.remove();
+    document.removeEventListener('keydown', onKey, true);
+    if (o.onClose) o.onClose();
+  };
+  const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+  const head = h('div', { class: 'led-sheet-head' },
+    h('span', { class: 'led-sheet-title' }, title),
+    h('button', { type: 'button', class: 'led-btn led-sheet-close', title: o.closeLabel || null, 'aria-label': o.closeLabel || null, onclick: () => close() }, icon('x', 18)));
+  const grip = h('div', { class: 'led-sheet-grip' });
+  const panel = h('div', { class: 'led-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title }, grip, head, h('div', { class: 'led-sheet-body' }, body));
+  const backdrop = h('div', { class: 'led-sheet-backdrop', onpointerdown: (e) => { if (e.target === backdrop) close(); } }, panel);
+  // Жест вниз за ручку или заголовок: лист едет за пальцем, дальше
+  // 80 пикселей — закрывается, ближе — возвращается.
+  let drag = null;
+  const down = (e) => { if (e.target.closest('button')) return; drag = { id: e.pointerId, y: e.clientY, dy: 0 }; try { panel.setPointerCapture(e.pointerId); } catch { /* без захвата */ } };
+  const move = (e) => { if (!drag || e.pointerId !== drag.id) return; drag.dy = Math.max(0, e.clientY - drag.y); panel.style.transform = `translateY(${drag.dy}px)`; };
+  const up = (e) => { if (!drag || e.pointerId !== drag.id) return; const far = drag.dy > 80; drag = null; panel.style.transform = ''; if (far) close(); };
+  for (const el of [grip, head]) el.addEventListener('pointerdown', down);
+  panel.addEventListener('pointermove', move);
+  panel.addEventListener('pointerup', up);
+  panel.addEventListener('pointercancel', up);
+  root.append(backdrop);
+  document.addEventListener('keydown', onKey, true);
+  return { close, el: panel };
+}
+
 /** Сегментный переключатель — тот же .segmented, что в приложении. */
 export function segmented(options, value, onChange, small) {
   const wrap = h('div', { class: `segmented${small ? ' segmented-sm' : ''}`, role: 'tablist' });

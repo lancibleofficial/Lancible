@@ -44,12 +44,16 @@ export class Toolbar {
     b.drawing = btn('draw', t('block.drawing'), () => ed.insertDrawing());
     b.insert = btn('plus', t('block.insert'), () => this.insertMenu(b.insert));
     b.comment = btn('comment', tip(t('comments.add'), 'Mod-Alt-m'), () => ed.addComment());
-    b.annotate = btn('annotate', t('ink.annotate'), () => ed.setAnnotate(!ed.annotating));
+    b.annotate = btn('annotate', tip(t('ink.annotate'), 'Mod-Shift-d'), () => ed.setAnnotate(!ed.annotating));
     b.find = btn('search', tip(t('find.title'), 'Mod-f'), () => ed.find.open(false));
     b.comments = btn('comments', t('comments.title'), () => ed.togglePanel('comments'));
     b.outline = btn('outline', t('outline.title'), () => ed.togglePanel('outline'));
     b.view = btn('settings', t('view.title'), () => this.viewMenu(b.view));
     b.more = btn('more', t('more'), () => this.moreMenu(b.more));
+    b.fontSize = btn('fontSize', t('fmt.font_size'), () => ed.fontSizeMenu(b.fontSize));
+    b.fontFamily = btn('fontFamily', t('fmt.font_family'), () => ed.fontFamilyMenu(b.fontFamily));
+    // «Во весь экран» — всегда у правого края, вне прокрутки и переносов.
+    b.fullscreen = btn('fullscreen', tip(t('view.fullscreen'), 'Mod-Shift-Enter'), () => ed.toggleFullscreen());
 
     const g = (...xs) => h('div', { class: 'led-group' }, ...xs);
     // На телефоне панель — одна строка с прокруткой, и до конца её
@@ -60,6 +64,7 @@ export class Toolbar {
       g(b.image, b.drawing, b.annotate, b.table, b.chart, b.insert),
       g(b.block),
       g(b.strong, b.em, b.underline, b.strike, b.inline),
+      g(b.fontSize, b.fontFamily),
       g(b.bullet, b.ordered, b.tasks, b.outdent, b.indent),
       g(b.color, b.highlight, b.link),
       g(b.quote, b.callout, b.align),
@@ -68,7 +73,7 @@ export class Toolbar {
       g(b.undo, b.redo),
       g(b.block),
       g(b.strong, b.em, b.underline, b.strike, b.inline),
-      g(b.color, b.highlight, b.link),
+      g(b.fontSize, b.fontFamily, b.color, b.highlight, b.link),
       g(b.bullet, b.ordered, b.tasks, b.outdent, b.indent, b.align),
       g(b.quote, b.callout),
       g(b.table, b.image, b.chart, b.drawing, b.insert),
@@ -76,7 +81,9 @@ export class Toolbar {
       h('div', { class: 'led-spacer' }),
       g(b.annotate, b.find, b.outline, b.comments, b.view, b.more),
     ];
-    this.dom = h('div', { class: 'led-toolbar', role: 'toolbar', 'aria-label': t('toolbar') }, ...groups);
+    this.dom = h('div', { class: 'led-toolbar', role: 'toolbar', 'aria-label': t('toolbar') },
+      h('div', { class: 'led-toolbar-main' }, ...groups),
+      h('div', { class: 'led-toolbar-end' }, b.fullscreen));
 
     this.tableBar = this.buildTableBar();
   }
@@ -230,8 +237,21 @@ export class Toolbar {
     ]);
   }
 
+  /** Кнопка «во весь экран» показывает, куда ведёт: развернуть или свернуть. */
+  syncFullscreen() {
+    const { ed } = this;
+    const on = !!ed.fullscreen;
+    const label = `${ed.t(on ? 'view.exit_fullscreen' : 'view.fullscreen')} (${keyLabel('Mod-Shift-Enter')})`;
+    this.b.fullscreen.title = label;
+    this.b.fullscreen.setAttribute('aria-label', label);
+    this.b.fullscreen.classList.toggle('on', on);
+    this.b.fullscreen.replaceChildren(icon(on ? 'minimize' : 'fullscreen'));
+  }
+
   update(fs) {
     const b = this.b;
+    b.fontSize.classList.toggle('on', !!fs.fontSize);
+    b.fontFamily.classList.toggle('on', !!fs.fontFamily);
     b.undo.disabled = !fs.canUndo;
     b.redo.disabled = !fs.canRedo;
     for (const k of ['strong', 'em', 'underline', 'strike']) b[k].classList.toggle('on', !!fs[k]);

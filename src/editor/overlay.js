@@ -15,7 +15,7 @@ import { InkSurface, InkToolbar } from './ink.js';
 
 export class InkOverlay {
   /** ctx: { root, t, toast, inkSettings, setInkSettings, getInk(), setInk(list),
-   *  scroller, page, view, mobile, hidden(), hide() } */
+   *  scroller, page, view, mobile, hidden(), hide(), undo(), redo() } */
   constructor(ctx) {
     this.ctx = ctx;
     this.on = false;
@@ -41,10 +41,12 @@ export class InkOverlay {
       // Поверхность работает в координатах страницы: ластик и лассо видят
       // штрихи там, где они нарисованы сейчас.
       strokes: () => this.placed(),
-      commit: (next) => this.commit(next),
+      commit: (next, opts) => this.commit(next, opts),
       toLocal: (p) => this.toPage(p),
       transform: () => [1, this.pageLeft(), -this.ctx.scroller.scrollTop + this.pageTopInScroller()],
       canDraw: () => this.on && this.ctx.view.editable,
+      // Отмена — общая с текстом: штрих лежит шагом в истории документа.
+      history: { undo: () => this.ctx.undo(), redo: () => this.ctx.redo() },
       onSelection: () => this.toolbar.render(),
     });
 
@@ -71,7 +73,9 @@ export class InkOverlay {
       if (!this.on) return;
       const mod = e.metaKey || e.ctrlKey;
       // Escape при открытом меню или окне закрывает их, а не режим пометок.
-      if (e.key === 'Escape') { if (!document.querySelector('.led-pop, #ledmodal-backdrop')) { e.preventDefault(); ctx.setAnnotate(false); } }
+      if (e.key === 'Escape') { if (!document.querySelector('.led-pop, #ledmodal-backdrop, .led-sheet-backdrop')) { e.preventDefault(); ctx.setAnnotate(false); } }
+      // Ctrl/⌘+Shift+D — назад к тексту, курсор туда, где был.
+      else if (mod && e.shiftKey && e.key.toLowerCase() === 'd') { e.preventDefault(); e.stopPropagation(); ctx.setAnnotate(false); ctx.view.focus(); }
       else if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) this.surface.redo(); else this.surface.undo(); }
       else if ((e.key === 'Delete' || e.key === 'Backspace') && this.surface.selected.size) { e.preventDefault(); this.surface.deleteSelected(); this.toolbar.render(); }
     };
@@ -121,7 +125,7 @@ export class InkOverlay {
   /** Штрихи в координатах страницы → обратно к своим блокам. Нетронутый
    *  штрих остаётся прежним объектом; новый или изменённый — заново
    *  привязывается к блоку под своим началом. */
-  commit(next) {
+  commit(next, opts) {
     this.measure();
     this.ctx.setInk(next.map((st) => {
       const cached = st._src && this.cache.get(st._src);
@@ -129,7 +133,7 @@ export class InkOverlay {
       const clean = Object.assign({}, st);
       delete clean._src;
       return this.anchor(clean);
-    }));
+    }), opts);
     this.render();
   }
 

@@ -15,7 +15,7 @@
 import { EditorState, Plugin, PluginKey, TextSelection, NodeSelection } from 'prosemirror-state';
 import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
 import { DOMParser as PMDOMParser, DOMSerializer, Node as PMNode } from 'prosemirror-model';
-import { history } from 'prosemirror-history';
+import { history, closeHistory } from 'prosemirror-history';
 import { dropCursor } from 'prosemirror-dropcursor';
 import { gapCursor } from 'prosemirror-gapcursor';
 import { tableEditing, columnResizing, isInTable } from 'prosemirror-tables';
@@ -39,7 +39,7 @@ import { TableHandles } from './tablehandles.js';
 import { normalizeInkSettings, defaultInkSettings, clearInkColorCache } from './ink.js';
 import { createAssetStore } from './assets.js';
 import { h, icon, debounce, downloadBlob, keyLabel } from './util.js';
-import { popup, modal, closePopup } from './ui.js';
+import { popup, menu, modal, closePopup } from './ui.js';
 import { translate } from './strings.js';
 
 const N = schema.nodes;
@@ -60,6 +60,13 @@ export const DEFAULT_SETTINGS = {
   inkHidden: false,
   ink: defaultInkSettings(),
 };
+
+/** Документ в JSON без пометок: в контейнере они лежат отдельным полем. */
+function docWithoutInk(doc) {
+  const json = doc.toJSON();
+  delete json.attrs;
+  return json;
+}
 
 function normalizeSettings(s) {
   const o = Object.assign({}, DEFAULT_SETTINGS, s || {});
@@ -175,7 +182,6 @@ class Editor {
     this.isMobile = !!this.opts.mobile;
     this.assets = this.opts.assets || createAssetStore({});
     this.comments = [];
-    this.ink = [];
     this.panel = null;
     this.annotating = false;
     this.fullscreen = false;
@@ -187,9 +193,8 @@ class Editor {
     this.buildDom();
     const content = Core.normalizeContainer(this.opts.content);
     this.comments = content.comments.slice();
-    this.ink = content.ink.slice();
     this.view = new EditorView({ mount: this.page }, {
-      state: this.createState(content.doc),
+      state: this.createState(content.doc, content.ink),
       nodeViews: this.nodeViews(),
       dispatchTransaction: (tr) => this.dispatch(tr),
       attributes: () => this.pmAttributes(),
@@ -214,7 +219,9 @@ class Editor {
       inkSettings: () => this.settings().ink,
       setInkSettings: (p) => this.setInkSettings(p),
       getInk: () => this.ink,
-      setInk: (list) => { this.ink = list; this.changed(); },
+      setInk: (list, opts) => this.setInk(list, opts),
+      undo: () => C.undo(this.view.state, this.view.dispatch),
+      redo: () => C.redo(this.view.state, this.view.dispatch),
       setAnnotate: (on) => this.setAnnotate(on),
       scroller: this.scroller,
       page: this.page,
@@ -285,10 +292,10 @@ class Editor {
     };
   }
 
-  createState(docJSON) {
+  createState(docJSON, ink) {
     let doc;
     try {
-      doc = PMNode.fromJSON(schema, docJSON);
+      doc = PMNode.fromJSON(schema, Object.assign({}, docJSON, { attrs: { ink: ink && ink.length ? ink : null } }));
       doc.check();
     } catch (e) {
       // Документ не прошёл схему (чужие данные, старая версия) — не теряем
@@ -298,7 +305,22 @@ class Editor {
       div.textContent = Core.docPlainText(docJSON);
       doc = PMDOMParser.fromSchema(schema).parse(div);
     }
+    if (ink && ink.length && !doc.attrs.ink) doc = schema.topNodeType.create({ ink }, doc.content);
     return EditorState.create({ doc, plugins: this.plugins() });
+  }
+
+  /** Пометки поверх текста — атрибут документа (schema.js, doc.attrs.ink). */
+  get ink() { return (this.view && this.view.state.doc.attrs.ink) || []; }
+
+  /** Новый список пометок — шагом документа: штрих попадает в историю
+   *  отдельным пунктом и отменяется вместе с текстом в общем порядке. */
+  setInk(list, opts) {
+    const o = opts || {};
+    const tr = this.view.state.tr.setDocAttribute('ink', list && list.length ? list : null);
+    // Продолжение того же жеста (ластик ведут по штрихам) — в тот же пункт
+    // истории: у prosemirror-history это общий ключ composition.
+    if (o.gesture) tr.setMeta('composition', o.gesture);
+    this.view.dispatch(o.continuing ? tr : closeHistory(tr));
   }
 
   plugins() {
@@ -315,6 +337,8 @@ class Editor {
         'Mod-Alt-m': () => { this.addComment(); return true; },
         'Mod-/': () => { this.showShortcuts(); return true; },
         'Mod-Shift-Enter': () => { this.toggleFullscreen(); return true; },
+        // Рисование ↔ текст: из текста — в пометки; обратно — overlay.js.
+        'Mod-Shift-d': () => { this.setAnnotate(!this.annotating); return true; },
         'Mod-p': () => { this.print(); return true; },
       }),
       ...buildKeymaps(),
@@ -406,7 +430,9 @@ class Editor {
       if (this.panel === 'comments') this.commentsPanel.render();
       if (this.panel === 'outline') this.renderOutline();
       this.renderStatus();
-      if (this.overlay && this.ink.length) requestAnimationFrame(() => this.overlay.render());
+      // Без проверки «есть ли пометки»: отмена последнего штриха оставляет
+      // список пустым, и холст надо стереть.
+      if (this.overlay) requestAnimationFrame(() => this.overlay.render());
     } else if (tr && tr.selectionSet) this.renderStatus();
     if (tr && tr.selectionSet && this.settings().typewriter) this.typewriterScroll();
     if (this.opts.onFormat) this.opts.onFormat(fs);
@@ -443,7 +469,7 @@ class Editor {
   getContent() {
     return {
       v: Core.DOC_VERSION,
-      doc: this.view.state.doc.toJSON(),
+      doc: docWithoutInk(this.view.state.doc),
       comments: this.comments.filter((th) => !th.draft).map((th) => { const c = Object.assign({}, th); delete c.draft; return c; }),
       ink: this.ink,
     };
@@ -453,10 +479,9 @@ class Editor {
     const c = Core.normalizeContainer(container);
     this.emitChange.cancel();
     this.comments = c.comments.slice();
-    this.ink = c.ink.slice();
     if (this.annotating) this.setAnnotate(false);
     closePopup();
-    this.view.updateState(this.createState(c.doc));
+    this.view.updateState(this.createState(c.doc, c.ink));
     this.view.dispatch(this.view.state.tr.setMeta('led-init', true).setMeta('addToHistory', false));
     this.scroller.scrollTop = 0;
     this.updateUi();
@@ -581,6 +606,29 @@ class Editor {
     if (this.opts.onDrawingActive) this.opts.onDrawingActive(this.annotating);
   }
 
+  /** Размер выделенного текста — ступенями от размера текста в «Виде».
+   *  Подпись пункта набрана тем размером, который он ставит. */
+  fontSizeMenu(anchor) {
+    const cur = C.formatState(this.view.state).fontSize;
+    const run = (v) => () => { C.setValueMark('fontSize', 'size', v)(this.view.state, this.view.dispatch); this.view.focus(); };
+    const steps = ['xs', 's', null, 'l', 'xl', 'xxl'];
+    menu(this.root, anchor, [
+      { heading: this.t('fmt.font_size') },
+      ...steps.map((v) => ({ label: h('span', { class: v ? `led-fs-${v}` : '' }, this.t(`fmt.size_${v || 'normal'}`)), active: (cur || null) === v, run: run(v) })),
+    ], { class: 'led-font-menu' });
+  }
+
+  /** Гарнитура выделенного текста: без засечек, с засечками, моноширинная. */
+  fontFamilyMenu(anchor) {
+    const cur = C.formatState(this.view.state).fontFamily;
+    const run = (v) => () => { C.setValueMark('fontFamily', 'family', v)(this.view.state, this.view.dispatch); this.view.focus(); };
+    menu(this.root, anchor, [
+      { heading: this.t('fmt.font_family') },
+      { label: this.t('fmt.family_default'), active: !cur, run: run(null) },
+      ...['sans', 'serif', 'mono'].map((v) => ({ label: h('span', { class: `led-ff-${v}` }, this.t(`view.font_${v}`)), active: cur === v, run: run(v) })),
+    ], { class: 'led-font-menu' });
+  }
+
   /** Спрятать пометки и выйти из режима пометок. */
   hideInk() {
     this.setSettings({ inkHidden: true });
@@ -592,6 +640,7 @@ class Editor {
   toggleFullscreen(force) {
     this.fullscreen = force != null ? !!force : !this.fullscreen;
     this.root.classList.toggle('led-fullscreen', this.fullscreen);
+    this.toolbar.syncFullscreen();
     requestAnimationFrame(() => this.overlay.render());
     this.view.focus();
   }
@@ -810,7 +859,8 @@ pre{background:#f3f4f6;padding:12px;border-radius:8px;overflow:auto}blockquote{b
 .led-gallery{display:flex;gap:10px;margin:16px 0}.led-gallery figure{flex:1 1 0;margin:0}
 .align-wrap-left{float:left;width:40%;margin:4px 20px 8px 0}.align-wrap-right{float:right;width:40%;margin:4px 0 8px 20px}ul[data-type=tasks]{list-style:none;padding-left:4px}
 li[data-checked=true]::before{content:"☑ "}li[data-checked=false]::before{content:"☐ "}figure{margin:16px 0}figcaption{color:#666;font-size:13px;text-align:center}
-mark{padding:0 2px}</style></head><body>${box.innerHTML}</body></html>`;
+mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs-l{font-size:1.25em}.led-fs-xl{font-size:1.5em}.led-fs-xxl{font-size:2em}
+.led-ff-serif{font-family:Georgia,serif}.led-ff-mono{font-family:ui-monospace,Menlo,Consolas,monospace}</style></head><body>${box.innerHTML}</body></html>`;
   }
 
   async exportAs(kind) {
@@ -855,6 +905,7 @@ mark{padding:0 2px}</style></head><body>${box.innerHTML}</body></html>`;
       ['block.quote', 'Mod-Shift-b'], ['block.code', 'Mod-Alt-c'], ['help.line_break', 'Shift-Enter'],
       ['block.move_up', 'Alt-Shift-ArrowUp'], ['block.move_down', 'Alt-Shift-ArrowDown'], ['block.duplicate', 'Mod-d'],
       ['find.title', 'Mod-f'], ['find.replace', 'Mod-Alt-f'], ['comments.add', 'Mod-Alt-m'], ['view.fullscreen', 'Mod-Shift-Enter'],
+      ['ink.toggle_mode', 'Mod-Shift-d'],
       ['undo', 'Mod-z'], ['redo', 'Mod-Shift-z'],
     ];
     const md = [['# ', 'turn.h1'], ['## ', 'turn.h2'], ['- ', 'block.bullet'], ['1. ', 'block.ordered'], ['[] ', 'block.tasks'], ['> ', 'block.quote'], ['``` ', 'block.code'], ['---', 'block.hr'], ['**…**', 'fmt.bold'], ['*…*', 'fmt.italic'], ['`…`', 'fmt.code'], ['~~…~~', 'fmt.strike'], ['==…==', 'fmt.highlight'], ['/', 'help.slash']];

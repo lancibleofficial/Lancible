@@ -18,7 +18,7 @@
 import getStroke from 'perfect-freehand';
 import Core from '../renderer/core/doc.js';
 import { h, icon, shortId, clamp } from './util.js';
-import { popup, segmented, toggleSwitch, slider } from './ui.js';
+import { popup, sheet, segmented, toggleSwitch, slider } from './ui.js';
 
 const { packPoints, unpackPoints } = Core;
 
@@ -26,6 +26,14 @@ export const INK_COLORS = ['ink', 'gray', 'red', 'orange', 'yellow', 'green', 't
 export const TOOLS = ['pen', 'pencil', 'marker', 'eraser', 'lasso', 'shape'];
 export const SHAPES = ['line', 'arrow', 'rect', 'ellipse'];
 export const BACKGROUNDS = ['plain', 'grid', 'dots', 'lines'];
+
+const RECENT_KEEP = 6;
+const RECENT_SHOW = 3;
+
+/** Новый цвет — в начало списка последних, без повторов. */
+export function pushRecentColor(recent, color) {
+  return [color].concat((recent || []).filter((c) => c !== color)).slice(0, RECENT_KEEP);
+}
 
 export function defaultInkSettings() {
   return {
@@ -41,12 +49,10 @@ export function defaultInkSettings() {
     holdToShape: true,
     opacity: 1, // множитель к прозрачности инструмента: маркер и при 100% полупрозрачен
     bg: 'plain',
-    presets: [
-      { tool: 'pen', color: 'ink', size: 3 },
-      { tool: 'pen', color: 'blue', size: 3 },
-      { tool: 'pen', color: 'red', size: 3 },
-      { tool: 'marker', color: 'yellow', size: 16 },
-    ],
+    // Последние цвета, первым — текущий. В панели стоят три предыдущих:
+    // вернуться к цвету одним касанием (круг 4, 7 октября 2026; до этого
+    // на их месте были «быстрые перья», и их не понимали).
+    recent: ['ink', 'blue', 'red', 'green'],
   };
 }
 
@@ -56,7 +62,9 @@ export function normalizeInkSettings(s) {
   if (!TOOLS.includes(o.tool)) o.tool = 'pen';
   if (!SHAPES.includes(o.shape)) o.shape = 'line';
   if (!['auto', 'only', 'any'].includes(o.stylus)) o.stylus = 'auto';
-  if (!Array.isArray(o.presets) || !o.presets.length) o.presets = d.presets;
+  delete o.presets;
+  if (!Array.isArray(o.recent)) o.recent = d.recent;
+  o.recent = o.recent.filter((c) => typeof c === 'string' && c).slice(0, RECENT_KEEP);
   o.size = clamp(Number(o.size) || 3, 1, 60);
   o.smoothing = clamp(Number(o.smoothing), 0, 1);
   o.opacity = clamp(Number(o.opacity) || 1, 0.1, 1);
@@ -454,7 +462,8 @@ export class InkSurface {
    *  settings() — текущие настройки; strokes() — массив штрихов;
    *  commit(strokes) — записать новый массив; toLocal([x,y,p]) → координаты
    *  поверхности; transform() → [scale, dx, dy] для отрисовки (без dpr);
-   *  canDraw(info) — можно ли начинать штрих; onSelection(set).
+   *  canDraw(info) — можно ли начинать штрих; onSelection(set);
+   *  history — { undo(), redo() }, если отменой ведает владелец.
    */
   constructor(o) {
     this.o = o;
@@ -485,12 +494,16 @@ export class InkSurface {
   }
 
   pushUndo() {
+    // Своя история не нужна, если отменой ведает владелец (слой пометок —
+    // общей историей редактора, вместе с текстом).
+    if (this.o.history) return;
     this.undoStack.push(this.o.strokes());
     if (this.undoStack.length > 200) this.undoStack.shift();
     this.redoStack = [];
   }
 
   undo() {
+    if (this.o.history) { this.selected.clear(); return this.o.history.undo(); }
     if (!this.undoStack.length) return false;
     this.redoStack.push(this.o.strokes());
     this.o.commit(this.undoStack.pop());
@@ -500,6 +513,7 @@ export class InkSurface {
   }
 
   redo() {
+    if (this.o.history) { this.selected.clear(); return this.o.history.redo(); }
     if (!this.redoStack.length) return false;
     this.undoStack.push(this.o.strokes());
     this.o.commit(this.redoStack.pop());
@@ -535,6 +549,7 @@ export class InkSurface {
     if (tool === 'eraser') {
       this.pushUndo();
       this.eraseTrail = [lp];
+      this.eraseTrail.committed = 0;
       this.eraseAt(lp);
       return true;
     }
@@ -655,7 +670,9 @@ export class InkSurface {
       changed = true;
       if (partial) next.push(...splitStroke(st, p, r));
     }
-    if (changed) { this.o.commit(next); this.render(); }
+    // Один проход ластиком — один пункт отмены, сколько бы штрихов он ни
+    // задел: второй и дальше коммиты жеста помечены как продолжение.
+    if (changed) { this.o.commit(next, { gesture: this.eraseTrail, continuing: this.eraseTrail.committed++ > 0 }); this.render(); }
   }
 
   selectionBox() {
@@ -764,6 +781,7 @@ export class InkToolbar {
   }
 
   set(patch) {
+    if (patch.color) patch = Object.assign({}, patch, { recent: pushRecentColor(this.api.settings().recent, patch.color) });
     this.api.setSettings(patch);
     this.render();
   }
@@ -787,20 +805,12 @@ export class InkToolbar {
       }, icon(tool === 'shape' ? SHAPE_ICON[s.shape] : TOOL_ICON[tool]));
       return b;
     });
-    const presets = h('div', { class: 'led-ink-presets' }, s.presets.map((p, i) => h('button', {
-      type: 'button',
-      class: `led-ink-preset${p.tool === s.tool && p.color === s.color && p.size === s.size ? ' on' : ''}`,
-      title: `${t(`ink.tool_${p.tool}`)} · ${t(`color.${p.color}`)}`,
-      onclick: () => this.set({ tool: p.tool, color: p.color, size: p.size }),
-      oncontextmenu: (e) => {
-        // Правый щелчок (долгое касание) — запомнить текущее перо на это место.
-        e.preventDefault();
-        const presetsNext = s.presets.slice();
-        presetsNext[i] = { tool: ['pen', 'pencil', 'marker'].includes(s.tool) ? s.tool : 'pen', color: s.color, size: s.size };
-        this.set({ presets: presetsNext });
-        this.ctx.toast(t('ink.preset_saved'));
-      },
-    }, inkDot(p.color, Math.min(16, 4 + p.size), p.tool))));
+    // Три предыдущих цвета — одним касанием. Текущий — в кнопке цвета.
+    const recent = h('div', { class: 'led-ink-recent' }, s.recent.filter((c) => c !== s.color).slice(0, RECENT_SHOW).map((c) => h('button', {
+      type: 'button', class: 'led-ink-recent-btn', dataset: { color: c },
+      title: `${t('ink.recent_color')}: ${INK_COLORS.includes(c) ? t(`color.${c}`) : c}`,
+      onclick: () => this.set({ color: c }),
+    }, inkDot(c, 12))));
     const colorBtn = h('button', {
       type: 'button', class: 'led-btn led-ink-colorbtn', title: t('ink.color'),
       onclick: (e) => this.colorMenu(e.currentTarget),
@@ -826,18 +836,18 @@ export class InkToolbar {
       // Настройки на телефоне — в меню «ещё» у владельца панели (extra).
       this.dom.replaceChildren(
         h('div', { class: 'led-ink-row' }, h('div', { class: 'led-ink-group' }, tools), sep(), ...history),
-        h('div', { class: 'led-ink-row' }, ...(selActions || [presets, colorBtn, sizeBtn]), finger, h('span', { class: 'led-ink-spacer' }), ...extra),
+        h('div', { class: 'led-ink-row' }, ...(selActions || [colorBtn, recent, sizeBtn]), ...(finger ? [finger] : []), h('span', { class: 'led-ink-spacer' }), ...extra),
       );
       return;
     }
     this.dom.replaceChildren(
       h('div', { class: 'led-ink-group' }, tools),
       sep(),
-      presets, colorBtn, sizeBtn,
+      colorBtn, recent, sizeBtn,
       ...(selActions ? [sep(), ...selActions] : []),
       sep(),
       ...history,
-      finger,
+      ...(finger ? [finger] : []),
       ...extra,
       h('button', { type: 'button', class: 'led-btn', title: t('ink.settings'), onclick: (e) => this.settingsPanel(e.currentTarget) }, icon('settings')),
     );
@@ -900,31 +910,40 @@ export class InkToolbar {
     const p = popup(this.ctx.root, anchor, h('div', { class: 'led-ink-sizepop' }, row, sl, op), { above: this.api.above, onClose: () => this.render() });
   }
 
+  /** Настройки рисования: три раздела карточками — ввод, линия, ластик.
+   *  Подпись слева, переключатель справа. На телефоне — нижним листом. */
   settingsPanel(anchor) {
     const t = this.t;
     const s = this.api.settings();
     const set = (patch) => this.api.setSettings(patch);
+    const section = (title, ...rows) => h('section', { class: 'led-set-sec' }, h('div', { class: 'led-set-cap' }, title), ...rows);
+    const sw = (label, value, key, hint) => {
+      const b = toggleSwitch(label, value, (v) => set({ [key]: v }), hint);
+      b.classList.add('led-setting', 'led-set-row');
+      return b;
+    };
+    const choice = (label, hint, options, value, key) => h('div', { class: 'led-setting-col led-set-row' },
+      h('span', { class: 'led-setting-text' }, h('span', {}, label), hint ? h('span', { class: 'led-setting-hint' }, hint) : null),
+      segmented(options, value, (v) => set({ [key]: v }), true));
     const body = h('div', { class: 'led-ink-settings' },
-      h('div', { class: 'led-menu-head' }, t('ink.settings')),
-      h('div', { class: 'led-setting-col' },
-        h('span', { class: 'led-setting-text' }, h('span', {}, t('ink.stylus')), h('span', { class: 'led-setting-hint' }, t('ink.stylus_hint'))),
-        segmented([
+      section(t('ink.sec_input'),
+        choice(t('ink.stylus'), t('ink.stylus_hint'), [
           { value: 'auto', label: t('ink.stylus_auto') },
           { value: 'only', label: t('ink.stylus_only') },
           { value: 'any', label: t('ink.stylus_any') },
-        ], s.stylus, (v) => set({ stylus: v }), true)),
-      toggleSwitch(t('ink.pressure'), s.pressure, (v) => set({ pressure: v }), t('ink.pressure_hint')),
-      toggleSwitch(t('ink.pen_button'), s.penButtonEraser, (v) => set({ penButtonEraser: v }), t('ink.pen_button_hint')),
-      toggleSwitch(t('ink.hold_shape'), s.holdToShape, (v) => set({ holdToShape: v }), t('ink.hold_shape_hint')),
-      h('div', { class: 'led-setting-col' },
-        h('span', { class: 'led-setting-text' }, h('span', {}, t('ink.eraser_mode'))),
-        segmented([
+        ], s.stylus, 'stylus'),
+        sw(t('ink.pressure'), s.pressure, 'pressure', t('ink.pressure_hint')),
+        sw(t('ink.pen_button'), s.penButtonEraser, 'penButtonEraser', t('ink.pen_button_hint'))),
+      section(t('ink.sec_line'),
+        sw(t('ink.hold_shape'), s.holdToShape, 'holdToShape', t('ink.hold_shape_hint')),
+        h('div', { class: 'led-set-row' }, slider(t('ink.smoothing'), s.smoothing, 0, 1, 0.05, (v) => set({ smoothing: v }), (v) => `${Math.round(v * 100)}%`))),
+      section(t('ink.sec_eraser'),
+        choice(t('ink.eraser_mode'), null, [
           { value: 'stroke', label: t('ink.eraser_stroke') },
           { value: 'partial', label: t('ink.eraser_partial') },
-        ], s.eraser, (v) => set({ eraser: v }), true)),
-      slider(t('ink.smoothing'), s.smoothing, 0, 1, 0.05, (v) => set({ smoothing: v }), (v) => `${Math.round(v * 100)}%`),
-      h('div', { class: 'led-hint' }, t('ink.presets_hint')));
-    popup(this.ctx.root, anchor, body, { above: this.api.above, class: 'led-pop-wide' });
+        ], s.eraser, 'eraser')));
+    if (this.api.rows) sheet(this.ctx.root, t('ink.settings'), body, { closeLabel: t('common.close') });
+    else popup(this.ctx.root, anchor, h('div', {}, h('div', { class: 'led-set-title' }, t('ink.settings')), body), { above: this.api.above, class: 'led-pop-wide' });
   }
 }
 

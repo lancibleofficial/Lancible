@@ -290,8 +290,9 @@
         </div>
       </div>
 
-      <!-- ЗАДАЧА — своя страница: крошки, по центру название, теги и
-           редактор, справа таймер и остров «Свойства / История». -->
+      <!-- ЗАДАЧА — своя страница: крошки, по центру название и редактор,
+           справа таймер и остров «Свойства / История» (там же теги и
+           удаление задачи). -->
       <div id="task-view" class="view" hidden>
         <div class="task-crumbs">
           <button type="button" id="task-back" class="icon-btn" data-i18n-aria="task.back_to_project" aria-label="К проекту"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
@@ -303,16 +304,6 @@
           <section class="island task-main" id="task-detail">
             <div class="task-title-row">
               <input id="task-title" type="text" data-i18n-ph="task.title_ph" placeholder="Название задачи" autocomplete="off" />
-              <button id="pin-task-btn" class="icon-btn" data-i18n-title="task.pin_title" title="Закрепить задачу">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z"/></svg>
-              </button>
-              <button id="delete-task-btn" class="icon-btn icon-btn-danger" data-i18n-title="task.delete_title" title="Удалить задачу">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
-              </button>
-            </div>
-            <div class="task-tags-row" id="task-tags-row">
-              <div class="tag-chips" id="task-tags"></div>
-              <button type="button" class="tag-add-btn" id="task-tags-add" data-i18n-title="tag.pick" title="Теги">+</button>
             </div>
             <div class="tab-panel" id="tab-notes">
                 <div id="editor-wrap"></div>
@@ -346,6 +337,14 @@
                     <span class="due-label" data-i18n="task.status_label">Статус</span>
                     <span class="st-swatch" id="task-status-dot"></span>
                     <button type="button" class="dp-btn" id="task-status"></button>
+                  </div>
+                  <!-- Теги — строкой свойств (круг 4, 7 октября 2026): над
+                       редактором остаётся одно название. -->
+                  <div class="due-bar tags-bar task-tags-row" id="task-tags-row">
+                    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 2.6a1 1 0 011-1h5a1 1 0 01.7.3l6.1 6.1a1 1 0 010 1.4l-5 5a1 1 0 01-1.4 0L1.9 8.3a1 1 0 01-.3-.7zm3.2 1.2a1 1 0 100 2 1 1 0 000-2z"/></svg>
+                    <span class="due-label" data-i18n="tag.pick">Теги</span>
+                    <div class="tag-chips" id="task-tags"></div>
+                    <button type="button" class="tag-add-btn" id="task-tags-add" data-i18n-title="tag.pick" title="Теги">+</button>
                   </div>
                   <div class="due-bar version-bar" id="task-version-row" hidden>
                     <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.55 1.5a1 1 0 01.9 0l5.4 2.8a.8.8 0 010 1.42l-5.4 2.8a1 1 0 01-.9 0l-5.4-2.8a.8.8 0 010-1.42zM2.6 8.36l1.9.99L8 11.2l3.5-1.85 1.9-.99a.8.8 0 01.74 1.42l-5.69 2.99a1 1 0 01-.9 0L1.86 9.78a.8.8 0 01.74-1.42z"/></svg>
@@ -383,6 +382,7 @@
                 </div>
                 <div class="task-actions">
                   <button type="button" id="task-done-btn" class="ghost" data-i18n="filter.done">Выполнено</button>
+                  <button type="button" id="delete-task-btn" class="danger" data-i18n="task.delete_title">Удалить задачу</button>
                 </div>
               </div>
               <div class="tab-panel" id="tab-history" hidden>

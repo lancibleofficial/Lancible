@@ -129,3 +129,31 @@ test('перезагрузка: проект и задача остаются н
   expect(after.tasks).toEqual(['Свёрстать главную']);
   expect(after.statusOk, 'после перезагрузки статус задачи должен существовать').toBe(true);
 });
+
+test('шапка задачи — одно название; теги и удаление — в «Свойствах»', async ({ page }) => {
+  const id = await page.evaluate(() => {
+    const now = new Date().toISOString();
+    const pid = uid();
+    state.projects.push({ id: pid, name: 'Сайт', color: '#87ff65', description: '', pinnedAt: null, createdAt: now, tagIds: [] });
+    seedProjectStatuses(pid);
+    const tid = uid();
+    state.tasks.push({
+      id: tid, projectId: pid, title: 'Шапка', done: false, notes: null, totalMs: 0, sessions: [], rate: null, pinnedAt: null,
+      createdAt: now, updatedAt: now, statusId: orderedStatuses(pid)[1].id, tagIds: [], versionId: null, repeat: null, cancelled: false,
+      dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+    });
+    openProject(pid);
+    selectTask(tid);
+    return tid;
+  });
+  const head = page.locator('#task-detail .task-title-row');
+  await expect(head.locator('#task-title')).toHaveValue('Шапка');
+  await expect(head.locator('button'), 'в шапке нет кнопок').toHaveCount(0);
+  await expect(page.locator('#pin-task-btn')).toHaveCount(0);
+  await expect(page.locator('#task-props #task-tags-add'), 'теги — строкой свойств').toBeVisible();
+  const del = page.locator('#task-props #delete-task-btn');
+  await expect(del).toBeVisible();
+  await del.click();
+  await page.locator('#confirm-ok').click();
+  expect(await page.evaluate((tid) => state.tasks.some((x) => x.id === tid), id)).toBe(false);
+});

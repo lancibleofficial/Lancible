@@ -15,7 +15,7 @@ import {
   TriangleAlert, Type, Underline, Undo2, Unlink, ZoomIn, ZoomOut,
   ArrowLeft, ArrowRight, PanelLeft, PanelRight, ImagePlus, SquareSplitHorizontal,
   BetweenVerticalStart, BetweenVerticalEnd, BetweenHorizontalStart, BetweenHorizontalEnd,
-  Pointer, Eye, EyeOff,
+  Pointer, Eye, EyeOff, ALargeSmall, CaseSensitive,
 } from 'lucide';
 
 export const uid = () => {
@@ -80,7 +80,7 @@ const ICONS = {
   arrowLeft: ArrowLeft, arrowRight: ArrowRight, wrapLeft: PanelLeft, wrapRight: PanelRight, imagePlus: ImagePlus,
   unrow: SquareSplitHorizontal, colBefore: BetweenVerticalStart, colAfter: BetweenVerticalEnd,
   rowBefore: BetweenHorizontalStart, rowAfter: BetweenHorizontalEnd,
-  finger: Pointer, eye: Eye, eyeOff: EyeOff,
+  finger: Pointer, eye: Eye, eyeOff: EyeOff, fontSize: ALargeSmall, fontFamily: CaseSensitive,
 };
 
 export function icon(name, size) {

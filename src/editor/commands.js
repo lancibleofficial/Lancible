@@ -72,6 +72,8 @@ export function formatState(state) {
     link: markAttr(state, M.link, 'href'),
     textColor: markAttr(state, M.textColor, 'color'),
     highlight: markAttr(state, M.highlight, 'color'),
+    fontSize: markAttr(state, M.fontSize, 'size'),
+    fontFamily: markAttr(state, M.fontFamily, 'family'),
     block,
     list: list ? list.node.type.name : null,
     quote: !!findParent(state, [N.blockquote]),
@@ -92,16 +94,22 @@ export const toggle = (name) => toggleMark(M[name]);
 
 /** Цветная метка (цвет текста, маркер): null снимает. */
 export function setColorMark(name, color) {
+  return setValueMark(name, 'color', color);
+}
+
+/** Метка с одним значением (цвет, размер, гарнитура) на выделение или на
+ *  курсор — для того, что наберут дальше. null снимает. */
+export function setValueMark(name, attr, value) {
   const type = M[name];
   return (state, dispatch) => {
     const { from, to, empty } = state.selection;
     if (empty) {
-      if (dispatch) dispatch(color ? state.tr.addStoredMark(type.create({ color })) : state.tr.removeStoredMark(type));
+      if (dispatch) dispatch(value ? state.tr.addStoredMark(type.create({ [attr]: value })) : state.tr.removeStoredMark(type));
       return true;
     }
     if (dispatch) {
       const tr = state.tr.removeMark(from, to, type);
-      if (color) tr.addMark(from, to, type.create({ color }));
+      if (value) tr.addMark(from, to, type.create({ [attr]: value }));
       dispatch(tr.scrollIntoView());
     }
     return true;
@@ -153,7 +161,7 @@ export function clearFormatting(state, dispatch) {
   const { from, to } = state.selection;
   if (dispatch) {
     const tr = state.tr;
-    for (const name of ['strong', 'em', 'underline', 'strike', 'code', 'sub', 'sup', 'textColor', 'highlight']) tr.removeMark(from, to, M[name]);
+    for (const name of ['strong', 'em', 'underline', 'strike', 'code', 'sub', 'sup', 'textColor', 'highlight', 'fontSize', 'fontFamily']) tr.removeMark(from, to, M[name]);
     state.doc.nodesBetween(from, to, (node, pos) => {
       if (node.isTextblock && node.attrs.align) tr.setNodeMarkup(pos, null, Object.assign({}, node.attrs, { align: null }));
     });

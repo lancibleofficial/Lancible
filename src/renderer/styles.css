@@ -543,7 +543,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-dot { flex: none; width: 9px; height: 9px; border-radius: 3px; background: var(--sc, var(--accent)); }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
-#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop, #ledmodal-backdrop {
+#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop, #ledmodal-backdrop, .led-sheet-backdrop {
   position: fixed; inset: 0; background: var(--scrim);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
@@ -784,6 +784,8 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .led {
   --led-size: 16px;
   --led-page: 760px;
+  --led-serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'PT Serif', serif;
+  --led-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -804,15 +806,18 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 /* --- панели --- */
 .led-toolbar {
-  flex: none; display: flex; align-items: center; gap: 2px;
-  padding: 6px 8px; overflow-x: auto; overflow-y: hidden;
+  flex: none; display: flex; align-items: flex-start; gap: 2px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--line);
 }
 /* На десктопе панель переносится на вторую строку, а не уезжает за край:
    картинка, график и рисунок должны быть видны, а не прятаться прокруткой.
    На телефоне — одна строка с прокруткой (.led-mobile ниже). */
-.led-toolbar { flex-wrap: wrap; row-gap: 4px; }
-.led-mobile .led-toolbar { flex-wrap: nowrap; }
+.led-toolbar-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; flex-wrap: wrap; row-gap: 4px; overflow-x: auto; overflow-y: hidden; }
+.led-mobile .led-toolbar-main { flex-wrap: nowrap; }
+.led-toolbar-main::-webkit-scrollbar { height: 0; }
+/* «Во весь экран» — у правого края всегда, вне прокрутки (круг 4). */
+.led-toolbar-end { flex: none; display: flex; align-items: center; padding-left: 4px; border-left: 1px solid var(--line); }
 /* Остров таблицы — тем же видом, что панель над выделением: плавает под
    таблицей, пока в ней курсор (положение — из JS, editor placeTableBar). */
 .led-tablebar {
@@ -880,8 +885,19 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   caret-color: var(--accent-ink);
   -webkit-font-smoothing: antialiased;
 }
-.led-f-serif .led-pm { font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'PT Serif', serif; }
-.led-f-mono .led-pm { font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace; font-size: calc(var(--led-size) * 0.92); }
+.led-f-serif .led-pm { font-family: var(--led-serif); }
+.led-f-mono .led-pm { font-family: var(--led-mono); font-size: calc(var(--led-size) * 0.92); }
+/* Размер и гарнитура выделенного текста (метки fontSize, fontFamily —
+   schema.js): ступени от размера текста, гарнитуры — те же, что в «Виде». */
+.led-ff-sans { font-family: var(--font-ui); }
+.led-ff-serif { font-family: var(--led-serif); }
+.led-ff-mono { font-family: var(--led-mono); }
+.led-fs-xs { font-size: 0.75em; }
+.led-fs-s { font-size: 0.875em; }
+.led-fs-l { font-size: 1.25em; }
+.led-fs-xl { font-size: 1.5em; }
+.led-fs-xxl { font-size: 2em; }
+.led-font-menu .led-menu-label { line-height: 1.25; }
 .led-pm > * { margin: 0 0 0.55em; }
 .led-pm p { margin-top: 0; }
 .led-pm h1, .led-pm h2, .led-pm h3, .led-pm h4 { font-family: var(--font-display); line-height: 1.25; margin: 1.1em 0 0.45em; font-weight: 700; }
@@ -1088,24 +1104,46 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
 
 /* Панель рисования */
 .led-inkbar { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
-.led-ink-group, .led-ink-presets { display: flex; align-items: center; gap: 1px; }
-.led-ink-presets { gap: 4px; padding: 0 4px; }
-.led-ink-preset { width: 30px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 50%; background: none; cursor: pointer; }
-.led-ink-preset:hover { background: var(--panel-2); }
-.led-ink-preset.on { box-shadow: inset 0 0 0 2px var(--accent); }
+.led-ink-group, .led-ink-recent { display: flex; align-items: center; gap: 1px; }
+.led-ink-recent { gap: 2px; padding: 0 2px; }
+.led-ink-recent-btn { width: 26px; height: 30px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.led-ink-recent-btn:hover { background: var(--panel-2); }
 .led-ink-dot { display: block; width: var(--sz, 12px); height: var(--sz, 12px); border-radius: 50%; background: currentColor; }
 .led-ink-dot.tool-marker { border-radius: 3px; opacity: 0.55; }
 /* Текущий цвет — точка в кольце: не путается с быстрыми перьями рядом. */
 .led-ink-colorbtn .led-ink-dot { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px currentColor; }
-.ink-ink { color: var(--text); } .ink-gray { color: var(--led-c-gray); } .ink-red { color: var(--led-c-red); }
-.ink-orange { color: var(--led-c-orange); } .ink-yellow { color: var(--led-c-yellow); } .ink-green { color: var(--led-c-green); }
-.ink-teal { color: var(--led-c-teal); } .ink-blue { color: var(--led-c-blue); } .ink-purple { color: var(--led-c-purple); } .ink-pink { color: var(--led-c-pink); }
 .led-ink-size-dot { display: block; width: var(--sz, 12px); height: var(--sz, 12px); border-radius: 50%; background: var(--text-dim); }
 .led-ink-sizes, .led-ink-shapes { display: flex; gap: 2px; padding: 2px; }
 .led-ink-colors .led-swatch.ink-sw { background: currentColor; }
 .led-ink-custom-row { display: flex; align-items: center; gap: 8px; padding: 8px 4px 2px; font-size: 12.5px; color: var(--text-dim); cursor: pointer; }
 .led-ink-custom { width: 28px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
-.led-ink-settings { width: min(330px, 86vw); display: flex; flex-direction: column; gap: 10px; padding: 4px 4px 6px; }
+/* Настройки рисования: разделы с подписью, строки через тонкую линию,
+   подпись слева, управление справа или во всю ширину под ней (круг 4). */
+.led-ink-settings { width: min(340px, 86vw); display: flex; flex-direction: column; gap: 12px; padding: 2px 6px 6px; }
+.led-sheet .led-ink-settings { width: auto; padding: 0; }
+.led-set-title { padding: 6px 6px 8px; font-size: 14px; font-weight: 600; color: var(--text); }
+.led-set-sec { display: flex; flex-direction: column; }
+.led-set-cap { padding: 4px 0 2px; font-size: 12px; font-weight: 500; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.led-set-row { padding: 9px 0; border-top: 1px solid var(--line); }
+.led-set-cap + .led-set-row { border-top: 0; }
+.led-set-row.switch { width: 100%; padding-left: 0; padding-right: 0; }
+.led-set-row .segmented { width: 100%; }
+.led-set-row .segmented > button { flex: 1; }
+.led-set-row .led-setting-slider { grid-template-columns: auto minmax(80px, 1fr) 40px; gap: 10px; }
+
+/* Нижний лист (ui.js, sheet) — на телефоне вместо всплывашки. */
+/* Подложка — общая с модалками (правило подложек выше); лист прижат к низу. */
+.led-sheet-backdrop { z-index: 158; align-items: flex-end; }
+.led-sheet {
+  width: 100%; max-height: 86vh; overflow: auto; overscroll-behavior: contain;
+  padding: 4px 18px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 18px 18px 0 0; background: var(--panel); box-shadow: var(--shadow-pop);
+  animation: sheetIn 0.22s var(--ease); transition: transform 0.15s var(--ease);
+}
+.led-sheet-grip { width: 38px; height: 4px; margin: 6px auto 4px; border-radius: 2px; background: var(--line); touch-action: none; }
+.led-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0 10px; touch-action: none; }
+.led-sheet-title { font-size: 16px; font-weight: 600; color: var(--text); }
+@keyframes sheetIn { from { transform: translateY(100%); } to { transform: none; } }
 
 /* Слой пометок поверх текста */
 .led-overlay { position: absolute; z-index: 5; pointer-events: none; overflow: hidden; }
@@ -1136,8 +1174,8 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
    экране шириной 360 (самый узкий из ходовых Android). */
 .led-mobile .led-ink-row { gap: 1px; }
 .led-mobile .led-ink-row .led-ink-group { gap: 0; }
-.led-mobile .led-ink-presets { gap: 1px; padding: 0 1px; }
-.led-mobile .led-ink-preset { width: 26px; height: 32px; border-radius: 8px; }
+.led-mobile .led-ink-recent { gap: 1px; padding: 0 1px; }
+.led-mobile .led-ink-recent-btn { height: 32px; }
 .led-mobile .led-ink-row .led-btn { min-width: 32px; padding: 0 4px; }
 .led-mobile .led-drawing .led-draw-bar { overflow: visible; }
 /* Рисунок на телефоне — от края до края: на полосе шириной 250 пикселей
@@ -1173,6 +1211,11 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
 .led-swatch { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px; background: var(--panel-2); color: var(--text); font: 700 14px var(--font-ui); cursor: pointer; }
 .led-swatch.on { box-shadow: inset 0 0 0 2px var(--accent); }
 .led-swatch.none { color: var(--text-faint); }
+/* Цвета пера — после .led-swatch: та задаёт color: var(--text) тем же весом,
+   и в палитре пера все квадраты были чёрными (круг 4, 7 октября). */
+.ink-ink { color: var(--text); } .ink-gray { color: var(--led-c-gray); } .ink-red { color: var(--led-c-red); }
+.ink-orange { color: var(--led-c-orange); } .ink-yellow { color: var(--led-c-yellow); } .ink-green { color: var(--led-c-green); }
+.ink-teal { color: var(--led-c-teal); } .ink-blue { color: var(--led-c-blue); } .ink-purple { color: var(--led-c-purple); } .ink-pink { color: var(--led-c-pink); }
 .sw-tc-gray { color: var(--led-c-gray); } .sw-tc-red { color: var(--led-c-red); } .sw-tc-orange { color: var(--led-c-orange); }
 .sw-tc-yellow { color: var(--led-c-yellow); } .sw-tc-green { color: var(--led-c-green); } .sw-tc-teal { color: var(--led-c-teal); }
 .sw-tc-blue { color: var(--led-c-blue); } .sw-tc-purple { color: var(--led-c-purple); } .sw-tc-pink { color: var(--led-c-pink); }
@@ -1975,8 +2018,7 @@ body.platform-web .tb-account .tb-avatar { margin-right: 2px; }
   flex: 1; min-width: 140px; font-size: 22px; font-weight: 700;
   border: none; background: transparent; color: var(--text); padding: 2px 0; outline: none;
 }
-#pin-task-btn.on { color: var(--text); background: var(--panel-2); }
-#delete-task-btn:hover { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+/* Теги — строкой свойств (круг 4): чипы переносятся под подпись. */
 .task-tags-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tab-panel { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 #tab-history { overflow-y: auto; }
@@ -2020,12 +2062,11 @@ body.platform-web .tb-account .tb-avatar { margin-right: 2px; }
 .task-params .due-state { margin-left: 2px; }
 .task-params .repeat-next { flex-basis: 100%; font-size: 12px; color: var(--text-faint); }
 .task-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
-.task-actions .ghost { flex: 1; }
+.task-actions .ghost, .task-actions .danger { flex: 1; }
 #tmdlg-params .task-params { margin: 2px 0 12px; }
 /* В окне подписи одной ширины — управление встаёт в одну колонку. */
 #tmdlg-params .task-params .due-label, #tmdlg-params .task-params .money-bar label { flex: 0 0 96px; }
 #tmdlg-params .status-bar .st-swatch { display: none; }
-#tmdlg-params .task-tags-row { margin: -4px 0 12px; }
 
 /* ---------- История записей (правая панель задачи) ---------- */
 .history-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }

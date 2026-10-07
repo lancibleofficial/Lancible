@@ -64,7 +64,7 @@ export class DrawingView {
     this.grip.addEventListener('pointerdown', (e) => this.startResize(e));
     this.onOutside = (e) => {
       if (!this.active || this.dom.contains(e.target)) return;
-      if (e.target.closest && e.target.closest('.led-pop, .ctx-menu')) return;
+      if (e.target.closest && e.target.closest('.led-pop, .ctx-menu, .led-sheet-backdrop, #ledmodal-backdrop')) return;
       this.deactivate();
     };
     document.addEventListener('pointerdown', this.onOutside, true);
@@ -209,7 +209,8 @@ export class DrawingView {
 
   onKey(e) {
     const mod = e.metaKey || e.ctrlKey;
-    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); this.deactivate(); this.view.focus(); return; }
+    // Esc и Ctrl/⌘+Shift+D — назад к тексту (та же клавиша включает пометки).
+    if (e.key === 'Escape' || (mod && e.shiftKey && e.key.toLowerCase() === 'd')) { e.preventDefault(); e.stopPropagation(); this.deactivate(); this.view.focus(); return; }
     if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) this.surface.redo(); else this.surface.undo(); return; }
     if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); e.stopPropagation(); this.surface.redo(); return; }
     if ((e.key === 'Delete' || e.key === 'Backspace') && this.surface.selected.size) { e.preventDefault(); e.stopPropagation(); this.surface.deleteSelected(); this.toolbar.render(); return; }
@@ -239,6 +240,10 @@ export class DrawingView {
     this.save.cancel();
     const pos = this.getPos();
     if (pos == null) return;
+    // Блок уже удалён (destroy после удаления зовёт flush): по старому
+    // месту лежит другое, и setNodeMarkup падал «No node at given
+    // position» посреди удаления.
+    if (this.view.state.doc.nodeAt(pos) !== this.node) return;
     const attrs = Object.assign({}, this.node.attrs, { strokes: this.strokes, height: this.height }, extra || {});
     const same = attrs.strokes === this.node.attrs.strokes && attrs.height === this.node.attrs.height && attrs.bg === this.node.attrs.bg;
     if (same) return;

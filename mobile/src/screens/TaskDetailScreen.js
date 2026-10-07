@@ -11,6 +11,7 @@ import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
 import MenuSheet from '../components/MenuSheet';
+import PrimaryButton from '../components/PrimaryButton';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import DueSheet from '../components/DueSheet';
 import TagPickerSheet from '../components/TagPickerSheet';
@@ -45,7 +46,6 @@ export default function TaskDetailScreen({ route, navigation }) {
   const setTaskTags = useAppStore((s) => s.setTaskTags);
   const allTags = useAppStore((s) => s.tags);
   const deleteTask = useAppStore((s) => s.deleteTask);
-  const togglePinTask = useAppStore((s) => s.togglePinTask);
   const startTimer = useAppStore((s) => s.startTimer);
   const stopTimer = useAppStore((s) => s.stopTimer);
   const showToast = useAppStore((s) => s.showToast);
@@ -123,22 +123,10 @@ export default function TaskDetailScreen({ route, navigation }) {
     openSheet(
       <MenuSheet
         title={(task && task.title) || t(LANG, 'task.no_name')}
+        // Закрепить — только из списков, удалить — в «Настройках» задачи
+        // (круг 4, 7 октября 2026): внутри задачи — её название и работа.
         items={[
-          {
-            key: 'pin',
-            icon: 'pin',
-            label: t(LANG, task && task.pinnedAt ? 'pin.unpin' : 'pin.pin'),
-            onPress: () => togglePinTask(taskId),
-          },
           { key: 'export', icon: 'download', label: t(LANG, 'menu.export_excel'), onPress: onExport },
-          {
-            key: 'delete',
-            icon: 'trash',
-            label: t(LANG, 'task.delete_title'),
-            danger: true,
-            separated: true,
-            onPress: onDelete,
-          },
         ]}
       />,
     );
@@ -467,6 +455,16 @@ export default function TaskDetailScreen({ route, navigation }) {
               </Text>
               <Icon name="chevron-right" size={14} color={colors.textDim} />
             </Pressable>
+
+            {/* Удаление — последней строкой свойств, как на десктопе:
+                в шапке задачи остаётся одно название. */}
+            <PrimaryButton
+              title={t(LANG, 'task.delete_title')}
+              icon="trash"
+              variant="danger"
+              onPress={onDelete}
+              style={styles.deleteBtn}
+            />
           </View>
         ) : (
           <View style={styles.historyScroll}>
@@ -552,6 +550,7 @@ const makeStyles = (colors) => StyleSheet.create({
   // Бейджи выравниваются вправо, как и остальные значения в этих строках,
   // и переносятся: их может быть больше, чем влезает в одну строку.
   tagRowValue: { flex: 1, justifyContent: "flex-end" },
+  deleteBtn: { marginTop: spacing.lg },
   statusValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
   statusDot: { width: 8, height: 8, borderRadius: 3 },
   dueNone: { color: colors.textDim, fontSize: fontSize.sm },

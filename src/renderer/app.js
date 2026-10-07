@@ -204,10 +204,10 @@ const el = {
   tfStatus: [...document.querySelectorAll('.tf-status button')],
 
   detail: $('task-detail'),
-  title: $('task-title'), pinTaskBtn: $('pin-task-btn'),
+  title: $('task-title'),
   taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), taskProps: $('task-props'), tabHistory: $('tab-history'),
   // Узел параметров задачи ездит между вкладкой и модалкой с календаря.
-  taskParams: document.querySelector('#task-props .task-params'), taskTagsRow: $('task-tags-row'),
+  taskParams: document.querySelector('#task-props .task-params'),
   tmdlgBackdrop: $('tmdlg-backdrop'), tmdlgDot: $('tmdlg-dot'), tmdlgTitle: $('tmdlg-title'),
   tmdlgProj: $('tmdlg-proj'), tmdlgTot: $('tmdlg-tot'), tmdlgEntry: $('tmdlg-entry'),
   tmdlgDate: $('tmdlg-date'), tmdlgStart: $('tmdlg-start'), tmdlgEnd: $('tmdlg-end'),
@@ -3577,8 +3577,6 @@ function renderDetail() {
   el.taskDoneBtn.textContent = task.done ? t('task.reopen') : t('filter.done');
 
   if (document.activeElement !== el.title) el.title.value = task.title || '';
-  el.pinTaskBtn.classList.toggle('on', !!task.pinnedAt);
-  el.pinTaskBtn.title = task.pinnedAt ? t('task.unpin_title') : t('task.pin_title');
   el.exportTaskBtn.disabled = !(task.sessions && task.sessions.length);
 
   renderTimer(task);
@@ -4946,7 +4944,6 @@ el.exportProjectBtn.addEventListener('click', exportProject);
 el.exportCalendarBtn.addEventListener('click', exportCalendar);
 el.exportAllBtn.addEventListener('click', exportAllProjects);
 el.exportPeriodBtn.addEventListener('click', openExportPeriodDialog);
-el.pinTaskBtn.addEventListener('click', () => selectedId && togglePinTask(selectedId));
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });
 
 
@@ -5966,7 +5963,6 @@ function openTaskModal(task, index, opts) {
   tmdlg.index = index != null ? index : null;
   selectedId = task.id;
   el.tmdlgParams.appendChild(el.taskParams);
-  el.tmdlgParams.appendChild(el.taskTagsRow);
 
   const s = tmdlg.index != null ? (task.sessions || [])[tmdlg.index] : null;
   el.tmdlgEntry.hidden = !s;
@@ -5991,7 +5987,6 @@ function closeTaskModal(discard) {
   // Узел возвращается под название задачи. Не вернуть — и страница задачи
   // останется без свойств до перезагрузки.
   el.taskProps.insertBefore(el.taskParams, el.taskProps.firstChild);
-  el.tabNotes.parentElement.insertBefore(el.taskTagsRow, el.tabNotes);
   tmdlg.taskId = null;
   tmdlg.fresh = false;
   closeDatePicker();

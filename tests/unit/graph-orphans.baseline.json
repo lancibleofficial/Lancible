@@ -506,16 +506,22 @@
       "at": "L88"
     },
     {
+      "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ondelete",
+      "label": "onDelete()",
+      "file": "mobile/src/screens/TaskDetailScreen.js",
+      "at": "L158"
+    },
+    {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ondeletesession",
       "label": "onDeleteSession()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L194"
+      "at": "L182"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopendue",
       "label": "onOpenDue()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L218"
+      "at": "L206"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenmenu",
@@ -527,43 +533,43 @@
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenproject",
       "label": "onOpenProject()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L153"
+      "at": "L141"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenrepeat",
       "label": "onOpenRepeat()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L266"
+      "at": "L254"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenstatus",
       "label": "onOpenStatus()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L238"
+      "at": "L226"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopentags",
       "label": "onOpenTags()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L229"
+      "at": "L217"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenversion",
       "label": "onOpenVersion()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L251"
+      "at": "L239"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onratechange",
       "label": "onRateChange()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L189"
+      "at": "L177"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ontitlechange",
       "label": "onTitleChange()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L184"
+      "at": "L172"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_openeditor",
@@ -827,25 +833,25 @@
       "id": "src_editor_commands_addimagebeside",
       "label": "addImageBeside()",
       "file": "src/editor/commands.js",
-      "at": "L343"
+      "at": "L351"
     },
     {
       "id": "src_editor_commands_clearformatting",
       "label": "clearFormatting()",
       "file": "src/editor/commands.js",
-      "at": "L152"
+      "at": "L160"
     },
     {
       "id": "src_editor_commands_deleteblock",
       "label": "deleteBlock()",
       "file": "src/editor/commands.js",
-      "at": "L473"
+      "at": "L481"
     },
     {
       "id": "src_editor_commands_duplicateblock",
       "label": "duplicateBlock()",
       "file": "src/editor/commands.js",
-      "at": "L463"
+      "at": "L471"
     },
     {
       "id": "src_editor_commands_formatstate",
@@ -857,115 +863,115 @@
       "id": "src_editor_commands_indent",
       "label": "indent()",
       "file": "src/editor/commands.js",
-      "at": "L231"
+      "at": "L239"
     },
     {
       "id": "src_editor_commands_insertchart",
       "label": "insertChart()",
       "file": "src/editor/commands.js",
-      "at": "L328"
+      "at": "L336"
     },
     {
       "id": "src_editor_commands_insertdrawing",
       "label": "insertDrawing()",
       "file": "src/editor/commands.js",
-      "at": "L329"
+      "at": "L337"
     },
     {
       "id": "src_editor_commands_insertimage",
       "label": "insertImage()",
       "file": "src/editor/commands.js",
-      "at": "L327"
+      "at": "L335"
     },
     {
       "id": "src_editor_commands_insertrule",
       "label": "insertRule()",
       "file": "src/editor/commands.js",
-      "at": "L325"
+      "at": "L333"
     },
     {
       "id": "src_editor_commands_inserttable",
       "label": "insertTable()",
       "file": "src/editor/commands.js",
-      "at": "L302"
+      "at": "L310"
     },
     {
       "id": "src_editor_commands_moveblock",
       "label": "moveBlock()",
       "file": "src/editor/commands.js",
-      "at": "L435"
+      "at": "L443"
     },
     {
       "id": "src_editor_commands_moveingallery",
       "label": "moveInGallery()",
       "file": "src/editor/commands.js",
-      "at": "L362"
+      "at": "L370"
     },
     {
       "id": "src_editor_commands_outdent",
       "label": "outdent()",
       "file": "src/editor/commands.js",
-      "at": "L236"
+      "at": "L244"
     },
     {
       "id": "src_editor_commands_setalign",
       "label": "setAlign()",
       "file": "src/editor/commands.js",
-      "at": "L251"
+      "at": "L259"
     },
     {
       "id": "src_editor_commands_setcolormark",
       "label": "setColorMark()",
       "file": "src/editor/commands.js",
-      "at": "L94"
+      "at": "L96"
     },
     {
       "id": "src_editor_commands_setheading",
       "label": "setHeading()",
       "file": "src/editor/commands.js",
-      "at": "L168"
+      "at": "L176"
     },
     {
       "id": "src_editor_commands_setlink",
       "label": "setLink()",
       "file": "src/editor/commands.js",
-      "at": "L128"
+      "at": "L136"
     },
     {
       "id": "src_editor_commands_splititem",
       "label": "splitItem()",
       "file": "src/editor/commands.js",
-      "at": "L241"
+      "at": "L249"
     },
     {
       "id": "src_editor_commands_tablerowsatcursor",
       "label": "tableRowsAtCursor()",
       "file": "src/editor/commands.js",
-      "at": "L411"
+      "at": "L419"
     },
     {
       "id": "src_editor_commands_takeoutofgallery",
       "label": "takeOutOfGallery()",
       "file": "src/editor/commands.js",
-      "at": "L379"
+      "at": "L387"
     },
     {
       "id": "src_editor_commands_toggle",
       "label": "toggle()",
       "file": "src/editor/commands.js",
-      "at": "L91"
+      "at": "L93"
     },
     {
       "id": "src_editor_commands_togglecallout",
       "label": "toggleCallout()",
       "file": "src/editor/commands.js",
-      "at": "L198"
+      "at": "L206"
     },
     {
       "id": "src_editor_commands_turninto",
       "label": "turnInto()",
       "file": "src/editor/commands.js",
-      "at": "L485"
+      "at": "L493"
     },
     {
       "id": "src_editor_comments_commentspanel_add",
@@ -989,37 +995,37 @@
       "id": "src_editor_drawing_drawingview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/drawing.js",
-      "at": "L271"
+      "at": "L276"
     },
     {
       "id": "src_editor_drawing_drawingview_destroy",
       "label": ".destroy()",
       "file": "src/editor/drawing.js",
-      "at": "L277"
+      "at": "L282"
     },
     {
       "id": "src_editor_drawing_drawingview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/drawing.js",
-      "at": "L275"
+      "at": "L280"
     },
     {
       "id": "src_editor_drawing_drawingview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/drawing.js",
-      "at": "L269"
+      "at": "L274"
     },
     {
       "id": "src_editor_drawing_drawingview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/drawing.js",
-      "at": "L273"
+      "at": "L278"
     },
     {
       "id": "src_editor_drawing_drawingview_update",
       "label": ".update()",
       "file": "src/editor/drawing.js",
-      "at": "L256"
+      "at": "L261"
     },
     {
       "id": "src_editor_find_findbar_constructor",
@@ -1079,157 +1085,169 @@
       "id": "src_editor_index_decorationsetfor",
       "label": "DecorationSetFor()",
       "file": "src/editor/index.js",
-      "at": "L909"
+      "at": "L960"
     },
     {
       "id": "src_editor_index_editor_chartfromtable",
       "label": ".chartFromTable()",
       "file": "src/editor/index.js",
-      "at": "L759"
+      "at": "L808"
     },
     {
       "id": "src_editor_index_editor_constructor",
       "label": ".constructor()",
       "file": "src/editor/index.js",
-      "at": "L172"
+      "at": "L179"
     },
     {
       "id": "src_editor_index_editor_copymarkdown",
       "label": ".copyMarkdown()",
       "file": "src/editor/index.js",
-      "at": "L824"
+      "at": "L874"
     },
     {
       "id": "src_editor_index_editor_destroy",
       "label": ".destroy()",
       "file": "src/editor/index.js",
-      "at": "L898"
+      "at": "L949"
     },
     {
       "id": "src_editor_index_editor_exportas",
       "label": ".exportAs()",
       "file": "src/editor/index.js",
-      "at": "L816"
+      "at": "L866"
+    },
+    {
+      "id": "src_editor_index_editor_fontfamilymenu",
+      "label": ".fontFamilyMenu()",
+      "file": "src/editor/index.js",
+      "at": "L622"
+    },
+    {
+      "id": "src_editor_index_editor_fontsizemenu",
+      "label": ".fontSizeMenu()",
+      "file": "src/editor/index.js",
+      "at": "L611"
     },
     {
       "id": "src_editor_index_editor_imagefromurl",
       "label": ".imageFromUrl()",
       "file": "src/editor/index.js",
-      "at": "L713"
+      "at": "L762"
     },
     {
       "id": "src_editor_index_editor_print",
       "label": ".print()",
       "file": "src/editor/index.js",
-      "at": "L835"
+      "at": "L885"
     },
     {
       "id": "src_editor_index_editor_setcontent",
       "label": ".setContent()",
       "file": "src/editor/index.js",
-      "at": "L452"
+      "at": "L478"
     },
     {
       "id": "src_editor_index_editor_seteditable",
       "label": ".setEditable()",
       "file": "src/editor/index.js",
-      "at": "L473"
+      "at": "L498"
     },
     {
       "id": "src_editor_index_editor_threads",
       "label": ".threads()",
       "file": "src/editor/index.js",
-      "at": "L471"
+      "at": "L496"
     },
     {
       "id": "src_editor_index_editor_user",
       "label": ".user()",
       "file": "src/editor/index.js",
-      "at": "L484"
+      "at": "L509"
     },
     {
       "id": "src_editor_ink_inkinput_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L345"
+      "at": "L353"
     },
     {
       "id": "src_editor_ink_inkinput_destroy",
       "label": ".destroy()",
       "file": "src/editor/ink.js",
-      "at": "L434"
+      "at": "L442"
     },
     {
       "id": "src_editor_ink_inkinput_ondown",
       "label": ".onDown()",
       "file": "src/editor/ink.js",
-      "at": "L394"
+      "at": "L402"
     },
     {
       "id": "src_editor_ink_inkinput_onmove",
       "label": ".onMove()",
       "file": "src/editor/ink.js",
-      "at": "L417"
+      "at": "L425"
     },
     {
       "id": "src_editor_ink_inkinput_ontouch",
       "label": ".onTouch()",
       "file": "src/editor/ink.js",
-      "at": "L387"
+      "at": "L395"
     },
     {
       "id": "src_editor_ink_inkinput_onup",
       "label": ".onUp()",
       "file": "src/editor/ink.js",
-      "at": "L427"
+      "at": "L435"
     },
     {
       "id": "src_editor_ink_inksurface_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L459"
+      "at": "L468"
     },
     {
       "id": "src_editor_ink_inksurface_destroy",
       "label": ".destroy()",
       "file": "src/editor/ink.js",
-      "at": "L735"
+      "at": "L752"
     },
     {
       "id": "src_editor_ink_inktoolbar_colormenu",
       "label": ".colorMenu()",
       "file": "src/editor/ink.js",
-      "at": "L872"
+      "at": "L882"
     },
     {
       "id": "src_editor_ink_inktoolbar_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L758"
+      "at": "L775"
     },
     {
       "id": "src_editor_ink_inktoolbar_set",
       "label": ".set()",
       "file": "src/editor/ink.js",
-      "at": "L766"
+      "at": "L783"
     },
     {
       "id": "src_editor_menus_blockhandle_constructor",
       "label": ".constructor()",
       "file": "src/editor/menus.js",
-      "at": "L213"
+      "at": "L217"
     },
     {
       "id": "src_editor_menus_blockhandle_hide",
       "label": ".hide()",
       "file": "src/editor/menus.js",
-      "at": "L251"
+      "at": "L255"
     },
     {
       "id": "src_editor_menus_blockhandle_track",
       "label": ".track()",
       "file": "src/editor/menus.js",
-      "at": "L225"
+      "at": "L229"
     },
     {
       "id": "src_editor_menus_bubblemenu_constructor",
@@ -1241,7 +1259,7 @@
       "id": "src_editor_menus_bubblemenu_update",
       "label": ".update()",
       "file": "src/editor/menus.js",
-      "at": "L188"
+      "at": "L190"
     },
     {
       "id": "src_editor_menus_slashmenu_constructor",
@@ -1265,19 +1283,19 @@
       "id": "src_editor_overlay_inkoverlay_destroy",
       "label": ".destroy()",
       "file": "src/editor/overlay.js",
-      "at": "L216"
+      "at": "L220"
     },
     {
       "id": "src_editor_overlay_inkoverlay_seton",
       "label": ".setOn()",
       "file": "src/editor/overlay.js",
-      "at": "L186"
+      "at": "L190"
     },
     {
       "id": "src_editor_schema_colormark",
       "label": "colorMark()",
       "file": "src/editor/schema.js",
-      "at": "L285"
+      "at": "L289"
     },
     {
       "id": "src_editor_schema_readalign",
@@ -1290,6 +1308,12 @@
       "label": "readBid()",
       "file": "src/editor/schema.js",
       "at": "L38"
+    },
+    {
+      "id": "src_editor_schema_stepmark",
+      "label": "stepMark()",
+      "file": "src/editor/schema.js",
+      "at": "L313"
     },
     {
       "id": "src_editor_schema_withblock",
@@ -1322,10 +1346,16 @@
       "at": "L12"
     },
     {
+      "id": "src_editor_toolbar_toolbar_syncfullscreen",
+      "label": ".syncFullscreen()",
+      "file": "src/editor/toolbar.js",
+      "at": "L241"
+    },
+    {
       "id": "src_editor_toolbar_toolbar_update",
       "label": ".update()",
       "file": "src/editor/toolbar.js",
-      "at": "L233"
+      "at": "L251"
     },
     {
       "id": "src_editor_views_codeblockview_constructor",
@@ -1397,25 +1427,25 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L6171"
+      "at": "L6166"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L5785"
+      "at": "L5782"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L5775"
+      "at": "L5772"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L6177"
+      "at": "L6172"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
@@ -1433,7 +1463,7 @@
       "id": "src_renderer_app_applyremind",
       "label": "applyRemind()",
       "file": "src/renderer/app.js",
-      "at": "L4900"
+      "at": "L4898"
     },
     {
       "id": "src_renderer_app_authdismissible",
@@ -1463,13 +1493,13 @@
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L4275"
+      "at": "L4273"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L6330"
+      "at": "L6325"
     },
     {
       "id": "src_renderer_app_committime",
@@ -1481,7 +1511,7 @@
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L6086"
+      "at": "L6081"
     },
     {
       "id": "src_renderer_app_deletestatus",
@@ -1493,13 +1523,13 @@
       "id": "src_renderer_app_deletetask",
       "label": "deleteTask()",
       "file": "src/renderer/app.js",
-      "at": "L3751"
+      "at": "L3749"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L5271"
+      "at": "L5268"
     },
     {
       "id": "src_renderer_app_dppickfrom",
@@ -1511,13 +1541,13 @@
       "id": "src_renderer_app_expdlgrange",
       "label": "expdlgRange()",
       "file": "src/renderer/app.js",
-      "at": "L4177"
+      "at": "L4175"
     },
     {
       "id": "src_renderer_app_exportallprojects",
       "label": "exportAllProjects()",
       "file": "src/renderer/app.js",
-      "at": "L4290"
+      "at": "L4288"
     },
     {
       "id": "src_renderer_app_gettag",
@@ -1535,7 +1565,7 @@
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L5072"
+      "at": "L5069"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
@@ -1547,13 +1577,13 @@
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L3728"
+      "at": "L3726"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L5028"
+      "at": "L5025"
     },
     {
       "id": "src_renderer_app_openlangmenu",
@@ -1571,13 +1601,13 @@
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L5227"
+      "at": "L5224"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L6324"
+      "at": "L6319"
     },
     {
       "id": "src_renderer_app_opensearch",
@@ -1613,7 +1643,7 @@
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L4007"
+      "at": "L4005"
     },
     {
       "id": "src_renderer_app_savetagdialog",
@@ -1625,13 +1655,13 @@
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L6291"
+      "at": "L6286"
     },
     {
       "id": "src_renderer_app_settaskversion",
       "label": "setTaskVersion()",
       "file": "src/renderer/app.js",
-      "at": "L5123"
+      "at": "L5120"
     },
     {
       "id": "src_renderer_app_statusesofkind",
@@ -1799,7 +1829,7 @@
       "id": "tests_e2e_editor_spec_linemenu",
       "label": "lineMenu()",
       "file": "tests/e2e/editor.spec.js",
-      "at": "L137"
+      "at": "L139"
     },
     {
       "id": "tests_e2e_editor_spec_opentask",
@@ -1829,7 +1859,7 @@
       "id": "tests_e2e_editor_spec_scribble",
       "label": "scribble()",
       "file": "tests/e2e/editor.spec.js",
-      "at": "L363"
+      "at": "L372"
     },
     {
       "id": "tests_e2e_editor_spec_tableshape",
