@@ -190,6 +190,7 @@ const el = {
   taskView: $('task-view'), taskBack: $('task-back'), crumbProjects: $('crumb-projects'), crumbProject: $('crumb-project'), crumbTask: $('crumb-task'),
   taskDoneBtn: $('task-done-btn'), timerRate: $('timer-rate'),
   navProjects: $('nav-projects'), navNewProject: $('nav-new-project'),
+  navPinned: $('nav-pinned'), navPinnedHead: $('nav-pinned-head'),
   boardCols: $('board-cols'),
   boardStatuses: $('board-statuses'), stList: $('st-list'), stAdd: $('st-add'),
   pdlgTabs: [...document.querySelectorAll('#pdlg-tabs button')], pdlgLater: $('pdlg-later'),
@@ -222,7 +223,6 @@ const el = {
   spMonth: $('sp-month'), spDone: $('sp-done'),
   tfVersion: $('tf-version'), tfVersionRow: $('task-filter-version'),
   sfProject: $('sf-project'), sfVersion: $('sf-version'), sfReset: $('sf-reset'),
-  exportAllBtn: $('export-all-btn'),
   exportPeriodBtn: $('export-period-btn'),
   expdlgBackdrop: $('expdlg-backdrop'), expPills: $('exp-pills'), expRange: $('exp-range'),
   expFrom: $('exp-from'), expTo: $('exp-to'),
@@ -728,10 +728,12 @@ function renderAccountBtn() {
       el.accountBtn.insertBefore(a, el.accountLabel);
     }
     el.accountBtn.querySelector('.tb-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase();
-    if (icon0) icon0.hidden = true;
+    // У SVG нет свойства hidden — только атрибут. Через свойство значок не
+    // прятался, и у вошедшего в пилюле стояли и человечек, и буква.
+    if (icon0) icon0.setAttribute('hidden', '');
   } else {
     if (avatar) avatar.remove();
-    if (icon0) icon0.hidden = false;
+    if (icon0) icon0.removeAttribute('hidden');
   }
 }
 
@@ -1775,15 +1777,10 @@ function projectTile(p) {
   tile.className = 'ptile';
   tile.style.setProperty('--pc', p.color || PALETTE[0]);
   tile.dataset.id = p.id;
-  // Закрепление вынесено из меню на саму карточку: это единственное действие,
-  // которое нажимают часто. Кнопка проявляется по наведению, чтобы не шуметь в
-  // сетке, но у уже закреплённого проекта видна всегда — иначе нечем открепить.
-  const pinTitle = p.pinnedAt ? t('project.unpin') : t('project.pin');
   tile.innerHTML = `
     <div class="ptile-head">
       <i class="ptile-dot"></i>
       <span class="ptile-name">${escapeHtml(p.name)}</span>
-      <button class="ptile-pin icon-btn${p.pinnedAt ? ' on' : ''}" aria-label="${escapeHtml(pinTitle)}" title="${escapeHtml(pinTitle)}" aria-pressed="${p.pinnedAt ? 'true' : 'false'}" tabindex="-1">${icon('pin')}</button>
       <button class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}" tabindex="-1"><svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg></button>
     </div>
     <div class="ptile-desc">${escapeHtml(p.description || '')}</div>
@@ -1791,10 +1788,6 @@ function projectTile(p) {
     <span class="ptile-progress"><i style="width:${pct}%"></i></span>
     <div class="ptile-foot"><span>${escapeHtml(t('home.tasks_done', { done, total: tasks.length }))}</span><span>${escapeHtml(nextDue ? t('home.next_due', { date: fmtDateShort(nextDue) }) : t('home.no_due'))}</span></div>`;
   tile.addEventListener('click', () => openProject(p.id));
-  tile.querySelector('.ptile-pin').addEventListener('click', (e) => {
-    e.stopPropagation();
-    togglePinProject(p.id);
-  });
   tile.querySelector('.ptile-menu').addEventListener('click', (e) => {
     e.stopPropagation();
     openProjectMenu(p, e.currentTarget);
@@ -3224,25 +3217,28 @@ function renderProjectSide() {
   }
 }
 
-/** Проекты в левом меню — в том же порядке, что на «Обзоре»: закреплённые
- *  сверху. Рядом — сколько задач ещё не готово. */
+/** Проекты в левом меню: закреплённые — своей группой «Быстрый доступ» над
+ *  остальными, в порядке закрепления. Рядом — сколько задач ещё не готово. */
 function renderNavProjects() {
   const pinned = state.projects.filter((p) => p.pinnedAt).sort(byPinned);
   const rest = state.projects.filter((p) => !p.pinnedAt);
-  el.navProjects.textContent = '';
-  for (const p of [...pinned, ...rest]) {
-    const b = elt('button', 'nav-item nav-project');
-    b.type = 'button';
-    b.title = p.name;
-    b.dataset.projectId = p.id;
-    b.classList.toggle('active', (state.ui.view === 'project' || state.ui.view === 'task') && state.ui.projectId === p.id);
-    const dot = elt('span', 'nav-pdot');
-    dot.style.background = p.color || PALETTE[0];
-    const open = tasksOf(p.id).filter((t2) => !t2.done).length;
-    b.append(dot, elt('span', 'nav-label nav-pname', p.name), elt('span', 'nav-pcount', open ? String(open) : ''));
-    b.addEventListener('click', () => openProject(p.id));
-    el.navProjects.appendChild(b);
-  }
+  el.navPinnedHead.hidden = el.navPinned.hidden = pinned.length === 0;
+  el.navPinned.replaceChildren(...pinned.map(navProjectItem));
+  el.navProjects.replaceChildren(...rest.map(navProjectItem));
+}
+
+function navProjectItem(p) {
+  const b = elt('button', 'nav-item nav-project');
+  b.type = 'button';
+  b.title = p.name;
+  b.dataset.projectId = p.id;
+  b.classList.toggle('active', (state.ui.view === 'project' || state.ui.view === 'task') && state.ui.projectId === p.id);
+  const dot = elt('span', 'nav-pdot');
+  dot.style.background = p.color || PALETTE[0];
+  const open = tasksOf(p.id).filter((t2) => !t2.done).length;
+  b.append(dot, elt('span', 'nav-label nav-pname', p.name), elt('span', 'nav-pcount', open ? String(open) : ''));
+  b.addEventListener('click', () => openProject(p.id));
+  return b;
 }
 
 /** Вкладка «Версии»: по каждой — готовые из всех, время и деньги. Что
@@ -3881,8 +3877,8 @@ function openProjectMenu(p, anchor) {
   items.push({ label: t('project.edit'), onClick: () => openProjectDialog(p) });
   // Статусы и версии — и в меню: на телефонной ширине шестерёнки в шапке нет.
   if (inProject) items.push({ label: t('board.statuses'), onClick: openStatusDialog });
-  // Закрепление здесь больше не дублируется — для него есть своя кнопка на
-  // карточке, слева от этого меню.
+  // Закреплённый проект встаёт в левое меню группой «Быстрый доступ».
+  items.push({ label: t(p.pinnedAt ? 'project.unpin' : 'project.pin'), onClick: () => togglePinProject(p.id) });
   items.push({ sep: true });
   items.push({ label: t('project.excel'), onClick: () => exportProjectById(p.id) });
   items.push({ label: t('project.copy_summary'), onClick: () => copyProjectSummary(p) });
@@ -4721,6 +4717,33 @@ el.notifBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleNotifP
 el.notifSeen.addEventListener('click', (e) => { e.stopPropagation(); markNotifSeen(); });
 el.notifPanel.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => { if (!el.notifPanel.hidden) closeNotifPanel(); });
+
+// Полоса прокрутки видна, пока над областью мышь или её крутят (вид —
+// «Скроллбар» в styles.css). Наведение — тоже классом: на :hover Chromium
+// полосу не перерисовывает. scroll не всплывает, поэтому слушаем на
+// погружении — один обработчик на все прокручиваемые области.
+let scrollHovered = [];
+const isScrollBox = (n) => (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth)
+  && /auto|scroll/.test(getComputedStyle(n).overflow);
+const markScrollHover = (boxes) => {
+  for (const n of scrollHovered) if (!boxes.includes(n)) n.classList.remove('scroll-hover');
+  for (const n of boxes) n.classList.add('scroll-hover');
+  scrollHovered = boxes;
+};
+document.addEventListener('mouseover', (e) => {
+  const boxes = [];
+  for (let n = e.target; n instanceof Element; n = n.parentElement) if (isScrollBox(n)) boxes.push(n);
+  markScrollHover(boxes);
+}, { passive: true });
+document.documentElement.addEventListener('mouseleave', () => markScrollHover([]));
+const scrollIdle = new WeakMap();
+document.addEventListener('scroll', (e) => {
+  const box = e.target === document ? document.documentElement : e.target;
+  if (!(box instanceof Element)) return;
+  box.classList.add('is-scrolling');
+  clearTimeout(scrollIdle.get(box));
+  scrollIdle.set(box, setTimeout(() => box.classList.remove('is-scrolling'), 1000));
+}, { capture: true, passive: true });
 setInterval(checkReminders, 30000);
 
 /** Дата и время дедлайна — одним окном. Пока даты нет, время по умолчанию
@@ -4811,7 +4834,6 @@ el.remindDateBtn.addEventListener('click', () => {
 });
 el.exportProjectBtn.addEventListener('click', exportProject);
 el.exportCalendarBtn.addEventListener('click', exportCalendar);
-el.exportAllBtn.addEventListener('click', exportAllProjects);
 el.exportPeriodBtn.addEventListener('click', openExportPeriodDialog);
 el.pinTaskBtn.addEventListener('click', () => selectedId && togglePinTask(selectedId));
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });

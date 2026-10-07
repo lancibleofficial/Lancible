@@ -91,3 +91,32 @@ test('без проектов — подсказка, кнопка создан�
   await page.locator('#create-project-btn').click();
   await expect(page.locator('#pdlg-backdrop')).toBeVisible();
 });
+
+// Закреп — не булавкой на карточке, а пунктом меню: закреплённый проект
+// встаёт в левое меню своей группой «Быстрый доступ», над остальными.
+test('закрепление — из меню карточки, закреплённые — группой «Быстрый доступ» в левом меню', async ({ page }) => {
+  await seed(page);
+  await expect(page.locator('.ptile .ptile-pin'), 'булавки на карточке нет').toHaveCount(0);
+  const quick = page.locator('#nav-pinned .nav-pname');
+  const rest = page.locator('#nav-projects .nav-pname');
+  await expect(page.locator('#nav-pinned-head')).toBeVisible();
+  await expect(page.locator('#nav-pinned-head')).toContainText('Быстрый доступ');
+  await expect(page.locator('#nav-pinned-head svg.icon'), 'у группы — значок закрепления').toBeVisible();
+  await expect(quick).toHaveText(['Кофейня']);
+  await expect(rest).toHaveText(['Сайт', 'Приложение']);
+
+  const menu = async (name, item) => {
+    const card = page.locator('.ptile', { hasText: name });
+    await card.hover();
+    await card.locator('.ptile-menu').click();
+    await page.locator('#ctx-menu .ctx-item', { hasText: item }).click();
+  };
+  await menu('Сайт', 'В быстрый доступ');
+  await expect(quick, 'в порядке закрепления').toHaveText(['Кофейня', 'Сайт']);
+  await expect(rest).toHaveText(['Приложение']);
+
+  await menu('Кофейня', 'Убрать из быстрого доступа');
+  await menu('Сайт', 'Убрать из быстрого доступа');
+  await expect(page.locator('#nav-pinned-head'), 'нечего показать — группы нет').toBeHidden();
+  await expect(rest, 'вернулись к остальным, в порядке проектов').toHaveText(['Сайт', 'Приложение', 'Кофейня']);
+});

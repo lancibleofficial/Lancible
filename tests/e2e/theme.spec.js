@@ -225,3 +225,53 @@ test('всплывающее меню поднято тенью над тем, �
     expect(shadow.z, 'меню — верхний слой').toBe('140');
   }
 });
+
+// У Basique Pro нет начертания между 400 и 700, а Bold тёмным по белому
+// слипался: в светлой теме акценты набраны Regular. Лого — знак, а не текст,
+// и остаётся Bold в обеих.
+test('Basique на акцентах: Bold в тёмной, Regular в светлой; лого — Bold в обеих', async ({ page }) => {
+  const weights = async (theme) => {
+    await open(page, theme);
+    return page.evaluate(() => {
+      const w = (sel) => getComputedStyle(document.querySelector(sel)).fontWeight;
+      const out = { day: w('.day-title'), logo: w('.tb-logo-text') };
+      state.ui.view = 'time';
+      render();
+      out.period = w('#time-title');
+      return out;
+    });
+  };
+  expect(await weights('dark')).toEqual({ day: '700', logo: '700', period: '700' });
+  expect(await weights('light')).toEqual({ day: '400', logo: '700', period: '400' });
+});
+
+// Профиль в шапке — тот же предмет, что поиск: заливка, скругление, без
+// рамки. Раньше у кнопки оставалась браузерная рамка, а у вошедшего рядом с
+// буквой стоял ещё и человечек: свойство hidden у SVG ничего не прячет.
+for (const theme of ['dark', 'light']) {
+  test(`${theme}: профиль в шапке выглядит как поиск рядом`, async ({ page }) => {
+    await open(page, theme);
+    const look = () => page.evaluate(() => {
+      const a = getComputedStyle(document.getElementById('account-btn'));
+      const s = getComputedStyle(document.querySelector('.tb-search'));
+      const icon = document.querySelector('#account-btn > svg.icon');
+      return {
+        border: a.borderTopWidth, bg: a.backgroundColor, searchBg: s.backgroundColor,
+        radius: a.borderRadius, searchRadius: s.borderRadius,
+        icon: icon.getBoundingClientRect().width > 0, avatar: !!document.querySelector('#account-btn .tb-avatar'),
+      };
+    });
+    // Фон у пилюли меняется плавно (transition), а тема только что
+    // переключилась — ждём, пока переход доиграет.
+    await expect.poll(async () => { const l = await look(); return l.bg === l.searchBg; }, { message: 'заливка — как у поиска' }).toBe(true);
+    const guest = await look();
+    expect(guest.border, 'без рамки').toBe('0px');
+    expect(guest.radius).toBe(guest.searchRadius);
+    expect(guest.icon, 'у гостя — значок входа').toBe(true);
+
+    await page.evaluate(() => { currentUser = { id: 'u1', email: 'turan@example.com', name: 'Turan' }; renderAccountBtn(); });
+    const user = await look();
+    expect(user.avatar, 'у вошедшего — кружок с буквой').toBe(true);
+    expect(user.icon, 'и без человечка рядом').toBe(false);
+  });
+}
