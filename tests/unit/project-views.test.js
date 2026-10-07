@@ -87,7 +87,7 @@ const VERSIONS = [
   { id: 'v11', projectId: 'p1', name: '1.1', releasedAt: null, order: 1 },
   { id: 'vx', projectId: 'p2', name: 'чужая', releasedAt: null, order: 0 },
 ];
-const vctx = { defaultRate: 1000, activeTimer: null, now: NOW };
+const vctx = { rates: 1000, activeTimer: null, now: NOW };
 
 test('версии: сначала в работе, потом выпущенные — как дорожки доски', () => {
   const rows = versionRows([], VERSIONS, 'p1', vctx);

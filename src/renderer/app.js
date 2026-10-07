@@ -131,6 +131,7 @@ const el = {
   updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
 
   accountBtn: $('account-btn'), accountLabel: $('account-label'),
+  tbTimer: $('tb-timer'), tbTimerTime: $('tb-timer-time'), tbTimerName: $('tb-timer-name'), tbTimerStop: $('tb-timer-stop'),
   mobileTabbar: $('mobile-tabbar'),
   mobileBackToList: $('mobile-back-to-list'),
   authBackdrop: $('auth-backdrop'),
@@ -142,18 +143,29 @@ const el = {
   authCancel: $('auth-cancel'), authSubmit: $('auth-submit'),
   authName: $('auth-name'), authUsecases: $('auth-usecases'),
   authOnboardingSkip: $('auth-onboarding-skip'), authOnboardingSave: $('auth-onboarding-save'),
+  authOnboardingTitle: $('auth-onboarding-title'), authConsentSub: $('auth-consent-sub'),
+  authProfileFields: $('auth-profile-fields'), authConsentCheck: $('auth-consent-check'),
+  authConsentText: $('auth-consent-text'), authConsentDecline: $('auth-consent-decline'),
 
-  topbar: $('topbar'),
-  stTime: $('st-time'), stMoney: $('st-money'), stMonth: $('st-month'), stDone: $('st-done'), stRunning: $('st-running'),
+  stTime: $('st-time'), stMoney: $('st-money'), stDone: $('st-done'),
+  stToday: $('st-today'), stTodayMoney: $('st-today-money'), stWeek: $('st-week'), stWeekMoney: $('st-week-money'),
+  kpiWeekLabel: $('kpi-week-label'), kpiMonthLabel: $('kpi-month-label'),
+  dayTitle: $('day-title'), daySub: $('day-sub'), dayTrack: $('day-track'), dayHours: $('day-hours'),
+  dayAddEntry: $('day-add-entry'), dayOpen: $('day-open'),
+  homeProjects: $('home-projects'), homeProjGrid: $('home-proj-grid'), homeAllProjects: $('home-all-projects'),
+  homeDueList: $('home-due-list'), homeDueEmpty: $('home-due-empty'), homeDueNote: $('home-due-note'),
+  nowIsland: $('now-island'), nowLabel: $('now-label'), nowSince: $('now-since'), nowTitle: $('now-title'),
+  nowProj: $('now-proj'), nowBtn: $('now-btn'), nowTime: $('now-time'), nowMoney: $('now-money'), nowOpen: $('now-open'),
+  recentList: $('recent-list'), recentEmpty: $('recent-empty'),
 
-  homeView: $('home-view'), projectView: $('project-view'), calendarView: $('calendar-view'),
+  homeView: $('home-view'), projectsView: $('projects-view'), projectView: $('project-view'), timeView: $('time-view'),
   agTime: $('ag-time'), agMonth: $('ag-month'), agList: $('ag-list'),
   agDaynames: $('ag-daynames'), agAllday: $('ag-allday'), agAlldayRow: $('ag-allday-row'), agGutter: $('ag-gutter'),
-  agCols: $('ag-cols'), agScroll: $('ag-scroll'), agTitle: $('ag-title'), agTotal: $('ag-total'),
-  agModes: $('ag-modes'), agToday: $('ag-today'), agPrev: $('ag-prev'), agNext: $('ag-next'),
-  agMiniTitle: $('ag-mini-title'), agMiniDays: $('ag-mini-days'),
-  agMiniPrev: $('ag-mini-prev'), agMiniNext: $('ag-mini-next'),
-  agProjects: $('ag-projects'), agCreate: $('ag-create'),
+  agCols: $('ag-cols'), agScroll: $('ag-scroll'), agTitle: $('time-title'),
+  agModes: $('time-modes'), timeToday: $('time-today'), timePrev: $('time-prev'), timeNext: $('time-next'),
+  timeStatsToggle: $('time-stats-toggle'), agMain: $('ag-main'), calMain: $('cal-main'),
+  periodBar: $('period-bar'), periodBarRange: $('period-bar-range'), periodBarSum: $('period-bar-sum'), periodBarInfo: $('period-bar-info'),
+  agCreate: $('ag-create'),
   settingsView: $('settings-view'), settingsProfile: $('settings-profile'),
   settingsLangRow: $('settings-lang-row'), settingsLangValue: $('settings-lang-value'),
   settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
@@ -162,24 +174,27 @@ const el = {
   settingsAccountLabel: $('settings-account-label'), settingsAccountCard: $('settings-account-card'),
   settingsNameRow: $('settings-name-row'), settingsNameValue: $('settings-name-value'),
   settingsPasswordRow: $('settings-password-row'), settingsSignoutRow: $('settings-signout-row'),
+  settingsDeleteRow: $('settings-delete-row'),
   modalLabel2: $('modal-label2'), modalInput2: $('modal-input2'), modalError: $('modal-error'),
 
-  homeCount: $('home-count'),
-  pinnedSection: $('pinned-section'), pinnedTrack: $('pinned-track'),
-  projectsTrack: $('projects-track'), allLabel: $('all-label'),
+  homeCount: $('home-count'), projectsTrack: $('projects-track'),
   recentSection: $('recent-section'), recentTrack: $('recent-track'),
   homeEmpty: $('home-empty'), createProjectBtn: $('create-project-btn'),
-
-  miniCalTitle: $('mini-cal-title'), miniCalTot: $('mini-cal-tot'),
-  miniCal: $('mini-cal'), sideToday: $('side-today'), openCalendarBtn: $('open-calendar'),
 
   phDot: $('ph-dot'), phName: $('ph-name'), projectMenuBtn: $('project-menu-btn'),
   projTabs: [...document.querySelectorAll('#proj-tabs button')], projList: $('proj-list'),
   projBoard: $('proj-board'), projVersions: $('proj-versions'), ptabVerCount: $('ptab-ver-count'),
-  pverList: $('pver-list'), pverEmpty: $('pver-empty'), toggleListBtn: $('toggle-list-btn'),
+  pverList: $('pver-list'), pverEmpty: $('pver-empty'), projBack: $('proj-back'), phDesc: $('ph-desc'),
+  ppDone: $('pp-done'), ppOf: $('pp-of'), ppPct: $('pp-pct'), ppBar: $('pp-bar'), ppLegend: $('pp-legend'),
+  projVersionsCard: $('proj-versions-card'), pvRows: $('pv-rows'), pvAll: $('pv-all'), psList: $('ps-list'), psEmpty: $('ps-empty'),
+  taskView: $('task-view'), taskBack: $('task-back'), crumbProjects: $('crumb-projects'), crumbProject: $('crumb-project'), crumbTask: $('crumb-task'),
+  taskDoneBtn: $('task-done-btn'), timerRate: $('timer-rate'),
   navProjects: $('nav-projects'), navNewProject: $('nav-new-project'),
   boardCols: $('board-cols'),
-  boardStatuses: $('board-statuses'), stdlgBackdrop: $('stdlg-backdrop'), stList: $('st-list'), stAdd: $('st-add'), stdlgClose: $('stdlg-close'),
+  boardStatuses: $('board-statuses'), stList: $('st-list'), stAdd: $('st-add'),
+  pdlgTabs: [...document.querySelectorAll('#pdlg-tabs button')], pdlgLater: $('pdlg-later'),
+  pdlgRate: $('pdlg-rate'), pdlgRateUnit: $('pdlg-rate-unit'), pdlgRateHint: $('pdlg-rate-hint'), pdlgCurrency: $('pdlg-currency'),
+  pdlgTagList: $('pdlg-tag-list'), pdlgTagAdd: $('pdlg-tag-add'),
   verList: $('ver-list'), verAdd: $('ver-add'),
   boardEmpty: $('board-empty'),
 
@@ -188,11 +203,11 @@ const el = {
 
   tfStatus: [...document.querySelectorAll('.tf-status button')],
 
-  emptyState: $('empty-state'), detail: $('task-detail'),
+  detail: $('task-detail'),
   title: $('task-title'), pinTaskBtn: $('pin-task-btn'),
   taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), taskProps: $('task-props'), tabHistory: $('tab-history'),
   // Узел параметров задачи ездит между вкладкой и модалкой с календаря.
-  taskParams: document.querySelector('#task-props .task-params'),
+  taskParams: document.querySelector('#task-props .task-params'), taskTagsRow: $('task-tags-row'),
   tmdlgBackdrop: $('tmdlg-backdrop'), tmdlgDot: $('tmdlg-dot'), tmdlgTitle: $('tmdlg-title'),
   tmdlgProj: $('tmdlg-proj'), tmdlgTot: $('tmdlg-tot'), tmdlgEntry: $('tmdlg-entry'),
   tmdlgDate: $('tmdlg-date'), tmdlgStart: $('tmdlg-start'), tmdlgEnd: $('tmdlg-end'),
@@ -203,8 +218,8 @@ const el = {
   timerBtnIcon: $('timer-btn-icon'), timerBtnLabel: $('timer-btn-label'),
   deleteBtn: $('delete-task-btn'), exportTaskBtn: $('export-task-btn'),
   exportProjectBtn: $('export-project-btn'), exportCalendarBtn: $('export-calendar-btn'),
-  statsView: $('stats-view'), spTime: $('sp-time'), spMoney: $('sp-money'),
-  spMonth: $('sp-month'), spDone: $('sp-done'), spRunning: $('sp-running'),
+  spTime: $('sp-time'), spMoney: $('sp-money'),
+  spMonth: $('sp-month'), spDone: $('sp-done'),
   tfVersion: $('tf-version'), tfVersionRow: $('task-filter-version'),
   sfProject: $('sf-project'), sfVersion: $('sf-version'), sfReset: $('sf-reset'),
   exportAllBtn: $('export-all-btn'),
@@ -226,6 +241,8 @@ const el = {
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
   settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
   settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
+  settingsLegalPrivacy: $('settings-legal-privacy'), settingsLegalTerms: $('settings-legal-terms'),
+  settingsLegalDocs: $('settings-legal-docs'),
   settingsNotifState: $('settings-notif-state'),
   notifList: $('notif-list'), notifEmpty: $('notif-empty'), notifSeen: $('notif-seen'),
   dueDateBtn: $('due-date-btn'), dueState: $('due-state'),
@@ -235,9 +252,8 @@ const el = {
   sessionList: $('session-list'), sessionCount: $('session-count'),
   sessionEmpty: $('session-empty'), addSessionBtn: $('add-session-btn'),
 
-  calModes: [...document.querySelectorAll('.cal-modes button')],
-  calPrev: $('cal-prev'), calNext: $('cal-next'), calToday: $('cal-today'),
-  calTitle: $('cal-title'), calDays: $('cal-days'),
+  calModes: [],
+  calTitle: $('time-title'), calDays: $('cal-days'),
   calWeekdays: $('cal-weekdays'),
   calPeriodToggle: $('cal-period-toggle'),
   rangeFrom: $('range-from'), rangeTo: $('range-to'),
@@ -397,32 +413,36 @@ const monthLabel = (y, m) => `${capFirst(new Date(y, m, 1).toLocaleDateString(lo
 
 const moneyFmt = () => new Intl.NumberFormat(locale(), { maximumFractionDigits: 2 });
 
-
-const currencySym = () => {
-  const c = state.settings && state.settings.currency;
-  return CURRENCIES[c] || c || '₽';
-};
-
 // Расчёт денег и сводки живут в core/money.js: там их можно проверить
 // тестом, потому что ставка, идущий таймер и текущий момент приходят
 // параметрами. Здесь — обёртки с прежними именами, подставляющие state.
 const defaultRate = () => Number(state.settings && state.settings.hourlyRate) || 0;
-const effectiveRate = (task) => Core.effectiveRate(task, defaultRate());
+/** Ставки для ядра: общая и свои у проектов (см. core/money.js). */
+const rates = () => ({
+  default: defaultRate(),
+  byProject: Object.fromEntries(state.projects.filter((p) => p.rate !== null && p.rate !== undefined).map((p) => [p.id, p.rate])),
+});
+/** То же, но деньги считаются только по проектам в основной валюте — для
+ *  общих итогов по всем проектам: складывать рубли с долларами нельзя. */
+const ratesMain = () => ({ ...rates(), scope: Core.moneyScope(state.tasks, state.projects, state.settings.currency) });
+const currencyOf = (projectId) => Core.projectCurrency(getProject(projectId), state.settings.currency);
+const symOf = (code) => CURRENCIES[code] || code || '₽';
+const effectiveRate = (task) => Core.effectiveRate(task, rates());
 const hasOwnRate = Core.hasOwnRate;
-const sessionRate = (s, task) => Core.sessionRate(s, task, defaultRate());
-const sessionMoney = (s, task) => Core.sessionMoney(s, task, defaultRate());
-const earnedOf = (task) => Core.earnedOf(task, defaultRate(), state.activeTimer, Date.now());
-const earnedShown = (task, earned) => Core.earnedShown(task, defaultRate(), earned);
+const sessionMoney = (s, task) => Core.sessionMoney(s, task, rates());
+const earnedOf = (task) => Core.earnedOf(task, rates(), state.activeTimer, Date.now());
+const earnedShown = (task, earned) => Core.earnedShown(task, rates(), earned);
 const allSessionPairs = () => Core.allSessionPairs(state.tasks);
-const aggregateDays = () => Core.aggregateDays(state.tasks, defaultRate());
-const rangeAgg = (from, to) => Core.rangeAgg(state.tasks, from, to, defaultRate());
+const aggregateDays = () => Core.aggregateDays(state.tasks, ratesMain());
+const rangeAgg = (from, to) => Core.rangeAgg(state.tasks, from, to, ratesMain());
 const tasksDoneOnDay = (key) => Core.tasksDoneOnDay(state.tasks, key);
-const projectMoney = (id) => Core.projectMoney(tasksOf(id), defaultRate(), state.activeTimer, Date.now());
+const projectMoney = (id) => Core.projectMoney(tasksOf(id), rates(), state.activeTimer, Date.now());
 const projectMs = (id) => Core.projectMs(tasksOf(id), state.activeTimer, Date.now());
 const reminderTime = Core.reminderTime;
 const dueState = (task) => Core.dueState(task, Date.now());
 
-const fmtMoney = (n) => `${moneyFmt().format(Math.round((n + Number.EPSILON) * 100) / 100)} ${currencySym()}`;
+/** Сумма с валютой: по умолчанию основной, у проекта — своей. */
+const fmtMoney = (n, code) => `${moneyFmt().format(Math.round((n + Number.EPSILON) * 100) / 100)} ${symOf(code || state.settings.currency)}`;
 
 const { REMIND_PRESETS, REMIND_LABEL } = Core;
 
@@ -448,7 +468,7 @@ function toast(message) {
 const anyDialogOpen = () =>
   !el.modalBackdrop.hidden || !el.pdlgBackdrop.hidden || !el.sdlgBackdrop.hidden ||
   !el.confirmBackdrop.hidden || !el.searchPanel.hidden || !el.expdlgBackdrop.hidden ||
-  !el.stdlgBackdrop.hidden || !el.tagdlgBackdrop.hidden || !el.rpdlgBackdrop.hidden ||
+  !el.tagdlgBackdrop.hidden || !el.rpdlgBackdrop.hidden ||
   !el.tmdlgBackdrop.hidden;
 
 // ---------------------------------------------------------------------------
@@ -604,6 +624,11 @@ function openExternalLink(url) {
 
 el.settingsAboutUs.addEventListener('click', () => openExternalLink(LANDING_URL));
 el.settingsAboutBlog.addEventListener('click', () => openExternalLink(LANDING_URL + '/blog.html'));
+/** Правовой документ на лендинге — на языке приложения. */
+const openLegal = (doc) => openExternalLink(Core.legalUrl(LANDING_URL, doc, lang()));
+el.settingsLegalPrivacy.addEventListener('click', () => openLegal('privacy'));
+el.settingsLegalTerms.addEventListener('click', () => openLegal('terms'));
+el.settingsLegalDocs.addEventListener('click', () => openLegal('legal'));
 el.settingsSyncToggle.addEventListener('click', () => {
   toggleSyncEnabled();
   renderSettings();
@@ -634,6 +659,7 @@ el.settingsPasswordRow.addEventListener('click', async () => {
   toast(t(ok ? 'profile.password_updated' : 'profile.update_failed'));
 });
 el.settingsSignoutRow.addEventListener('click', signOut);
+el.settingsDeleteRow.addEventListener('click', deleteAccount);
 el.settingsCurrency.addEventListener('click', () => openCurrencyMenu(el.settingsCurrency));
 
 if (el.mobileBackToList) {
@@ -689,7 +715,24 @@ const USE_CASES = ['personal', 'freelance', 'team', 'other'];
 let selectedUseCase = null;
 
 function renderAccountBtn() {
-  el.accountLabel.textContent = currentUser ? (currentUser.name || currentUser.email) : t('auth.sign_in_nav');
+  const name = currentUser ? (currentUser.name || currentUser.email) : t('auth.sign_in_nav');
+  el.accountLabel.textContent = name;
+  // Кружок с первой буквой — только у вошедшего: у гостя пилюля остаётся
+  // кнопкой входа со значком.
+  const avatar = el.accountBtn.querySelector('.tb-avatar');
+  const icon0 = el.accountBtn.querySelector('.icon');
+  if (currentUser) {
+    if (!avatar) {
+      const a = document.createElement('span');
+      a.className = 'tb-avatar';
+      el.accountBtn.insertBefore(a, el.accountLabel);
+    }
+    el.accountBtn.querySelector('.tb-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase();
+    if (icon0) icon0.hidden = true;
+  } else {
+    if (avatar) avatar.remove();
+    if (icon0) icon0.hidden = false;
+  }
 }
 
 /** Страница настроек — зеркалит то, что есть в настройках мобильного
@@ -705,33 +748,64 @@ function renderAccountBtn() {
 /** Страница «Статистика»: четыре карточки, как на главной, и под ними
  *  календарь. Разбивки по проектам, статусам и задачам убраны — то же самое
  *  теперь видно в правой панели календаря, разложенное по проектам. */
+/** Раздел «Время»: шапка с режимами, числа, сетка (часовая или итогов),
+ *  справа день. Режим «Месяц» — сетка итогов статистики с выбором периода;
+ *  остальные режимы — расписание (core/agenda.js). */
+function renderTimePage() {
+  const mode = timeMode();
+  const month = mode === 'month';
+  if (!month) agenda.mode = mode;
+  el.agModes.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+  el.timeView.classList.toggle('stats-hidden', !!state.ui.timeStatsHidden);
+  el.timeStatsToggle.setAttribute('aria-pressed', String(!!state.ui.timeStatsHidden));
+  const hideLabel = t(state.ui.timeStatsHidden ? 'time.show_stats' : 'time.hide_stats');
+  el.timeStatsToggle.title = hideLabel;
+  el.timeStatsToggle.setAttribute('aria-label', hideLabel);
+  el.agMain.hidden = month;
+  el.calMain.hidden = !month;
+  renderStatsPage();
+  if (month) {
+    calState.mode = 'month';
+    el.calWeekdays.hidden = false;
+    renderCalendar();
+  } else {
+    // Правая панель и итог «за неделю» идут за сеткой расписания.
+    const anchor = new Date(agenda.anchor);
+    if (mode === 'week') { calState.mode = 'week'; calState.weekStart = mondayOf(anchor); }
+    else if (mode === 'agenda') { calState.mode = 'month'; calState.year = anchor.getFullYear(); calState.month = anchor.getMonth(); }
+    else { calState.mode = 'day'; calState.day = startOfDay(anchor); calState.selected = dayKey(anchor); }
+    renderAgendaPage();
+    el.calViewTot.classList.remove('period');
+    renderViewTotal();
+    renderCalDayPanel();
+  }
+  el.periodBarInfo.hidden = !calState.periodOn;
+}
+
+function setTimeMode(mode) {
+  state.ui.timeMode = mode;
+  if (mode === 'month') { calState.mode = 'month'; if (calState.periodOn) seedRangeFromView(); }
+  else agenda.mode = mode;
+  render();
+  scheduleSave();
+}
+
 function renderStatsPage() {
   renderFilterBar(statsNodes(), statsFilter, () => render());
   const tasks = statsTasks();
 
   const totalMs = tasks.reduce((a, t2) => a + taskElapsedMs(t2), 0);
-  const totalMoney = tasks.reduce((a, t2) => a + earnedOf(t2), 0);
+  const totalMoney = tasks.reduce((a, t2) => a + Core.earnedOf(t2, statsRates(), state.activeTimer, Date.now()), 0);
   el.spTime.textContent = fmtDur(totalMs);
-  el.spMoney.textContent = fmtMoney(totalMoney);
+  el.spMoney.textContent = fmtMoney(totalMoney, statsCurrency());
 
   const now = new Date();
   const monthFrom = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthTo = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-  el.spMonth.textContent = fmtMoney(Core.rangeAgg(tasks, monthFrom, monthTo, defaultRate()).money);
+  el.spMonth.textContent = fmtMoney(Core.rangeAgg(tasks, monthFrom, monthTo, statsRates()).money, statsCurrency());
 
   const done = tasks.filter((t2) => t2.done).length;
   el.spDone.textContent = tasks.length ? `${done} / ${tasks.length}` : '0';
-
-  // Идущий таймер показываем, только если его задача попала под фильтр:
-  // иначе строка спорила бы с цифрами прямо над ней.
-  const ticking = state.activeTimer && getTask(state.activeTimer.taskId);
-  const running = ticking && tasks.includes(ticking) ? ticking : null;
-  el.spRunning.hidden = !running;
-  if (running) {
-    const sec = fmtClock(Date.now() - new Date(state.activeTimer.startedAt).getTime());
-    el.spRunning.innerHTML = `<span class="r-name">${icon('clock')} ${escapeHtml(running.title || t('task.no_name'))}</span><span class="r-time">${sec}</span>`;
-    el.spRunning.onclick = () => { openProject(running.projectId); selectTask(running.id); };
-  }
 }
 
 function renderSettings() {
@@ -817,11 +891,42 @@ function showAuthError(key) {
   el.authError.textContent = t(key);
   el.authError.hidden = false;
 }
-function openOnboarding() {
+/** Шаг после входа. 'full' — новый аккаунт: имя и назначение (оба
+ *  необязательны) и согласие. 'consent' — профиль есть, но принятая
+ *  редакция документов старая или её нет: только согласие. Дальше в обоих
+ *  случаях — лишь с включённым переключателем согласия (core/legal.js). */
+let onboardingMode = 'full';
+function openOnboarding(mode) {
+  onboardingMode = mode === 'consent' ? 'consent' : 'full';
+  const consentOnly = onboardingMode === 'consent';
   selectedUseCase = null;
   el.authName.value = '';
   buildUsecaseButtons();
+  el.authProfileFields.hidden = consentOnly;
+  el.authConsentSub.hidden = !consentOnly;
+  el.authOnboardingSkip.hidden = consentOnly;
+  el.authOnboardingTitle.textContent = t(consentOnly ? 'auth.consent_title' : 'auth.onboarding_title');
+  el.authOnboardingSave.textContent = t(consentOnly ? 'auth.consent_accept' : 'common.continue');
+  renderConsentText();
+  setConsent(false);
   showAuthStep('onboarding');
+  // Шаг согласия открывается и при тихом восстановлении сессии на старте —
+  // тогда окна входа на экране ещё нет.
+  el.authBackdrop.hidden = false;
+}
+const consentGiven = () => el.authConsentCheck.getAttribute('aria-pressed') === 'true';
+function setConsent(on) {
+  el.authConsentCheck.setAttribute('aria-pressed', String(on));
+  el.authOnboardingSave.disabled = !on;
+  el.authOnboardingSkip.disabled = !on;
+}
+/** «Мне уже исполнилось 16 лет. Я принимаю Условия и Политику» — со ссылками
+ *  на документы на языке приложения. */
+function renderConsentText() {
+  const link = (doc, key) => `<a href="${escapeHtml(Core.legalUrl(LANDING_URL, doc, lang()))}" data-legal="${doc}">${escapeHtml(t(key))}</a>`;
+  el.authConsentText.innerHTML = escapeHtml(t('auth.consent_text', { age: Core.MIN_AGE, terms: '{terms}', privacy: '{privacy}' }))
+    .replace('{terms}', link('terms', 'auth.consent_terms'))
+    .replace('{privacy}', link('privacy', 'auth.consent_privacy'));
 }
 
 /** После успешного входа: если для пользователя ещё нет профиля — это его
@@ -837,11 +942,17 @@ async function afterSignedIn(opts) {
   if (!user) return;
   let profile = null;
   try {
-    const { data: row } = await sb.from('profiles').select('name').eq('id', user.id).maybeSingle();
+    const { data: row } = await sb.from('profiles').select('name, terms_version, age_confirmed').eq('id', user.id).maybeSingle();
     profile = row;
   } catch (err) { console.error('Не удалось прочитать профиль:', err); }
   if (!profile) {
-    if (!silent) openOnboarding();
+    if (!silent) openOnboarding('full');
+    return;
+  }
+  // Профиль есть, а согласия с нынешней редакцией нет — без него аккаунт
+  // дальше не работает, даже при тихом восстановлении на старте.
+  if (Core.needsConsent(profile)) {
+    openOnboarding('consent');
     return;
   }
   currentUser = { id: user.id, email: user.email, name: profile.name };
@@ -902,24 +1013,32 @@ async function handleSignup() {
   }
 }
 
-async function saveOnboarding() {
+/** Сохраняет шаг после входа и доводит вход до конца. withProfile=false —
+ *  «Пропустить»: только согласие, без имени и назначения. Email в профиль
+ *  не пишется: он и так есть в аккаунте, копия ни для чего не нужна. Без
+ *  согласия не сохраняется ничего. */
+async function saveOnboarding(withProfile = true) {
+  if (!consentGiven()) return;
   try {
     const { data } = await sb.auth.getUser();
     const user = data && data.user;
-    if (user) {
-      await sb.from('profiles').upsert({
+    if (!user) return;
+    const consent = Core.consentFields(Date.now());
+    const { error } = onboardingMode === 'consent'
+      ? await sb.from('profiles').update(consent).eq('id', user.id)
+      : await sb.from('profiles').upsert({
         id: user.id,
-        email: user.email,
-        name: el.authName.value.trim() || null,
-        use_case: selectedUseCase,
+        ...(withProfile ? { name: el.authName.value.trim() || null, use_case: selectedUseCase } : {}),
+        ...consent,
       });
-      currentUser = { id: user.id, email: user.email, name: el.authName.value.trim() || null };
-      renderAccountBtn();
-      await syncOnSignIn();
-    }
-  } catch (err) { console.error('Не удалось сохранить профиль:', err); }
-  closeAuthModal();
-  toast(t('auth.signed_in_toast'));
+    if (error) throw error;
+  } catch (err) {
+    console.error('Не удалось сохранить профиль:', err);
+    toast(t('auth.error_generic'));
+    return;
+  }
+  // Профиль и согласие на месте — afterSignedIn закроет окно и запустит синк.
+  await afterSignedIn();
 }
 
 /** Имя живёт в таблице profiles (не в auth-метаданных) — так же, как в
@@ -957,6 +1076,32 @@ async function signOut() {
   // без этого после выхода она продолжала показывать вошедшего.
   if (state.ui.view === 'settings') renderSettings();
   toast(t('auth.signed_out_toast'));
+}
+
+/** Удаление аккаунта. Клиент держит только ключ anon и удалить пользователя
+ *  сам не может — это делает функция delete_my_account в базе
+ *  (supabase/legal.sql): стирает того, кто её вызвал, а профиль, проекты,
+ *  задачи и синхронизация уходят следом каскадом. Копия данных на
+ *  устройстве остаётся: приложение работает и без аккаунта. */
+async function deleteAccount() {
+  if (!currentUser) return;
+  const ok = await confirmDialog(t('account.delete_confirm'), {
+    title: t('account.delete_title'), okLabel: t('account.delete'), danger: true,
+  });
+  if (!ok) return;
+  const { error } = await sb.rpc('delete_my_account');
+  if (error) {
+    console.error('Не удалось удалить аккаунт:', error);
+    toast(t('account.delete_error'));
+    return;
+  }
+  unsubscribeSyncRealtime();
+  // Пользователя на сервере уже нет — выходим только здесь, без запроса.
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (err) { console.error('Не удалось выйти:', err); }
+  currentUser = null;
+  renderAccountBtn();
+  if (state.ui.view === 'settings') renderSettings();
+  toast(t('account.deleted_toast'));
 }
 
 async function handleGoogleSignIn() {
@@ -1018,25 +1163,31 @@ el.accountBtn.addEventListener('click', () => {
   } else openAuthModal();
 });
 el.authCancel.addEventListener('click', closeAuthModal);
-el.authBackdrop.addEventListener('click', (e) => { if (e.target === el.authBackdrop) closeAuthModal(); });
+// Шаг согласия не закрывается ни щелчком мимо окна, ни Escape: иначе он
+// обходится без ответа. Выйти из него — только «Выйти» или «Продолжить».
+const authDismissible = () => el.authStepOnboarding.hidden;
+el.authBackdrop.addEventListener('click', (e) => { if (e.target === el.authBackdrop && authDismissible()) closeAuthModal(); });
+el.authBackdrop.addEventListener('keydown', (e) => { if (e.key === 'Escape' && authDismissible()) closeAuthModal(); });
+el.authConsentCheck.addEventListener('click', () => setConsent(!consentGiven()));
+el.authConsentText.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-legal]');
+  if (a) { e.preventDefault(); openLegal(a.dataset.legal); return; }
+  setConsent(!consentGiven()); // подпись работает как <label>
+});
+el.authConsentDecline.addEventListener('click', async () => {
+  try { await sb.auth.signOut(); } catch (err) { console.error('Не удалось выйти:', err); }
+  currentUser = null;
+  closeAuthModal();
+  renderAccountBtn();
+  toast(t('auth.signed_out_toast'));
+});
 el.authSubmit.addEventListener('click', handleAuthSubmit);
 el.authSignupBtn.addEventListener('click', handleSignup);
 el.authGoogleBtn.addEventListener('click', handleGoogleSignIn);
-el.authOnboardingSave.addEventListener('click', saveOnboarding);
-el.authOnboardingSkip.addEventListener('click', async () => {
-  try {
-    const { data } = await sb.auth.getUser();
-    const user = data && data.user;
-    if (user) {
-      // минимальная строка профиля — иначе онбординг будет всплывать при каждом входе.
-      await sb.from('profiles').upsert({ id: user.id, email: user.email });
-      currentUser = { id: user.id, email: user.email, name: null };
-      renderAccountBtn();
-    }
-  } catch (err) { console.error('Не удалось сохранить профиль:', err); }
-  closeAuthModal();
-  toast(t('auth.signed_in_toast'));
-});
+el.authOnboardingSave.addEventListener('click', () => saveOnboarding(true));
+// «Пропустить» пропускает имя и назначение, но не согласие: строка профиля
+// с отметкой о нём всё равно нужна — иначе шаг всплывал бы при каждом входе.
+el.authOnboardingSkip.addEventListener('click', () => saveOnboarding(false));
 el.authConfirmOk.addEventListener('click', closeAuthModal);
 [el.authEmail, el.authPassword].forEach((input) => {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); });
@@ -1283,19 +1434,24 @@ function render() {
     if (pid) { state.ui.projectId = pid; state.ui.projectTab = 'board'; }
   }
   if (state.ui.view === 'project' && !getProject(state.ui.projectId)) state.ui.view = 'home';
+  aliasTimeView();
+  // Страница задачи без задачи — это её проект, а без проекта — «Сегодня».
+  if (state.ui.view === 'task') {
+    const task = getTask(selectedId);
+    if (!task) state.ui.view = getProject(state.ui.projectId) ? 'project' : 'home';
+    else state.ui.projectId = task.projectId;
+  }
   const v = state.ui.view;
 
   document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
-  document.body.classList.toggle('has-selected-task', v === 'project' && projectTab() === 'list' && !!selectedId);
   renderStats();
   renderNotifBadge();
-  el.topbar.hidden = v !== 'home';
 
   // Открытый проект подсвечен в меню сам — «Обзор» при этом не горит.
   el.navItems.forEach((tab) => tab.classList.toggle('active', tab.dataset.view === v));
   renderNavProjects();
 
-  const views = { home: el.homeView, project: el.projectView, calendar: el.calendarView, stats: el.statsView, settings: el.settingsView };
+  const views = { home: el.homeView, projects: el.projectsView, project: el.projectView, task: el.taskView, time: el.timeView, settings: el.settingsView };
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1303,11 +1459,10 @@ function render() {
   }
 
   if (v === 'home') renderHome();
+  else if (v === 'projects') renderProjects();
   else if (v === 'project') renderProjectPage();
-  else if (v === 'calendar') renderAgendaPage();
-  // В «Статистике» остался прежний календарь: он про деньги и итоги,
-  // а страница «Календарь» — про расписание.
-  else if (v === 'stats') { renderStatsPage(); renderCalendar(); }
+  else if (v === 'task') renderTaskPage();
+  else if (v === 'time') renderTimePage();
   else if (v === 'settings') renderSettings();
 
   // Модалка задачи живёт поверх любой страницы, и общий render() про неё
@@ -1315,28 +1470,34 @@ function render() {
   if (!el.tmdlgBackdrop.hidden) renderTaskModal();
 }
 
+/** Старые имена экранов — «calendar» и «stats» — с 7 октября 2026 один
+ *  раздел «Время»: календарь открывается в своём последнем режиме,
+ *  статистика — месяцем. */
+function aliasTimeView() {
+  if (state.ui.view === 'calendar') {
+    state.ui.view = 'time';
+    if (timeMode() === 'month') state.ui.timeMode = AG_TIME_MODES.includes(agenda.mode) || agenda.mode === 'agenda' ? agenda.mode : 'week';
+  } else if (state.ui.view === 'stats') {
+    state.ui.view = 'time';
+    state.ui.timeMode = 'month';
+  }
+}
+const timeMode = () => state.ui.timeMode || 'week';
+
 function openView(view) {
   flushEditor();
   closeMenu();
   closeSearch();
   state.ui.view = view;
+  aliasTimeView();
   render();
   scheduleSave();
-  setTimeout(updateCarousels, 60);
 }
 
 function toggleNav() {
   state.ui.navCollapsed = !state.ui.navCollapsed;
   document.body.classList.toggle('nav-collapsed', state.ui.navCollapsed);
   scheduleSave();
-  // Карусели пересчитываем по ходу анимации сворачивания рейла (не только в конце),
-  // чтобы стрелки прокрутки не "прыгали" при появлении лишнего места.
-  const start = performance.now();
-  const step = (tm) => {
-    updateCarousels();
-    if (tm - start < 260) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
 }
 
 // ---------------------------------------------------------------------------
@@ -1344,61 +1505,258 @@ function toggleNav() {
 // ---------------------------------------------------------------------------
 
 function renderStats() {
-  const totalMs = state.tasks.reduce((a, t2) => a + taskElapsedMs(t2), 0);
-  el.stTime.textContent = fmtDur(totalMs);
-  el.stMoney.textContent = fmtMoney(state.tasks.reduce((a, t2) => a + earnedOf(t2), 0));
-
+  // Три числа «Сегодня»: день, неделя, месяц — время и деньги в основной
+  // валюте. Всё время и все деньги за всю историю живут на «Времени».
   const now = new Date();
+  const today = aggregateDays().get(dayKey(now)) || { ms: 0, money: 0 };
+  const weekFrom = mondayOf(now);
+  const weekTo = new Date(weekFrom.getTime() + 6 * 86400000);
+  weekTo.setHours(23, 59, 59, 999);
+  const week = rangeAgg(weekFrom, weekTo);
   const monthFrom = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthTo = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-  el.stMonth.textContent = fmtMoney(rangeAgg(monthFrom, monthTo).money);
+  const month = rangeAgg(monthFrom, monthTo);
+
+  el.stToday.textContent = fmtDur(today.ms);
+  el.stTodayMoney.textContent = fmtMoney(today.money);
+  el.kpiWeekLabel.textContent = t('home.week_label', { range: `${fmtDateShort(weekFrom)}–${fmtDateShort(weekTo)}` });
+  el.stWeek.textContent = fmtDur(week.ms);
+  el.stWeekMoney.textContent = fmtMoney(week.money);
+  el.kpiMonthLabel.textContent = monthLabel(now.getFullYear(), now.getMonth());
+  el.stTime.textContent = fmtDur(month.ms);
+  el.stMoney.textContent = fmtMoney(month.money);
 
   const total = state.tasks.length;
   const done = state.tasks.filter((t2) => t2.done).length;
-  el.stDone.textContent = total ? `${done} / ${total}` : '0';
+  el.stDone.textContent = total ? `· ${t('home.tasks_done', { done, total })}` : '';
+  renderTbTimer();
+}
 
+/** Капсула идущей задачи в шапке: время с начала записи и название. Без
+ *  идущего таймера капсулы нет — пустая пилюля в шапке только путала бы. */
+function renderTbTimer() {
+  const at = state.activeTimer;
+  const task = at && getTask(at.taskId);
+  el.tbTimer.hidden = !task;
+  if (!task) return;
+  el.tbTimerTime.textContent = fmtClock(Date.now() - new Date(at.startedAt).getTime());
+  el.tbTimerName.textContent = task.title || t('task.no_name');
+}
+
+// ---------------------------------------------------------------------------
+// Сегодня
+// ---------------------------------------------------------------------------
+
+const SVG_PLAY = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.6l8 5.4-8 5.4z"/></svg>';
+const SVG_STOP = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="2"/></svg>';
+const hm = (d) => new Date(d).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+
+function renderHome() {
+  renderDayIsland();
+  renderHomeProjects();
+  renderHomeDue();
+  renderNowIsland();
+  renderRecentList();
+}
+
+/** Записи сегодняшнего дня вместе с идущей — для ленты по часам. */
+function todaySessions() {
+  const now = new Date();
+  const key = dayKey(now);
+  const out = [];
+  for (const task of state.tasks) {
+    for (const sess of task.sessions || []) {
+      const start = new Date(sess.start);
+      if (dayKey(start) !== key) continue;
+      out.push({ task, start, end: new Date(sess.end || sess.start), running: false });
+    }
+  }
   const at = state.activeTimer;
   const rt = at && getTask(at.taskId);
-  el.stRunning.hidden = !rt;
   if (rt) {
-    const sec = fmtClock(Date.now() - new Date(at.startedAt).getTime());
-    el.stRunning.innerHTML =
-      `<span class="r-name">${icon('clock')} ${escapeHtml(rt.title || t('task.no_name'))}</span><span class="r-time">${sec}</span>`;
+    const start = new Date(at.startedAt);
+    if (dayKey(start) === key) out.push({ task: rt, start, end: now, running: true });
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+
+/** День: дата, записано, лента записей с 8 до 20 (шире, если записи были
+ *  раньше или позже), идущая запись — акцентом, «сейчас» — красной линией. */
+function renderDayIsland() {
+  const now = new Date();
+  const title = now.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
+  el.dayTitle.textContent = title.charAt(0).toUpperCase() + title.slice(1);
+  const agg = aggregateDays().get(dayKey(now)) || { ms: 0, money: 0 };
+  const at = state.activeTimer;
+  const since = at ? ` · ${t('home.since', { time: hm(at.startedAt) })}` : '';
+  el.daySub.innerHTML = `${escapeHtml(t('home.recorded'))} <b>${escapeHtml(fmtDur(agg.ms))}</b> · <b>${escapeHtml(fmtMoney(agg.money))}</b><span class="muted">${escapeHtml(since)}</span>`;
+
+  const items = todaySessions();
+  let h0 = 8;
+  let h1 = 20;
+  for (const it of items) {
+    h0 = Math.min(h0, it.start.getHours());
+    h1 = Math.max(h1, Math.min(24, it.end.getHours() + 1));
+  }
+  const span = (h1 - h0) * 60;
+  const minOf = (d) => d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60 - h0 * 60;
+  const pct = (m) => Math.max(0, Math.min(100, (m / span) * 100));
+  el.dayTrack.innerHTML = `<div class="day-grid">${'<i></i>'.repeat(h1 - h0)}</div>`;
+  for (const it of items) {
+    const left = pct(minOf(it.start));
+    const width = Math.max(0.4, pct(minOf(it.end)) - left);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'day-blk' + (it.running ? ' run' : '');
+    b.style.left = `${left}%`;
+    b.style.width = `${width}%`;
+    const name = it.task.title || t('task.no_name');
+    b.title = `${name} · ${hm(it.start)}–${it.running ? '…' : hm(it.end)}`;
+    b.setAttribute('aria-label', b.title);
+    if (width > 6) b.textContent = it.running ? `${t('task.running_now')} · ${fmtShort(it.end - it.start)}` : name;
+    b.addEventListener('click', () => { openProject(it.task.projectId); selectTask(it.task.id); });
+    el.dayTrack.appendChild(b);
+  }
+  const nowMin = minOf(now);
+  if (nowMin >= 0 && nowMin <= span) {
+    const line = document.createElement('i');
+    line.className = 'day-now';
+    line.style.left = `${pct(nowMin)}%`;
+    el.dayTrack.appendChild(line);
+  }
+  el.dayHours.innerHTML = Array.from({ length: h1 - h0 }, (_, i) => `<span>${pad2(h0 + i)}</span>`).join('');
+}
+
+/** Проекты по последней записи времени, свежие первыми. */
+function recentProjects(limit) {
+  const last = new Map();
+  for (const task of state.tasks) {
+    for (const sess of task.sessions || []) {
+      const e = new Date(sess.end || sess.start).getTime();
+      if (e > (last.get(task.projectId) || 0)) last.set(task.projectId, e);
+    }
+  }
+  // Проекты с записями — по последней записи; без записей — после них, в
+  // порядке создания (новые выше).
+  return state.projects
+    .map((p) => ({ p, last: last.get(p.id) || 0, created: new Date(p.createdAt || 0).getTime() }))
+    .sort((a, b) => (b.last - a.last) || (b.created - a.created))
+    .slice(0, limit)
+    .map((x) => x.p);
+}
+
+function renderHomeProjects() {
+  const list = recentProjects(3);
+  el.homeProjects.hidden = list.length === 0;
+  el.homeProjGrid.innerHTML = '';
+  for (const p of list) {
+    const tasks = tasksOf(p.id);
+    const done = tasks.filter((t2) => t2.done).length;
+    const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'hp-card';
+    b.style.setProperty('--pc', p.color || PALETTE[0]);
+    b.innerHTML = `<span class="hp-head"><i class="hp-dot"></i><span class="hp-name">${escapeHtml(p.name)}</span></span>`
+      + `<span class="hp-figs"><span><b>${escapeHtml(fmtDur(projectMs(p.id)))}</b> · ${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span><span>${done}/${tasks.length}</span></span>`
+      + `<span class="hp-bar"><i style="width:${pct}%"></i></span>`;
+    b.addEventListener('click', () => openProject(p.id));
+    el.homeProjGrid.appendChild(b);
+  }
+}
+
+/** Сроки — та же лента, что в колокольчике: просроченное, ближайшее,
+ *  сработавшие напоминания. */
+function renderHomeDue() {
+  const feed = notificationFeed().slice(0, 6);
+  el.homeDueList.innerHTML = '';
+  el.homeDueEmpty.hidden = feed.length > 0;
+  const overdue = feed.filter((n) => n.kind === 'overdue').length;
+  el.homeDueNote.textContent = overdue ? t('home.overdue_n', { n: overdue }) : '';
+  el.homeDueNote.classList.toggle('danger', overdue > 0);
+  for (const n of feed) {
+    const p = getProject(n.task.projectId);
+    const li = document.createElement('li');
+    li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
+    li.innerHTML = `<span class="rl-main"><span class="rl-name">${escapeHtml(n.task.title || t('task.no_name'))}</span>`
+      + `<span class="rl-sub"><i class="rl-dot"></i>${escapeHtml(p ? p.name : '')}${n.kind === 'reminder' ? ` · ${escapeHtml(t('notif.reminder'))}` : ''}</span></span>`
+      + `<span class="rl-when${n.kind === 'overdue' ? ' overdue' : ''}">${escapeHtml(dueShort(n.task))}</span>`;
+    li.addEventListener('click', () => { openProject(n.task.projectId); selectTask(n.task.id); });
+    el.homeDueList.appendChild(li);
+  }
+}
+
+/** Задача для острова «Сейчас идёт»: идущая, а если таймер стоит —
+ *  последняя, чтобы продолжить одним нажатием. */
+const nowTask = () => (state.activeTimer && getTask(state.activeTimer.taskId)) || recentTasks(1)[0] || null;
+
+function renderNowIsland() {
+  const at = state.activeTimer;
+  const running = at && getTask(at.taskId);
+  const task = running || recentTasks(1)[0] || null;
+  el.nowIsland.hidden = !task;
+  if (!task) return;
+  const p = getProject(task.projectId);
+  el.nowIsland.classList.toggle('idle', !running);
+  el.nowLabel.textContent = running ? t('home.now_running') : t('home.now_idle');
+  el.nowSince.textContent = running ? hm(at.startedAt) : t('home.continue');
+  el.nowTitle.textContent = task.title || t('task.no_name');
+  el.nowProj.innerHTML = `<i class="rl-dot" style="--pc:${p ? p.color : PALETTE[0]}"></i>${escapeHtml(p ? p.name : '')}`;
+  el.nowBtn.className = 'sq-btn' + (running ? ' run' : '');
+  el.nowBtn.innerHTML = running ? SVG_STOP : SVG_PLAY;
+  el.nowBtn.setAttribute('aria-label', running ? t('timer.stop') : t('timer.start'));
+  el.nowTime.textContent = fmtClock(taskElapsedMs(task));
+  const earned = earnedOf(task);
+  el.nowMoney.textContent = earnedShown(task, earned) ? fmtMoney(earned, currencyOf(task.projectId)) : '';
+}
+
+/** Когда по задаче последний раз шло время; 0 — записей не было. Недавнее
+ *  — это то, над чем работали, а не то, что только что завели. */
+function lastSessionAt(task) {
+  let last = 0;
+  for (const sess of task.sessions || []) last = Math.max(last, new Date(sess.end || sess.start).getTime());
+  if (state.activeTimer && state.activeTimer.taskId === task.id) last = Math.max(last, Date.now());
+  return last;
+}
+const whenLabel = (ms) => Core.fmtWhen(new Date(ms).toISOString(), locale(), t, Date.now());
+
+function renderRecentList() {
+  const recent = recentTasks(6);
+  el.recentList.innerHTML = '';
+  el.recentEmpty.hidden = recent.length > 0;
+  for (const task of recent) {
+    const p = getProject(task.projectId);
+    const running = !!state.activeTimer && state.activeTimer.taskId === task.id;
+    const li = document.createElement('li');
+    li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
+    li.innerHTML = `<span class="rl-main"><span class="rl-name">${escapeHtml(task.title || t('task.no_name'))}</span>`
+      + `<span class="rl-sub"><i class="rl-dot"></i>${escapeHtml(p ? p.name : '')} · ${escapeHtml(running ? t('task.running_now') : whenLabel(lastSessionAt(task)))}</span></span>`
+      + `<button type="button" class="icon-btn rl-play${running ? ' run' : ''}" aria-label="${escapeHtml(running ? t('timer.stop') : t('timer.start'))}">${running ? SVG_STOP : SVG_PLAY}</button>`;
+    li.querySelector('.rl-play').addEventListener('click', (e) => { e.stopPropagation(); if (running) stopTimer(); else startTimer(task.id); });
+    li.addEventListener('click', () => { openProject(task.projectId); selectTask(task.id); });
+    el.recentList.appendChild(li);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Главная
+// Проекты
 // ---------------------------------------------------------------------------
 
-function renderHome() {
-  const pinned = state.projects.filter((p) => p.pinnedAt).sort(byPinned);
-  const rest = state.projects.filter((p) => !p.pinnedAt);
-
-  el.homeCount.textContent = state.projects.length ? `· ${state.projects.length}` : '';
-  el.pinnedSection.hidden = pinned.length === 0;
-  el.allLabel.hidden = pinned.length === 0;
-  el.homeEmpty.hidden = state.projects.length > 0;
-
-  fillTrack(el.pinnedTrack, pinned.map(projectTile));
-  fillNodes(el.projectsTrack, [...rest.map(projectTile), plusTile()]);
-
-  const recent = recentTasks(12);
-  el.recentSection.hidden = recent.length === 0;
-  fillTrack(el.recentTrack, recent.map(recentTile));
-
-  renderHomeSide();
-  requestAnimationFrame(updateCarousels);
-}
-
-function fillTrack(track, nodes) {
-  track.innerHTML = '';
-  nodes.forEach((n, i) => {
-    n.style.animationDelay = `${Math.min(i, 8) * 28}ms`;
-    track.appendChild(n);
+function renderProjects() {
+  // Закреплённые — первыми, в порядке закрепления; остальные как есть.
+  const projects = [...state.projects].sort((a, b) => {
+    if (!!a.pinnedAt !== !!b.pinnedAt) return a.pinnedAt ? -1 : 1;
+    return a.pinnedAt && b.pinnedAt ? byPinned(a, b) : 0;
   });
+  el.homeCount.textContent = state.projects.length ? `· ${state.projects.length}` : '';
+  el.homeEmpty.hidden = state.projects.length > 0;
+  fillNodes(el.projectsTrack, projects.map(projectTile));
+  const recent = recentTasks(8);
+  el.recentSection.hidden = recent.length === 0;
+  el.recentTrack.innerHTML = '';
+  recent.forEach((task) => el.recentTrack.appendChild(recentRow(task)));
 }
-/** Как fillTrack, но без ограничений на длину (для .projects-grid — заголовок ряда не важен). */
+
 function fillNodes(container, nodes) {
   container.innerHTML = '';
   nodes.forEach((n, i) => {
@@ -1410,37 +1768,29 @@ function fillNodes(container, nodes) {
 function projectTile(p) {
   const tasks = tasksOf(p.id);
   const done = tasks.filter((t2) => t2.done).length;
-  const ms = projectMs(p.id);
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+  const nextDue = tasks.filter((t2) => !t2.done && t2.dueAt).map((t2) => t2.dueAt).sort()[0];
 
   const tile = document.createElement('article');
   tile.className = 'ptile';
   tile.style.setProperty('--pc', p.color || PALETTE[0]);
   tile.dataset.id = p.id;
   // Закрепление вынесено из меню на саму карточку: это единственное действие,
-  // которое нажимают часто, и ради него не стоит каждый раз открывать список.
-  // Кнопка проявляется по наведению, чтобы не шуметь в сетке, но у уже
-  // закреплённого проекта видна всегда — иначе непонятно, чем его открепить.
+  // которое нажимают часто. Кнопка проявляется по наведению, чтобы не шуметь в
+  // сетке, но у уже закреплённого проекта видна всегда — иначе нечем открепить.
   const pinTitle = p.pinnedAt ? t('project.unpin') : t('project.pin');
   tile.innerHTML = `
-    <button class="ptile-pin icon-btn${p.pinnedAt ? ' on' : ''}" aria-label="${escapeHtml(pinTitle)}" title="${escapeHtml(pinTitle)}" aria-pressed="${p.pinnedAt ? 'true' : 'false'}" tabindex="-1">
-      ${icon('pin')}
-    </button>
-    <button class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}" tabindex="-1">
-      <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
-    </button>
-    <div class="ptile-main">
-      <div class="ptile-name">${escapeHtml(p.name)}</div>
-      ${p.description ? `<div class="ptile-desc">${escapeHtml(p.description)}</div>` : ''}
-      <div class="ptile-foot">
-        <span class="ptile-stat">${icon('clock')} ${fmtDur(ms)}</span>
-        <span class="ptile-stat">${icon('wallet')} ${fmtMoney(projectMoney(p.id))}</span>
-        <span class="ptile-stat">${icon('check')} ${done}/${tasks.length}</span>
-        <span class="ptile-date">${escapeHtml(t('home.created_on', { date: fmtDateShort(p.createdAt) }))}</span>
-      </div>
-      <div class="ptile-progress"><i style="width:${pct}%"></i></div>
-    </div>`;
-  tile.querySelector('.ptile-main').addEventListener('click', () => openProject(p.id));
+    <div class="ptile-head">
+      <i class="ptile-dot"></i>
+      <span class="ptile-name">${escapeHtml(p.name)}</span>
+      <button class="ptile-pin icon-btn${p.pinnedAt ? ' on' : ''}" aria-label="${escapeHtml(pinTitle)}" title="${escapeHtml(pinTitle)}" aria-pressed="${p.pinnedAt ? 'true' : 'false'}" tabindex="-1">${icon('pin')}</button>
+      <button class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}" tabindex="-1"><svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg></button>
+    </div>
+    <div class="ptile-desc">${escapeHtml(p.description || '')}</div>
+    <div class="ptile-figs"><span class="ptile-time">${escapeHtml(fmtDur(projectMs(p.id)))}</span><span class="ptile-money">· ${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span><span class="ptile-note">${escapeHtml(t('home.total_label'))}</span></div>
+    <span class="ptile-progress"><i style="width:${pct}%"></i></span>
+    <div class="ptile-foot"><span>${escapeHtml(t('home.tasks_done', { done, total: tasks.length }))}</span><span>${escapeHtml(nextDue ? t('home.next_due', { date: fmtDateShort(nextDue) }) : t('home.no_due'))}</span></div>`;
+  tile.addEventListener('click', () => openProject(p.id));
   tile.querySelector('.ptile-pin').addEventListener('click', (e) => {
     e.stopPropagation();
     togglePinProject(p.id);
@@ -1452,134 +1802,37 @@ function projectTile(p) {
   return tile;
 }
 
-function plusTile() {
-  const b = document.createElement('button');
-  b.className = 'ptile ptile-add';
-  b.innerHTML = '<span class="plus">+</span>';
-  b.title = t('home.new_project_title');
-  b.addEventListener('click', () => openProjectDialog(null));
-  return b;
-}
-
 function recentTasks(limit) {
   return state.tasks
     .filter((t2) => !t2.done)
-    .map((t2) => {
-      let last = 0;
-      for (const s of t2.sessions || []) last = Math.max(last, new Date(s.end || s.start).getTime());
-      if (!last) last = new Date(t2.updatedAt || t2.createdAt || 0).getTime();
-      return { t: t2, last };
-    })
+    .map((t2) => ({ t: t2, last: lastSessionAt(t2) }))
     .filter((x) => x.last > 0)
     .sort((a, b) => b.last - a.last)
     .slice(0, limit)
     .map((x) => x.t);
 }
 
-function recentTile(task) {
+/** Строка таблицы недавних задач: плей/стоп, задача с проектом, последняя
+ *  запись, время, деньги. Строка — кнопка, плей внутри — не кнопка (кнопка в
+ *  кнопке не бывает), а span с ролью. */
+function recentRow(task) {
   const p = getProject(task.projectId);
-  const tile = document.createElement('div');
-  tile.className = 'rtile' + (task.done ? ' done' : '');
-  tile.style.setProperty('--pc', p ? p.color : PALETTE[0]);
-  tile.innerHTML = `
-    <div class="rtile-top">
-      <input type="checkbox" ${task.done ? 'checked' : ''} />
-      <span class="rtile-name">${escapeHtml(task.title || t('task.no_name'))}</span>
-    </div>
-    <div class="rtile-foot">
-      <span class="rtile-proj"><span>${escapeHtml(p ? p.name : '')}</span></span>
-      <span class="rtile-time">${icon('clock')} ${fmtDur(taskElapsedMs(task))}</span>
-    </div>`;
-  const cb = tile.querySelector('input');
-  cb.addEventListener('click', (e) => e.stopPropagation());
-  cb.addEventListener('change', () => {
-    setTaskDone(task, cb.checked);
-    tile.classList.toggle('done', task.done);
-    renderStats();
-    scheduleSave();
-  });
-  tile.addEventListener('click', () => { openProject(task.projectId); selectTask(task.id); });
-  return tile;
+  const running = !!state.activeTimer && state.activeTimer.taskId === task.id;
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'recent-row';
+  row.innerHTML = `<span class="icon-btn rl-play${running ? ' run' : ''}" role="button" tabindex="0" aria-label="${escapeHtml(running ? t('timer.stop') : t('timer.start'))}">${running ? SVG_STOP : SVG_PLAY}</span>`
+    + `<span class="recent-main"><span class="recent-name">${escapeHtml(task.title || t('task.no_name'))}</span><span class="recent-sub"><i class="rl-dot" style="--pc:${p ? p.color : PALETTE[0]}"></i>${escapeHtml(p ? p.name : '')}</span></span>`
+    + `<span class="recent-when${running ? ' run' : ''}">${escapeHtml(running ? t('task.running_now') : whenLabel(lastSessionAt(task)))}</span>`
+    + `<span class="recent-num">${escapeHtml(fmtDur(taskElapsedMs(task)))}</span>`
+    + `<span class="recent-num money">${escapeHtml(fmtMoney(earnedOf(task), currencyOf(task.projectId)))}</span>`;
+  const play = row.querySelector('.rl-play');
+  const toggle = (e) => { e.stopPropagation(); if (running) stopTimer(); else startTimer(task.id); };
+  play.addEventListener('click', toggle);
+  play.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); } });
+  row.addEventListener('click', () => { openProject(task.projectId); selectTask(task.id); });
+  return row;
 }
-
-function renderHomeSide() {
-  const days = aggregateDays();
-  const now = new Date();
-  const y = now.getFullYear();
-  const mo = now.getMonth();
-  el.miniCalTitle.textContent = monthLabel(y, mo);
-
-  const startOffset = (new Date(y, mo, 1).getDay() + 6) % 7;
-  const dim = new Date(y, mo + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= dim; d++) cells.push(d);
-  while (cells.length % 7) cells.push(null);
-
-  el.miniCal.innerHTML = '';
-  let mMs = 0;
-  let mMoney = 0;
-  const tKey = dayKey(now);
-  for (const d of cells) {
-    const c = document.createElement('button');
-    c.className = 'mc-cell';
-    if (d == null) { c.classList.add('empty'); c.disabled = true; el.miniCal.appendChild(c); continue; }
-    const key = `${y}-${pad2(mo + 1)}-${pad2(d)}`;
-    const agg = days.get(key);
-    if (agg) { c.classList.add('has'); mMs += agg.ms; mMoney += agg.money; }
-    if (key === tKey) c.classList.add('today');
-    c.textContent = String(d);
-    c.title = agg ? `${fmtDur(agg.ms)} · ${fmtMoney(agg.money)}` : '';
-    c.addEventListener('click', () => {
-      calState.year = y;
-      calState.month = mo;
-      calState.selected = key;
-      if (calState.periodOn) togglePeriod();
-      setCalMode('month');
-      openView('calendar');
-    });
-    el.miniCal.appendChild(c);
-  }
-  el.miniCalTot.textContent = `${fmtDur(mMs)} · ${fmtMoney(mMoney)}`;
-  const tAgg = days.get(tKey);
-  const weekFrom = mondayOf(now);
-  const weekTo = new Date(weekFrom.getTime() + 6 * 86400000);
-  weekTo.setHours(23, 59, 59, 999);
-  const week = rangeAgg(weekFrom, weekTo);
-  el.sideToday.innerHTML = `
-    <div class="side-stat"><span>${escapeHtml(t('calendar.today'))}</span><b>${tAgg ? `${fmtDur(tAgg.ms)} · ${fmtMoney(tAgg.money)}` : `0м · ${fmtMoney(0)}`}</b></div>
-    <div class="side-stat"><span>${escapeHtml(t('calendar.for_week'))}</span><b>${fmtDur(week.ms)} · ${fmtMoney(week.money)}</b></div>`;
-}
-
-// карусели
-
-const carousels = [];
-function setupCarousels() {
-  document.querySelectorAll('.carousel').forEach((c) => {
-    const track = c.querySelector('.car-track');
-    c.querySelectorAll('.car-arrow').forEach((a) => {
-      a.addEventListener('click', () => {
-        const dir = a.dataset.dir === '1' ? 1 : -1;
-        track.scrollBy({ left: dir * track.clientWidth * 0.85, behavior: 'smooth' });
-      });
-    });
-    track.addEventListener('scroll', () => updateCarousel(c));
-    track.addEventListener('wheel', (e) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { track.scrollLeft += e.deltaY; e.preventDefault(); }
-    }, { passive: false });
-    carousels.push(c);
-  });
-}
-function updateCarousel(c) {
-  const track = c.querySelector('.car-track');
-  const [left, right] = c.querySelectorAll('.car-arrow');
-  const overflow = track.scrollWidth > track.clientWidth + 4;
-  const max = track.scrollWidth - track.clientWidth - 2;
-  left.hidden = !overflow || track.scrollLeft <= 1;
-  right.hidden = !overflow || track.scrollLeft >= max;
-}
-const updateCarousels = () => carousels.forEach(updateCarousel);
-window.addEventListener('resize', updateCarousels);
 
 // ---------------------------------------------------------------------------
 // Поиск
@@ -1722,7 +1975,6 @@ function currentViewBounds() {
 
 function setCalMode(mode) {
   calState.mode = mode;
-  el.calModes.forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
   el.calWeekdays.hidden = mode === 'day';
   if (calState.periodOn) seedRangeFromView();
   renderCalendar();
@@ -1744,6 +1996,7 @@ function togglePeriod() {
   if (calState.periodOn) seedRangeFromView();
   else closeDatePicker();
   renderCalendar();
+  el.periodBarInfo.hidden = !calState.periodOn;
 }
 
 /** [от, до 23:59:59] выбранного диапазона периода, или null. */
@@ -1805,11 +2058,23 @@ function openDatePicker(anchorEl, value, onPick, opts) {
   dp.open = true;
   anchorEl.classList.add('on');
   renderDatePicker();
-  const r = anchorEl.getBoundingClientRect();
-  el.dpPop.style.left = `${Math.round(r.left)}px`;
-  el.dpPop.style.top = `${Math.round(r.bottom + 6)}px`;
-  el.dpPop.hidden = false;
+  placePopBelow(el.dpPop, anchorEl);
   setTimeout(() => document.addEventListener('pointerdown', dpOutside, true), 0);
+}
+
+/** Всплывающее окно под кнопкой, но в пределах экрана: кнопка срока стоит
+ *  в правой колонке, и справа от неё места нет — окно сдвигается влево,
+ *  а у нижнего края — поднимается над кнопкой. */
+function placePopBelow(pop, anchorEl) {
+  const r = anchorEl.getBoundingClientRect();
+  pop.hidden = false;
+  const pw = pop.offsetWidth;
+  const ph = pop.offsetHeight;
+  const left = Math.max(8, Math.min(Math.round(r.left), window.innerWidth - pw - 8));
+  let top = Math.round(r.bottom + 6);
+  if (top + ph > window.innerHeight - 8) top = Math.max(8, Math.round(r.top - ph - 6));
+  pop.style.left = `${left}px`;
+  pop.style.top = `${top}px`;
 }
 function closeDatePicker() {
   if (!dp.open) return;
@@ -1894,10 +2159,7 @@ function openTimePicker(anchorEl, value, onPick) {
   tp.open = true;
   anchorEl.classList.add('on');
   renderTimePicker();
-  const r = anchorEl.getBoundingClientRect();
-  el.tpPop.style.left = `${Math.round(r.left)}px`;
-  el.tpPop.style.top = `${Math.round(r.bottom + 6)}px`;
-  el.tpPop.hidden = false;
+  placePopBelow(el.tpPop, anchorEl);
   setTimeout(() => document.addEventListener('pointerdown', tpOutside, true), 0);
   requestAnimationFrame(() => {
     const selH = el.tpHours.querySelector('.sel');
@@ -1987,7 +2249,7 @@ function renderCalendar() {
   for (const c of cells) {
     const cell = document.createElement('button');
     cell.className = 'cal-cell';
-    if (c == null) { cell.classList.add('empty'); cell.disabled = true; el.calDays.appendChild(cell); continue; }
+    if (c == null) { cell.classList.add('empty'); cell.disabled = true; cell.setAttribute('aria-hidden', 'true'); el.calDays.appendChild(cell); continue; }
     const agg = days.get(c.key);
     if (c.key === todayKey) cell.classList.add('today');
     if (!calState.periodOn && c.key === calState.selected) cell.classList.add('sel');
@@ -2078,7 +2340,9 @@ function renderCalDay() {
     .map(({ t: t2, s }) => ({ t: t2, s, ms: s.ms, money: sessionMoney(s, t2) }));
 
   const totalMs = items.reduce((a, r) => a + r.ms, 0);
-  const totalMoney = items.reduce((a, r) => a + r.money, 0);
+  // Итог дня — только по проектам в основной валюте; строки — каждая в своей.
+  const scope = Core.moneyScope(state.tasks, state.projects, state.settings.currency);
+  const totalMoney = items.reduce((a, r) => a + (scope.has(r.t.id) ? r.money : 0), 0);
 
   // Записи разложены по проектам: за день их набирается из нескольких сразу,
   // и плоский список не отвечал на вопрос «сколько ушло на что».
@@ -2092,7 +2356,7 @@ function renderCalDay() {
         <div class="cdl-time">${fmtTime(s.start).slice(0, 5)}–${s.end ? fmtTime(s.end).slice(0, 5) : '…'}</div>
         <div class="cdl-dur">${fmtDur(s.ms)}</div>
         <div class="cdl-task">${escapeHtml(t2.title || t('task.no_name'))}</div>
-        <div class="cdl-money">${fmtMoney(money)}</div>`;
+        <div class="cdl-money">${fmtMoney(money, currencyOf(t2.projectId))}</div>`;
       row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
       return row;
     }));
@@ -2122,9 +2386,12 @@ function renderPeriodSummary() {
   }
   const tasks = [...map.values()].sort((a, b) => b.ms - a.ms);
   const totalMs = tasks.reduce((a, x) => a + x.ms, 0);
-  const totalMoney = tasks.reduce((a, x) => a + x.money, 0);
+  const scope = Core.moneyScope(state.tasks, state.projects, state.settings.currency);
+  const totalMoney = tasks.reduce((a, x) => a + (scope.has(x.t.id) ? x.money : 0), 0);
 
   el.calDayTot.textContent = tasks.length ? `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}` : '';
+  el.periodBarRange.textContent = el.calDayHead.textContent;
+  el.periodBarSum.textContent = `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}`;
   el.calViewTot.hidden = false;
   el.calViewTot.classList.add('period');
   el.calViewTot.innerHTML = `<span>${escapeHtml(t('calendar.period_label'))}</span>`
@@ -2139,7 +2406,7 @@ function renderPeriodSummary() {
       row.innerHTML = `
         <span class="pl-check${t2.done ? ' done' : ''}">${icon('check')}</span>
         <span><span class="pl-name">${escapeHtml(t2.title || t('task.no_name'))}</span></span>
-        <span class="pl-right"><span class="pl-money">${fmtMoney(money)}</span><span class="pl-time">${fmtDur(ms)}</span></span>`;
+        <span class="pl-right"><span class="pl-money">${fmtMoney(money, currencyOf(t2.projectId))}</span><span class="pl-time">${fmtDur(ms)}</span></span>`;
       row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
       return row;
     }));
@@ -2158,7 +2425,7 @@ function renderPeriodSummary() {
  *  проекта. Выбор живёт в ui, а не в данных: это способ смотреть, а не
  *  свойство проекта, и он не должен уезжать в синхронизацию. */
 function boardProjectId() {
-  if (state.ui.view === 'project' && getProject(state.ui.projectId)) return state.ui.projectId;
+  if ((state.ui.view === 'project' || state.ui.view === 'task') && getProject(state.ui.projectId)) return state.ui.projectId;
   if (state.ui.boardProjectId && getProject(state.ui.boardProjectId)) return state.ui.boardProjectId;
   return state.projects[0] ? state.projects[0].id : null;
 }
@@ -2451,6 +2718,8 @@ function fitHeaderTags(p) {
     cap -= 1;
     renderTagChipsCapped(el.phTags, p.tagIds, cap);
   }
+  // Не помещается даже «+N» — лучше без тегов, чем с обрезанным чипом.
+  if (el.phTags.scrollWidth > el.phTags.clientWidth + 1) el.phTags.hidden = true;
 }
 
 /** Первые max чипов и «+N» за остальные; имена остальных — подсказкой. */
@@ -2469,14 +2738,15 @@ function renderTagChipsCapped(box, ids, max) {
  *  нему видно, какие теги живые, а какие можно убрать. */
 function renderTagsSettings() {
   el.tagsList.innerHTML = '';
-  if (!state.tags.length) {
+  const globalTags = state.tags.filter(Core.isGlobalTag);
+  if (!globalTags.length) {
     const empty = document.createElement('div');
     empty.className = 'settings-row tags-empty';
     empty.innerHTML = `<span class="settings-row-label muted">${escapeHtml(t('tag.empty_hint'))}</span>`;
     el.tagsList.appendChild(empty);
     return;
   }
-  for (const tag of state.tags) {
+  for (const tag of globalTags) {
     const u = tagUsage(tag.id);
     const row = document.createElement('button');
     row.type = 'button';
@@ -2491,7 +2761,7 @@ function renderTagsSettings() {
   }
 }
 
-const tagdlg = { editing: null, color: PALETTE[0], after: null };
+const tagdlg = { editing: null, color: PALETTE[0], after: null, projectId: null };
 
 function buildTagSwatches() {
   el.tagdlgSwatches.innerHTML = '';
@@ -2508,11 +2778,16 @@ function buildTagSwatches() {
 /** @param {object|null} tag — редактируемый тег или null для нового
  *  @param {string} [presetName] — имя, набранное в пикере
  *  @param {function} [after] — что сделать с созданным тегом (повесить его) */
-function openTagDialog(tag, presetName, after) {
+/** @param {string|null} [projectId] — проект, которому принадлежит новый
+ *  тег; пусто — общий. У существующего тега область не меняется. */
+function openTagDialog(tag, presetName, after, projectId) {
   tagdlg.editing = tag || null;
   tagdlg.color = tag ? (tag.color || PALETTE[0]) : PALETTE[state.tags.length % PALETTE.length];
   tagdlg.after = after || null;
-  el.tagdlgTitle.textContent = tag ? t('tag.dialog_edit') : t('tag.dialog_new');
+  tagdlg.projectId = tag ? (tag.projectId || null) : (projectId || null);
+  const scopeProject = tagdlg.projectId ? getProject(tagdlg.projectId) : null;
+  const title = tag ? t('tag.dialog_edit') : t('tag.dialog_new');
+  el.tagdlgTitle.textContent = scopeProject ? `${title} · ${scopeProject.name}` : title;
   el.tagdlgName.value = tag ? (tag.name || '') : (presetName || '');
   el.tagdlgError.hidden = true;
   el.tagdlgDelete.hidden = !tag;
@@ -2533,7 +2808,7 @@ function saveTagDialog() {
   if (!name) { el.tagdlgName.focus(); return; }
   // Два тега с одинаковым именем различить на глаз нельзя, и заводить оба
   // бессмысленно — поэтому отказ с объяснением, а не молчаливое создание.
-  if (Core.nameTaken(state.tags, name, tagdlg.editing ? tagdlg.editing.id : null)) {
+  if (Core.nameTaken(state.tags, name, tagdlg.editing ? tagdlg.editing.id : null, tagdlg.projectId)) {
     el.tagdlgError.textContent = t('tag.name_taken');
     el.tagdlgError.hidden = false;
     el.tagdlgName.focus();
@@ -2543,7 +2818,7 @@ function saveTagDialog() {
   if (tagdlg.editing) {
     Object.assign(tagdlg.editing, { name, color: tagdlg.color });
   } else {
-    created = { id: uid(), name, color: tagdlg.color };
+    created = { id: uid(), name, color: tagdlg.color, projectId: tagdlg.projectId };
     state.tags.push(created);
   }
   const after = tagdlg.after;
@@ -2578,8 +2853,11 @@ async function deleteTagFromDialog() {
  *  @param {Element} anchor — у чего открыть
  *  @param {function} getIds — текущие теги сущности
  *  @param {function} setIds — куда записать новый набор */
-function openTagPicker(anchor, getIds, setIds) {
+/** @param {string|null} [projectId] — в каком проекте выбираем: видны общие
+ *  теги и его собственные; новый тег из пикера заводится проектным. */
+function openTagPicker(anchor, getIds, setIds, projectId) {
   document.querySelectorAll('.tag-pop').forEach((n) => n.remove());
+  const visible = () => Core.tagsForProject(state.tags, projectId || null);
   const pop = document.createElement('div');
   pop.className = 'tag-pop';
 
@@ -2596,27 +2874,28 @@ function openTagPicker(anchor, getIds, setIds) {
     const query = search.value.trim();
     list.innerHTML = '';
 
-    for (const tag of Core.searchTags(state.tags, query)) {
+    for (const tag of Core.searchTags(visible(), query)) {
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'tag-pop-item' + (ids.includes(tag.id) ? ' sel' : '');
       row.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(tag.color || PALETTE[0])}"></span>`
-        + `<span class="tag-pop-name">${escapeHtml(tag.name || '')}</span>`;
+        + `<span class="tag-pop-name">${escapeHtml(tag.name || '')}</span>`
+        + (Core.isGlobalTag(tag) ? `<span class="tag-pop-scope">${escapeHtml(t('tag.scope_global'))}</span>` : '');
       row.addEventListener('click', () => { setIds(Core.toggleTag(getIds(), tag.id)); draw(); });
       list.appendChild(row);
     }
 
-    if (query && !Core.exactMatch(state.tags, query)) {
+    if (query && !Core.exactMatch(visible(), query)) {
       const create = document.createElement('button');
       create.type = 'button';
       create.className = 'tag-pop-create';
       create.textContent = t('tag.create_named', { name: query });
       create.addEventListener('click', () => {
         pop.remove();
-        openTagDialog(null, query, (made) => { if (made) setIds([...getIds(), made.id]); });
+        openTagDialog(null, query, (made) => { if (made) setIds([...getIds(), made.id]); }, projectId || null);
       });
       list.appendChild(create);
-    } else if (!state.tags.length) {
+    } else if (!visible().length) {
       const empty = document.createElement('div');
       empty.className = 'tag-pop-empty muted';
       empty.textContent = t('tag.none');
@@ -2663,16 +2942,15 @@ function renderTaskTags(task) {
 
 /** Набор статусов настраивается у каждого проекта отдельно, поэтому диалог
  *  открывается с доски — страницы, которая этим набором и живёт. */
+/** Шестерёнка на доске и «Статусы и версии» в меню: то же окно проекта,
+ *  открытое на статусах. */
 function openStatusDialog() {
-  if (!boardProjectId()) return;
-  renderStatusDialog();
-  renderVersionDialog();
-  el.stdlgBackdrop.hidden = false;
+  const p = getProject(boardProjectId());
+  if (p) openProjectDialog(p, 'statuses');
 }
-function closeStatusDialog() { el.stdlgBackdrop.hidden = true; }
 
 function renderStatusDialog() {
-  const pid = boardProjectId();
+  const pid = pdlgProjectId();
   const list = orderedStatuses(pid);
   el.stList.innerHTML = '';
   list.forEach((st, i) => {
@@ -2759,7 +3037,7 @@ async function deleteStatus(st) {
 }
 
 function addStatus() {
-  const pid = boardProjectId();
+  const pid = pdlgProjectId();
   if (!pid) return;
   const list = orderedStatuses(pid);
   state.statuses.push({
@@ -2811,7 +3089,7 @@ function boardCard(task) {
     ${chips ? `<div class="tag-chips bc-tags">${chips}</div>` : ''}
     <div class="bc-foot">
       <span class="bc-time">${icon('clock')} ${fmtDur(taskElapsedMs(task))}</span>
-      <span class="bc-money">${escapeHtml(fmtMoney(earnedOf(task)))}</span>
+      <span class="bc-money">${escapeHtml(fmtMoney(earnedOf(task), currencyOf(task.projectId)))}</span>
       ${due ? `<span class="task-due ${due}">${escapeHtml(dueShort(task))}</span>` : ''}
     </div>`;
   card.addEventListener('dragstart', (e) => {
@@ -2843,12 +3121,8 @@ function renderProjectPage() {
   el.projBoard.hidden = tab !== 'board';
   el.projVersions.hidden = tab !== 'versions';
   if (tab === 'list') {
-    const hidden = !!state.ui.listHidden;
-    el.projList.classList.toggle('list-hidden', hidden);
-    el.toggleListBtn.classList.toggle('on', hidden);
-    el.toggleListBtn.title = t(hidden ? 'task.show_list' : 'task.hide_list');
     renderSidebar();
-    renderDetail();
+    renderProjectSide();
   } else if (tab === 'board') {
     renderBoardPage();
   } else {
@@ -2863,22 +3137,91 @@ function renderProjectHeader() {
   if (!p) return;
   el.phName.textContent = p.name;
   el.phName.title = p.description || '';
+  el.phDesc.textContent = p.description || '';
+  el.phDesc.hidden = !p.description;
   el.phDot.style.background = p.color || PALETTE[0];
   // Теги проекта — рядом с названием. Здесь они только показываются: менять их
   // логично там же, где название и цвет, то есть в окне проекта.
   el.phTags.hidden = !tagsOf(p.tagIds).length;
-  fitHeaderTags(p);
   el.ptabVerCount.textContent = versionsOf(p.id).length || '';
 
   const tasks = visibleTasks();
   el.projectEarned.textContent = '';
-  if (!tasks.length) return;
+  if (tasks.length) {
+    const done = tasks.filter((t2) => t2.done).length;
+    el.projectEarned.append(
+      elt('b', null, fmtDur(projectMs(p.id))),
+      elt('b', 'kpi-money', fmtMoney(projectMoney(p.id), currencyOf(p.id))),
+      elt('span', null, t('project.done_of', { done, total: tasks.length })),
+    );
+  }
+  // Теги меряются последними: они делят строку с числами проекта, и до
+  // того, как числа встали, места у тегов больше, чем будет.
+  fitHeaderTags(p);
+}
+
+/** Правая колонка проекта: прогресс по статусам, версии, последние записи. */
+function renderProjectSide() {
+  const pid = state.ui.projectId;
+  const tasks = visibleTasks();
   const done = tasks.filter((t2) => t2.done).length;
-  el.projectEarned.append(
-    elt('b', null, fmtDur(projectMs(p.id))),
-    elt('b', 'kpi-money', fmtMoney(projectMoney(p.id))),
-    elt('span', null, t('project.done_of', { done, total: tasks.length })),
-  );
+  const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+  el.ppDone.textContent = String(done);
+  el.ppOf.textContent = t('project.of_done', { total: tasks.length });
+  el.ppPct.textContent = tasks.length ? `${pct}%` : '';
+  // Полоса и легенда — по статусам проекта в порядке столбцов доски.
+  el.ppBar.innerHTML = '';
+  el.ppLegend.innerHTML = '';
+  for (const st of orderedStatuses(pid)) {
+    const n = tasks.filter((t2) => t2.statusId === st.id).length;
+    if (!n) continue;
+    const seg = document.createElement('i');
+    seg.style.width = `${(n / tasks.length) * 100}%`;
+    seg.style.background = st.color;
+    el.ppBar.appendChild(seg);
+    const li = document.createElement('span');
+    li.innerHTML = `<i style="background:${escapeHtml(st.color)}"></i>${escapeHtml(st.name)} · ${n}`;
+    el.ppLegend.appendChild(li);
+  }
+
+  const rows = Core.versionRows(state.tasks, state.versions, pid, { rates: rates(), activeTimer: state.activeTimer, now: Date.now() });
+  el.projVersionsCard.hidden = versionsOf(pid).length === 0;
+  el.pvRows.innerHTML = '';
+  for (const r of rows.slice(0, 4)) {
+    const row = document.createElement('div');
+    row.className = 'pv-row';
+    if (!r.id) {
+      row.className = 'pv-none';
+      row.textContent = `${t('version.none')} — ${t('project.of_done', { total: r.total }).replace(/^·\s*/, '')}`;
+    } else {
+      row.innerHTML = `<div class="pv-head"><span class="pv-name">${escapeHtml(r.name || t('task.no_name'))}</span><span class="pv-sum">${escapeHtml(t('project.done_of', { done: r.done, total: r.total }))} · ${escapeHtml(fmtDur(r.ms))}</span></div>`
+        + `<span class="pv-bar"><i style="width:${r.total ? Math.round((r.done / r.total) * 100) : 0}%"></i></span>`;
+      row.addEventListener('click', () => {
+        taskFilter = { status: 'all', versionId: r.id };
+        state.ui.projectTab = 'list';
+        render();
+        scheduleSave();
+      });
+    }
+    el.pvRows.appendChild(row);
+  }
+
+  // Последние записи по всем задачам проекта.
+  const recs = [];
+  for (const task of tasksOf(pid)) {
+    for (const sess of task.sessions || []) recs.push({ task, sess, at: new Date(sess.end || sess.start).getTime() });
+  }
+  recs.sort((a, b) => b.at - a.at);
+  el.psList.innerHTML = '';
+  el.psEmpty.hidden = recs.length > 0;
+  for (const r of recs.slice(0, 5)) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="rl-when">${escapeHtml(whenLabel(r.at))}</span>`
+      + `<span class="rl-main"><span class="rl-name">${escapeHtml(r.task.title || t('task.no_name'))}</span></span>`
+      + `<span class="rl-money">${escapeHtml(fmtDur(r.sess.ms))}</span>`;
+    li.addEventListener('click', () => selectTask(r.task.id));
+    el.psList.appendChild(li);
+  }
 }
 
 /** Проекты в левом меню — в том же порядке, что на «Обзоре»: закреплённые
@@ -2892,7 +3235,7 @@ function renderNavProjects() {
     b.type = 'button';
     b.title = p.name;
     b.dataset.projectId = p.id;
-    b.classList.toggle('active', state.ui.view === 'project' && state.ui.projectId === p.id);
+    b.classList.toggle('active', (state.ui.view === 'project' || state.ui.view === 'task') && state.ui.projectId === p.id);
     const dot = elt('span', 'nav-pdot');
     dot.style.background = p.color || PALETTE[0];
     const open = tasksOf(p.id).filter((t2) => !t2.done).length;
@@ -2908,7 +3251,7 @@ function renderNavProjects() {
 function renderVersionsTab() {
   const pid = state.ui.projectId;
   const rows = Core.versionRows(state.tasks, state.versions, pid, {
-    defaultRate: defaultRate(), activeTimer: state.activeTimer, now: Date.now(),
+    rates: rates(), activeTimer: state.activeTimer, now: Date.now(),
   });
   el.pverList.textContent = '';
   el.pverEmpty.hidden = versionsOf(pid).length > 0;
@@ -2927,7 +3270,7 @@ function renderVersionsTab() {
     meta.append(
       elt('span', null, t('project.done_of', { done: r.done, total: r.total })),
       elt('span', null, fmtDur(r.ms)),
-      elt('b', 'kpi-money', fmtMoney(r.money)),
+      elt('b', 'kpi-money', fmtMoney(r.money, currencyOf(pid))),
     );
     li.append(head, bar, meta);
     li.addEventListener('click', () => {
@@ -2974,15 +3317,18 @@ function taskGroupHead(g) {
   const li = elt('li', 'task-group' + (g.collapsed ? ' collapsed' : ''));
   li.dataset.group = g.key;
   const chev = elt('span', 'tg-chev');
+  // Пустая колонка «срок» между именем и суммами — её занимает сетка.
   chev.innerHTML = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>';
   const dot = elt('span', 'tg-dot');
   if (g.status) dot.style.background = g.status.color;
   else dot.hidden = true;
+  const main = elt('span', 'tg-main');
+  main.append(dot, elt('span', 'tg-name', g.status ? g.status.name : t('sep.pinned')), elt('span', 'tg-count', String(g.tasks.length)));
+  const money = g.tasks.reduce((a, t2) => a + earnedOf(t2), 0);
   li.append(
-    chev, dot,
-    elt('span', 'tg-name', g.status ? g.status.name : t('sep.pinned')),
-    elt('span', 'tg-count', String(g.tasks.length)),
+    chev, main,
     elt('span', 'tg-time', fmtShort(g.ms)),
+    elt('span', 'tg-money', money ? fmtMoney(money, currencyOf(state.ui.projectId)) : ''),
   );
   li.addEventListener('click', () => {
     const shut = new Set(state.ui.collapsedGroups || []);
@@ -3035,6 +3381,7 @@ function taskItem(task, i) {
   const cb = document.createElement('input');
   cb.type = 'checkbox';
   cb.className = 'task-done';
+  cb.setAttribute('aria-label', t('task.done_label'));
   cb.checked = v.done;
   cb.addEventListener('click', (e) => e.stopPropagation());
   cb.addEventListener('change', () => {
@@ -3069,20 +3416,18 @@ function taskItem(task, i) {
     rep.title = v.repeat.title;
     meta.appendChild(rep);
   }
-  if (v.due) {
-    const due = elt('span', `task-due ${v.due.state}`, v.due.text);
-    due.title = v.due.text;
-    meta.appendChild(due);
-  }
   if (v.running) meta.appendChild(elt('span', 'running-dot', '●'));
-  meta.appendChild(elt('span', 'task-time', v.time));
 
+  // Колонки: галочка · название с метой · срок · время · деньги.
+  const main = elt('div', 'ti-main');
   const top = elt('div', 'ti-top');
-  top.append(cb, name, pin);
+  top.append(name, pin);
   if (v.tags.length) meta.prepend(dots);
-  const bottom = elt('div', 'ti-bottom');
-  bottom.append(meta);
-  li.append(top, bottom);
+  main.append(top, meta);
+  const due = elt('span', 'ti-due' + (v.due ? ` ${v.due.state}` : ''), v.due ? v.due.text : '');
+  if (v.due) due.title = v.due.text;
+  const money = earnedOf(task);
+  li.append(cb, main, due, elt('span', 'task-time', v.time), elt('span', 'ti-money', money ? fmtMoney(money, currencyOf(task.projectId)) : ''));
   li.addEventListener('click', () => selectTask(task.id));
   return li;
 }
@@ -3206,12 +3551,20 @@ function renderDue(task) {
   }
 }
 
+/** Страница задачи: крошки, название с тегами и редактор, справа таймер и
+ *  свойства с историей. */
+function renderTaskPage() {
+  const task = getTask(selectedId);
+  const p = getProject(task.projectId);
+  el.crumbProject.textContent = p ? p.name : '';
+  el.crumbTask.textContent = task.title || t('task.no_name');
+  renderDetail();
+}
+
 function renderDetail() {
   const task = getTask(selectedId);
-  const hasTask = !!task && task.projectId === state.ui.projectId;
-  el.emptyState.hidden = hasTask;
-  el.detail.hidden = !hasTask;
-  if (!hasTask) return;
+  if (!task) return;
+  el.taskDoneBtn.textContent = task.done ? t('task.reopen') : t('filter.done');
 
   if (document.activeElement !== el.title) el.title.value = task.title || '';
   el.pinTaskBtn.classList.toggle('on', !!task.pinnedAt);
@@ -3244,7 +3597,7 @@ function renderMoney(task) {
   el.taskRate.placeholder = def ? String(def) : '0';
   // Без пометки «по умолчанию»: ставка по умолчанию задаётся в настройках, и
   // повторять это в каждой задаче незачем — строка только удлинялась.
-  el.rateUnit.textContent = `${currencySym()}${t('rate.per_hour')}`;
+  el.rateUnit.textContent = `${symOf(currencyOf(task.projectId))}${t('rate.per_hour')}`;
 
   const rate = effectiveRate(task);
   const ms = taskElapsedMs(task);
@@ -3252,7 +3605,7 @@ function renderMoney(task) {
   const minWord = { ru: 'мин', en: 'min', uk: 'хв', kk: 'мин' }[lang()] || 'мин';
   const time = mins < 60 ? `${mins} ${minWord}` : fmtShort(ms);
   el.moneyCalc.innerHTML = rate
-    ? `${t('money.calc', { time, rate: moneyFmt().format(rate), cur: currencySym() })} <b>${fmtMoney(earnedOf(task))}</b>`
+    ? `${t('money.calc', { time, rate: moneyFmt().format(rate), cur: symOf(currencyOf(task.projectId)) })} <b>${fmtMoney(earnedOf(task), currencyOf(task.projectId))}</b>`
     : t('money.no_rate');
 }
 
@@ -3263,10 +3616,13 @@ function renderTimer(task) {
   // рядом с часами сумма читается сама. Растёт вместе с идущим таймером.
   const earned = earnedOf(task);
   el.timerEarned.hidden = !earnedShown(task, earned);
-  el.timerEarned.textContent = fmtMoney(earned);
-  el.timerBtnIcon.textContent = running ? '■' : '▶';
+  el.timerEarned.textContent = fmtMoney(earned, currencyOf(task.projectId));
+  el.timerBtnIcon.innerHTML = running ? SVG_STOP : SVG_PLAY;
   el.timerBtnLabel.textContent = running ? t('timer.stop') : t('timer.start');
-  el.timerBtn.classList.toggle('running', running);
+  el.timerBtn.setAttribute('aria-label', running ? t('timer.stop') : t('timer.start'));
+  el.timerBtn.classList.toggle('run', running);
+  const rate = effectiveRate(task);
+  el.timerRate.textContent = rate ? `· ${moneyFmt().format(rate)} ${symOf(currencyOf(task.projectId))}${t('rate.per_hour')}` : '';
   if (running) {
     const sessionMs = Date.now() - new Date(state.activeTimer.startedAt).getTime();
     el.timerSub.textContent = t('timer.recording', { time: fmtClock(sessionMs) });
@@ -3336,26 +3692,31 @@ function setTaskTab(tab) {
   if (tab !== 'history') tab = 'notes';
   activeTaskTab = tab;
   el.taskTabs.forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
-  el.tabNotes.hidden = tab !== 'notes';
+  // Редактор виден всегда; вкладки переключают правую панель: свойства
+  // или история.
+  el.taskProps.hidden = tab !== 'notes';
   el.tabHistory.hidden = tab !== 'history';
 }
 
+/** Открыть задачу — своей страницей. */
 function selectTask(id) {
-  if (id === selectedId && state.ui.view === 'project') return;
-  flushEditor();
-  selectedId = id;
   const task = getTask(id);
+  if (!task) return;
+  if (id === selectedId && state.ui.view === 'task') return;
+  flushEditor();
+  closeMenu();
+  selectedId = id;
+  state.ui.projectId = task.projectId;
+  state.ui.view = 'task';
   loadEditor(task);
   setTaskTab('notes');
   render();
-  if (state.ui.view === 'project') {
-    el.title.focus({ preventScroll: true });
-    if (task && !task.title) el.title.select();
-  }
+  scheduleSave();
+  if (!task.title) { el.title.focus({ preventScroll: true }); el.title.select(); }
 }
 
 function newTask() {
-  if (!state.ui.projectId || state.ui.view !== 'project') return;
+  if (!state.ui.projectId || !['project', 'task'].includes(state.ui.view)) return;
   flushEditor();
   const now = new Date().toISOString();
   const task = {
@@ -3369,6 +3730,7 @@ function newTask() {
   };
   state.tasks.unshift(task);
   selectedId = task.id;
+  state.ui.view = 'task';
   loadEditor(task);
   setTaskTab('notes');
   render();
@@ -3384,9 +3746,9 @@ async function deleteTask(id) {
   if (state.activeTimer && state.activeTimer.taskId === id) state.activeTimer = null;
   state.tasks = state.tasks.filter((t2) => t2.id !== id);
   if (selectedId === id) {
-    const next = sortedProjectTasks().all[0];
-    selectedId = next ? next.id : null;
-    loadEditor(getTask(selectedId));
+    selectedId = null;
+    loadEditor(null);
+    if (state.ui.view === 'task') state.ui.view = 'project';
   }
   render();
   scheduleSave();
@@ -3459,7 +3821,7 @@ async function copyProjectSummary(p) {
   const n = tasks.length;
   const parts = [p.name, fmtDur(projectMs(p.id)), `${n} ${pluralForm(n, 'plural.task')}, ${done} ${t('xlsx.done').toLowerCase()}`];
   const money = projectMoney(p.id);
-  if (money > 0) parts.push(fmtMoney(money));
+  if (money > 0) parts.push(fmtMoney(money, currencyOf(p.id)));
   try { await window.api.copy(parts.join(' · ')); toast(t('toast.summary_copied')); }
   catch { toast(t('toast.copy_failed')); }
 }
@@ -3544,18 +3906,79 @@ function renderPdlgTags() {
   });
 }
 
-function openProjectDialog(project) {
+const pdlgProjectId = () => (pdlg.editing ? pdlg.editing.id : null);
+
+/** @param {object|null} project — null для нового
+ *  @param {string} [sec] — раздел, с которого открыть: main, money, tags,
+ *  statuses, versions. У нового проекта есть только первые два. */
+function openProjectDialog(project, sec) {
   pdlg.editing = project || null;
   pdlg.color = project ? (project.color || PALETTE[0]) : PALETTE[state.projects.length % PALETTE.length];
-  el.pdlgTitle.textContent = project ? t('project.edit_title') : t('project.new_title');
+  pdlg.rate = project && project.rate !== null && project.rate !== undefined ? project.rate : null;
+  pdlg.currency = project ? (project.currency || null) : null;
+  el.pdlgTitle.textContent = project ? t('status.dialog_title') : t('project.new_title');
   el.pdlgName.value = project ? project.name : '';
   el.pdlgDesc.value = project ? (project.description || '') : '';
   pdlg.tagIds = Core.keepKnown(state.tags, project ? project.tagIds : []);
   renderPdlgTags();
   buildSwatches();
+  el.pdlgRate.value = pdlg.rate !== null ? String(pdlg.rate) : '';
+  el.pdlgRate.placeholder = String(defaultRate() || 0);
+  el.pdlgLater.hidden = !!project;
+  setPdlgSection(project && ['money', 'tags', 'statuses', 'versions'].includes(sec) ? sec : (sec === 'money' ? 'money' : 'main'));
   el.pdlgBackdrop.hidden = false;
-  el.pdlgName.focus();
-  el.pdlgName.select();
+  if (!sec || sec === 'main') { el.pdlgName.focus(); el.pdlgName.select(); }
+}
+
+/** Разделы окна проекта. Теги, статусы и версии — только у существующего. */
+function setPdlgSection(sec) {
+  pdlg.sec = sec;
+  const has = !!pdlg.editing;
+  el.pdlgTabs.forEach((b) => {
+    b.classList.toggle('on', b.dataset.sec === sec);
+    b.hidden = !has && ['tags', 'statuses', 'versions'].includes(b.dataset.sec);
+  });
+  for (const name of ['main', 'money', 'tags', 'statuses', 'versions']) {
+    document.getElementById(`pdlg-sec-${name}`).hidden = name !== sec;
+  }
+  if (sec === 'money') renderPdlgMoney();
+  if (sec === 'tags') renderPdlgTagList();
+  if (sec === 'statuses') renderStatusDialog();
+  if (sec === 'versions') renderVersionDialog();
+}
+
+function renderPdlgMoney() {
+  const main = state.settings.currency;
+  const cur = pdlg.currency || main;
+  el.pdlgRateUnit.textContent = `${symOf(cur)}${t('rate.per_hour')}`;
+  el.pdlgRateHint.textContent = t('pdlg.rate_hint', { rate: `${moneyFmt().format(defaultRate())} ${symOf(main)}` });
+  el.pdlgCurrency.textContent = pdlg.currency ? currencyLabel(pdlg.currency) : t('pdlg.currency_default', { cur: currencyLabel(main) });
+  el.pdlgCurrency.classList.toggle('unset', !pdlg.currency);
+}
+
+/** Теги проекта — его собственные; общие заводятся в настройках. */
+function renderPdlgTagList() {
+  const pid = pdlgProjectId();
+  el.pdlgTagList.innerHTML = '';
+  const own = state.tags.filter((tg) => tg.projectId === pid);
+  if (!own.length) {
+    const empty = document.createElement('div');
+    empty.className = 'settings-row tags-empty';
+    empty.innerHTML = `<span class="settings-row-label muted">${escapeHtml(t('tag.project_empty'))}</span>`;
+    el.pdlgTagList.appendChild(empty);
+  }
+  for (const tag of own) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'settings-row settings-row-btn';
+    row.dataset.id = tag.id;
+    row.innerHTML = `
+      <span class="tag-dot" style="--sc:${escapeHtml(tag.color || PALETTE[0])}"></span>
+      <span class="settings-row-label">${escapeHtml(tag.name || '')}</span>
+      <span class="settings-row-value">${escapeHtml(tagUsageLabel(tagUsage(tag.id)))}</span>`;
+    row.addEventListener('click', () => openTagDialog(tag, '', () => renderPdlgTagList(), pid));
+    el.pdlgTagList.appendChild(row);
+  }
 }
 function buildSwatches() {
   el.pdlgSwatches.innerHTML = '';
@@ -3568,18 +3991,21 @@ function buildSwatches() {
     el.pdlgSwatches.appendChild(b);
   }
 }
-function closeProjectDialog() { el.pdlgBackdrop.hidden = true; }
+function closeProjectDialog() { el.pdlgBackdrop.hidden = true; closeDatePicker(); }
 function saveProjectDialog() {
   const name = el.pdlgName.value.trim();
-  if (!name) { el.pdlgName.focus(); return; }
+  if (!name) { setPdlgSection('main'); el.pdlgName.focus(); return; }
   const description = el.pdlgDesc.value.trim();
+  const rateText = el.pdlgRate.value.trim();
+  const rate = rateText === '' ? null : parseNum(rateText);
+  const fields = { name, description, color: pdlg.color, tagIds: pdlg.tagIds.slice(), rate, currency: pdlg.currency };
   if (pdlg.editing) {
-    Object.assign(pdlg.editing, { name, description, color: pdlg.color, tagIds: pdlg.tagIds.slice() });
+    Object.assign(pdlg.editing, fields);
     closeProjectDialog();
     render();
     scheduleSave();
   } else {
-    const p = { id: uid(), name, description, color: pdlg.color, createdAt: new Date().toISOString(), pinnedAt: null, tagIds: pdlg.tagIds.slice() };
+    const p = { id: uid(), createdAt: new Date().toISOString(), pinnedAt: null, ...fields };
     state.projects.push(p);
     seedProjectStatuses(p.id);
     closeProjectDialog();
@@ -3632,7 +4058,7 @@ function spanFromParts(dateKey, startHm, endHm) {
  *  Само правило — в ядре (core/money.js, planSessionEdit), здесь только
  *  применение к задаче. */
 function applySessionEdit(task, index, span) {
-  const upd = Core.planSessionEdit(task, index, span, defaultRate(), Date.now());
+  const upd = Core.planSessionEdit(task, index, span, rates(), Date.now());
   task.sessions = upd.sessions;
   task.totalMs = upd.totalMs;
   task.updatedAt = upd.updatedAt;
@@ -3671,20 +4097,20 @@ el.sdlgEndBtn.addEventListener('click', () => openTimePicker(el.sdlgEndBtn, sdlg
 // формулы там, а здесь только подстановка состояния. Подписи и
 // форматирование передаются параметрами, потому что словарь и format у
 // десктопа и телефона свои.
-const reports = () => Core.makeReports({
+const reportsFor = (projectId) => Core.makeReports({
   t,
-  cur: currencySym(),
+  cur: symOf(projectId ? currencyOf(projectId) : state.settings.currency),
   fmtClock,
   fmtDate,
   fmtTime,
   hoursOf,
-  effectiveRate,
-  sessionRate,
+  effectiveRate: (task) => Core.effectiveRate(task, projectId ? rates() : ratesMain()),
+  sessionRate: (s, task) => Core.sessionRate(s, task, projectId ? rates() : ratesMain()),
   sessionMoney,
 });
 
 function buildTaskSheets(task) {
-  return reports().buildTaskSheets(task, getProject(task.projectId));
+  return reportsFor(task.projectId).buildTaskSheets(task, getProject(task.projectId));
 }
 
 function buildProjectSheets(project, versionId) {
@@ -3695,17 +4121,17 @@ function buildProjectSheets(project, versionId) {
   const meta = versionId && versionId !== 'all'
     ? [[{ t: t('xlsx.version'), s: 1 }, versionFilterLabel(project.id, versionId)]]
     : [];
-  return reports().buildProjectSheets(project, tasks, { meta });
+  return reportsFor(project.id).buildProjectSheets(project, tasks, { meta });
 }
 
 function buildAllProjectsSheets() {
-  return reports().buildAllProjectsSheets(state.projects, tasksOf);
+  return reportsFor(null).buildAllProjectsSheets(state.projects, tasksOf);
 }
 
 function buildPeriodSheets(from, to) {
   // statsTasks() уже учитывает фильтр по проекту на экране статистики,
   // поэтому ядру достаётся готовый список, а оно отбирает сессии по датам.
-  return reports().buildPeriodSheets(statsTasks(), getProject, { from, to });
+  return reportsFor(statsFilter.projectId !== 'all' ? statsFilter.projectId : null).buildPeriodSheets(statsTasks(), getProject, { from, to });
 }
 
 async function runExport(defaultName, sheets) {
@@ -4106,12 +4532,13 @@ function flushEditor() {
 setInterval(() => {
   if (!state.activeTimer) return;
   const task = getTask(state.activeTimer.taskId);
+  if (state.ui.view === 'task' && task && task.id === selectedId) { renderTimer(task); renderMoney(task); }
   if (state.ui.view === 'project') {
-    if (task && task.id === selectedId) { renderTimer(task); renderMoney(task); }
     const li = el.taskList.querySelector(`.task-item[data-id="${state.activeTimer.taskId}"] .task-time`);
     if (li && task) li.textContent = fmtShort(taskElapsedMs(task));
     renderProjectHeader();
   }
+  if (state.ui.view === 'home') { renderNowIsland(); renderDayIsland(); }
   renderStats();
 }, 250);
 
@@ -4145,6 +4572,17 @@ function recoverActiveTimer() {
 
 el.navItems.forEach((tab) => tab.addEventListener('click', () => openView(tab.dataset.view)));
 el.navCollapse.addEventListener('click', toggleNav);
+
+// Капсула ведёт на идущую задачу; стоп внутри неё останавливает таймер, не
+// уводя с текущего экрана.
+el.tbTimerStop.addEventListener('click', (e) => { e.stopPropagation(); stopTimer(); });
+el.tbTimerStop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); stopTimer(); } });
+el.tbTimer.addEventListener('click', () => {
+  const task = state.activeTimer && getTask(state.activeTimer.taskId);
+  if (!task) return;
+  openProject(task.projectId);
+  selectTask(task.id);
+});
 el.searchInput.addEventListener('focus', openSearch);
 el.searchInput.addEventListener('input', () => { renderSearch(el.searchInput.value); if (el.searchPanel.hidden) openSearch(); });
 el.searchInput.addEventListener('keydown', (e) => {
@@ -4163,12 +4601,24 @@ el.searchInput.addEventListener('keydown', (e) => {
     items[i].scrollIntoView({ block: 'nearest' });
   }
 });
-el.openCalendarBtn.addEventListener('click', () => openView('calendar'));
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
+el.homeAllProjects.addEventListener('click', () => openView('projects'));
+el.dayAddEntry.addEventListener('click', () => {
+  const start = Core.snapMinutes(Date.now(), AG_SNAP_MIN);
+  openAgendaDraft({ start, end: start + 3_600_000 });
+});
+el.dayOpen.addEventListener('click', () => { openAgendaDay(Date.now()); openView('time'); });
+el.nowBtn.addEventListener('click', () => {
+  const task = nowTask();
+  if (!task) return;
+  if (state.activeTimer && state.activeTimer.taskId === task.id) stopTimer();
+  else startTimer(task.id);
+});
+const openNowTask = () => { const task = nowTask(); if (task) { openProject(task.projectId); selectTask(task.id); } };
+el.nowTitle.addEventListener('click', openNowTask);
+el.nowOpen.addEventListener('click', openNowTask);
 el.boardStatuses.addEventListener('click', openStatusDialog);
 el.stAdd.addEventListener('click', addStatus);
-el.stdlgClose.addEventListener('click', closeStatusDialog);
-el.stdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.stdlgBackdrop) closeStatusDialog(); });
 
 // --- Теги ---
 el.tagsAdd.addEventListener('click', () => openTagDialog(null));
@@ -4192,15 +4642,27 @@ el.taskTagsAdd.addEventListener('click', () => {
     touchTask(task);
     render();
     scheduleSave();
-  });
+  }, task.projectId);
 });
 
 el.pdlgTagsAdd.addEventListener('click', () => {
   openTagPicker(el.pdlgTagsAdd, () => pdlg.tagIds, (ids) => {
     pdlg.tagIds = ids;
     renderPdlgTags();
-  });
+  }, pdlgProjectId());
 });
+el.pdlgTabs.forEach((b) => b.addEventListener('click', () => setPdlgSection(b.dataset.sec)));
+el.pdlgCurrency.addEventListener('click', () => {
+  const main = state.settings.currency;
+  openMenu(el.pdlgCurrency, [
+    { label: t('pdlg.currency_default', { cur: currencyLabel(main) }), selected: !pdlg.currency, onClick: () => { pdlg.currency = null; renderPdlgMoney(); } },
+    { sep: true },
+    ...Object.keys(CURRENCIES).map((code) => ({
+      label: currencyLabel(code), selected: code === pdlg.currency, onClick: () => { pdlg.currency = code; renderPdlgMoney(); },
+    })),
+  ]);
+});
+el.pdlgTagAdd.addEventListener('click', () => openTagDialog(null, '', () => renderPdlgTagList(), pdlgProjectId()));
 
 el.projTabs.forEach((b) => b.addEventListener('click', () => {
   flushEditor();
@@ -4211,30 +4673,25 @@ el.projTabs.forEach((b) => b.addEventListener('click', () => {
 }));
 el.navNewProject.addEventListener('click', () => openProjectDialog(null));
 window.addEventListener('resize', () => { if (state.ui.view === 'project') renderProjectHeader(); });
-el.toggleListBtn.addEventListener('click', () => {
-  state.ui.listHidden = !state.ui.listHidden;
+el.projBack.addEventListener('click', () => openView('projects'));
+el.crumbProjects.addEventListener('click', () => openView('projects'));
+const backToProject = () => { flushEditor(); state.ui.view = 'project'; render(); scheduleSave(); };
+el.taskBack.addEventListener('click', backToProject);
+el.crumbProject.addEventListener('click', backToProject);
+el.taskDoneBtn.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (!task) return;
+  setTaskDone(task, !task.done);
   render();
   scheduleSave();
 });
+el.pvAll.addEventListener('click', () => { state.ui.projectTab = 'versions'; render(); scheduleSave(); });
 
 el.projectMenuBtn.addEventListener('click', (e) => {
   const p = getProject(state.ui.projectId);
   if (p) openProjectMenu(p, e.currentTarget);
 });
 
-el.calModes.forEach((b) => b.addEventListener('click', () => setCalMode(b.dataset.mode)));
-el.calPrev.addEventListener('click', () => calShift(-1));
-el.calNext.addEventListener('click', () => calShift(1));
-el.calToday.addEventListener('click', () => {
-  const n = new Date();
-  calState.year = n.getFullYear();
-  calState.month = n.getMonth();
-  calState.weekStart = mondayOf(n);
-  calState.day = startOfDay(n);
-  calState.selected = dayKey(n);
-  if (calState.periodOn) seedRangeFromView();
-  renderCalendar();
-});
 el.calPeriodToggle.addEventListener('click', togglePeriod);
 // Границы периода больше не открывают собственный мини-календарь: большой
 // календарь прямо под ними и так на экране, и период набирается кликами по
@@ -4359,12 +4816,6 @@ el.exportPeriodBtn.addEventListener('click', openExportPeriodDialog);
 el.pinTaskBtn.addEventListener('click', () => selectedId && togglePinTask(selectedId));
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });
 
-el.stRunning.addEventListener('click', () => {
-  const task = state.activeTimer && getTask(state.activeTimer.taskId);
-  if (!task) return;
-  openProject(task.projectId);
-  selectTask(task.id);
-});
 
 el.taskStatus.addEventListener('click', () => {
   const task = getTask(selectedId);
@@ -4485,7 +4936,6 @@ function migrate() {
 
 async function init() {
   setupEditor();
-  setupCarousels();
   renderCurrency();
   buildSwatches();
 
@@ -4561,13 +5011,13 @@ el.taskVersion.addEventListener('click', () => {
   items.push({ sep: true });
   items.push({
     label: t('version.manage'),
-    onClick: () => { state.ui.boardProjectId = task.projectId; openStatusDialog(); },
+    onClick: () => openProjectDialog(getProject(task.projectId), 'versions'),
   });
   openMenu(el.taskVersion, items);
 });
 
 function renderVersionDialog() {
-  const pid = boardProjectId();
+  const pid = pdlgProjectId();
   const list = versionsOf(pid);
   el.verList.innerHTML = '';
 
@@ -4666,7 +5116,7 @@ function openReleaseMenu(anchor, v) {
 }
 
 function addVersion() {
-  const pid = boardProjectId();
+  const pid = pdlgProjectId();
   if (!pid) return;
   const list = versionsOf(pid);
   state.versions.push({
@@ -4827,8 +5277,12 @@ const statsNodes = () => ({ project: el.sfProject, version: el.sfVersion, reset:
 // Календарь живёт на той же странице, поэтому фильтр у них один: два разных
 // ответа на вопрос «за какой проект смотрим» на одном экране сбивали бы.
 const statsTasks = () => Core.filterTasks(state.tasks, state.versions, statsFilter);
-const calAggregateDays = () => Core.aggregateDays(statsTasks(), defaultRate());
-const calRangeAgg = (from, to) => Core.rangeAgg(statsTasks(), from, to, defaultRate());
+/** Выбран один проект — считаем в его валюте и по его ставкам; все —
+ *  в основной, и чужие валюты в деньги не входят. */
+const statsRates = () => (statsFilter.projectId !== 'all' ? rates() : ratesMain());
+const statsCurrency = () => (statsFilter.projectId !== 'all' ? currencyOf(statsFilter.projectId) : state.settings.currency);
+const calAggregateDays = () => Core.aggregateDays(statsTasks(), statsRates());
+const calRangeAgg = (from, to) => Core.rangeAgg(statsTasks(), from, to, statsRates());
 const calSessionPairs = () => Core.allSessionPairs(statsTasks());
 
 // --- Правая панель: записи, разложенные по проектам ---
@@ -4875,7 +5329,7 @@ function calGroupHead(g) {
     <svg class="icon cdl-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>
     <span class="cdl-group-dot"></span>
     <span class="cdl-group-name">${escapeHtml(g.project ? g.project.name : t('xlsx.no_project'))}</span>
-    <span class="cdl-group-tot">${fmtDur(g.ms)} · ${fmtMoney(g.money)}</span>`;
+    <span class="cdl-group-tot">${fmtDur(g.ms)} · ${fmtMoney(g.money, currencyOf(g.project ? g.project.id : null))}</span>`;
   b.addEventListener('click', () => toggleCalGroup(g.id));
   return b;
 }
@@ -4911,13 +5365,11 @@ const agenda = {
   mode: 'week',
   anchor: Core.startOfDayMs(Date.now()),
   miniMonth: Core.startOfDayMs(Date.now()),
-  // Скрытые проекты — как галочки календарей в Google. Это способ смотреть,
-  // в данных ему делать нечего.
-  hidden: new Set(),
   scrolled: false,
 };
 
-const agendaTasks = () => state.tasks.filter((t2) => !agenda.hidden.has(t2.projectId));
+// Расписание слушает тот же фильтр проекта и версии, что и числа.
+const agendaTasks = () => statsTasks();
 const agendaSpan = () => Core.agendaRange(agenda.mode, agenda.anchor);
 const agendaProjectColor = (projectId) => {
   const p = getProject(projectId);
@@ -4959,14 +5411,11 @@ function addSessionSpan(task, startMs, endMs) {
 // --- Отрисовка --------------------------------------------------------------
 
 function renderAgendaPage() {
-  renderAgendaSide();
   renderAgendaHead();
-  const timeMode = AG_TIME_MODES.includes(agenda.mode);
-  el.agTime.hidden = !timeMode;
-  el.agMonth.hidden = agenda.mode !== 'month';
+  const timeGrid = AG_TIME_MODES.includes(agenda.mode);
+  el.agTime.hidden = !timeGrid;
   el.agList.hidden = agenda.mode !== 'agenda';
-  if (timeMode) { renderAgendaTime(); syncAgendaScrollbar(); }
-  else if (agenda.mode === 'month') renderAgendaMonth();
+  if (timeGrid) { renderAgendaTime(); syncAgendaScrollbar(); }
   else renderAgendaList();
 }
 
@@ -4989,9 +5438,6 @@ function agendaTitle() {
 function renderAgendaHead() {
   el.agModes.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.mode === agenda.mode));
   el.agTitle.textContent = agendaTitle();
-  const { from, to } = agendaSpan();
-  const ms = Core.sessionSegments(agendaTasks(), from, to).reduce((a, s) => a + s.ms, 0);
-  el.agTotal.textContent = ms ? fmtDur(ms) : '';
 }
 
 /** Сетка живёт в прокручиваемой области и теряет ширину её полосы, а шапка
@@ -5016,50 +5462,6 @@ function syncAgendaScrollbar() {
   put('--ag-sb', grid);
   put('--ag-sb-row', Math.max(0, grid - row));
 }
-function renderAgendaSide() {
-  const m = new Date(agenda.miniMonth);
-  el.agMiniTitle.textContent = monthLabel(m.getFullYear(), m.getMonth());
-
-  const first = new Date(m.getFullYear(), m.getMonth(), 1).getTime();
-  const gridStart = Core.mondayOfMs(first);
-  const { from, to } = agendaSpan();
-  const today = dayKey(new Date());
-
-  el.agMiniDays.innerHTML = '';
-  for (let i = 0; i < 42; i += 1) {
-    const d = new Date(gridStart + i * Core.DAY);
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'ag-mini-day';
-    b.classList.toggle('out', d.getMonth() !== m.getMonth());
-    b.classList.toggle('today', dayKey(d) === today);
-    // Подсвечен весь отрезок, который сейчас на сетке, а не один день: так
-    // видно, какую неделю или месяц ты смотришь.
-    b.classList.toggle('sel', d.getTime() >= from && d.getTime() < to);
-    b.textContent = String(d.getDate());
-    b.addEventListener('click', () => {
-      agenda.anchor = Core.startOfDayMs(d);
-      renderAgendaPage();
-    });
-    el.agMiniDays.appendChild(b);
-  }
-
-  el.agProjects.innerHTML = '';
-  for (const p of state.projects) {
-    const li = document.createElement('li');
-    li.className = 'ag-proj' + (agenda.hidden.has(p.id) ? ' off' : '');
-    li.style.setProperty('--pc', p.color || PALETTE[0]);
-    li.innerHTML = `<span class="ag-proj-box">${icon('check')}</span>`
-      + `<span class="ag-proj-name">${escapeHtml(p.name)}</span>`;
-    li.addEventListener('click', () => {
-      if (agenda.hidden.has(p.id)) agenda.hidden.delete(p.id);
-      else agenda.hidden.add(p.id);
-      renderAgendaPage();
-    });
-    el.agProjects.appendChild(li);
-  }
-}
-
 /** Часовая сетка: день, четыре дня или неделя. */
 /** Всё, что нужно правилам календаря (core/views.js). */
 const agendaCtx = () => {
@@ -5077,7 +5479,7 @@ const agendaCtx = () => {
 };
 
 /** День из календаря открывается во весь экран: клик по числу. */
-const openAgendaDay = (start) => { agenda.anchor = Core.startOfDayMs(start); agenda.mode = 'day'; renderAgendaPage(); };
+const openAgendaDay = (start) => { agenda.anchor = Core.startOfDayMs(start); agenda.mode = 'day'; state.ui.timeMode = 'day'; };
 
 /** Часовая сетка — день, четыре дня или неделя. Что показать — решает
  *  ядро (agendaTimeView); здесь сборка DOM, черта «сейчас» и прокрутка. */
@@ -5174,61 +5576,6 @@ function renderAgendaNow() {
 
 /** Месяц: клетки с короткими чипами, как в Google. Что показать —
  *  решает ядро (agendaMonthView); здесь только сборка DOM. */
-function renderAgendaMonth() {
-  const v = Core.agendaMonthView(agendaTasks(), agendaCtx());
-
-  el.agMonth.innerHTML = '';
-  const head = elt('div', 'ag-month-week');
-  for (const name of v.weekdays) head.appendChild(elt('span', 'ag-month-dow', name));
-  el.agMonth.appendChild(head);
-
-  const grid = elt('div', 'ag-month-grid');
-  grid.style.setProperty('--ag-weeks', String(v.weeks));
-  for (const c of v.cells) {
-    const cell = elt('div', 'ag-month-cell');
-    cell.classList.toggle('out', c.out);
-    cell.classList.toggle('today', c.today);
-
-    const num = document.createElement('button');
-    num.type = 'button';
-    num.className = 'ag-month-num';
-    num.textContent = String(c.date);
-    num.addEventListener('click', () => openAgendaDay(c.start));
-    cell.appendChild(num);
-
-    for (const dl of c.deadlines) {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'ag-mchip dl' + (dl.done ? ' done' : '') + (dl.ghost ? ' ghost' : '');
-      chip.style.setProperty('--pc', dl.color);
-      chip.textContent = dl.title;
-      chip.addEventListener('click', () => openTaskModal(getTask(dl.taskId), null));
-      cell.appendChild(chip);
-    }
-    for (const seg of c.sessions) {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'ag-mchip';
-      chip.style.setProperty('--pc', seg.color);
-      chip.innerHTML = `<span class="ag-mchip-time">${seg.time}</span>`
-        + `<span class="ag-mchip-name">${escapeHtml(seg.title)}</span>`;
-      chip.addEventListener('click', () => { const task = getTask(seg.taskId); if (task) openTaskModal(task, seg.index); });
-      cell.appendChild(chip);
-    }
-    if (c.more) {
-      const more = document.createElement('button');
-      more.type = 'button';
-      more.className = 'ag-mmore';
-      more.textContent = `+${c.more}`;
-      more.addEventListener('click', () => openAgendaDay(c.start));
-      cell.appendChild(more);
-    }
-    grid.appendChild(cell);
-  }
-  el.agMonth.appendChild(grid);
-}
-
-/** Расписание: всё подряд списком, днями — как «Повестка дня» в Google. */
 function renderAgendaList() {
   const { from, to } = agendaSpan();
   const tasks = agendaTasks();
@@ -5442,8 +5789,16 @@ function agendaDefaultProject() {
   const alive = (id) => id && state.projects.some((p) => p.id === id);
   if (alive(agenda.lastProjectId)) return agenda.lastProjectId;
   if (alive(state.ui.projectId)) return state.ui.projectId;
-  const shown = state.projects.find((p) => !agenda.hidden.has(p.id));
+  const shown = state.projects.find((p) => statsFilter.projectId === 'all' || p.id === statsFilter.projectId);
   return (shown || state.projects[0]).id;
+}
+
+/** Запись завели в проекте, который фильтр прячет, — иначе создание выглядит
+ *  как «ничего не произошло»: задача есть, а блока на сетке нет. */
+function revealProjectOnTime(projectId) {
+  if (statsFilter.projectId === 'all' || statsFilter.projectId === projectId) return;
+  statsFilter.projectId = 'all';
+  statsFilter.versionId = 'all';
 }
 
 /** Новая запись. Черновик задачи заводится сразу: только так окно может
@@ -5453,7 +5808,7 @@ function openAgendaDraft(span) {
   if (!state.projects.length) { toast(t('agenda.no_projects')); return; }
   const task = newTaskOnAgenda(agendaDefaultProject(), '');
   addSessionSpan(task, span.start, span.end);
-  agenda.hidden.delete(task.projectId);
+  revealProjectOnTime(task.projectId);
   render();
   openTaskModal(task, 0, { fresh: true });
 }
@@ -5475,6 +5830,7 @@ function openTaskModal(task, index, opts) {
   tmdlg.index = index != null ? index : null;
   selectedId = task.id;
   el.tmdlgParams.appendChild(el.taskParams);
+  el.tmdlgParams.appendChild(el.taskTagsRow);
 
   const s = tmdlg.index != null ? (task.sessions || [])[tmdlg.index] : null;
   el.tmdlgEntry.hidden = !s;
@@ -5498,7 +5854,8 @@ function closeTaskModal(discard) {
   el.tmdlgBackdrop.hidden = true;
   // Узел возвращается под название задачи. Не вернуть — и страница задачи
   // останется без свойств до перезагрузки.
-  el.taskProps.appendChild(el.taskParams);
+  el.taskProps.insertBefore(el.taskParams, el.taskProps.firstChild);
+  el.tabNotes.parentElement.insertBefore(el.taskTagsRow, el.tabNotes);
   tmdlg.taskId = null;
   tmdlg.fresh = false;
   closeDatePicker();
@@ -5526,7 +5883,7 @@ function renderTaskModal() {
   // Проект меняют только у черновика: у заведённой задачи за ним тянутся
   // её статус и версия, и переезд был бы не переключателем, а переносом.
   el.tmdlgProj.disabled = !tmdlg.fresh;
-  el.tmdlgTot.textContent = `${fmtDur(taskElapsedMs(task))} · ${fmtMoney(earnedOf(task))}`;
+  el.tmdlgTot.textContent = `${fmtDur(taskElapsedMs(task))} · ${fmtMoney(earnedOf(task), currencyOf(task.projectId))}`;
   el.tmdlgOpen.textContent = t(tmdlg.fresh ? 'common.cancel' : 'agenda.open_task');
   el.tmdlgDone.textContent = t(tmdlg.fresh ? 'agenda.create_btn' : 'common.done');
   renderTmdlgFound();
@@ -5582,7 +5939,7 @@ function attachToExisting(task) {
   if (!task || !span) return;
   addSessionSpan(task, span.start.getTime(), span.end.getTime());
   agenda.lastProjectId = task.projectId;
-  agenda.hidden.delete(task.projectId);
+  revealProjectOnTime(task.projectId);
   render();
   scheduleSave();
   toast(t('agenda.new_entry'));
@@ -5636,7 +5993,7 @@ el.tmdlgProj.addEventListener('click', () => {
       task.versionId = null;
       task.updatedAt = new Date().toISOString();
       agenda.lastProjectId = p.id;
-      agenda.hidden.delete(p.id);
+      revealProjectOnTime(p.id);
       render();
       el.tmdlgTitle.focus();
     },
@@ -5682,30 +6039,31 @@ function agendaGo(dir) {
 }
 
 function agendaSetMode(mode) {
-  agenda.mode = mode;
-  renderAgendaPage();
+  setTimeMode(mode);
 }
 
+// Одна шапка на все режимы: месяц листает сетку итогов, остальные — расписание.
 el.agModes.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-mode]');
-  if (b) agendaSetMode(b.dataset.mode);
+  if (b) setTimeMode(b.dataset.mode);
 });
-el.agPrev.addEventListener('click', () => agendaGo(-1));
-el.agNext.addEventListener('click', () => agendaGo(1));
-el.agToday.addEventListener('click', () => {
-  agenda.anchor = Core.startOfDayMs(Date.now());
-  agenda.miniMonth = agenda.anchor;
-  renderAgendaPage();
+el.timePrev.addEventListener('click', () => { if (timeMode() === 'month') calShift(-1); else agendaGo(-1); renderTimePage(); });
+el.timeNext.addEventListener('click', () => { if (timeMode() === 'month') calShift(1); else agendaGo(1); renderTimePage(); });
+el.timeToday.addEventListener('click', () => {
+  const n = new Date();
+  agenda.anchor = Core.startOfDayMs(n.getTime());
+  calState.year = n.getFullYear();
+  calState.month = n.getMonth();
+  calState.weekStart = mondayOf(n);
+  calState.day = startOfDay(n);
+  calState.selected = dayKey(n);
+  if (calState.periodOn) seedRangeFromView();
+  renderTimePage();
 });
-el.agMiniPrev.addEventListener('click', () => {
-  const d = new Date(agenda.miniMonth);
-  agenda.miniMonth = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
-  renderAgendaSide();
-});
-el.agMiniNext.addEventListener('click', () => {
-  const d = new Date(agenda.miniMonth);
-  agenda.miniMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
-  renderAgendaSide();
+el.timeStatsToggle.addEventListener('click', () => {
+  state.ui.timeStatsHidden = !state.ui.timeStatsHidden;
+  renderTimePage();
+  scheduleSave();
 });
 el.agCreate.addEventListener('click', (e) => {
   // Час с ближайшей четверти: начинать запись с «сейчас» удобнее, чем с
@@ -5718,22 +6076,22 @@ el.agCreate.addEventListener('click', (e) => {
 // стрелки — шаг по времени. Работают только на этой странице и не мешают
 // набору текста.
 document.addEventListener('keydown', (e) => {
-  if (state.ui.view !== 'calendar') return;
+  if (state.ui.view !== 'time') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (anyDialogOpen()) return;
   const node = document.activeElement;
   if (node && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.isContentEditable)) return;
   const key = e.key.toLowerCase();
   const modes = { 1: 'day', d: 'day', 2: 'week', w: 'week', 3: 'month', m: 'month', 4: 'days4', x: 'days4', 5: 'agenda', a: 'agenda' };
-  if (modes[key]) { e.preventDefault(); agendaSetMode(modes[key]); return; }
-  if (key === 't' || key === 'е') { e.preventDefault(); el.agToday.click(); return; }
-  if (key === 'arrowleft' || key === 'k') { e.preventDefault(); agendaGo(-1); return; }
-  if (key === 'arrowright' || key === 'j') { e.preventDefault(); agendaGo(1); }
+  if (modes[key]) { e.preventDefault(); setTimeMode(modes[key]); return; }
+  if (key === 't' || key === 'е') { e.preventDefault(); el.timeToday.click(); return; }
+  if (key === 'arrowleft' || key === 'k') { e.preventDefault(); el.timePrev.click(); return; }
+  if (key === 'arrowright' || key === 'j') { e.preventDefault(); el.timeNext.click(); }
 });
 
 // Черта «сейчас» ползёт сама, пока страница открыта.
 setInterval(() => {
-  if (state.ui.view === 'calendar' && AG_TIME_MODES.includes(agenda.mode)) renderAgendaNow();
+  if (state.ui.view === 'time' && timeMode() !== 'month' && AG_TIME_MODES.includes(agenda.mode)) renderAgendaNow();
 }, 60_000);
 
 

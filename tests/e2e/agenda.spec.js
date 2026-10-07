@@ -1,5 +1,5 @@
-// Страница «Календарь»: часовая сетка, перетаскивание записей, проекты как
-// календари. Запуск: npm run test:e2e
+// Раздел «Время», часовая сетка: записи блоками, перетаскивание, фильтр по
+// проекту. Запуск: npm run test:e2e
 const { test, expect } = require('@playwright/test');
 const { pinClock } = require('./clock');
 
@@ -57,7 +57,8 @@ async function seed(page) {
     // Вчера с 23:00 на 2.5 часа — переходит за полночь.
     addTask(p2, 'Ночная выкатка', [[1, 23, 0, 2.5]]);
 
-    state.ui.view = 'calendar';
+    state.ui.view = 'time';
+    state.ui.timeMode = 'week';
     render();
     return { p1, p2 };
   }, HOUR);
@@ -114,18 +115,26 @@ const sessionOf = (page, title) => page.evaluate((title) => {
   };
 }, title);
 
-test('календарь — отдельная страница, старый в статистике остался', async ({ page }) => {
+test('календарь и статистика — один раздел «Время»', async ({ page }) => {
   await seed(page);
   const views = await page.locator('.nav-item[data-view]').evaluateAll((els) => els.map((e) => e.dataset.view));
-  expect(views).toContain('calendar');
-  await expect(page.locator('#calendar-view .ag-layout')).toBeVisible();
-  // Календарь «Статистики» никуда не делся: он про деньги и итоги.
-  await expect(page.locator('#stats-view .cal-grid')).toHaveCount(1);
+  expect(views).toContain('time');
+  expect(views).not.toContain('calendar');
+  expect(views).not.toContain('stats');
+  // Неделя — часовая сетка; числа статистики и панель дня живут тут же.
+  await expect(page.locator('#time-view .ag-main')).toBeVisible();
+  await expect(page.locator('#time-view .cal-main')).toBeHidden();
+  await expect(page.locator('#time-view .time-kpis')).toBeVisible();
+  await expect(page.locator('#time-view .cal-day')).toBeVisible();
+  // Старые адреса видов ведут сюда же: сохранённое состояние не теряется.
+  await page.evaluate(() => { state.ui.view = 'stats'; render(); });
+  expect(await page.evaluate(() => [state.ui.view, state.ui.timeMode])).toEqual(['time', 'month']);
+  await expect(page.locator('#time-view .cal-main')).toBeVisible();
 });
 
 test('неделя: семь столбцов, сутки часами, записи блоками', async ({ page }) => {
   await seed(page);
-  await expect(page.locator('#ag-modes button.on')).toHaveText('Неделя');
+  await expect(page.locator('#time-modes button.on')).toHaveText('Неделя');
   await expect(page.locator('.ag-dayname')).toHaveCount(7);
   await expect(page.locator('.ag-col')).toHaveCount(7);
   await expect(page.locator('.ag-hour')).toHaveCount(24);
@@ -240,33 +249,33 @@ test('клик по блоку без протягивания открывае�
   await expect(page.locator('#tmdlg-backdrop')).toBeVisible();
 });
 
-test('проекты слева работают как календари: галочка прячет их записи', async ({ page }) => {
+test('фильтр проекта в шапке прячет записи остальных', async ({ page }) => {
   await seed(page);
-  await expect(page.locator('.ag-proj')).toHaveCount(2);
   const before = await page.locator('.ag-ev').count();
 
-  await page.locator('.ag-proj', { hasText: 'Лендинг' }).click();
-  await expect(page.locator('.ag-proj.off')).toHaveCount(1);
+  await page.locator('#sf-project').click();
+  await page.locator('#ctx-menu .ctx-item', { hasText: 'Сайт клиента' }).click();
   const after = await page.locator('.ag-ev').count();
   expect(after, 'записи «Лендинга» должны пропасть').toBeLessThan(before);
 
-  await page.locator('.ag-proj', { hasText: 'Лендинг' }).click();
+  await page.locator('#sf-reset').click();
   await expect(page.locator('.ag-ev')).toHaveCount(before);
 });
 
 test('режимы переключаются и показывают разное', async ({ page }) => {
   await seed(page);
-  const mode = (m) => page.locator(`#ag-modes button[data-mode="${m}"]`).click();
+  const mode = (m) => page.locator(`#time-modes button[data-mode="${m}"]`).click();
 
   await mode('day');
   await expect(page.locator('.ag-col')).toHaveCount(1);
   await mode('days4');
   await expect(page.locator('.ag-col')).toHaveCount(4);
 
+  // Месяц — сетка итогов по дням, часовой сетки нет.
   await mode('month');
-  await expect(page.locator('#ag-time')).toBeHidden();
-  await expect(page.locator('#ag-month')).toBeVisible();
-  const cells = await page.locator('.ag-month-cell').count();
+  await expect(page.locator('#ag-main')).toBeHidden();
+  await expect(page.locator('#cal-main')).toBeVisible();
+  const cells = await page.locator('#cal-days .cal-cell').count();
   expect(cells % 7, 'месяц — целое число недель').toBe(0);
 
   await mode('agenda');
@@ -279,33 +288,20 @@ test('режимы переключаются и показывают разно
 
 test('горячие клавиши переключают режимы и возвращают к сегодня', async ({ page }) => {
   await seed(page);
-  await page.locator('#ag-title').click();
+  await page.locator('#time-title').click();
 
   await page.keyboard.press('d');
-  await expect(page.locator('#ag-modes button.on')).toHaveText('День');
+  await expect(page.locator('#time-modes button.on')).toHaveText('День');
   await page.keyboard.press('m');
-  await expect(page.locator('#ag-modes button.on')).toHaveText('Месяц');
+  await expect(page.locator('#time-modes button.on')).toHaveText('Месяц');
   await page.keyboard.press('w');
-  await expect(page.locator('#ag-modes button.on')).toHaveText('Неделя');
+  await expect(page.locator('#time-modes button.on')).toHaveText('Неделя');
 
-  const title = await page.locator('#ag-title').textContent();
+  const title = await page.locator('#time-title').textContent();
   await page.keyboard.press('ArrowRight');
-  await expect(page.locator('#ag-title')).not.toHaveText(title);
+  await expect(page.locator('#time-title')).not.toHaveText(title);
   await page.keyboard.press('t');
-  await expect(page.locator('#ag-title')).toHaveText(title);
-});
-
-test('мини-календарь перелистывается и уводит сетку на выбранный день', async ({ page }) => {
-  await seed(page);
-  await expect(page.locator('.ag-mini-day')).toHaveCount(42);
-  // Подсвечен весь показанный отрезок, а не один день.
-  expect(await page.locator('.ag-mini-day.sel').count()).toBe(7);
-
-  const title = await page.locator('#ag-mini-title').textContent();
-  await page.locator('#ag-mini-next').click();
-  await expect(page.locator('#ag-mini-title')).not.toHaveText(title);
-  await page.locator('#ag-mini-prev').click();
-  await expect(page.locator('#ag-mini-title')).toHaveText(title);
+  await expect(page.locator('#time-title')).toHaveText(title);
 });
 
 test('выделенная зона открывает окно создания со всеми настройками', async ({ page }) => {
@@ -430,11 +426,11 @@ test('набранное имя показывает подходящие зад
   expect(after.rate).toBe(2000);
 });
 
-test('запись в спрятанном проекте снова показывает его на сетке', async ({ page }) => {
+test('запись в отфильтрованном проекте снимает фильтр, чтобы её было видно', async ({ page }) => {
   // Иначе создание выглядит как «ничего не произошло»: задача есть, а блока нет.
   const ids = await seed(page);
-  await page.evaluate((pid) => { agenda.hidden.add(pid); render(); }, ids.p2);
-  await expect(page.locator('.ag-proj.off')).toHaveCount(1);
+  await page.evaluate((pid) => { statsFilter.projectId = pid; render(); }, ids.p1);
+  await expect(page.locator('#sf-reset')).toBeVisible();
 
   await drag(page, { day: 2, h: 13 }, { day: 2, h: 14 });
   await page.locator('#tmdlg-proj').click();
@@ -442,7 +438,7 @@ test('запись в спрятанном проекте снова показ�
   await page.locator('#tmdlg-title').fill('Смета');
   await page.locator('#tmdlg-done').click();
 
-  await expect(page.locator('.ag-proj.off')).toHaveCount(0);
+  await expect(page.locator('#sf-reset')).toBeHidden();
   await expect(page.locator('.ag-ev-name', { hasText: 'Смета' })).toBeVisible();
 });
 

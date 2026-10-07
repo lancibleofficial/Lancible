@@ -29,6 +29,12 @@ const SIZES = [['широкий', 1280], ['узкий', 375]];
 /** Разметка приехала, шрифты приехали. Без ожидания шрифтов первый снимок
  *  набран запасным шрифтом, а второй — настоящим. */
 async function ready(page, url) {
+  // Снимаем сайт глазами вернувшегося посетителя: выбор по cookie уже
+  // сделан, и баннер не закрывает первый экран. Сам баннер проверяет
+  // tests/landing/legal.spec.js.
+  await page.addInitScript(() => {
+    localStorage.setItem('lancible:consent', JSON.stringify({ v: 1, at: '2026-10-07T00:00:00.000Z', analytics: false }));
+  });
   await page.goto(url);
   await page.evaluate(() => document.fonts.ready);
 }

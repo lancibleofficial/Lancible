@@ -6,20 +6,26 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { sb } from './supabaseClient';
+import Legal from '../core/legal.js';
 
+/** Профиля нет — новый аккаунт, нужен онбординг. Профиль есть, но согласия
+ *  с нынешней редакцией документов нет — нужен шаг согласия (core/legal.js).
+ *  Тот же порядок, что в afterSignedIn десктопа. */
 export async function afterSignedIn() {
   const { data } = await sb.auth.getUser();
   const user = data && data.user;
   if (!user) return { ok: false };
   let profile = null;
   try {
-    const { data: row } = await sb.from('profiles').select('name').eq('id', user.id).maybeSingle();
+    const { data: row } = await sb.from('profiles').select('name, terms_version, age_confirmed').eq('id', user.id).maybeSingle();
     profile = row;
   } catch (err) {
     console.error('Не удалось прочитать профиль:', err);
   }
   if (!profile) return { ok: true, needsOnboarding: true, user: { id: user.id, email: user.email, name: null } };
-  return { ok: true, needsOnboarding: false, user: { id: user.id, email: user.email, name: profile.name } };
+  const me = { id: user.id, email: user.email, name: profile.name };
+  if (Legal.needsConsent(profile)) return { ok: true, needsConsent: true, user: me };
+  return { ok: true, user: me };
 }
 
 export async function signInWithPassword(email, password) {
@@ -84,18 +90,42 @@ export async function signInWithGoogle() {
   }
 }
 
-export async function saveOnboarding(name, useCase) {
+/** Шаг после входа: вызывается только с принятым согласием — без него
+ *  экран не даёт нажать кнопку. consentOnly — профиль уже есть, пишем одно
+ *  согласие. withProfile=false — «Пропустить»: согласие без имени и
+ *  назначения. Email в профиль не пишется: он и так есть в аккаунте. */
+export async function saveOnboarding(name, useCase, { consentOnly = false, withProfile = true } = {}) {
   try {
     const { data } = await sb.auth.getUser();
     const user = data && data.user;
     if (!user) return { ok: false };
-    const cleanName = (name || '').trim() || null;
-    await sb.from('profiles').upsert({ id: user.id, email: user.email, name: cleanName, use_case: useCase });
-    return { ok: true, user: { id: user.id, email: user.email, name: cleanName } };
+    const consent = Legal.consentFields(Date.now());
+    const { error } = consentOnly
+      ? await sb.from('profiles').update(consent).eq('id', user.id)
+      : await sb.from('profiles').upsert({
+        id: user.id,
+        ...(withProfile ? { name: (name || '').trim() || null, use_case: useCase } : {}),
+        ...consent,
+      });
+    if (error) throw error;
+    return afterSignedIn();
   } catch (err) {
     console.error('Не удалось сохранить профиль:', err);
+    return { ok: false, errorKey: 'auth.error_generic' };
+  }
+}
+
+/** Удаление аккаунта функцией delete_my_account в базе (supabase/legal.sql):
+ *  она стирает того, кто её вызвал, остальное уходит каскадом. Пользователя
+ *  на сервере после этого нет — выходим только локально. */
+export async function deleteAccount() {
+  const { error } = await sb.rpc('delete_my_account');
+  if (error) {
+    console.error('Не удалось удалить аккаунт:', error);
     return { ok: false };
   }
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (err) { console.error('Не удалось выйти:', err); }
+  return { ok: true };
 }
 
 export async function updateProfileName(name) {

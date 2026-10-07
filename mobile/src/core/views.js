@@ -236,10 +236,10 @@
    * то, над чем работают, потом выпущенное. Задачи без версии — отдельной
    * строкой в конце, если такие есть.
    *
-   * @param {object} ctx — { defaultRate, activeTimer, now }
+   * @param {object} ctx — { rates (см. money.js), activeTimer, now }
    */
   function versionRows(tasks, versions, projectId, ctx) {
-    const { defaultRate, activeTimer, now } = ctx;
+    const { rates, activeTimer, now } = ctx;
     const own = tasks.filter((t) => t.projectId === projectId);
     const row = (id, name, releasedAt, list) => ({
       id,
@@ -249,7 +249,7 @@
       total: list.length,
       done: list.filter((t) => t.done).length,
       ms: list.reduce((a, t) => a + F.taskElapsedMs(t, activeTimer, now), 0),
-      money: list.reduce((a, t) => a + M.earnedOf(t, defaultRate, activeTimer, now), 0),
+      money: list.reduce((a, t) => a + M.earnedOf(t, rates, activeTimer, now), 0),
     });
     const rows = V.laneVersions(versions, projectId)
       .map((v) => row(v.id, v.name, v.releasedAt, own.filter((t) => t.versionId === v.id)));

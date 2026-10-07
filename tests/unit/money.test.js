@@ -174,3 +174,47 @@ test('несуществующий номер записи означает но
   assert.equal(upd.sessions.length, 1);
   assert.equal(upd.totalMs, 2 * HOUR);
 });
+
+// --- ставка проекта и итог в основной валюте (с 7 октября 2026) ----------------
+
+const RATES = { default: 1000, byProject: { p1: 3000 } };
+
+test('ставка: задача → проект → общая', () => {
+  assert.equal(M.effectiveRate({ projectId: 'p1', rate: 500 }, RATES), 500, 'своя у задачи');
+  assert.equal(M.effectiveRate({ projectId: 'p1', rate: null }, RATES), 3000, 'своя у проекта');
+  assert.equal(M.effectiveRate({ projectId: 'p2', rate: null }, RATES), 1000, 'общая');
+  assert.equal(M.effectiveRate({ projectId: 'p2', rate: null }, 1500), 1500, 'число — по-старому, общая');
+});
+
+test('нулевая ставка проекта — это ноль, а не «как в настройках»', () => {
+  assert.equal(M.effectiveRate({ projectId: 'p0' }, { default: 1000, byProject: { p0: 0 } }), 0);
+});
+
+test('валюта проекта: своя или основная', () => {
+  assert.equal(M.projectCurrency({ currency: 'USD' }, 'RUB'), 'USD');
+  assert.equal(M.projectCurrency({ currency: null }, 'RUB'), 'RUB');
+  assert.equal(M.projectCurrency(null, 'RUB'), 'RUB', 'проекта нет — основная');
+});
+
+test('в общий итог входят деньги только проектов в основной валюте', () => {
+  const projects = [{ id: 'p1', currency: 'USD' }, { id: 'p2', currency: null }];
+  const tasks = [
+    { id: 'a', projectId: 'p1', sessions: [{ ms: HOUR }] },
+    { id: 'b', projectId: 'p2', sessions: [{ ms: HOUR }] },
+  ];
+  const scope = M.moneyScope(tasks, projects, 'RUB');
+  assert.deepEqual([...scope], ['b']);
+  const rates = { default: 1000, scope };
+  assert.equal(M.earnedOf(tasks[0], rates, null, 0), 0, 'долларовый проект в рубли не входит');
+  assert.equal(M.earnedOf(tasks[1], rates, null, 0), 1000);
+  const agg = M.aggregateDays(tasks.map((t) => ({ ...t, sessions: t.sessions.map((s) => ({ ...s, start: '2026-06-10T10:00:00.000Z' })) })), rates);
+  const day = [...agg.values()][0];
+  assert.equal(day.ms, 2 * HOUR, 'время считается по всем');
+  assert.equal(day.money, 1000, 'деньги — только по основной валюте');
+});
+
+test('идущий таймер чужой валюты тоже не входит в итог', () => {
+  const rates = { default: 1000, scope: new Set() };
+  const running = { taskId: 'a', startedAt: new Date(0).toISOString() };
+  assert.equal(M.earnedOf({ id: 'a', projectId: 'p1', sessions: [] }, rates, running, HOUR), 0);
+});

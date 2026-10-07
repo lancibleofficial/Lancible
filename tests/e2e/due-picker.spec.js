@@ -42,6 +42,20 @@ test('у срока одна кнопка — с датой и временем'
   await expect(page.locator('#due-time-btn')).toHaveCount(0);
 });
 
+test('окно срока не выходит за край экрана', async ({ page }) => {
+  // Кнопка срока стоит в правой колонке страницы задачи: окно шириной с
+  // календарь не помещается справа от неё и должно сдвинуться влево.
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openTask(page, new Date(2026, 5, 12, 18, 0).toISOString());
+  await page.locator('#due-date-btn').click();
+  const m = await page.evaluate(() => {
+    const r = document.getElementById('dp-pop').getBoundingClientRect();
+    return { right: r.right, bottom: r.bottom, w: innerWidth, h: innerHeight };
+  });
+  expect(m.right, 'правый край').toBeLessThanOrEqual(m.w);
+  expect(m.bottom, 'нижний край').toBeLessThanOrEqual(m.h);
+});
+
 test('в окне срока под календарём — часы и минуты; день его не закрывает', async ({ page }) => {
   await openTask(page, new Date(2026, 5, 12, 18, 0).toISOString());
   await page.locator('#due-date-btn').click();

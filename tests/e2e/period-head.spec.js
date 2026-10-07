@@ -1,16 +1,16 @@
-// Шапка периода у календаря и статистики — одна. Запуск: npm run test:e2e
+// Шапка раздела «Время». Запуск: npm run test:e2e
 //
-// До 6 октября 2026 они листали время по-разному: в календаре «Сегодня» и
-// стрелки слева, режимы справа, а в статистике наоборот — режимы слева,
-// «Сегодня» справа, стрелки посередине. Теперь у обеих одна шапка
-// (.period-head): слева «Сегодня», стрелки и название периода, в статистике
-// следом переключатель «Выбрать период»; режимы — у правого края, от
-// меньшего к большему. Проверяем замером, а не на глаз.
+// До 7 октября 2026 календарь и статистика были двумя экранами с двумя
+// шапками, и те листали время по-разному. Теперь раздел один и шапка одна:
+// слева режимы от меньшего к большему, за ними «Сегодня», стрелки и название
+// периода; справа фильтр проекта и действия. На 1280 она помещается в одну
+// строку в любом режиме — вторая строка отжимала бы сетку вниз. Проверяем
+// замером, а не на глаз.
 const { test, expect } = require('@playwright/test');
 const { pinClock } = require('./clock');
 
 async function open(page) {
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.setViewportSize({ width: 1280, height: 900 });
   await pinClock(page);
   await page.goto('/index.html');
   await page.evaluate(() => localStorage.clear());
@@ -18,13 +18,20 @@ async function open(page) {
   await expect(page.locator('#shell')).toBeVisible();
 }
 
-/** Рамки элементов шапки и подписи режимов на открытом экране. */
-const measure = (page, view, ids) => page.evaluate(([v, sel]) => {
-  state.ui.view = v;
+const SEL = {
+  head: '#time-view .time-head', modes: '#time-modes', today: '#time-today',
+  prev: '#time-prev', next: '#time-next', title: '#time-title',
+  filter: '#sf-project', create: '#ag-create', excel: '#export-period-btn',
+};
+
+/** Рамки элементов шапки в указанном режиме. */
+const measure = (page, mode) => page.evaluate(([m, sel]) => {
+  state.ui.view = 'time';
+  state.ui.timeMode = m;
   render();
   const box = (s) => {
     const r = document.querySelector(s).getBoundingClientRect();
-    return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, mid: (r.top + r.bottom) / 2 };
   };
   const out = {};
   for (const [k, s] of Object.entries(sel)) out[k] = box(s);
@@ -32,53 +39,42 @@ const measure = (page, view, ids) => page.evaluate(([v, sel]) => {
   const ts = getComputedStyle(document.querySelector(sel.title));
   out.titleFont = `${ts.fontFamily}|${ts.fontSize}|${ts.fontWeight}`;
   return out;
-}, [view, ids]);
+}, [mode, SEL]);
 
-const CALENDAR = {
-  head: '#calendar-view .period-head', today: '#ag-today', prev: '#ag-prev', next: '#ag-next',
-  title: '#ag-title', modes: '#ag-modes',
-};
-const STATS = {
-  head: '#stats-view .period-head', today: '#cal-today', prev: '#cal-prev', next: '#cal-next',
-  title: '#cal-title', toggle: '#cal-period-toggle', modes: '.cal-modes',
-};
+const MODES = ['day', 'days4', 'week', 'month', 'agenda'];
 
-test('календарь и статистика листают время одной шапкой', async ({ page }) => {
+test('режимы слева, «Сегодня» и стрелки перед названием периода, действия справа', async ({ page }) => {
   await open(page);
-  for (const [view, ids] of [['calendar', CALENDAR], ['stats', STATS]]) {
-    const m = await measure(page, view, ids);
-    // Слева направо: «Сегодня», назад, вперёд, название периода.
-    expect(m.today.left - m.head.left, `${view}: «Сегодня» — первым слева`).toBeLessThan(2);
-    expect(m.prev.left, `${view}: стрелки после «Сегодня»`).toBeGreaterThan(m.today.right);
-    expect(m.next.left).toBeGreaterThan(m.prev.right);
-    expect(m.title.left, `${view}: название периода после стрелок`).toBeGreaterThan(m.next.right);
-    // Режимы — у правого края шапки.
-    expect(Math.abs(m.head.right - m.modes.right), `${view}: режимы у правого края`).toBeLessThan(2);
-    expect(m.modes.left).toBeGreaterThan(m.title.right);
-  }
+  const m = await measure(page, 'week');
+  expect(m.modes.left - m.head.left, 'режимы — первыми слева').toBeLessThan(16);
+  expect(m.today.left).toBeGreaterThan(m.modes.right);
+  expect(m.prev.left, 'стрелки после «Сегодня»').toBeGreaterThan(m.today.right);
+  expect(m.next.left).toBeGreaterThan(m.prev.right);
+  expect(m.title.left, 'название периода после стрелок').toBeGreaterThan(m.next.right);
+  expect(m.filter.left, 'фильтр — в правой части').toBeGreaterThan(m.title.right);
+  expect(m.create.left).toBeGreaterThan(m.filter.right);
+  expect(m.excel.left).toBeGreaterThan(m.create.right);
+  expect(m.head.right - m.excel.right, 'Excel — у правого края').toBeLessThan(16);
 });
 
-test('в статистике «Выбрать период» стоит слева — сразу за названием периода', async ({ page }) => {
+for (const mode of MODES) {
+  test(`на 1280 шапка в одну строку — режим ${mode}`, async ({ page }) => {
+    await open(page);
+    const m = await measure(page, mode);
+    const mids = [m.modes, m.today, m.title, m.filter, m.create, m.excel].map((b) => b.mid);
+    expect(Math.max(...mids) - Math.min(...mids), 'элементы на одной строке').toBeLessThan(6);
+    expect(m.head.bottom - m.head.top, 'шапка не выросла на вторую строку').toBeLessThan(60);
+  });
+}
+
+test('режимы идут от меньшего к большему', async ({ page }) => {
   await open(page);
-  const m = await measure(page, 'stats', STATS);
-  expect(m.toggle.left).toBeGreaterThan(m.title.right);
-  expect(m.toggle.right, 'и до режимов').toBeLessThan(m.modes.left);
-  // Одна строка: шапка не разъехалась на две.
-  expect(Math.abs(m.toggle.top - m.today.top)).toBeLessThan(8);
+  const m = await measure(page, 'week');
+  expect(m.modeLabels).toEqual(['День', '4 дня', 'Неделя', 'Месяц', 'Расписание']);
 });
 
-test('режимы идут от меньшего к большему на обоих экранах', async ({ page }) => {
+test('название периода набрано Basique Pro', async ({ page }) => {
   await open(page);
-  const cal = await measure(page, 'calendar', CALENDAR);
-  const stats = await measure(page, 'stats', STATS);
-  expect(cal.modeLabels).toEqual(['День', '4 дня', 'Неделя', 'Месяц', 'Расписание']);
-  expect(stats.modeLabels).toEqual(['День', 'Неделя', 'Месяц']);
-});
-
-test('название периода набрано одинаково на обоих экранах', async ({ page }) => {
-  await open(page);
-  const cal = await measure(page, 'calendar', CALENDAR);
-  const stats = await measure(page, 'stats', STATS);
-  expect(stats.titleFont).toBe(cal.titleFont);
-  expect(cal.titleFont).toMatch(/^"?Basique Pro/);
+  const m = await measure(page, 'week');
+  expect(m.titleFont).toMatch(/^"?Basique Pro/);
 });

@@ -93,9 +93,13 @@
       }
     }
 
+    // Тег проекта, которого больше нет, никому не виден — убираем. Общий —
+    // с пустым projectId (у тегов старой версии поля не было).
+    state.tags = state.tags.filter((tg) => !tg.projectId || projectIds.has(tg.projectId));
     state.tags.forEach((tg, i) => {
       if (!tg.color) tg.color = palette[i % palette.length];
       if (typeof tg.name !== 'string') tg.name = '';
+      if (!tg.projectId) tg.projectId = null;
     });
 
     state.versions = state.versions.filter((v) => projectIds.has(v.projectId));
@@ -125,6 +129,13 @@
       if (typeof p.description !== 'string') p.description = '';
       if (p.pinnedAt === undefined) p.pinnedAt = null;
       p.tagIds = keepTags(p.tagIds);
+      // Своя ставка и валюта проекта (с 7 октября 2026). Пусто — общие из
+      // настроек. Валюта хранится кодом, символ переводится, как и общая.
+      if (p.rate === null || p.rate === '' || p.rate === undefined || !Number.isFinite(Number(p.rate))) p.rate = null;
+      else p.rate = Number(p.rate);
+      let pc = p.currency || null;
+      if (pc && sym2code[pc]) pc = sym2code[pc];
+      p.currency = pc && currencies[pc] ? pc : null;
     });
     state.tasks.forEach((task) => {
       if (task.pinnedAt === undefined) task.pinnedAt = null;

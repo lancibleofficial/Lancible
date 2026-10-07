@@ -61,7 +61,8 @@ async function seed(page) {
     addTask(p2, 'Первый экран', w1.id, [[0, 1.25, 16]]);
 
     state.ui.projectId = p1;
-    state.ui.view = 'stats';
+    state.ui.view = 'time';
+    state.ui.timeMode = 'month';
     render();
     return { p1, p2 };
   }, HOUR);
@@ -74,23 +75,20 @@ const cards = (page) => page.evaluate(() => ({
   done: document.getElementById('sp-done').textContent.trim(),
 }));
 
-test('в «Статистике» свой календарь — про деньги и итоги', async ({ page }) => {
-  // Страница «Календарь» появилась отдельно и живёт своей жизнью: она про
-  // расписание. Этот календарь остаётся внутри статистики, рядом с цифрами.
+test('месяц во «Времени» — сетка итогов по дням, про деньги', async ({ page }) => {
+  // Расписание (часовая сетка) и итоги (сетка месяца) — режимы одного
+  // раздела: в месяце видна сетка итогов, часовая спрятана.
   await seed(page);
   const views = await page.locator('.nav-item[data-view]').evaluateAll((els) => els.map((e) => e.dataset.view));
-  expect(views).toContain('stats');
-  await expect(page.locator('#stats-view .cal-grid')).toHaveCount(1);
-  await expect(page.locator('#stats-view #cal-days')).toBeVisible();
-  // Сетка расписания — на своей странице, а не здесь.
-  await expect(page.locator('#stats-view #ag-cols')).toHaveCount(0);
+  expect(views).toContain('time');
+  await expect(page.locator('#time-view #cal-days')).toBeVisible();
+  await expect(page.locator('#time-view .cal-cell').first()).toBeVisible();
+  await expect(page.locator('#time-view #ag-main')).toBeHidden();
 });
 
-test('правая панель — колонка во всю высоту, карточки рядом с ней', async ({ page }) => {
+test('правая панель — остров во всю высоту, числа и сетка — колонка рядом', async ({ page }) => {
   // Календарь переезжал целиком, и на переезде легко потерять закрывающий
-  // тег: панель тогда оказывается внутри сетки и уезжает вниз. А шапка
-  // статистики должна жить в левой колонке — над всей сеткой она отжимала
-  // панель вниз, и та начиналась где-то посередине экрана.
+  // тег: панель тогда оказывается внутри сетки и уезжает вниз.
   await seed(page);
   await page.waitForTimeout(200);
   const m = await page.evaluate(() => {
@@ -102,21 +100,20 @@ test('правая панель — колонка во всю высоту, к�
       };
     };
     return {
-      view: r('#stats-view'),
-      main: r('#stats-view .cal-main'),
-      aside: r('#stats-view .cal-day'),
-      cards: r('#stats-view .stat-cards'),
-      days: r('#stats-view #cal-days'),
+      body: r('#time-body'),
+      main: r('#time-view .cal-main'),
+      aside: r('#time-view .cal-day'),
+      kpis: r('#time-view .time-kpis'),
     };
   });
 
-  expect(m.aside.left, 'панель должна начинаться правее сетки').toBeGreaterThanOrEqual(m.main.right - 2);
-  expect(m.aside.top, 'панель должна начинаться у шапки').toBe(m.view.top);
-  expect(m.aside.bottom, 'панель должна доходить до низа окна').toBe(m.view.bottom);
-  expect(m.cards.right, 'карточки не должны залезать на панель').toBeLessThanOrEqual(m.aside.left);
-  // Карточки и календарь — одна колонка, поэтому края у них общие.
-  expect(m.cards.left).toBe(m.days.left);
-  expect(Math.abs(m.cards.right - m.days.right)).toBeLessThanOrEqual(2);
+  expect(m.aside.left, 'панель должна начинаться правее сетки').toBeGreaterThanOrEqual(m.main.right);
+  expect(m.aside.top, 'панель должна начинаться вместе с числами').toBe(m.kpis.top);
+  expect(m.aside.bottom, 'панель должна доходить до низа раздела').toBe(m.body.bottom);
+  expect(m.kpis.right, 'числа не должны залезать на панель').toBeLessThanOrEqual(m.aside.left);
+  // Числа и сетка — одна колонка, поэтому края у них общие.
+  expect(m.kpis.left).toBe(m.main.left);
+  expect(m.kpis.right).toBe(m.main.right);
 });
 
 test('четыре карточки считают то же, что и данные', async ({ page }) => {
@@ -231,10 +228,10 @@ test('фильтр версии в списке задач отбирает и �
   await expect(page.locator('#task-list .task-item')).toHaveCount(3);
 });
 
-test('выбор версии стоит своей строкой под фильтром и выглядит выбором', async ({ page }) => {
-  // В ряду с пилюлями «Все / Не выполнено / Выполнено» кнопке версии не
-  // хватало места, и подписи переносились. Теперь она под ними, своей
-  // строкой. Рамка поля ввода без стрелки читалась подписью — её нет.
+test('выбор версии стоит в строке фильтра у правого края и выглядит выбором', async ({ page }) => {
+  // Список задач — широкий остров, и версии хватает места в одной строке с
+  // пилюлями «Все / Не выполнено / Выполнено»: она у правого края. Рамка
+  // поля ввода без стрелки читалась подписью — её нет.
   await seed(page);
   await page.evaluate(() => { openProject(state.projects[0].id); });
   await expect(page.locator('#tf-version')).toBeVisible();
@@ -243,12 +240,13 @@ test('выбор версии стоит своей строкой под фил
   const m = await page.evaluate(() => {
     const r = (sel) => {
       const b = document.querySelector(sel).getBoundingClientRect();
-      return { top: Math.round(b.top), bottom: Math.round(b.bottom) };
+      return { top: Math.round(b.top), bottom: Math.round(b.bottom), left: Math.round(b.left), right: Math.round(b.right) };
     };
     const cs = (sel, prop) => getComputedStyle(document.querySelector(sel)).getPropertyValue(prop);
     return {
       pillsBox: r('.tf-status'),
       version: r('#tf-version'),
+      island: r('#sidebar'),
       pillHeights: [...document.querySelectorAll('.tf-status button')].map((b) => Math.round(b.getBoundingClientRect().height)),
       filter: r('.task-filter'),
       border: cs('#tf-version', 'border-style'),
@@ -259,7 +257,9 @@ test('выбор версии стоит своей строкой под фил
     };
   });
 
-  expect(m.version.top, 'версия — под строкой фильтра').toBeGreaterThanOrEqual(m.filter.bottom);
+  expect(Math.abs((m.version.top + m.version.bottom) - (m.pillsBox.top + m.pillsBox.bottom)) / 2, 'версия — в строке с пилюлями').toBeLessThan(4);
+  expect(m.version.left, 'версия правее пилюль').toBeGreaterThan(m.pillsBox.right);
+  expect(m.island.right - m.version.right, 'версия у правого края острова').toBeLessThan(24);
   // Ни рамки, ни подложки: это не поле ввода, а подпись, по которой кликают.
   expect(m.border).toBe('none');
   expect(m.background).toBe('rgba(0, 0, 0, 0)');

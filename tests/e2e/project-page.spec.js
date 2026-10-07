@@ -77,7 +77,7 @@ test('итоги проекта — в шапке: время, деньги, г�
     const r = (sel) => document.querySelector(sel).getBoundingClientRect();
     return { head: r('#project-header'), name: r('#ph-name'), tabs: r('#proj-tabs'), add: r('#new-task-btn') };
   });
-  expect(m.head.height).toBeLessThanOrEqual(92);
+  expect(m.head.height).toBeLessThanOrEqual(100);
   expect(m.tabs.top, 'вкладки под названием').toBeGreaterThanOrEqual(m.name.bottom);
   expect(m.head.right - m.add.right, '«+ Задача» у правого края').toBeLessThanOrEqual(16);
 });
@@ -123,7 +123,7 @@ test('строка задачи: название целиком сверху, �
   const row = page.locator('#task-list .task-item', { hasText: 'Главная' });
   // Статус не повторяется — он сказан заголовком группы.
   await expect(row.locator('.task-status')).toHaveCount(0);
-  await expect(row.locator('.ti-bottom .task-version')).toHaveText('1.0');
+  await expect(row.locator('.ti-meta .task-version')).toHaveText('1.0');
   const m = await row.evaluate((n) => {
     const name = n.querySelector('.task-name').getBoundingClientRect();
     const meta = n.querySelector('.ti-meta').getBoundingClientRect();
@@ -131,20 +131,6 @@ test('строка задачи: название целиком сверху, �
   });
   expect(m.metaTop, 'мета под названием').toBeGreaterThanOrEqual(m.nameBottom);
   expect(m.height).toBeLessThanOrEqual(52);
-});
-
-test('кнопка в строке задачи прячет список — задача берёт всю ширину', async ({ page }) => {
-  await seed(page);
-  const width = () => page.locator('#detail').evaluate((n) => n.getBoundingClientRect().width);
-  const before = await width();
-  await page.locator('#toggle-list-btn').click();
-  await expect(page.locator('#sidebar')).toBeHidden();
-  const after = await width();
-  expect(after - before, 'задача шире на ширину списка').toBeGreaterThan(300);
-  await expect(page.locator('#toggle-list-btn')).toHaveAttribute('title', 'Показать список');
-
-  await page.locator('#toggle-list-btn').click();
-  await expect(page.locator('#sidebar')).toBeVisible();
 });
 
 test('вкладка «Версии»: готовые из всех и деньги; щелчок открывает список по версии', async ({ page }) => {

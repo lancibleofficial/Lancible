@@ -2,6 +2,24 @@
   "_": "Узлы без входящих рёбер на момент снимка. Пересоздать: npm run graph:baseline",
   "nodes": [
     {
+      "id": "landing_consent_onchange",
+      "label": "onChange()",
+      "file": "landing/consent.js",
+      "at": "L222"
+    },
+    {
+      "id": "landing_legal_apply",
+      "label": "apply()",
+      "file": "landing/legal.js",
+      "at": "L64"
+    },
+    {
+      "id": "landing_legal_initiallang",
+      "label": "initialLang()",
+      "file": "landing/legal.js",
+      "at": "L36"
+    },
+    {
       "id": "mobile_src_components_authsheet_authsheet_ongooglepress",
       "label": "onGooglePress()",
       "file": "mobile/src/components/AuthSheet.js",
@@ -74,22 +92,28 @@
       "at": "L33"
     },
     {
+      "id": "mobile_src_components_profilesheet_profilesheet_ondeleteaccount",
+      "label": "onDeleteAccount()",
+      "file": "mobile/src/components/ProfileSheet.js",
+      "at": "L55"
+    },
+    {
       "id": "mobile_src_components_profilesheet_profilesheet_onopenchangepassword",
       "label": "onOpenChangePassword()",
       "file": "mobile/src/components/ProfileSheet.js",
-      "at": "L43"
+      "at": "L44"
     },
     {
       "id": "mobile_src_components_profilesheet_profilesheet_onsavename",
       "label": "onSaveName()",
       "file": "mobile/src/components/ProfileSheet.js",
-      "at": "L25"
+      "at": "L26"
     },
     {
       "id": "mobile_src_components_profilesheet_profilesheet_onsignout",
       "label": "onSignOut()",
       "file": "mobile/src/components/ProfileSheet.js",
-      "at": "L47"
+      "at": "L48"
     },
     {
       "id": "mobile_src_components_quicktasksheet_quicktasksheet_oncreate",
@@ -149,37 +173,43 @@
       "id": "mobile_src_core_money_earnedof",
       "label": "earnedOf()",
       "file": "mobile/src/core/money.js",
-      "at": "L32"
+      "at": "L59"
     },
     {
       "id": "mobile_src_core_money_sessionrate",
       "label": "sessionRate()",
       "file": "mobile/src/core/money.js",
-      "at": "L24"
+      "at": "L51"
     },
     {
       "id": "mobile_src_lib_auth_changepassword",
       "label": "changePassword()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L116"
+      "at": "L146"
+    },
+    {
+      "id": "mobile_src_lib_auth_deleteaccount",
+      "label": "deleteAccount()",
+      "file": "mobile/src/lib/auth.js",
+      "at": "L121"
     },
     {
       "id": "mobile_src_lib_auth_saveonboarding",
       "label": "saveOnboarding()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L87"
+      "at": "L97"
     },
     {
       "id": "mobile_src_lib_auth_signinwithgoogle",
       "label": "signInWithGoogle()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L63"
+      "at": "L69"
     },
     {
       "id": "mobile_src_lib_auth_updateprofilename",
       "label": "updateProfileName()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L101"
+      "at": "L131"
     },
     {
       "id": "mobile_src_lib_statuses_isclosedstatus",
@@ -224,10 +254,10 @@
       "at": "L93"
     },
     {
-      "id": "mobile_src_screens_auth_onboardingscreen_onboardingscreen_onsubmit",
-      "label": "onSubmit()",
+      "id": "mobile_src_screens_auth_onboardingscreen_onboardingscreen_submit",
+      "label": "submit()",
       "file": "mobile/src/screens/auth/OnboardingScreen.js",
-      "at": "L27"
+      "at": "L37"
     },
     {
       "id": "mobile_src_screens_boardscreen_boardscreen_onadd",
@@ -419,7 +449,7 @@
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onupdatepress",
       "label": "onUpdatePress()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L55"
+      "at": "L54"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_tagusagelabel",
@@ -558,12 +588,6 @@
       "label": "task()",
       "file": "mobile/tests/store-tasks.test.js",
       "at": "L30"
-    },
-    {
-      "id": "mobile_tests_taskclock_test_settings",
-      "label": "settings()",
-      "file": "mobile/tests/TaskClock.test.js",
-      "at": "L17"
     },
     {
       "id": "mobile_tests_taskclock_test_task",
@@ -725,259 +749,265 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L5678"
+      "at": "L6035"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L5302"
+      "at": "L5649"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L5292"
+      "at": "L5639"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L5684"
+      "at": "L6041"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
       "label": "allSessionPairs()",
       "file": "src/renderer/app.js",
-      "at": "L416"
+      "at": "L435"
     },
     {
       "id": "src_renderer_app_anydialogopen",
       "label": "anyDialogOpen()",
       "file": "src/renderer/app.js",
-      "at": "L448"
+      "at": "L468"
     },
     {
       "id": "src_renderer_app_applyremind",
       "label": "applyRemind()",
       "file": "src/renderer/app.js",
-      "at": "L4310"
+      "at": "L4767"
+    },
+    {
+      "id": "src_renderer_app_authdismissible",
+      "label": "authDismissible()",
+      "file": "src/renderer/app.js",
+      "at": "L1168"
     },
     {
       "id": "src_renderer_app_boardlane",
       "label": "boardLane()",
       "file": "src/renderer/app.js",
-      "at": "L2251"
+      "at": "L2518"
     },
     {
       "id": "src_renderer_app_calshift",
       "label": "calShift()",
       "file": "src/renderer/app.js",
-      "at": "L1702"
+      "at": "L1955"
     },
     {
       "id": "src_renderer_app_changepassword",
       "label": "changePassword()",
       "file": "src/renderer/app.js",
-      "at": "L939"
+      "at": "L1058"
     },
     {
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L3837"
+      "at": "L4263"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5836"
-    },
-    {
-      "id": "src_renderer_app_closestatusdialog",
-      "label": "closeStatusDialog()",
-      "file": "src/renderer/app.js",
-      "at": "L2672"
+      "at": "L6194"
     },
     {
       "id": "src_renderer_app_committime",
       "label": "commitTime()",
       "file": "src/renderer/app.js",
-      "at": "L1939"
+      "at": "L2201"
     },
     {
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L5593"
+      "at": "L5950"
     },
     {
       "id": "src_renderer_app_deletestatus",
       "label": "deleteStatus()",
       "file": "src/renderer/app.js",
-      "at": "L2740"
+      "at": "L3018"
     },
     {
       "id": "src_renderer_app_deletetask",
       "label": "deleteTask()",
       "file": "src/renderer/app.js",
-      "at": "L3379"
+      "at": "L3741"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4685"
+      "at": "L5135"
     },
     {
       "id": "src_renderer_app_dppickfrom",
       "label": "dpPickFrom()",
       "file": "src/renderer/app.js",
-      "at": "L1845"
+      "at": "L2110"
     },
     {
       "id": "src_renderer_app_expdlgrange",
       "label": "expdlgRange()",
       "file": "src/renderer/app.js",
-      "at": "L3739"
+      "at": "L4165"
     },
     {
       "id": "src_renderer_app_exportallprojects",
       "label": "exportAllProjects()",
       "file": "src/renderer/app.js",
-      "at": "L3852"
+      "at": "L4278"
     },
     {
       "id": "src_renderer_app_gettag",
       "label": "getTag()",
       "file": "src/renderer/app.js",
-      "at": "L2396"
+      "at": "L2663"
     },
     {
       "id": "src_renderer_app_handleauthsubmit",
       "label": "handleAuthSubmit()",
       "file": "src/renderer/app.js",
-      "at": "L861"
+      "at": "L972"
     },
     {
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L4486"
+      "at": "L4937"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
       "label": "isClosedStatus()",
       "file": "src/renderer/app.js",
-      "at": "L304"
+      "at": "L320"
     },
     {
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L3357"
+      "at": "L3718"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4442"
-    },
-    {
-      "id": "src_renderer_app_openexternallink",
-      "label": "openExternalLink()",
-      "file": "src/renderer/app.js",
-      "at": "L600"
+      "at": "L4893"
     },
     {
       "id": "src_renderer_app_openlangmenu",
       "label": "openLangMenu()",
       "file": "src/renderer/app.js",
-      "at": "L568"
+      "at": "L588"
+    },
+    {
+      "id": "src_renderer_app_openlegal",
+      "label": "openLegal()",
+      "file": "src/renderer/app.js",
+      "at": "L628"
     },
     {
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L4641"
+      "at": "L5091"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5830"
+      "at": "L6188"
     },
     {
       "id": "src_renderer_app_opensearch",
       "label": "openSearch()",
       "file": "src/renderer/app.js",
-      "at": "L1588"
+      "at": "L1841"
+    },
+    {
+      "id": "src_renderer_app_openview",
+      "label": "openView()",
+      "file": "src/renderer/app.js",
+      "at": "L1487"
     },
     {
       "id": "src_renderer_app_pickrangeday",
       "label": "pickRangeDay()",
       "file": "src/renderer/app.js",
-      "at": "L1758"
+      "at": "L2011"
     },
     {
       "id": "src_renderer_app_promptdialog",
       "label": "promptDialog()",
       "file": "src/renderer/app.js",
-      "at": "L468"
+      "at": "L488"
+    },
+    {
+      "id": "src_renderer_app_saveonboarding",
+      "label": "saveOnboarding()",
+      "file": "src/renderer/app.js",
+      "at": "L1020"
     },
     {
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L3572"
+      "at": "L3995"
     },
     {
       "id": "src_renderer_app_savetagdialog",
       "label": "saveTagDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2531"
+      "at": "L2806"
     },
     {
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L5797"
+      "at": "L6155"
     },
     {
       "id": "src_renderer_app_settaskversion",
       "label": "setTaskVersion()",
       "file": "src/renderer/app.js",
-      "at": "L4537"
-    },
-    {
-      "id": "src_renderer_app_startofday",
-      "label": "startOfDay()",
-      "file": "src/renderer/app.js",
-      "at": "L1696"
+      "at": "L4987"
     },
     {
       "id": "src_renderer_app_statusesofkind",
       "label": "statusesOfKind()",
       "file": "src/renderer/app.js",
-      "at": "L288"
+      "at": "L304"
     },
     {
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L3135"
+      "at": "L3480"
     },
     {
       "id": "src_renderer_app_togglesyncenabled",
       "label": "toggleSyncEnabled()",
       "file": "src/renderer/app.js",
-      "at": "L1238"
+      "at": "L1389"
     },
     {
       "id": "src_renderer_app_updateprofilename",
       "label": "updateProfileName()",
       "file": "src/renderer/app.js",
-      "at": "L927"
+      "at": "L1046"
     },
     {
       "id": "src_renderer_core_format_fmtshort",
@@ -989,13 +1019,13 @@
       "id": "src_renderer_core_money_earnedof",
       "label": "earnedOf()",
       "file": "src/renderer/core/money.js",
-      "at": "L32"
+      "at": "L59"
     },
     {
       "id": "src_renderer_core_money_sessionrate",
       "label": "sessionRate()",
       "file": "src/renderer/core/money.js",
-      "at": "L24"
+      "at": "L51"
     },
     {
       "id": "src_xlsx_zip",
@@ -1016,10 +1046,22 @@
       "at": "L33"
     },
     {
+      "id": "tests_e2e_a11y_spec_open",
+      "label": "open()",
+      "file": "tests/e2e/a11y.spec.js",
+      "at": "L10"
+    },
+    {
+      "id": "tests_e2e_a11y_spec_unnamed",
+      "label": "unnamed()",
+      "file": "tests/e2e/a11y.spec.js",
+      "at": "L25"
+    },
+    {
       "id": "tests_e2e_agenda_spec_drag",
       "label": "drag()",
       "file": "tests/e2e/agenda.spec.js",
-      "at": "L71"
+      "at": "L72"
     },
     {
       "id": "tests_e2e_agenda_spec_seed",
@@ -1031,7 +1073,7 @@
       "id": "tests_e2e_agenda_spec_sessionof",
       "label": "sessionOf()",
       "file": "tests/e2e/agenda.spec.js",
-      "at": "L103"
+      "at": "L104"
     },
     {
       "id": "tests_e2e_board_spec_openboard",
@@ -1044,6 +1086,36 @@
       "label": "seed()",
       "file": "tests/e2e/board.spec.js",
       "at": "L9"
+    },
+    {
+      "id": "tests_e2e_consent_spec_consent",
+      "label": "consent()",
+      "file": "tests/e2e/consent.spec.js",
+      "at": "L22"
+    },
+    {
+      "id": "tests_e2e_consent_spec_open",
+      "label": "open()",
+      "file": "tests/e2e/consent.spec.js",
+      "at": "L10"
+    },
+    {
+      "id": "tests_e2e_consent_spec_save",
+      "label": "save()",
+      "file": "tests/e2e/consent.spec.js",
+      "at": "L20"
+    },
+    {
+      "id": "tests_e2e_consent_spec_skip",
+      "label": "skip()",
+      "file": "tests/e2e/consent.spec.js",
+      "at": "L21"
+    },
+    {
+      "id": "tests_e2e_consent_spec_step",
+      "label": "step()",
+      "file": "tests/e2e/consent.spec.js",
+      "at": "L19"
     },
     {
       "id": "tests_e2e_currency_spec_seed",
@@ -1103,7 +1175,7 @@
       "id": "tests_e2e_period_head_spec_measure",
       "label": "measure()",
       "file": "tests/e2e/period-head.spec.js",
-      "at": "L22"
+      "at": "L28"
     },
     {
       "id": "tests_e2e_period_head_spec_open",
@@ -1124,10 +1196,22 @@
       "at": "L13"
     },
     {
+      "id": "tests_e2e_project_settings_spec_seed",
+      "label": "seed()",
+      "file": "tests/e2e/project-settings.spec.js",
+      "at": "L12"
+    },
+    {
+      "id": "tests_e2e_projects_spec_seed",
+      "label": "seed()",
+      "file": "tests/e2e/projects.spec.js",
+      "at": "L13"
+    },
+    {
       "id": "tests_e2e_repeat_spec_opentask",
       "label": "openTask()",
       "file": "tests/e2e/repeat.spec.js",
-      "at": "L53"
+      "at": "L50"
     },
     {
       "id": "tests_e2e_repeat_spec_seed",
@@ -1139,13 +1223,13 @@
       "id": "tests_e2e_repeat_spec_taskstate",
       "label": "taskState()",
       "file": "tests/e2e/repeat.spec.js",
-      "at": "L59"
+      "at": "L52"
     },
     {
       "id": "tests_e2e_stats_spec_cards",
       "label": "cards()",
       "file": "tests/e2e/stats.spec.js",
-      "at": "L70"
+      "at": "L71"
     },
     {
       "id": "tests_e2e_stats_spec_seed",
@@ -1169,7 +1253,7 @@
       "id": "tests_e2e_task_modal_spec_clickblock",
       "label": "clickBlock()",
       "file": "tests/e2e/task-modal.spec.js",
-      "at": "L54"
+      "at": "L55"
     },
     {
       "id": "tests_e2e_task_modal_spec_seed",
@@ -1181,30 +1265,36 @@
       "id": "tests_e2e_task_modal_spec_taskof",
       "label": "taskOf()",
       "file": "tests/e2e/task-modal.spec.js",
-      "at": "L65"
+      "at": "L66"
     },
     {
       "id": "tests_e2e_theme_spec_contrast",
       "label": "contrast()",
       "file": "tests/e2e/theme.spec.js",
-      "at": "L45"
+      "at": "L46"
     },
     {
       "id": "tests_e2e_theme_spec_open",
       "label": "open()",
       "file": "tests/e2e/theme.spec.js",
-      "at": "L10"
+      "at": "L11"
     },
     {
       "id": "tests_e2e_theme_spec_paint",
       "label": "paint()",
       "file": "tests/e2e/theme.spec.js",
-      "at": "L19"
+      "at": "L20"
     },
     {
       "id": "tests_e2e_timer_earned_spec_opentask",
       "label": "openTask()",
       "file": "tests/e2e/timer-earned.spec.js",
+      "at": "L13"
+    },
+    {
+      "id": "tests_e2e_today_spec_seed",
+      "label": "seed()",
+      "file": "tests/e2e/today.spec.js",
       "at": "L13"
     },
     {
@@ -1238,6 +1328,12 @@
       "at": "L24"
     },
     {
+      "id": "tests_landing_legal_spec_stored",
+      "label": "stored()",
+      "file": "tests/landing/legal.spec.js",
+      "at": "L12"
+    },
+    {
       "id": "tests_unit_agenda_test_at",
       "label": "at()",
       "file": "tests/unit/agenda.test.js",
@@ -1262,6 +1358,18 @@
       "at": "L46"
     },
     {
+      "id": "tests_unit_contrast_test_ratio",
+      "label": "ratio()",
+      "file": "tests/unit/contrast.test.js",
+      "at": "L31"
+    },
+    {
+      "id": "tests_unit_contrast_test_tokens",
+      "label": "tokens()",
+      "file": "tests/unit/contrast.test.js",
+      "at": "L16"
+    },
+    {
       "id": "tests_unit_due_test_duein",
       "label": "dueIn()",
       "file": "tests/unit/due.test.js",
@@ -1283,25 +1391,43 @@
       "id": "tests_unit_landing_test_chromecss",
       "label": "chromeCss()",
       "file": "tests/unit/landing.test.js",
-      "at": "L118"
+      "at": "L119"
     },
     {
       "id": "tests_unit_landing_test_lines",
       "label": "lines()",
       "file": "tests/unit/landing.test.js",
-      "at": "L51"
+      "at": "L52"
     },
     {
       "id": "tests_unit_landing_test_onlyblock",
       "label": "onlyBlock()",
       "file": "tests/unit/landing.test.js",
-      "at": "L41"
+      "at": "L42"
     },
     {
       "id": "tests_unit_landing_test_vercel",
       "label": "vercel()",
       "file": "tests/unit/landing.test.js",
-      "at": "L189"
+      "at": "L190"
+    },
+    {
+      "id": "tests_unit_legal_pages_test_articles",
+      "label": "articles()",
+      "file": "tests/unit/legal-pages.test.js",
+      "at": "L21"
+    },
+    {
+      "id": "tests_unit_legal_pages_test_markup",
+      "label": "markup()",
+      "file": "tests/unit/legal-pages.test.js",
+      "at": "L141"
+    },
+    {
+      "id": "tests_unit_legal_pages_test_skeleton",
+      "label": "skeleton()",
+      "file": "tests/unit/legal-pages.test.js",
+      "at": "L28"
     },
     {
       "id": "tests_unit_migrate_test_deps",
@@ -1451,7 +1577,7 @@
       "id": "tests_unit_visual_rules_test_layersof",
       "label": "layersOf()",
       "file": "tests/unit/visual-rules.test.js",
-      "at": "L193"
+      "at": "L195"
     },
     {
       "id": "tests_unit_visual_rules_test_ratchet",
@@ -1481,7 +1607,7 @@
       "id": "tests_visual_landing_spec_onlychrome",
       "label": "onlyChrome()",
       "file": "tests/visual/landing.spec.js",
-      "at": "L45"
+      "at": "L51"
     },
     {
       "id": "tests_visual_landing_spec_ready",

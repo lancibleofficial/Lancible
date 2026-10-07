@@ -55,8 +55,9 @@ for (const width of [1440, 1024, 860]) {
       sidebarWide: document.getElementById('sidebar').scrollWidth > document.getElementById('sidebar').clientWidth + 1,
     }));
     expect(m.pageWide, 'горизонтальная прокрутка').toBe(false);
-    expect(m.head).toBeLessThanOrEqual(92);
-    expect(m.addRight, '«+ Задача» у правого края').toBeLessThanOrEqual(20);
+    expect(m.head, 'шапка-остров: две строки с полями').toBeLessThanOrEqual(100);
+    // Поле страницы и поле острова: 12 + 16.
+    expect(m.addRight, '«+ Задача» у правого края').toBeLessThanOrEqual(30);
     expect(m.sidebarWide, 'список шире себя').toBe(false);
   });
 }

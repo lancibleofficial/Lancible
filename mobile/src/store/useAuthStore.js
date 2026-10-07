@@ -13,15 +13,17 @@ import { setSyncUser, syncOnSignIn } from '../lib/sync';
  * данные — та же последовательность, что afterSignedIn->syncOnSignIn на
  * десктопе/вебе. */
 function applyAuthResult(set, result) {
-  set({ status: result.needsOnboarding ? 'needsOnboarding' : 'signedIn', user: result.user });
-  if (!result.needsOnboarding) {
+  const status = result.needsOnboarding ? 'needsOnboarding' : result.needsConsent ? 'needsConsent' : 'signedIn';
+  set({ status, user: result.user });
+  // Синхронизация — только с принятым согласием.
+  if (status === 'signedIn') {
     setSyncUser(result.user.id);
     syncOnSignIn(result.user.id);
   }
 }
 
 export const useAuthStore = create((set, get) => ({
-  status: 'loading', // loading | signedOut | needsOnboarding | signedIn
+  status: 'loading', // loading | signedOut | needsOnboarding | needsConsent | signedIn
   user: null,
   authError: null,
   pendingConfirmEmail: null,
@@ -82,12 +84,17 @@ export const useAuthStore = create((set, get) => ({
     return result;
   },
 
-  async completeOnboarding(name, useCase) {
-    const result = await auth.saveOnboarding(name, useCase);
+  async completeOnboarding(name, useCase, opts) {
+    const result = await auth.saveOnboarding(name, useCase, opts);
+    if (result.ok) applyAuthResult(set, result);
+    return result;
+  },
+
+  async deleteAccount() {
+    const result = await auth.deleteAccount();
     if (result.ok) {
-      set({ status: 'signedIn', user: result.user });
-      setSyncUser(result.user.id);
-      syncOnSignIn(result.user.id);
+      setSyncUser(null);
+      set({ status: 'signedOut', user: null, pendingConfirmEmail: null });
     }
     return result;
   },

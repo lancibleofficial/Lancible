@@ -57,11 +57,19 @@
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.8 1.2a5.6 5.6 0 104.02 9.5l3.2 3.2 1.4-1.4-3.2-3.2A5.6 5.6 0 006.8 1.2zm0 2a3.6 3.6 0 110 7.2 3.6 3.6 0 010-7.2z"/></svg>
         <input id="search-input" type="text" data-i18n-ph="search.placeholder" placeholder="Поиск" autocomplete="off" />
       </div>
+      <div class="tb-gap"></div>
+      <!-- Капсула идущей задачи: видна на каждом экране, ведёт на задачу,
+           стоп — отдельной кнопкой внутри. Пустой, пока таймер не идёт. -->
+      <button type="button" id="tb-timer" class="tb-timer" hidden data-i18n-title="timer.open_running" title="Открыть идущую задачу">
+        <span class="tb-timer-dot" aria-hidden="true"></span>
+        <span class="tb-timer-time" id="tb-timer-time">00:00:00</span>
+        <span class="tb-timer-name" id="tb-timer-name"></span>
+        <span class="tb-timer-stop" id="tb-timer-stop" role="button" tabindex="0" data-i18n-aria="timer.stop" aria-label="Стоп"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="2"/></svg></span>
+      </button>
       <button type="button" id="notif-btn" class="tb-notif" data-i18n-title="notif.title" title="Уведомления">
         <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
         <span class="notif-badge" id="notif-badge" hidden></span>
       </button>
-      <div class="tb-gap"></div>
       <button type="button" id="account-btn" class="tb-account">
         <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
         <span id="account-label">Войти</span>
@@ -74,15 +82,15 @@
       <div class="nav-items">
         <button class="nav-item" data-view="home">
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3l6.6 5.5-1.15 1.35-.75-.62V13.6a1.1 1.1 0 01-1.1 1.1H9.35V9.9h-2.7v4.8H4.4a1.1 1.1 0 01-1.1-1.1V7.5l-.75.63L1.4 6.8 8 1.3z"/></svg>
-          <span class="nav-label" data-i18n="nav.home">Обзор</span>
+          <span class="nav-label" data-i18n="nav.home">Сегодня</span>
         </button>
-        <button class="nav-item" data-view="calendar">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
-          <span class="nav-label" data-i18n="nav.calendar">Календарь</span>
+        <button class="nav-item" data-view="projects">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zm7 0h5v5H9zM2 9h5v5H2zm7 0h5v5H9zm-5.6-5.6v2.2h2.2V3.4zm7 0v2.2h2.2V3.4zm-7 7v2.2h2.2v-2.2zm7 0v2.2h2.2v-2.2z"/></svg>
+          <span class="nav-label" data-i18n="nav.projects">Проекты</span>
         </button>
-        <button class="nav-item" data-view="stats">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 1.4h1.4v13.2H2zM2 13.2h12v1.4H2zM4.4 9h2v4.6h-2zM7.6 6.2h2v7.4h-2zM10.8 3.4h2v10.2h-2z"/></svg>
-          <span class="nav-label" data-i18n="nav.stats">Статистика</span>
+        <button class="nav-item" data-view="time">
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+          <span class="nav-label" data-i18n="nav.time">Время</span>
         </button>
         <button class="nav-item" data-view="settings">
           <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zM8 6.8a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4zM6.9 1h2.2l.3 1.7c.5.15.95.37 1.37.63l1.5-.9 1.55 1.55-.9 1.5c.26.42.48.87.63 1.37L15.3 6.9v2.2l-1.7.3c-.15.5-.37.95-.63 1.37l.9 1.5-1.55 1.55-1.5-.9c-.42.26-.87.48-1.37.63L9.1 15H6.9l-.3-1.7a5.2 5.2 0 01-1.37-.63l-1.5.9-1.55-1.55.9-1.5A5.2 5.2 0 012.4 9.1L.7 8.8V6.6l1.7-.3c.15-.5.37-.95.63-1.37l-.9-1.5L3.68 1.88l1.5.9c.42-.26.87-.48 1.37-.63L6.9 1z"/></svg>
@@ -118,107 +126,105 @@
     </nav>
 
     <div id="main">
-      <!-- ГЛАВНАЯ -->
+      <!-- СЕГОДНЯ. Слева — день: лента записей по часам, числа за сегодня,
+           неделю и месяц, три недавних проекта, сроки. Справа — идущая задача
+           (или последняя, чтобы продолжить) и недавние задачи. -->
       <main id="home-view" class="view">
-        <div class="home-center">
-          <div class="home-main">
-            <div id="topbar">
-              <div class="stat-cards">
-                <div class="stat-card">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
-                  <div><b id="st-time">—</b><span data-i18n="stats.worked">всего проработано</span></div>
-                </div>
-                <div class="stat-card">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
-                  <div><b id="st-money">—</b><span data-i18n="stats.earned">всего заработано</span></div>
-                </div>
-                <div class="stat-card">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
-                  <div><b id="st-month">—</b><span data-i18n="stats.month">заработано в этом месяце</span></div>
-                </div>
-                <div class="stat-card">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M13.6 3.3a1.05 1.05 0 010 1.5l-6.7 6.7a1.05 1.05 0 01-1.5 0L2 8.1a1.05 1.05 0 011.5-1.5l2.65 2.65 5.95-5.95a1.05 1.05 0 011.5 0z"/></svg>
-                  <div><b id="st-done">0</b><span data-i18n="stats.done">задач выполнено</span></div>
-                </div>
+        <div class="home-main">
+          <section class="island day-island">
+            <div class="day-head">
+              <div class="day-titles">
+                <h1 class="day-title" id="day-title"></h1>
+                <div class="day-sub" id="day-sub"></div>
               </div>
-              <button id="st-running" class="st-running" hidden></button>
-            </div>
-
-            <div class="home-head">
-              <h1><span data-i18n="home.title">Проекты</span> <span class="h-count" id="home-count"></span></h1>
-              <button id="create-project-btn" class="btn-accent">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
-                <span data-i18n="home.create">Создать проект</span>
-              </button>
-            </div>
-
-            <section id="pinned-section" hidden>
-              <div class="row-label" data-i18n="home.pinned">Закреплённые</div>
-              <div class="carousel">
-                <button class="car-arrow" data-dir="-1" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-                <div class="car-track" id="pinned-track"></div>
-                <button class="car-arrow" data-dir="1" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+              <div class="day-actions">
+                <button type="button" id="day-add-entry" class="btn-soft"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
+                <button type="button" id="day-open" class="ghost"><span data-i18n="home.open_day">Открыть день</span> →</button>
               </div>
-            </section>
-
-            <section>
-              <div class="row-label" id="all-label" data-i18n="home.other" hidden>Остальные</div>
-              <div class="projects-grid" id="projects-track"></div>
-            </section>
-
-            <p id="home-empty" class="muted" data-i18n="home.empty" hidden>Пока нет ни одного проекта. Создай первый.</p>
-          </div>
-
-          <section id="recent-section" class="recent-fixed" hidden>
-            <div class="row-label" data-i18n="home.recent">Недавние задачи</div>
-            <div class="carousel">
-              <button class="car-arrow" data-dir="-1" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-              <div class="car-track" id="recent-track"></div>
-              <button class="car-arrow" data-dir="1" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
             </div>
+            <div class="day-track" id="day-track"></div>
+            <div class="day-hours" id="day-hours"></div>
+          </section>
+
+          <section class="island kpi-island">
+            <div class="kpi"><div class="kpi-label" data-i18n="calendar.today">Сегодня</div><b class="kpi-num" id="st-today">—</b><span class="kpi-sub" id="st-today-money"></span></div>
+            <div class="kpi"><div class="kpi-label" id="kpi-week-label"></div><b class="kpi-num" id="st-week">—</b><span class="kpi-sub" id="st-week-money"></span></div>
+            <div class="kpi"><div class="kpi-label" id="kpi-month-label"></div><b class="kpi-num" id="st-time">—</b><span class="kpi-sub"><span id="st-money"></span> <span class="muted" id="st-done"></span></span></div>
+          </section>
+
+          <section class="island" id="home-projects" hidden>
+            <div class="island-head"><span class="island-title" data-i18n="home.recent_projects">Недавние проекты</span><button type="button" class="linklike" id="home-all-projects"><span data-i18n="home.all_projects">все проекты</span> →</button></div>
+            <div class="home-proj-grid" id="home-proj-grid"></div>
+          </section>
+
+          <section class="island" id="home-due">
+            <div class="island-head"><span class="island-title" data-i18n="home.due">Сроки</span><span class="island-note" id="home-due-note"></span></div>
+            <ul class="row-list" id="home-due-list"></ul>
+            <p class="muted island-empty" id="home-due-empty" data-i18n="notif.empty" hidden>Сроков и напоминаний пока нет.</p>
           </section>
         </div>
 
-        <aside id="home-side">
-          <div class="side-head">
-            <span id="mini-cal-title">—</span>
-            <button id="open-calendar" class="linklike"><span data-i18n="home.calendar_link">Календарь</span> →</button>
-          </div>
-          <div class="mini-cal-tot" id="mini-cal-tot"></div>
-          <div class="mini-weekdays">
-            <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
-          </div>
-          <div class="mini-cal" id="mini-cal"></div>
-          <div class="side-today" id="side-today"></div>
+        <aside class="home-side">
+          <section class="island now-island" id="now-island" hidden>
+            <div class="island-head"><span class="now-label" id="now-label"></span><span class="island-note" id="now-since"></span></div>
+            <button type="button" class="now-title" id="now-title"></button>
+            <div class="now-proj" id="now-proj"></div>
+            <div class="now-row">
+              <button type="button" class="sq-btn" id="now-btn" aria-label="Стоп"></button>
+              <div class="now-figures"><div class="now-time" id="now-time">00:00:00</div><div class="now-money" id="now-money"></div></div>
+              <span class="spacer"></span>
+              <button type="button" class="btn-soft" id="now-open" data-i18n="home.open_short">Открыть</button>
+            </div>
+          </section>
+          <section class="island" id="home-recent">
+            <div class="island-head"><span class="island-title" data-i18n="home.recent">Недавние задачи</span></div>
+            <ul class="row-list" id="recent-list"></ul>
+            <p class="muted island-empty" id="recent-empty" data-i18n="home.recent_empty" hidden>Начните задачу — она появится здесь.</p>
+          </section>
         </aside>
       </main>
 
-      <!-- ОТКРЫТЫЙ ПРОЕКТ -->
+      <!-- ПРОЕКТЫ: карточки и таблица недавних задач. Открыть проект — щелчок
+           по карточке, задачу — по строке. -->
+      <main id="projects-view" class="view" hidden>
+        <div class="page-head">
+          <h1 class="page-title"><span data-i18n="nav.projects">Проекты</span> <span class="h-count" id="home-count"></span></h1>
+          <span class="spacer"></span>
+          <button id="create-project-btn" class="btn-accent"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="home.create">Создать проект</span></button>
+        </div>
+        <div class="projects-grid" id="projects-track"></div>
+        <p id="home-empty" class="muted" data-i18n="home.empty" hidden>Пока нет ни одного проекта. Создай первый.</p>
+        <section class="island" id="recent-section" hidden>
+          <div class="island-head"><span class="island-title" data-i18n="home.recent">Недавние задачи</span></div>
+          <div class="recent-head"><span></span><span data-i18n="task.col_task">Задача</span><span data-i18n="task.col_last">Последняя запись</span><span data-i18n="task.col_time">Время</span><span data-i18n="task.col_money">Заработано</span></div>
+          <div class="recent-rows" id="recent-track"></div>
+        </section>
+      </main>
+
+      <!-- ОТКРЫТЫЙ ПРОЕКТ: остров-шапка (назад, цвет, название, описание,
+           теги, «+ Задача»; ниже вкладки, итоги, действия), список задач
+           колонками с группами по статусам, справа — прогресс, версии и
+           последние записи. Задача открывается своей страницей (#task-view). -->
       <div id="project-view" class="view" hidden>
-        <!-- Шапка проекта — одной строкой: название, вкладки, итоги, действия.
-             Описание проекта — подсказкой на названии. Общая ставка и валюта
-             живут на странице «Настройки» (здесь они были её копией). -->
-        <!-- Шапка проекта — две строки. Сверху то, что про сам проект:
-             цвет, название целиком, теги и «+ Задача» у правого края. Ниже
-             вкладки «Список / Доска / Версии», итоги и действия. Описание
-             проекта — подсказкой на названии. -->
-        <header class="proj-head" id="project-header">
+        <header class="proj-head island" id="project-header">
           <div class="ph-line">
+            <button type="button" id="proj-back" class="icon-btn" data-i18n-aria="nav.projects" aria-label="Проекты"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
             <span class="ph-dot" id="ph-dot"></span>
             <h1 class="ph-name" id="ph-name"></h1>
-            <div class="tag-chips ph-tags" id="ph-tags" hidden></div>
+            <span class="ph-desc" id="ph-desc"></span>
             <span class="spacer"></span>
             <button id="new-task-btn" class="btn-accent proj-new" data-i18n-title="project.new_task_title" title="Новая задача (Ctrl+N)">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="project.new_task_short">Задача</span>
             </button>
-            </div>
+          </div>
           <div class="ph-line ph-line-2">
-            <div class="proj-tabs" id="proj-tabs">
+            <div class="proj-tabs segmented" id="proj-tabs">
               <button type="button" data-ptab="list" class="on"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 3h9.3v1.6H5.2zm0 4.2h9.3v1.6H5.2zm0 4.2h9.3V13H5.2zM1.5 2.7h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5z"/></svg><span data-i18n="project.tab_list">Список</span></button>
               <button type="button" data-ptab="board"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h3.4v12H2zm4.3 0h3.4v8H6.3zm4.3 0H14v10h-3.4z"/></svg><span data-i18n="nav.board">Доска</span></button>
               <button type="button" data-ptab="versions"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.55 1.5a1 1 0 01.9 0l5.4 2.8a.8.8 0 010 1.42l-5.4 2.8a1 1 0 01-.9 0l-5.4-2.8a.8.8 0 010-1.42zM2.6 8.36l1.9.99L8 11.2l3.5-1.85 1.9-.99a.8.8 0 01.74 1.42l-5.69 2.99a1 1 0 01-.9 0L1.86 9.78a.8.8 0 01.74-1.42z"/></svg><span data-i18n="version.section">Версии</span><span class="ptab-count" id="ptab-ver-count"></span></button>
             </div>
-              <span class="spacer"></span>
+            <div class="tag-chips ph-tags" id="ph-tags" hidden></div>
+            <span class="spacer"></span>
             <span class="proj-kpis" id="project-earned"></span>
             <button type="button" class="icon-btn" id="board-statuses" data-i18n-title="board.statuses" data-i18n-aria="board.statuses" title="Статусы и версии" aria-label="Статусы и версии">
               <svg class="icon" viewBox="0 0 16 16" fill-rule="evenodd" aria-hidden="true"><path d="M6.82 1.4a.9.9 0 01.89-.75h.58a.9.9 0 01.89.75l.15.94c.4.13.77.29 1.12.5l.77-.55a.9.9 0 011.14.1l.41.41a.9.9 0 01.1 1.14l-.55.77c.21.35.37.72.5 1.12l.94.15a.9.9 0 01.75.89v.58a.9.9 0 01-.75.89l-.94.15c-.13.4-.29.77-.5 1.12l.55.77a.9.9 0 01-.1 1.14l-.41.41a.9.9 0 01-1.14.1l-.77-.55c-.35.21-.72.37-1.12.5l-.15.94a.9.9 0 01-.89.75h-.58a.9.9 0 01-.89-.75l-.15-.94c-.4-.13-.77-.29-1.12-.5l-.77.55a.9.9 0 01-1.14-.1l-.41-.41a.9.9 0 01-.1-1.14l.55-.77c-.21-.35-.37-.72-.5-1.12l-.94-.15a.9.9 0 01-.75-.89v-.58a.9.9 0 01.75-.89l.94-.15c.13-.4.29-.77.5-1.12l-.55-.77a.9.9 0 01.1-1.14l.41-.41a.9.9 0 011.14-.1l.77.55c.35-.21.72-.37 1.12-.5l.15-.94zM8 5.55a2.45 2.45 0 100 4.9 2.45 2.45 0 000-4.9z"/></svg>
@@ -229,49 +235,125 @@
               <button id="project-menu-btn" class="icon-btn" aria-label="Опции проекта">
               <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
             </button>
-            </div>
+          </div>
         </header>
 
         <div class="proj-list" id="proj-list">
-          <aside id="sidebar">
+          <section class="island proj-tasks" id="sidebar">
             <div class="task-filter">
-              <div class="tf-status segmented segmented-sm">
+              <div class="tf-status segmented">
                 <button data-status="all" class="on" data-i18n="filter.all">Все</button>
                 <button data-status="active" data-i18n="filter.active">Не выполнено</button>
                 <button data-status="done" data-i18n="filter.done">Выполнено</button>
               </div>
+              <div class="task-filter-version" id="task-filter-version" hidden>
+                <button type="button" class="ph-version" id="tf-version"></button>
+              </div>
             </div>
-            <!-- Версия — своей строкой под фильтром: рядом с тремя подписями
-                 в узком списке ей не хватало места, и подписи переносились. -->
-            <div class="task-filter-version" id="task-filter-version" hidden>
-              <button type="button" class="ph-version" id="tf-version"></button>
-            </div>
+            <div class="tl-head"><span></span><span data-i18n="task.col_task">Задача</span><span data-i18n="due.label">Срок</span><span data-i18n="task.col_time">Время</span><span data-i18n="task.col_money">Заработано</span></div>
             <div id="sidebar-empty" class="muted"></div>
             <ul id="task-list"></ul>
+          </section>
+
+          <aside class="proj-side">
+            <section class="island proj-card" id="proj-progress">
+              <div class="island-title" data-i18n="project.progress">Прогресс</div>
+              <div class="pp-line"><b class="pp-num" id="pp-done">0</b><span class="muted" id="pp-of"></span><span class="spacer"></span><span class="pp-pct" id="pp-pct"></span></div>
+              <div class="pp-bar" id="pp-bar"></div>
+              <div class="pp-legend" id="pp-legend"></div>
+            </section>
+            <section class="island proj-card" id="proj-versions-card" hidden>
+              <div class="island-head"><span class="island-title" data-i18n="version.section">Версии</span><button type="button" class="linklike" id="pv-all"><span data-i18n="version.all_short">все</span> →</button></div>
+              <div id="pv-rows"></div>
+            </section>
+            <section class="island proj-card" id="proj-sessions">
+              <div class="island-title" data-i18n="project.last_sessions">Последние записи</div>
+              <ul class="row-list" id="ps-list"></ul>
+              <p class="muted island-empty" id="ps-empty" data-i18n="history.empty" hidden>Ещё не было ни одного запуска таймера.</p>
+            </section>
           </aside>
+        </div>
 
-          <main id="detail">
-            <div id="empty-state" class="muted">
-              <p data-i18n="project.pick_task">Выбери задачу слева или создай новую.</p>
+        <!-- Доска — вкладка проекта: проект выбран самим экраном. -->
+        <div class="proj-board island" id="proj-board" hidden>
+          <div class="board-cols" id="board-cols"></div>
+          <div class="board-empty muted" id="board-empty" hidden data-i18n="board.empty">Сначала создайте проект.</div>
+        </div>
+
+        <!-- Версии: по каждой — задачи, готовые, время и деньги. -->
+        <div class="proj-versions island" id="proj-versions" hidden>
+          <ul class="pver-list" id="pver-list"></ul>
+          <p class="pver-empty muted" id="pver-empty" hidden data-i18n="version.empty_hint"></p>
+        </div>
+      </div>
+
+      <!-- ЗАДАЧА — своя страница: крошки, по центру название, теги и
+           редактор, справа таймер и остров «Свойства / История». -->
+      <div id="task-view" class="view" hidden>
+        <div class="task-crumbs">
+          <button type="button" id="task-back" class="icon-btn" data-i18n-aria="task.back_to_project" aria-label="К проекту"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+          <button type="button" class="crumb" id="crumb-projects" data-i18n="nav.projects">Проекты</button><span class="crumb-sep">›</span>
+          <button type="button" class="crumb" id="crumb-project"></button><span class="crumb-sep">›</span>
+          <span class="crumb crumb-cur" id="crumb-task"></span>
+        </div>
+        <div class="task-grid">
+          <section class="island task-main" id="task-detail">
+            <div class="task-title-row">
+              <input id="task-title" type="text" data-i18n-ph="task.title_ph" placeholder="Название задачи" autocomplete="off" />
+              <button id="pin-task-btn" class="icon-btn" data-i18n-title="task.pin_title" title="Закрепить задачу">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z"/></svg>
+              </button>
+              <button id="delete-task-btn" class="icon-btn icon-btn-danger" data-i18n-title="task.delete_title" title="Удалить задачу">
+                <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
+              </button>
             </div>
+            <div class="task-tags-row" id="task-tags-row">
+              <div class="tag-chips" id="task-tags"></div>
+              <button type="button" class="tag-add-btn" id="task-tags-add" data-i18n-title="tag.pick" title="Теги">+</button>
+            </div>
+            <div class="tab-panel" id="tab-notes">
+                <div id="editor-wrap">
+                  <div id="editor"></div>
+                  <div id="table-tools" hidden>
+                    <button data-tt="rowBelow" data-i18n="table.add_row">+ строка</button>
+                    <button data-tt="colRight" data-i18n="table.add_col">+ столбец</button>
+                    <button data-tt="rowDel" data-i18n="table.del_row">− строка</button>
+                    <button data-tt="colDel" data-i18n="table.del_col">− столбец</button>
+                    <span class="tt-div"></span>
+                    <span class="tt-fill-label" data-i18n="table.fill_label">залить:</span>
+                    <div class="tt-scope">
+                      <button data-scope="cell" class="on" data-i18n="table.scope_cell">ячейку</button>
+                      <button data-scope="row" data-i18n="table.scope_row">строку</button>
+                      <button data-scope="col" data-i18n="table.scope_col">столбец</button>
+                    </div>
+                    <div class="tt-swatches" id="tt-swatches"></div>
+                    <span class="tt-div"></span>
+                    <button data-tt="tableDel" class="tt-danger" data-i18n="table.del_table">удалить таблицу</button>
+                  </div>
+                </div>
+            </div>
+          </section>
 
-            <section id="task-detail" hidden>
-              <div class="task-title-row">
-                <input id="task-title" type="text" data-i18n-ph="task.title_ph" placeholder="Название задачи" autocomplete="off" />
-                <button id="toggle-list-btn" class="icon-btn" data-i18n-title="task.hide_list" title="Скрыть список">
-                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 2h10.8A1.6 1.6 0 0115 3.6v8.8a1.6 1.6 0 01-1.6 1.6H2.6A1.6 1.6 0 011 12.4V3.6A1.6 1.6 0 012.6 2zm.1 1.6v8.8h3.1V3.6H2.7zm4.7 0v8.8h6V3.6h-6z"/></svg>
-                </button>
-                <button id="pin-task-btn" class="icon-btn" data-i18n-title="task.pin_title" title="Закрепить задачу">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z"/></svg>
-                </button>
-                <button id="delete-task-btn" class="icon-btn icon-btn-danger" data-i18n-title="task.delete_title" title="Удалить задачу">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
-                </button>
+          <aside class="task-side">
+            <section class="island task-timer-island">
+              <div class="timer-bar">
+                <button id="timer-btn" class="sq-btn timer-btn"><span id="timer-btn-icon" class="timer-btn-icon"></span><span id="timer-btn-label" data-i18n="timer.start">Старт</span></button>
+                <div class="timer-block">
+                  <div class="timer-display" id="timer-display">00:00:00</div>
+                  <div class="timer-line"><span class="timer-earned" id="timer-earned" hidden></span><span class="timer-rate" id="timer-rate"></span></div>
+                </div>
               </div>
+              <div class="timer-sub" id="timer-sub" data-i18n="timer.sub_default">общее время по задаче</div>
+            </section>
 
-              <!-- Свойства задачи — строкой фишек под названием, всегда на виду.
+            <section class="island task-props-island">
+              <div class="task-tabs segmented" id="task-tabs">
+                <button type="button" data-tab="notes" class="on" data-i18n="task.props">Свойства</button>
+                <button type="button" data-tab="history" data-i18n="tabs.history">История</button>
+              </div>
+              <!-- Свойства задачи — строками: подпись слева, управление справа.
                    Это тот же узел .task-params, что одалживает окно задачи из
-                   календаря (#tmdlg-params): там он раскладывается колонкой. -->
+                   календаря (#tmdlg-params). -->
               <div class="task-props" id="task-props">
                 <div class="task-params">
                   <div class="due-bar status-bar">
@@ -284,12 +366,6 @@
                     <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.55 1.5a1 1 0 01.9 0l5.4 2.8a.8.8 0 010 1.42l-5.4 2.8a1 1 0 01-.9 0l-5.4-2.8a.8.8 0 010-1.42zM2.6 8.36l1.9.99L8 11.2l3.5-1.85 1.9-.99a.8.8 0 01.74 1.42l-5.69 2.99a1 1 0 01-.9 0L1.86 9.78a.8.8 0 01.74-1.42z"/></svg>
                     <span class="due-label" data-i18n="version.label">Версия</span>
                     <button type="button" class="dp-btn" id="task-version"></button>
-                  </div>
-                  <div class="due-bar tags-bar">
-                    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6A.6.6 0 012.6 2h5.1c.27 0 .52.1.71.29l5.3 5.3a1.6 1.6 0 010 2.26l-3.85 3.85a1.6 1.6 0 01-2.26 0l-5.3-5.3A1 1 0 012 7.7zm2.9 1.3a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
-                    <span class="due-label" data-i18n="tag.pick">Теги</span>
-                    <div class="tag-chips" id="task-tags"></div>
-                    <button type="button" class="tag-add-btn" id="task-tags-add" data-i18n-title="tag.pick" title="Теги">+</button>
                   </div>
                   <div class="money-bar">
                   <svg class="icon" viewBox="0 0 16 16"><path d="M2.2 4.4A2.2 2.2 0 014.4 2.2h7.2a2.2 2.2 0 012.2 2.2v.6H4.4a.6.6 0 100 1.2h9.4a2.2 2.2 0 012.2 2.2v3.2a2.2 2.2 0 01-2.2 2.2H4.4a2.2 2.2 0 01-2.2-2.2V4.4zm9.6 5.2a1 1 0 100 2 1 1 0 000-2z"/></svg>
@@ -320,148 +396,59 @@
                   <button type="button" class="dp-btn" id="remind-date-btn"></button>
                   </div>
                 </div>
-              </div>
-
-              <!-- Полоса: старт, время и заработанное, справа — вкладки. Стоит над
-                   вкладками, чтобы время было видно и в «Истории». -->
-              <div class="timer-bar">
-                <button id="timer-btn" class="timer-btn"><span id="timer-btn-icon">▶</span> <span id="timer-btn-label" data-i18n="timer.start">Старт</span></button>
-                <div class="timer-block">
-                  <div class="timer-line">
-                    <div class="timer-display" id="timer-display">00:00:00</div>
-                    <span class="timer-earned" id="timer-earned" hidden></span>
-                  </div>
-                  <div class="timer-sub" id="timer-sub" data-i18n="timer.sub_default">общее время по задаче</div>
-                </div>
-                <span class="spacer"></span>
-                <div class="task-tabs segmented" id="task-tabs">
-                  <button type="button" data-tab="notes" class="on" data-i18n="tabs.notes">Заметки</button>
-                  <button type="button" data-tab="history" data-i18n="tabs.history">История</button>
+                <div class="task-actions">
+                  <button type="button" id="task-done-btn" class="ghost" data-i18n="filter.done">Выполнено</button>
                 </div>
               </div>
-
-              <div class="tab-panel" id="tab-notes">
-                <div id="editor-wrap">
-                  <div id="editor"></div>
-                  <div id="table-tools" hidden>
-                    <button data-tt="rowBelow" data-i18n="table.add_row">+ строка</button>
-                    <button data-tt="colRight" data-i18n="table.add_col">+ столбец</button>
-                    <button data-tt="rowDel" data-i18n="table.del_row">− строка</button>
-                    <button data-tt="colDel" data-i18n="table.del_col">− столбец</button>
-                    <span class="tt-div"></span>
-                    <span class="tt-fill-label" data-i18n="table.fill_label">залить:</span>
-                    <div class="tt-scope">
-                      <button data-scope="cell" class="on" data-i18n="table.scope_cell">ячейку</button>
-                      <button data-scope="row" data-i18n="table.scope_row">строку</button>
-                      <button data-scope="col" data-i18n="table.scope_col">столбец</button>
-                    </div>
-                    <div class="tt-swatches" id="tt-swatches"></div>
-                    <span class="tt-div"></span>
-                    <button data-tt="tableDel" class="tt-danger" data-i18n="table.del_table">удалить таблицу</button>
-                  </div>
-                </div>
-              </div>
-
               <div class="tab-panel" id="tab-history" hidden>
                 <div class="history-head">
                   <h2><span data-i18n="history.title">Записи времени</span> <span class="h-count" id="session-count">0</span></h2>
                   <div class="history-actions">
-                    <button id="add-session-btn" class="btn-accent" data-i18n="history.add">+ Добавить запись</button>
+                    <button id="add-session-btn" class="btn-soft"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="history.add_short">Запись</span></button>
                     <button id="export-task-btn" class="ghost" data-i18n="history.excel" data-i18n-title="history.excel_title" title="Выгрузить логи времени этой задачи в Excel">⬇ Excel</button>
                   </div>
                 </div>
-                <ul id="session-list" class="island"></ul>
+                <ul id="session-list"></ul>
                 <p id="session-empty" class="muted" data-i18n="history.empty">Ещё не было ни одного запуска таймера.</p>
               </div>
             </section>
-          </main>
-        </div>
-
-        <!-- Доска — вкладка проекта: проект выбран самим экраном. -->
-        <div class="proj-board" id="proj-board" hidden>
-          <div class="board-cols" id="board-cols"></div>
-          <div class="board-empty muted" id="board-empty" hidden data-i18n="board.empty">Сначала создайте проект.</div>
-        </div>
-
-        <!-- Версии: по каждой — задачи, готовые, время и деньги. -->
-        <div class="proj-versions" id="proj-versions" hidden>
-          <ul class="pver-list" id="pver-list"></ul>
-          <p class="pver-empty muted" id="pver-empty" hidden data-i18n="version.empty_hint"></p>
-        </div>
-      </div>
-
-      <!-- КАЛЕНДАРЬ -->
-      <div id="calendar-view" class="view" hidden>
-        <div class="ag-layout">
-          <aside class="ag-side">
-            <button type="button" id="ag-create" class="btn-accent ag-create">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
-              <span data-i18n="agenda.new_entry">Новая запись</span>
-            </button>
-            <div class="ag-mini">
-              <div class="ag-mini-head">
-                <button type="button" id="ag-mini-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-                <span id="ag-mini-title"></span>
-                <button type="button" id="ag-mini-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
-              </div>
-              <div class="ag-mini-weekdays">
-                <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
-              </div>
-              <div class="ag-mini-days" id="ag-mini-days"></div>
-            </div>
-            <div class="ag-cal-list">
-              <div class="row-label" data-i18n="agenda.calendars">Мои проекты</div>
-              <ul class="ag-projects" id="ag-projects"></ul>
-            </div>
           </aside>
-
-          <div class="ag-main">
-            <div class="period-head">
-              <button type="button" id="ag-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
-              <div class="period-nav">
-                <button type="button" id="ag-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-                <button type="button" id="ag-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
-              </div>
-              <span class="period-title" id="ag-title"></span>
-              <span class="spacer"></span>
-              <span class="ag-total" id="ag-total"></span>
-              <div class="ag-modes segmented" id="ag-modes">
-                <button type="button" data-mode="day" data-i18n="calendar.day">День</button>
-                <button type="button" data-mode="days4" data-i18n="agenda.days4">4 дня</button>
-                <button type="button" data-mode="week" class="on" data-i18n="calendar.week">Неделя</button>
-                <button type="button" data-mode="month" data-i18n="calendar.month">Месяц</button>
-                <button type="button" data-mode="agenda" data-i18n="agenda.schedule">Расписание</button>
-              </div>
-            </div>
-
-            <div class="ag-time" id="ag-time">
-              <div class="ag-daynames" id="ag-daynames"></div>
-              <div class="ag-allday-row" id="ag-allday-row">
-                <span class="ag-allday-label" data-i18n="agenda.all_day">Весь день</span>
-                <div class="ag-allday" id="ag-allday"></div>
-              </div>
-              <div class="ag-scroll" id="ag-scroll">
-                <div class="ag-gutter" id="ag-gutter"></div>
-                <div class="ag-cols" id="ag-cols"></div>
-              </div>
-            </div>
-
-            <div class="ag-month" id="ag-month" hidden></div>
-            <div class="ag-list" id="ag-list" hidden></div>
-          </div>
         </div>
       </div>
 
-      <!-- НАСТРОЙКИ -->
-      <main id="stats-view" class="view" hidden>
-        <div class="cal-grid">
-          <div class="cal-main">
-          <div class="stats-wrap">
-            <div class="filter-bar">
-              <button type="button" class="dp-btn" id="sf-project"></button>
-              <button type="button" class="dp-btn" id="sf-version" hidden></button>
-              <button type="button" class="filter-reset" id="sf-reset" hidden data-i18n="version.filter_reset">Сбросить</button>
-            </div>
+      <!-- ВРЕМЯ: календарь и статистика одним разделом. День · 4 дня ·
+           Неделя — часовая сетка (записи блоками, перетаскивание); Месяц —
+           сетка итогов с выбором периода; Расписание — список. Слева числа и
+           сетка, справа день; статистику можно спрятать — сетка займёт всё. -->
+      <div id="time-view" class="view" hidden>
+        <div class="island time-head period-head">
+          <div class="segmented time-modes" id="time-modes">
+            <button type="button" data-mode="day" data-i18n="calendar.day">День</button>
+            <button type="button" data-mode="days4" data-i18n="agenda.days4">4 дня</button>
+            <button type="button" data-mode="week" data-i18n="calendar.week">Неделя</button>
+            <button type="button" data-mode="month" data-i18n="calendar.month">Месяц</button>
+            <button type="button" data-mode="agenda" data-i18n="agenda.schedule">Расписание</button>
+          </div>
+          <button type="button" id="time-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
+          <div class="period-nav">
+            <button type="button" id="time-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+            <button type="button" id="time-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+          </div>
+          <span class="period-title" id="time-title"></span>
+          <span class="spacer"></span>
+          <div class="filter-bar">
+            <button type="button" class="dp-btn" id="sf-project"></button>
+            <button type="button" class="dp-btn" id="sf-version" hidden></button>
+            <button type="button" class="filter-reset" id="sf-reset" hidden data-i18n="version.filter_reset">Сбросить</button>
+          </div>
+          <button type="button" id="time-stats-toggle" class="icon-btn" aria-pressed="false" data-i18n-title="time.hide_stats" title="Скрыть статистику" data-i18n-aria="time.hide_stats" aria-label="Скрыть статистику"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 2h10.8A1.6 1.6 0 0115 3.6v8.8a1.6 1.6 0 01-1.6 1.6H2.6A1.6 1.6 0 011 12.4V3.6A1.6 1.6 0 012.6 2zm.1 1.6v8.8h6.6V3.6H2.7zm8.2 0v8.8h2.5V3.6h-2.5z"/></svg></button>
+          <button type="button" id="ag-create" class="btn-soft ag-create"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
+          <button type="button" id="export-period-btn" class="icon-btn" data-i18n-title="export.pick_period" title="Excel за период" data-i18n-aria="export.pick_period" aria-label="Excel за период"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg></button>
+        </div>
+
+        <div class="time-body" id="time-body">
+          <div class="time-main">
+            <div class="island time-kpis" id="time-kpis">
             <div class="stat-cards">
               <div class="stat-card">
                 <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
@@ -480,61 +467,63 @@
                 <div><b id="sp-done">0</b><span data-i18n="stats.done">задач выполнено</span></div>
               </div>
             </div>
-            <div class="stats-actions">
-              <button id="export-all-btn" class="btn-accent">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
-                <span data-i18n="export.all_excel">Скачать всё в Excel</span>
-              </button>
-              <button id="export-period-btn" class="ghost">
-                <span data-i18n="export.pick_period">Excel за период</span>
-              </button>
+              <button id="export-all-btn" class="linklike kpi-export-all"><span data-i18n="export.all_excel">Скачать всё в Excel</span></button>
             </div>
-            <button id="sp-running" class="st-running" hidden></button>
-          </div>
-            <div class="period-head">
-              <button id="cal-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
-              <div class="period-nav">
-                <button id="cal-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-                <button id="cal-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+            <div class="island ag-main" id="ag-main">
+            <div class="ag-time" id="ag-time">
+              <div class="ag-daynames" id="ag-daynames"></div>
+              <div class="ag-allday-row" id="ag-allday-row">
+                <span class="ag-allday-label" data-i18n="agenda.all_day">Весь день</span>
+                <div class="ag-allday" id="ag-allday"></div>
               </div>
-              <span class="period-title" id="cal-title"></span>
-              <button id="cal-period-toggle" class="switch" aria-pressed="false">
-                <span class="switch-track"><span class="switch-thumb"></span></span>
-                <span data-i18n="calendar.choose_period">Выбрать период</span>
-              </button>
-              <span class="spacer"></span>
-              <div class="cal-modes segmented">
-                <button data-mode="day" data-i18n="calendar.day">День</button>
-                <button data-mode="week" data-i18n="calendar.week">Неделя</button>
-                <button data-mode="month" class="on" data-i18n="calendar.month">Месяц</button>
+              <div class="ag-scroll" id="ag-scroll">
+                <div class="ag-gutter" id="ag-gutter"></div>
+                <div class="ag-cols" id="ag-cols"></div>
               </div>
             </div>
+
+              <div class="ag-list" id="ag-list" hidden></div>
+            </div>
+            <div class="island cal-main" id="cal-main" hidden>
+              <div class="period-bar" id="period-bar">
+                <button type="button" id="cal-period-toggle" class="switch" aria-pressed="false">
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                  <span data-i18n="calendar.choose_period">Выбрать период</span>
+                </button>
+                <span class="period-bar-info" id="period-bar-info" hidden>
+                  <b id="period-bar-range"></b>
+                  <span class="muted" id="period-bar-sum"></span>
+                </span>
+              </div>
             <div class="cal-weekdays" id="cal-weekdays">
               <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
             </div>
-            <div class="cal-days" id="cal-days"></div>
+              <div class="cal-days" id="cal-days"></div>
+            </div>
           </div>
-
-          <aside class="cal-day" id="cal-day-panel">
+          <aside class="island cal-day" id="cal-day-panel">
             <div class="cal-view-tot" id="cal-view-tot" hidden></div>
             <div class="cal-day-head" id="cal-day-head" data-i18n="calendar.pick_day">Выбери день</div>
             <div class="cal-day-tot" id="cal-day-tot"></div>
             <ul class="cal-day-list" id="cal-day-list"></ul>
             <p class="muted" id="cal-day-empty" data-i18n="calendar.day_empty" hidden>В этот день записей не было.</p>
-            <button id="export-calendar-btn" class="btn-accent cal-export">
+            <button id="export-calendar-btn" class="btn-soft cal-export">
               <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
               <span data-i18n="export.excel">Экспорт</span>
             </button>
           </aside>
         </div>
-      </main>
+      </div>
 
       <div id="settings-view" class="view" hidden>
         <div class="settings-wrap">
-          <div class="settings-profile" id="settings-profile"></div>
+          <div class="page-head"><h1 class="page-title" data-i18n="nav.settings">Настройки</h1></div>
+          <section class="island settings-profile" id="settings-profile"></section>
+          <!-- Сетка островов: два в ряд, «О приложении» — на всю ширину. -->
+          <div class="settings-grid">
 
-          <div class="settings-section-label" id="settings-account-label" data-i18n="settings.section_account" hidden>Аккаунт</div>
-          <div class="settings-card" id="settings-account-card" hidden>
+          <section class="island settings-card" id="settings-account-card" hidden>
+            <div class="settings-section-label" id="settings-account-label" data-i18n="settings.section_account" hidden>Аккаунт</div>
             <button type="button" class="settings-row settings-row-btn" id="settings-name-row">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
               <span class="settings-row-label" data-i18n="profile.name_label">Имя</span>
@@ -544,14 +533,18 @@
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.8 7V5.2a3.2 3.2 0 116.4 0V7h-1.6V5.2a1.6 1.6 0 10-3.2 0V7zM3.6 7.6h8.8a1 1 0 011 1v5a1 1 0 01-1 1H3.6a1 1 0 01-1-1v-5a1 1 0 011-1z"/></svg>
               <span class="settings-row-label" data-i18n="profile.change_password">Изменить пароль</span>
             </button>
-            <button type="button" class="settings-row settings-row-btn settings-row-last settings-row-danger" id="settings-signout-row">
+            <button type="button" class="settings-row settings-row-btn settings-row-danger" id="settings-signout-row">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 2.2h3.4v1.6H5v8.4h1.8v1.6H3.4a1 1 0 01-1-1V3.2a1 1 0 011-1zM6.6 7.4h4.1v1.2H6.6zM10.4 5.6l3.6 2.4-3.6 2.4z"/></svg>
               <span class="settings-row-label" data-i18n="auth.sign_out">Выйти</span>
             </button>
-          </div>
+            <button type="button" class="settings-row settings-row-btn settings-row-last settings-row-danger" id="settings-delete-row">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
+              <span class="settings-row-label" data-i18n="account.delete">Удалить аккаунт</span>
+            </button>
+          </section>
 
-          <div class="settings-section-label" data-i18n="settings.section_main">Основное</div>
-          <div class="settings-card">
+          <section class="island settings-card">
+            <div class="settings-section-label" data-i18n="settings.section_main">Основное</div>
             <button type="button" class="settings-row settings-row-btn" id="settings-lang-row">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
               <span class="settings-row-label" data-i18n="nav.language">Язык</span>
@@ -572,19 +565,19 @@
                 </button>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div class="settings-section-label" id="settings-data-label" data-i18n="settings.section_data" hidden>Данные</div>
-          <div class="settings-card" id="settings-data-card" hidden>
+          <section class="island settings-card" id="settings-data-card" hidden>
+            <div class="settings-section-label" id="settings-data-label" data-i18n="settings.section_data" hidden>Данные</div>
             <button type="button" class="settings-row settings-row-last switch" id="settings-sync-toggle" aria-pressed="false">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 6.4a3.6 3.6 0 016.9-1.3A3 3 0 0114.8 8a3 3 0 01-3 3H4.9A2.9 2.9 0 012 8.1a2.9 2.9 0 012.6-2.88z"/></svg>
               <span class="settings-row-label" data-i18n="sync.toggle_label">Синхронизировать с аккаунтом</span>
               <span class="switch-track"><span class="switch-thumb"></span></span>
             </button>
-          </div>
+          </section>
 
-          <div class="settings-section-label" data-i18n="settings.section_notifications">Уведомления</div>
-          <div class="settings-card">
+          <section class="island settings-card">
+            <div class="settings-section-label" data-i18n="settings.section_notifications">Уведомления</div>
             <button type="button" class="settings-row switch" id="settings-notif-toggle" aria-pressed="true">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
               <span class="settings-row-label" data-i18n="notif.enable">Напоминания о дедлайнах</span>
@@ -595,10 +588,10 @@
               <span class="settings-row-label" data-i18n="notif.system">Уведомления в системе</span>
               <span class="settings-row-value" id="settings-notif-state"></span>
             </button>
-          </div>
+          </section>
 
-          <div class="settings-section-label" data-i18n="settings.section_work">Работа</div>
-          <div class="settings-card">
+          <section class="island settings-card">
+            <div class="settings-section-label" data-i18n="settings.section_work">Работа</div>
             <div class="settings-row">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
               <span class="settings-row-label" data-i18n="rate.default_label">Ставка по умолчанию</span>
@@ -612,29 +605,47 @@
               <span class="settings-row-label" data-i18n="settings.currency_label">Валюта</span>
               <button type="button" class="dp-btn" id="settings-currency" data-i18n-title="currency.title" title="Валюта"></button>
             </div>
-          </div>
+          </section>
 
-          <div class="settings-section-label" data-i18n="settings.section_tags">Теги</div>
-          <div class="settings-card">
+          <section class="island settings-card">
+            <div class="settings-section-label" data-i18n="settings.section_tags">Теги</div>
             <div id="tags-list"></div>
             <button type="button" class="settings-row settings-row-btn settings-row-last" id="tags-add">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
               <span class="settings-row-label" data-i18n="tag.add">Новый тег</span>
             </button>
-          </div>
+          </section>
 
-          <div class="settings-section-label" data-i18n="settings.section_about">О приложении</div>
-          <div class="settings-card">
+          <section class="island settings-card settings-card-wide">
+            <div class="settings-section-label" data-i18n="settings.section_about">О приложении</div>
+            <div class="settings-rows-2col">
             <button type="button" class="settings-row settings-row-btn" id="settings-about-us">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM8 4.3a1 1 0 110 2 1 1 0 010-2zm-.9 3.3h1.8v4.4H7.1z"/></svg>
               <span class="settings-row-label" data-i18n="about.us">О нас</span>
               <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
             </button>
-            <button type="button" class="settings-row settings-row-btn settings-row-last" id="settings-about-blog">
+            <button type="button" class="settings-row settings-row-btn" id="settings-about-blog">
               <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
               <span class="settings-row-label" data-i18n="about.blog">Блог</span>
               <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
             </button>
+            <button type="button" class="settings-row settings-row-btn" id="settings-legal-privacy">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
+              <span class="settings-row-label" data-i18n="about.privacy">Конфиденциальность</span>
+              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+            </button>
+            <button type="button" class="settings-row settings-row-btn" id="settings-legal-terms">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
+              <span class="settings-row-label" data-i18n="about.terms">Условия использования</span>
+              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+            </button>
+            <button type="button" class="settings-row settings-row-btn settings-row-last" id="settings-legal-docs">
+              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
+              <span class="settings-row-label" data-i18n="about.legal">Документы и реквизиты</span>
+              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+            </button>
+            </div>
+          </section>
           </div>
           <div class="settings-footer">Lancible</div>
         </div>
@@ -716,21 +727,6 @@
         <button id="tagdlg-delete" class="danger" hidden data-i18n="common.delete">Удалить</button>
         <button id="tagdlg-cancel" data-i18n="common.cancel">Отмена</button>
         <button id="tagdlg-save" class="primary" data-i18n="common.save">Сохранить</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="stdlg-backdrop" hidden>
-    <div class="modal modal-wide">
-      <div class="modal-title" data-i18n="status.dialog_title">Настройки проекта</div>
-      <div class="setup-section" data-i18n="status.section">Статусы</div>
-      <div class="st-list" id="st-list"></div>
-      <button type="button" class="st-add" id="st-add" data-i18n="status.add">Новый статус</button>
-      <div class="setup-section" data-i18n="version.section">Версии</div>
-      <div class="st-list" id="ver-list"></div>
-      <button type="button" class="st-add" id="ver-add" data-i18n="version.add">Новая версия</button>
-      <div class="modal-buttons">
-        <button id="stdlg-close" class="primary" data-i18n="common.done">Готово</button>
       </div>
     </div>
   </div>
@@ -882,20 +878,69 @@
   </div>
 
   <!-- Диалог проекта -->
+  <!-- Настройки проекта — одно окно с разделами. «Основное» и «Ставка и
+       валюта» сохраняются кнопкой; теги, статусы и версии — списки
+       сущностей, они правятся на месте. У нового проекта последних трёх
+       разделов нет: ему сначала нужно появиться. -->
   <div id="pdlg-backdrop" hidden>
-    <div class="modal modal-lg">
+    <div class="modal modal-lg modal-wide pjdlg">
       <div class="modal-title" id="pdlg-title">Проект</div>
-      <label for="pdlg-name" data-i18n="pdlg.name_label">Название</label>
-      <input id="pdlg-name" type="text" maxlength="60" autocomplete="off" data-i18n-ph="pdlg.name_ph" placeholder="Название проекта" />
-      <label for="pdlg-desc" data-i18n="pdlg.desc_label">Описание</label>
-      <textarea id="pdlg-desc" rows="3" data-i18n-ph="pdlg.desc_ph" placeholder="Необязательно"></textarea>
-      <label data-i18n="pdlg.color_label">Цвет</label>
-      <div class="swatches" id="pdlg-swatches"></div>
-      <label data-i18n="tag.pick">Теги</label>
-      <div class="tag-row">
-        <div class="tag-chips" id="pdlg-tags"></div>
-        <button type="button" class="tag-add-btn" id="pdlg-tags-add" data-i18n-title="tag.pick" title="Теги">+</button>
+      <div class="segmented pjdlg-tabs" id="pdlg-tabs">
+        <button type="button" data-sec="main" class="on" data-i18n="pdlg.sec_main">Основное</button>
+        <button type="button" data-sec="money" data-i18n="pdlg.sec_money">Ставка и валюта</button>
+        <button type="button" data-sec="tags" data-i18n="pdlg.sec_tags">Теги</button>
+        <button type="button" data-sec="statuses" data-i18n="status.section">Статусы</button>
+        <button type="button" data-sec="versions" data-i18n="version.section">Версии</button>
       </div>
+
+      <div class="pjdlg-sec" id="pdlg-sec-main">
+        <label for="pdlg-name" data-i18n="pdlg.name_label">Название</label>
+        <input id="pdlg-name" type="text" maxlength="60" autocomplete="off" data-i18n-ph="pdlg.name_ph" placeholder="Название проекта" />
+        <label for="pdlg-desc" data-i18n="pdlg.desc_label">Описание</label>
+        <textarea id="pdlg-desc" rows="3" data-i18n-ph="pdlg.desc_ph" placeholder="Необязательно"></textarea>
+        <label data-i18n="pdlg.color_label">Цвет</label>
+        <div class="swatches" id="pdlg-swatches"></div>
+        <label data-i18n="pdlg.marks_label">Метки проекта</label>
+        <div class="tag-row">
+          <div class="tag-chips" id="pdlg-tags"></div>
+          <button type="button" class="tag-add-btn" id="pdlg-tags-add" data-i18n-title="tag.pick" title="Теги">+</button>
+        </div>
+        <p class="muted pjdlg-hint" id="pdlg-later" data-i18n="pdlg.create_first" hidden>Теги, статусы и версии появятся после создания проекта.</p>
+      </div>
+
+      <div class="pjdlg-sec" id="pdlg-sec-money" hidden>
+        <label for="pdlg-rate" data-i18n="pdlg.rate_label">Ставка проекта</label>
+        <div class="rate-row">
+          <input id="pdlg-rate" class="field" type="text" inputmode="decimal" autocomplete="off" />
+          <span class="muted" id="pdlg-rate-unit"></span>
+        </div>
+        <p class="muted pjdlg-hint" id="pdlg-rate-hint"></p>
+        <label data-i18n="pdlg.currency_label">Валюта проекта</label>
+        <button type="button" class="dp-btn dp-btn-wide" id="pdlg-currency"></button>
+        <p class="muted pjdlg-hint" data-i18n="pdlg.currency_hint">В общие итоги входят только проекты в основной валюте — курсов у нас нет.</p>
+      </div>
+
+      <div class="pjdlg-sec" id="pdlg-sec-tags" hidden>
+        <div class="island">
+          <div id="pdlg-tag-list"></div>
+          <button type="button" class="settings-row settings-row-btn settings-row-last" id="pdlg-tag-add">
+            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
+            <span class="settings-row-label" data-i18n="tag.project_add">Новый тег проекта</span>
+          </button>
+        </div>
+        <p class="muted pjdlg-hint" data-i18n="tag.global_hint">Общие теги заводятся в настройках и видны во всех проектах.</p>
+      </div>
+
+      <div class="pjdlg-sec" id="pdlg-sec-statuses" hidden>
+        <div class="st-list" id="st-list"></div>
+        <button type="button" class="st-add" id="st-add" data-i18n="status.add">Новый статус</button>
+      </div>
+
+      <div class="pjdlg-sec" id="pdlg-sec-versions" hidden>
+        <div class="st-list" id="ver-list"></div>
+        <button type="button" class="st-add" id="ver-add" data-i18n="version.add">Новая версия</button>
+      </div>
+
       <div class="modal-buttons">
         <button id="pdlg-cancel" data-i18n="common.cancel">Отмена</button>
         <button id="pdlg-save" class="primary" data-i18n="common.save">Сохранить</button>
@@ -959,12 +1004,22 @@
         </div>
       </div>
       <div id="auth-step-onboarding" hidden>
-        <div class="modal-title" data-i18n="auth.onboarding_title">Расскажите о себе</div>
-        <label for="auth-name" data-i18n="auth.name_label">Как вас зовут?</label>
-        <input id="auth-name" type="text" autocomplete="name" />
-        <label data-i18n="auth.usecase_label">Для чего будете использовать Lancible?</label>
-        <div class="auth-usecases" id="auth-usecases"></div>
+        <div class="modal-title" id="auth-onboarding-title" data-i18n="auth.onboarding_title">Расскажите о себе</div>
+        <p class="muted auth-sub" id="auth-consent-sub" data-i18n="auth.consent_sub" hidden>Мы обновили Условия использования и Политику конфиденциальности. Чтобы пользоваться аккаунтом дальше, примите новую редакцию.</p>
+        <div id="auth-profile-fields">
+          <label for="auth-name" data-i18n="auth.name_label">Как вас зовут? (необязательно)</label>
+          <input id="auth-name" type="text" autocomplete="name" />
+          <label data-i18n="auth.usecase_label">Для чего будете использовать Lancible? (необязательно)</label>
+          <div class="auth-usecases" id="auth-usecases"></div>
+        </div>
+        <div class="auth-consent">
+          <button type="button" class="switch" id="auth-consent-check" aria-pressed="false" aria-labelledby="auth-consent-text">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </button>
+          <span id="auth-consent-text"></span>
+        </div>
         <div class="modal-buttons">
+          <button type="button" id="auth-consent-decline" class="auth-decline" data-i18n="auth.sign_out">Выйти</button>
           <button id="auth-onboarding-skip" data-i18n="common.skip">Пропустить</button>
           <button id="auth-onboarding-save" class="primary" data-i18n="common.continue">Продолжить</button>
         </div>
@@ -991,6 +1046,7 @@
   <script src="core/migrate.js"></script>
   <script src="core/reports.js"></script>
   <script src="core/sync.js"></script>
+  <script src="core/legal.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

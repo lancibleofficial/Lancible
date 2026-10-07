@@ -93,3 +93,25 @@ test('аноним не может дописывать события в жур
   assert.notEqual(r.code, '23503', 'политика пропустила запись — дело дошло до внешнего ключа');
   assert.equal(r.code, '42501', `ожидали отказ политики, получили ${r.status} ${r.code}: ${r.body.slice(0, 200)}`);
 });
+
+// --- согласия и удаление аккаунта (supabase/legal.sql) ----------------------
+
+test('в профиле есть поля согласия — без них онбординг не сохранит профиль', async () => {
+  // Колонки заводит supabase/legal.sql. Пока его не выполнили, запрос
+  // падает с 42703 (нет такой колонки) — и выкатывать приложение рано.
+  const r = await get('profiles?select=terms_version,terms_accepted_at,age_confirmed&limit=1');
+  assert.equal(r.status, 200, `нет полей согласия — выполните supabase/legal.sql (${r.status}: ${r.body.slice(0, 200)})`);
+});
+
+test('аноним не может вызвать удаление аккаунта', async () => {
+  // Функция удаляет того, кто её вызвал. У анонима права на неё нет вовсе:
+  // ждём отказ 42501. PGRST202 значит, что функции нет — legal.sql не выполнен.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/delete_my_account`, {
+    method: 'POST', headers: HEADERS, body: '{}',
+  });
+  const body = await res.text();
+  let code = null;
+  try { code = JSON.parse(body).code; } catch { /* не JSON */ }
+  assert.notEqual(code, 'PGRST202', 'функции delete_my_account нет — выполните supabase/legal.sql');
+  assert.equal(code, '42501', `ожидали отказ в праве, получили ${res.status} ${code}: ${body.slice(0, 200)}`);
+});

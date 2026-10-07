@@ -165,6 +165,8 @@ const COMPONENTS = [
   'st-swatch', 'task-status', 'board-dot', 'task-version',
   'segmented', 'segmented-sm', 'segmented-rows', 'segmented-row', 'field', 'field-sm',
   'period-head', 'period-nav', 'period-title', 'island', 'settings-card',
+  'btn-soft', 'btn-accent', 'island-head', 'island-title', 'island-note', 'island-empty',
+  'page-head', 'page-title', 'row-list', 'rl-main', 'sq-btn', 'tag-chip', 'tag-dot', 'tag-add-btn',
 ];
 
 test('styles.css: слои по порядку, общие детали — только в слое «Компоненты»', () => {
@@ -317,7 +319,7 @@ test('телефон: каждое начертание, которое назы
   assert.deepEqual(missing, [], 'эти начертания называет код, но App.js их не загружает');
 });
 
-const LANDING_PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html'];
+const LANDING_PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html', 'privacy.html', 'terms.html', 'cookies.html', 'refund.html', 'legal.html', 'delete-account.html'];
 
 test('лендинг: общее — в landing.css, у страниц только своё', () => {
   assert.ok(fs.existsSync(path.join(ROOT, 'landing', 'landing.css')), 'landing/landing.css нет');

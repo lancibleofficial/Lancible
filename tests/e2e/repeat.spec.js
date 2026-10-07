@@ -41,20 +41,13 @@ async function seed(page) {
     const withDue = add('Отчёт клиенту', due, 3_600_000);
     const noDue = add('Без срока', null, 0);
 
-    state.ui.view = 'project';
     state.ui.projectId = pid;
-    selectedId = withDue;
-    loadEditor(getTask(withDue));
-    render();
+    selectTask(withDue);
     return { pid, withDue, noDue };
   });
 }
 
-const openTask = (page, id) => page.evaluate((id) => {
-  selectedId = id;
-  loadEditor(getTask(id));
-  render();
-}, id);
+const openTask = (page, id) => page.evaluate((id) => { selectTask(id); }, id);
 
 const taskState = (page, title) => page.evaluate((title) => {
   const list = state.tasks.filter((t) => t.title === title);
@@ -93,6 +86,7 @@ test('готовые правила из меню ставятся и подпи
   await expect(page.locator('#task-repeat')).toHaveText('Каждую неделю');
   await expect(page.locator('#repeat-next')).toBeVisible();
   // Значок в списке: повторяющуюся задачу видно, не открывая её.
+  await page.locator('#task-back').click();
   await expect(page.locator('#task-list .task-repeat-mark')).toHaveCount(1);
 });
 
@@ -226,7 +220,8 @@ test('будущие повторения видны на календаре п�
   const counts = await page.evaluate(() => {
     const task = state.tasks.find((t) => t.title === 'Отчёт клиенту');
     task.repeat = Core.normalizeRepeat({ freq: 'day', every: 1 });
-    state.ui.view = 'calendar';
+    state.ui.view = 'time';
+    state.ui.timeMode = 'week';
     render();
     const { from, days } = Core.agendaRange(agenda.mode, agenda.anchor);
     const expected = Core.upcomingDue(task.repeat, new Date(task.dueAt).getTime(), from + (days * Core.DAY), 40).length;

@@ -9,11 +9,38 @@
   const F = (typeof module !== 'undefined' && module.exports) ? require('./format.js') : global.Core;
   const { hoursOf, dayKey, taskElapsedMs } = F;
 
-  /** Ставка задачи: своя, если задана, иначе общая из настроек. */
-  function effectiveRate(task, defaultRate) {
+  /** Ставки, с которыми считаются деньги. Либо просто число — общая ставка
+   *  из настроек (так считает телефон и старые вызовы), либо объект:
+   *    default   — общая ставка;
+   *    byProject — { projectId: ставка } для проектов со своей ставкой;
+   *    scope     — Set задач, чьи деньги считать; остальные дают 0. Так
+   *                сводится общий итог: время — по всем, деньги — только
+   *                по проектам в основной валюте, курсов у нас нет.
+   *  Ставка задачи: своя → проекта → общая. */
+  function baseRate(task, rates) {
+    if (rates && typeof rates === 'object') {
+      const own = rates.byProject ? rates.byProject[task.projectId] : null;
+      if (own !== null && own !== undefined && own !== '' && Number.isFinite(Number(own))) return Number(own);
+      return Number(rates.default) || 0;
+    }
+    return Number(rates) || 0;
+  }
+  const counts = (task, rates) => !(rates && typeof rates === 'object' && rates.scope && !rates.scope.has(task.id));
+
+  function effectiveRate(task, rates) {
     const own = task.rate;
     if (own !== null && own !== undefined && own !== '' && Number.isFinite(Number(own))) return Number(own);
-    return Number(defaultRate) || 0;
+    return baseRate(task, rates);
+  }
+
+  /** Валюта проекта: своя или основная из настроек. */
+  const projectCurrency = (project, mainCurrency) => (project && project.currency) || mainCurrency;
+
+  /** Задачи, чьи деньги входят в общий итог: только из проектов в основной
+   *  валюте. Складывать рубли с долларами нельзя, а переводить — нечем. */
+  function moneyScope(tasks, projects, mainCurrency) {
+    const byId = new Map(projects.map((p) => [p.id, p]));
+    return new Set(tasks.filter((t) => projectCurrency(byId.get(t.projectId), mainCurrency) === mainCurrency).map((t) => t.id));
   }
 
   const hasOwnRate = (task) =>
@@ -26,14 +53,15 @@
     return r !== null && r !== undefined && Number.isFinite(Number(r)) ? Number(r) : effectiveRate(task, defaultRate);
   }
 
-  const sessionMoney = (s, task, defaultRate) => hoursOf(s.ms) * sessionRate(s, task, defaultRate);
+  const sessionMoney = (s, task, rates) => (counts(task, rates) ? hoursOf(s.ms) * sessionRate(s, task, rates) : 0);
 
   /** Заработано по задаче. Идущий таймер добавляется по текущей ставке. */
-  function earnedOf(task, defaultRate, activeTimer, now) {
-    let money = (task.sessions || []).reduce((a, s) => a + sessionMoney(s, task, defaultRate), 0);
+  function earnedOf(task, rates, activeTimer, now) {
+    if (!counts(task, rates)) return 0;
+    let money = (task.sessions || []).reduce((a, s) => a + sessionMoney(s, task, rates), 0);
     if (activeTimer && activeTimer.taskId === task.id) {
       const runMs = now - new Date(activeTimer.startedAt).getTime();
-      money += hoursOf(runMs) * effectiveRate(task, defaultRate);
+      money += hoursOf(runMs) * effectiveRate(task, rates);
     }
     return money;
   }
@@ -121,7 +149,7 @@
   }
 
   const api = {
-    effectiveRate, hasOwnRate, sessionRate, sessionMoney, earnedOf, earnedShown,
+    effectiveRate, baseRate, projectCurrency, moneyScope, hasOwnRate, sessionRate, sessionMoney, earnedOf, earnedShown,
     allSessionPairs, aggregateDays, rangeAgg, tasksDoneOnDay,
     projectMoney, projectMs, planSessionEdit,
   };

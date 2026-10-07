@@ -55,14 +55,14 @@ for (const width of [1280, 1024, 900, 760]) {
     await open(page, width);
     await page.evaluate(() => { state.ui.view = 'home'; render(); });
     expect(await cardsFit(page), 'обзор').toEqual([]);
-    await page.evaluate(() => { state.ui.view = 'stats'; render(); });
+    await page.evaluate(() => { state.ui.view = 'time'; state.ui.timeMode = 'month'; render(); });
     expect(await cardsFit(page), 'статистика').toEqual([]);
   });
 }
 
 test('суммы в клетках календаря статистики — одной строкой', async ({ page }) => {
   await open(page, 900);
-  await page.evaluate(() => { state.ui.view = 'stats'; render(); });
+  await page.evaluate(() => { state.ui.view = 'time'; state.ui.timeMode = 'month'; render(); });
   const bad = await page.evaluate(() => [...document.querySelectorAll('.cc-money, .cc-time')]
     .filter((n) => n.getBoundingClientRect().height > parseFloat(getComputedStyle(n).lineHeight) + 2)
     .map((n) => n.textContent));

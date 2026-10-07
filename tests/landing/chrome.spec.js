@@ -13,7 +13,7 @@
 // ширине 561 правый блок шапки вылезал за поле страницы на 22 px.
 const { test, expect } = require('@playwright/test');
 
-const PAGES = ['/index.html', '/blog.html', '/logs.html', '/architecture.html', '/graph.html'];
+const PAGES = ['/index.html', '/blog.html', '/logs.html', '/architecture.html', '/graph.html', '/privacy.html', '/terms.html', '/cookies.html', '/refund.html', '/legal.html', '/delete-account.html'];
 
 // Порог сужения шапки. Замер: в полном составе ей нужно 583 px (герб 125 +
 // правый блок 394 + поля 48 + зазор 16), поэтому 640 с запасом, а 560 — уже
@@ -58,7 +58,7 @@ for (const width of [1280, NARROW_AT + 1, NARROW_AT - 1, 375]) {
     const seen = {};
     for (const url of PAGES) {
       await page.goto(url);
-      // Шрифты приезжают с Google Fonts, то есть позже разметки. Померить до
+      // Шрифты приезжают отдельными файлами, то есть позже разметки. Померить до
       // них — значит померить запасной шрифт: у него другие метрики, и высота
       // подвала выходит другая. Под нагрузкой (например, когда рядом гоняет
       // сторож) разница вылезает, а в тишине её не видно — ровно тот сорт

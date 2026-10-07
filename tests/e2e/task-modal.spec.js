@@ -43,7 +43,8 @@ async function seed(page) {
     const withEntry = add('Главная страница', 10, 2, null);
     const withDue = add('Сдать макет', 0, 0, 18);
 
-    state.ui.view = 'calendar';
+    state.ui.view = 'time';
+    state.ui.timeMode = 'week';
     render();
     return { pid, withEntry, withDue };
   });
@@ -161,16 +162,16 @@ test('дедлайн на календаре открывает ту же мод
   await expect(page.locator('#tmdlg-title')).toHaveValue('Сдать макет');
   // Записи у задачи нет — и строки записи тоже.
   await expect(page.locator('#tmdlg-entry')).toBeHidden();
-  expect(await page.evaluate(() => state.ui.view), 'мы всё ещё на календаре').toBe('calendar');
+  expect(await page.evaluate(() => state.ui.view), 'мы всё ещё во «Времени»').toBe('time');
 });
 
-test('«Открыть задачу» уводит на страницу проекта', async ({ page }) => {
+test('«Открыть задачу» уводит на страницу задачи', async ({ page }) => {
   await seed(page);
   await clickBlock(page, 'Главная страница');
   await page.locator('#tmdlg-open').click();
 
   await expect(page.locator('#tmdlg-backdrop')).toBeHidden();
-  expect(await page.evaluate(() => state.ui.view)).toBe('project');
+  expect(await page.evaluate(() => state.ui.view)).toBe('task');
   await expect(page.locator('#task-title')).toHaveValue('Главная страница');
 });
 

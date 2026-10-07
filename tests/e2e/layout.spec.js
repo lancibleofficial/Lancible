@@ -16,7 +16,7 @@
 const { test, expect } = require('@playwright/test');
 const { pinClock } = require('./clock');
 
-const VIEWS = ['home', 'board', 'calendar', 'stats', 'project', 'settings'];
+const VIEWS = ['home', 'projects', 'board', 'time', 'project', 'task', 'settings'];
 const WIDTHS = [1280, 375];
 
 async function open(page) {
@@ -88,7 +88,11 @@ for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
     await open(page);
     for (const view of VIEWS) {
-      await page.evaluate((v) => { state.ui.view = v; render(); }, view);
+      // Страница задачи открывается только через выбор задачи.
+      await page.evaluate((v) => {
+        if (v === 'task') selectTask(state.tasks[0].id);
+        else { state.ui.view = v; render(); }
+      }, view);
       const got = await overflowers(page);
       expect(got.scrollsSideways,
         `вид ${view}: страницу можно утащить вбок; за край вылезли:\n  ${got.culprits.join('\n  ')}`)

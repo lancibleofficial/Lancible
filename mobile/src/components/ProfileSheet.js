@@ -20,6 +20,7 @@ export default function ProfileSheet() {
   const user = useAuthStore((s) => s.user);
   const updateName = useAuthStore((s) => s.updateName);
   const signOut = useAuthStore((s) => s.signOut);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const [name, setName] = useState(user ? user.name || '' : '');
 
   function onSaveName() {
@@ -47,6 +48,27 @@ export default function ProfileSheet() {
   function onSignOut() {
     closeSheet();
     signOut();
+  }
+
+  // Удаление — только после подтверждения отдельным листом: действие
+  // необратимое, а случайный тап по нижней строке листа — обычное дело.
+  function onDeleteAccount() {
+    confirmSheet({
+      title: t(lang, 'account.delete_title'),
+      message: t(lang, 'account.delete_confirm'),
+      actions: [
+        {
+          label: t(lang, 'account.delete'),
+          destructive: true,
+          onPress: async () => {
+            const result = await deleteAccount();
+            closeSheet();
+            showToast(t(lang, result.ok ? 'account.deleted_toast' : 'account.delete_error'));
+          },
+        },
+        { label: t(lang, 'common.cancel'), cancel: true },
+      ],
+    });
   }
 
   useEffect(() => {
@@ -96,6 +118,11 @@ export default function ProfileSheet() {
       <Pressable style={styles.actionRow} onPress={onSignOut}>
         <Icon name="logout" size={16} color={colors.danger} />
         <Text style={[styles.actionText, { color: colors.danger }]}>{t(lang, 'auth.sign_out')}</Text>
+      </Pressable>
+
+      <Pressable style={styles.actionRow} onPress={onDeleteAccount} accessibilityRole="button">
+        <Icon name="trash" size={16} color={colors.danger} />
+        <Text style={[styles.actionText, { color: colors.danger }]}>{t(lang, 'account.delete')}</Text>
       </Pressable>
     </View>
   );

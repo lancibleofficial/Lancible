@@ -26,9 +26,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors, useThemeMode, spacing, radius, fontSize } from '../theme';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { t, LANG_NAMES } from '../lib/i18n';
+import { LANDING_URL, openLegal } from '../lib/legalLinks';
 
-// Лендинг: главная и страница блога. Тот же адрес, что и в десктопной версии.
-const LANDING_URL = 'https://lancible.vercel.app';
 
 export default function SettingsScreen({ navigation }) {
   const colors = useColors();
@@ -77,6 +76,7 @@ export default function SettingsScreen({ navigation }) {
   useEffect(() => { permissionStatus().then(setNotifPerm); }, []);
 
   if (authStatus === 'needsOnboarding') return <OnboardingScreen />;
+  if (authStatus === 'needsConsent') return <OnboardingScreen consentOnly />;
 
   async function onToggleNotify(value) {
     // Включение имеет смысл только вместе с разрешением: без него мы бы
@@ -286,7 +286,10 @@ export default function SettingsScreen({ navigation }) {
         <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_about')}</Text>
         <SettingsCard>
           <SettingsRow icon="link" label={t(settings.lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
-          <SettingsRow icon="list-bullet" label={t(settings.lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} last />
+          <SettingsRow icon="list-bullet" label={t(settings.lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} />
+          <SettingsRow icon="lock" label={t(settings.lang, 'about.privacy')} onPress={() => openLegal('privacy', settings.lang)} />
+          <SettingsRow icon="list-check" label={t(settings.lang, 'about.terms')} onPress={() => openLegal('terms', settings.lang)} />
+          <SettingsRow icon="link" label={t(settings.lang, 'about.legal')} onPress={() => openLegal('legal', settings.lang)} last />
         </SettingsCard>
 
         <Text style={styles.footer}>Lancible · {appVersion}</Text>

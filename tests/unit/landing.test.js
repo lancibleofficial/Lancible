@@ -19,7 +19,8 @@ const path = require('node:path');
 const { cssRules, ruleText } = require('../css');
 
 const LANDING = path.join(__dirname, '..', '..', 'landing');
-const PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html'];
+const LEGAL = ['privacy.html', 'terms.html', 'cookies.html', 'refund.html', 'legal.html', 'delete-account.html'];
+const PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html', ...LEGAL];
 
 // Страницы, которых не должно быть в поиске. Они открыты по прямому адресу —
 // закрывает их не пароль, а отсутствие ссылок и запрет индексации.
@@ -113,7 +114,7 @@ test('каждая страница подключает landing.css раньш�
 /** Классы, из которых собраны шапка и подвал. Правила про них обязаны
  *  совпадать на всех страницах — иначе одна и та же шапка ведёт себя
  *  по-разному, что и случилось с надписью «GitHub». */
-const CHROME = /(^|[\s,>+~])(header|footer)\b|\.(header-row|header-actions|brand|gh-link|status-pill|status-dot|footer-brand|footer-links)\b/;
+const CHROME = /(^|[\s,>+~])(header|footer)\b|\.(header-row|header-actions|brand|gh-link|status-pill|status-dot|footer-brand|footer-links|footer-legal|footer-consent)\b/;
 
 function chromeCss(page) {
   return cssRules(stylesOf(page))

@@ -1,10 +1,11 @@
 // Палитра и шрифты. Запуск: npm run test:e2e
 //
 // Редизайн 6 октября 2026. Тёмная тема — глубокий графит, слои светлеют
-// кверху: фон → панель → поле. Светлая «Чистая» — всё белое, части экрана
-// разделены линиями, текст почти чёрный. Проверяем цифрами, а не на глаз:
-// на скриншоте «почти белый» и «белый» неразличимы, а «бледно» — это
-// контраст, и его можно посчитать.
+// кверху: фон → панель → поле. Светлая «Чистая» — с 7 октября во второй
+// редакции: земля светло-серая, предметы на ней белые (первая была белой
+// целиком, и «не хватало контраста между объектами»). Проверяем цифрами, а
+// не на глаз: на скриншоте «почти белый» и «белый» неразличимы, а «бледно» —
+// это контраст, и его можно посчитать.
 const { test, expect } = require('@playwright/test');
 
 const open = async (page, theme) => {
@@ -65,33 +66,47 @@ const contrast = (page, pairs) => page.evaluate((list) => {
 const TEXT = ['--text', '--text-dim', '--text-faint', '--accent-ink', '--danger'];
 const SURFACES = ['--bg', '--panel', '--panel-2', '--board-col', '--board-card'];
 
-test('светлая «Чистая»: страница, шапка и левая панель белые, панель отделена линией', async ({ page }) => {
+test('светлая: серая земля, рейл и поиск — белые острова, без обводок', async ({ page }) => {
+  // Острова (7 октября): предмет отличается от земли только цветом.
   await open(page, 'light');
   const p = await paint(page);
-  expect(p.page, 'фон страницы').toBe('rgb(255, 255, 255)');
-  expect(p.header, 'шапка того же цвета, что страница').toBe(p.page);
-  expect(p.rail, 'левая панель того же цвета, что страница').toBe(p.page);
-  expect(p.railBorder, 'панель отделена линией').not.toBe(p.page);
-});
-
-test('поле поиска покрашено как остальные поля ввода', async ({ page }) => {
-  await open(page, 'light');
-  const same = await page.evaluate(() => {
-    const search = getComputedStyle(document.querySelector('.tb-search')).backgroundColor;
-    // Любое поле из модалки — они все на --panel-2.
-    promptDialog({ label: 'Проверка' });
-    const input = getComputedStyle(document.getElementById('modal-input')).backgroundColor;
-    return { search, input };
+  expect(p.page, 'земля светло-серая, не белая').toBe('rgb(236, 238, 241)');
+  expect(p.header, 'шапка того же цвета, что земля').toBe(p.page);
+  expect(p.rail, 'рейл — белый остров').toBe('rgb(255, 255, 255)');
+  const flat = await page.evaluate(() => {
+    const cs = (sel) => getComputedStyle(document.querySelector(sel));
+    return { railW: cs('#navrail').borderRightWidth, railR: cs('#navrail').borderRadius, searchW: cs('.tb-search').borderTopWidth, searchBg: cs('.tb-search').backgroundColor, shadow: cs('#navrail').boxShadow };
   });
-  expect(same.search).toBe(same.input);
+  expect(flat.railW, 'линии справа у рейла нет').toBe('0px');
+  expect(flat.railR, 'скругление острова').toBe('14px');
+  expect(flat.searchW).toBe('0px');
+  expect(flat.searchBg, 'поиск — остров').toBe(p.rail);
+  expect(flat.shadow, 'тени у островов нет').toBe('none');
 });
 
-test('тёмная тема — глубокий графит, панель светлее фона', async ({ page }) => {
+test('поля ввода — залитые, без обводки, акцентная рамка только в фокусе', async ({ page }) => {
+  await open(page, 'light');
+  const got = await page.evaluate(() => {
+    promptDialog({ label: 'Проверка' });
+    const input = document.getElementById('modal-input');
+    const before = getComputedStyle(input);
+    const out = { border: before.borderTopWidth, bg: before.backgroundColor, idle: before.boxShadow };
+    input.focus();
+    out.focus = getComputedStyle(input).boxShadow;
+    return out;
+  });
+  expect(got.border).toBe('0px');
+  expect(got.bg).not.toBe('rgba(0, 0, 0, 0)');
+  expect(got.idle).toBe('none');
+  expect(got.focus).not.toBe('none');
+});
+
+test('тёмная тема — глубокий графит, остров светлее земли', async ({ page }) => {
   await open(page, 'dark');
   const p = await paint(page);
-  expect(p.page).toBe('rgb(20, 21, 24)');
-  expect(p.lum.rail, 'слой выше — светлее').toBeGreaterThan(p.lum.page);
-  expect(p.lum.search, 'поле ещё светлее панели').toBeGreaterThan(p.lum.rail);
+  expect(p.page).toBe('rgb(17, 18, 21)');
+  expect(p.lum.rail, 'остров светлее земли').toBeGreaterThan(p.lum.page);
+  expect(p.lum.search, 'поиск — такой же остров').toBe(p.lum.rail);
 });
 
 for (const theme of ['light', 'dark']) {
@@ -124,7 +139,7 @@ test('текст набран Onest, а лого и крупные числа �
       body: fam('body'),
       nav: fam('.nav-item'),
       logo: fam('.tb-logo-text'),
-      heading: fam('.home-head h1'),
+      heading: fam('.day-title'),
       loaded: [...document.fonts].filter((x) => x.status === 'loaded').map((x) => `${x.family} ${x.weight}`),
     };
   });
@@ -172,24 +187,28 @@ test('обычный текст в светлой теме на полступе
   expect(await weight('dark')).toBe('400');
 });
 
-test('в светлой теме все панели — цвета страницы', async ({ page }) => {
+test('капсула идущей задачи — в шапке на любом экране, со стопом внутри', async ({ page }) => {
   await open(page, 'light');
-  const got = await page.evaluate(() => {
-    const bg = (sel) => getComputedStyle(document.querySelector(sel)).backgroundColor;
-    state.projects.push({
-      id: uid(), name: 'П', color: '#87ff65', description: '',
-      pinnedAt: null, createdAt: new Date().toISOString(), tagIds: [],
-    });
-    state.ui.view = 'home';
+  await page.evaluate(() => {
+    const p = { id: 'p1', name: 'П', color: '#87ff65', description: '', pinnedAt: null, createdAt: new Date().toISOString(), tagIds: [] };
+    state.projects.push(p);
+    state.tasks.push({ id: 't1', projectId: 'p1', title: 'Идущая задача', notes: '', statusId: null, done: false, totalMs: 0, sessions: [], createdAt: new Date().toISOString(), tagIds: [], dueAt: null });
+    migrate();
     render();
-    const home = bg('#home-side');
-    state.ui.view = 'stats';
-    render();
-    return { page: bg('body'), rail: bg('#navrail'), home, stats: bg('.cal-day') };
   });
-  expect(got.home, 'правая панель обзора').toBe(got.page);
-  expect(got.stats, 'правая панель статистики').toBe(got.page);
-  expect(got.rail, 'левая панель').toBe(got.page);
+  await expect(page.locator('#tb-timer')).toBeHidden();
+  await page.evaluate(() => startTimer('t1'));
+  await expect(page.locator('#tb-timer')).toBeVisible();
+  await expect(page.locator('#tb-timer-name')).toHaveText('Идущая задача');
+  // Капсула — пилюля того же цвета, что острова, и не меняется между экранами.
+  const pill = await page.evaluate(() => getComputedStyle(document.getElementById('tb-timer')));
+  expect(pill.borderRadius).toBe('999px');
+  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
+  await expect(page.locator('#tb-timer')).toBeVisible();
+  await page.locator('#tb-timer-stop').click();
+  await expect(page.locator('#tb-timer')).toBeHidden();
+  expect(await page.evaluate(() => state.activeTimer)).toBeNull();
+  expect(await page.evaluate(() => state.ui.view), 'стоп не уводит с экрана').toBe('settings');
 });
 
 test('всплывающее меню поднято тенью над тем, из чего вызвано', async ({ page }) => {

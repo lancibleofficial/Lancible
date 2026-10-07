@@ -1,93 +1,36 @@
 /* Адаптивные брейкпоинты для веб-версии — накладываются поверх styles.css,
-   сам styles.css не трогаем (нулевой риск для десктоп-приложения). */
+   сам styles.css не трогаем (нулевой риск для десктоп-приложения).
+
+   Раскладка островов до 900 px (две колонки в одну) живёт в styles.css —
+   она нужна и десктопу в узком окне. Здесь — то, что есть только у веба:
+   свёрнутый рейл на планшете и телефон с нижней плашкой. */
 
 /* =========================================================================
-   ≤860px — "узкий/планшет"
+   ≤860px — "узкий/планшет": рейл только значками
    ========================================================================= */
 @media (max-width: 860px) {
-  /* Главная: мини-календарь уезжает под основной контент. flex-column +
-     min-height:100% (а не просто display:block) — чтобы #home-side, если
-     контента меньше высоты экрана, растягивался своим собственным фоном
-     до низа, а не оставлял разноцветную прогалину до таббара/края экрана. */
-  #home-view {
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-    height: auto;
-    overflow-y: auto;
-  }
-  #home-view .home-center {
-    display: block;
-    /* flex:none — .home-center и #home-side (ниже) держат натуральную
-       высоту контента и НИКОГДА не сжимают друг друга: раньше #home-side
-       был flex:1 (растёт/не сжимается), из-за чего при реальных данных
-       .home-center (у него унаследованный min-height:0) сжимался и его
-       контент (плитки проектов) обрезался через overflow:hidden. Если
-       суммарная высота обоих больше экрана — скроллится весь #home-view
-       (overflow-y:auto выше), лишнее место при короткой странице просто
-       остаётся фоном #home-view (тот же --bg, разрыва цвета не видно). */
-    flex: none;
-  }
-  .home-main {
-    overflow: visible;
-    height: auto;
-  }
-  #recent-section.recent-fixed {
-    position: static;
-  }
-  #home-side {
-    flex: none;
-    border-left: none;
-    border-top: 1px solid var(--border);
-  }
-
-  /* Календарь: день/период-панель уезжает под сетку. Тот же приём —
-     flex-column + min-height:100%, чтобы .cal-day растягивался своим фоном
-     до низа, а не оставлял серую прогалину другого цвета над таббаром. */
-  .cal-grid {
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-    height: auto;
-    overflow-y: auto;
-  }
-  .cal-main {
-    /* см. подробный комментарий у #home-view/.home-center — тот же приём:
-       оба ребёнка натуральной высоты, не сжимают друг друга */
-    flex: none;
-  }
-  .cal-day {
-    flex: none;
-    border-left: none;
-    border-top: 1px solid var(--border);
-  }
-
-  /* Рейл — по умолчанию свёрнутый (только иконки), меньше занимает места */
-  #navrail:not([data-user-expanded]) {
+  #navrail {
     width: var(--nav-w-collapsed);
   }
-  #navrail:not([data-user-expanded]) .nav-label,
-  #navrail:not([data-user-expanded]) .nav-pcount {
+  #navrail .nav-label,
+  #navrail .nav-pcount {
     opacity: 0;
   }
-  #navrail:not([data-user-expanded]) .nav-sec-add {
+  #navrail .nav-sec-add {
     display: none;
   }
-  /* Сдвигается только основная область — шапка идёт во всю ширину окна и не
-     зависит от того, свёрнут рейл или нет. Раньше .tb-rest уезжал вместе с
-     ним, и лого отрывалось от левого края. */
-  body:not(.nav-collapsed) #main {
-    margin-left: var(--nav-w-collapsed);
+  /* Сдвигается только основная область — шапка идёт во всю ширину окна. */
+  #main {
+    margin-left: calc(var(--nav-w-collapsed) + var(--gap) * 2);
   }
-  /* Места в шапке на этой ширине ещё хватает, подпись рядом со значком
-     остаётся — прятать её начинаем только на телефоне. */
 }
 
 /* =========================================================================
-   ≤560px — "телефон": нижняя плашка вместо рейла, список/деталь задачи
+   ≤560px — "телефон": нижняя плашка вместо рейла, страницы прокручиваются
+   целиком, острова идут столбиком
    ========================================================================= */
 @media (max-width: 560px) {
-  /* --- 1. Скроллбар скрыт (нативный touch-скролл и так есть) --- */
+  /* --- Скроллбар скрыт (нативный touch-скролл и так есть) --- */
   * {
     scrollbar-width: none;
   }
@@ -97,12 +40,12 @@
     height: 0;
   }
 
-  /* --- 3. Базовый шрифт чуть крупнее --- */
+  /* --- Базовый шрифт чуть крупнее --- */
   body {
     font-size: 15px;
   }
 
-  /* --- 7. Шапка: иконка + поисковая строка аккуратно помещаются --- */
+  /* --- Шапка: иконка + поисковая строка аккуратно помещаются --- */
   #titlebar {
     height: 50px;
   }
@@ -136,9 +79,9 @@
   #search-input {
     font-size: 14.5px;
   }
-  /* На телефонной ширине доступ к аккаунту/теме/языку уже даёт нижняя
-     плашка (#mobile-account-btn) — свой пункт в шапке рядом с поиском тут
-     только отнимал бы и без того тесное место. Селектор повторяет тот, что
+  /* На телефонной ширине доступ к аккаунту уже даёт нижняя плашка
+     (#mobile-account-btn) — свой пункт в шапке рядом с поиском тут только
+     отнимал бы и без того тесное место. Селектор повторяет тот, что
      показывает кнопку в вебе, иначе он проигрывает по специфичности. */
   body.platform-web .tb-account {
     display: none;
@@ -147,18 +90,17 @@
     min-width: 0;
   }
 
-  /* Рейл полностью скрыт — навигация через нижнюю плашку. .tb-rest сюда
-     специально не входит — ему по-прежнему нужен отступ под лого (задан
-     чуть выше), сбрасывать нужно только отступ #main под сам рейл. */
+  /* Рейл полностью скрыт — навигация через нижнюю плашку. Слева появляется
+     поле страницы, снизу — место под плашку. */
   #navrail {
     display: none;
   }
   #main {
     margin-left: 0 !important;
+    padding: 0 var(--gap) calc(70px + var(--gap)) var(--gap);
   }
 
-  /* --- 4/11. Нижняя навигация — мягкая тень вместо плоской серой линии,
-     подсветка активной вкладки пилюлей, иконки крупнее --- */
+  /* --- Нижняя навигация: подсветка активной вкладки пилюлей --- */
   #mobile-tabbar[hidden] {
     display: flex !important;
   }
@@ -215,19 +157,93 @@
   #mobile-tabbar .nav-label {
     opacity: 1 !important;
   }
-  /* Место под фиксированную нижнюю плашку — на самих скролл-контейнерах
-     (а не на #main целиком), чтобы у каждого свой фон дотягивался до низа
-     без разноцветных прогалин чужого цвета над таббаром. */
-  #home-view,
-  .cal-grid {
-    padding-bottom: 70px;
-  }
   #toast {
     bottom: 76px;
   }
 
-  /* --- 5/6. Модалки и плавающее меню становятся нижними шторками --- */
-  #modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop {
+  /* --- Страницы прокручиваются целиком: колонки островов идут одна за
+     другой натуральной высоты, а не делят фиксированную высоту окна. --- */
+  #home-view,
+  .proj-list,
+  .task-grid,
+  #time-view,
+  .time-body {
+    display: flex;
+    flex-direction: column;
+  }
+  #home-view,
+  .proj-list,
+  .task-grid,
+  #time-view {
+    overflow-y: auto;
+  }
+  .home-main,
+  .home-side,
+  #sidebar,
+  .proj-side,
+  .task-main,
+  .task-side,
+  .time-body,
+  .cal-day {
+    flex: none;
+    overflow: visible;
+    min-height: auto;
+    max-height: none;
+  }
+  #task-list {
+    overflow: visible;
+  }
+  /* Часовая сетка — единственное, что прокручивается внутри себя: сутки
+     выше любого экрана. */
+  .ag-main {
+    flex: none;
+    height: 70vh;
+  }
+  /* Редактору заметок — не меньше половины экрана. */
+  #editor-wrap {
+    min-height: 50vh;
+  }
+
+  /* --- «Сегодня»: кнопки дня своей строкой, числа столбиком --- */
+  .day-head {
+    flex-wrap: wrap;
+  }
+  .day-actions {
+    flex-basis: 100%;
+  }
+  .kpi-island {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kpi + .kpi {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .home-proj-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* --- «Проекты»: карточки в один столбец, у недавних задач только
+     название и время. Кнопки карточки видны всегда — наведения нет. --- */
+  .projects-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ptile-menu,
+  .ptile-pin {
+    opacity: 1;
+  }
+  .recent-head,
+  .recent-row {
+    grid-template-columns: 32px minmax(0, 1fr) 72px;
+  }
+  .recent-head > :nth-child(3),
+  .recent-head > :nth-child(5),
+  .recent-row > :nth-child(3),
+  .recent-row > :nth-child(5) {
+    display: none;
+  }
+
+  /* --- Модалки и плавающее меню становятся нижними шторками --- */
+  #modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop {
     align-items: flex-end;
   }
   .modal {
@@ -257,7 +273,6 @@
     min-width: 0;
     border-radius: 20px 20px 0 0;
     border: none;
-    border-top: 1px solid var(--border-strong);
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
     animation: sheetUp 0.2s var(--ease);
   }
@@ -290,35 +305,7 @@
     border-radius: 12px;
   }
 
-  /* Карточки проектов — в один столбец на всю ширину вместо сминающейся
-     wrap-сетки под 250px-плитки */
-  .projects-grid {
-    flex-direction: column;
-  }
-  .projects-grid .ptile,
-  .projects-grid .ptile-add {
-    width: 100% !important;
-    flex: none !important;
-  }
-
-  /* --- 2. Меньше отступов по краям --- */
-  .home-main {
-    padding: 0 14px 16px;
-  }
-  #home-side {
-    padding: 12px 14px 16px;
-  }
-  #detail {
-    padding: 12px 14px;
-  }
-  .cal-main {
-    padding: 10px 12px;
-  }
-  #topbar {
-    padding: 12px 0 10px;
-  }
-
-  /* --- 8/10. Иконки и табы крупнее везде --- */
+  /* --- Иконки и вкладки крупнее везде --- */
   .icon {
     width: 17px;
     height: 17px;
@@ -330,7 +317,7 @@
   }
   .task-tabs button,
   .tf-status button,
-  .cal-modes button {
+  .time-modes button {
     font-size: 13.5px;
     padding: 9px 13px;
   }
@@ -340,19 +327,25 @@
   .task-tabs button {
     flex: 1;
   }
+  /* Пять режимов «Времени» в ширину телефона не встают — строка листается. */
+  .time-modes {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .time-modes button {
+    flex: none;
+  }
 
-  /* --- 9. Шапка проекта: в строку не помещается — переносится. Вкладки
-     встают отдельной строкой во всю ширину, итоги прячутся (они есть на
-     «Обзоре»), кнопка «скрыть список» не нужна: список и задача и так
-     показываются по одному. --- */
+  /* --- Шапка проекта: вкладки своей строкой во всю ширину, итоги прячутся
+     (они есть на «Сегодня» и в карточке проекта). --- */
   .proj-head {
-    padding: 8px 12px 0;
+    padding: 8px 12px 6px;
   }
   .ph-name {
     flex: 1 1 auto;
     max-width: none;
   }
-  /* Тегам на телефоне места нет — они видны в окне проекта. */
+  .ph-desc,
   .proj-head .ph-tags,
   .ph-line > .spacer {
     display: none;
@@ -365,56 +358,12 @@
     justify-content: center;
   }
   .proj-kpis,
-  #toggle-list-btn,
   #board-statuses,
   #export-project-btn {
     display: none;
   }
 
-  /* Проект: список задач и деталь — по одному пейну за раз (master-detail).
-     flex, а не block — иначе #sidebar/#detail теряют высотное растяжение,
-     которое на десктопе давал grid-template-columns, и редактор перестаёт
-     дотягиваться до низа страницы. */
-  .proj-list {
-    display: flex;
-  }
-  #sidebar,
-  #detail {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-  }
-  #sidebar {
-    padding-bottom: 70px;
-  }
-  body.has-selected-task #sidebar {
-    display: none;
-  }
-  #detail {
-    display: none;
-    padding-bottom: 70px;
-  }
-  body.has-selected-task #detail {
-    display: flex;
-  }
-  #mobile-back-to-list[hidden] {
-    display: flex !important;
-  }
-  .mobile-back-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-family: inherit;
-    font-size: 13px;
-    padding: 0 0 10px;
-    cursor: pointer;
-  }
-
-  /* Календарь: месяц остаётся 7-колоночным, но компактнее и с более
-     крупным, читаемым текстом (3) */
+  /* --- Календарь месяца: компактнее, текст читаемый --- */
   .cal-days {
     grid-auto-rows: 62px;
   }
@@ -422,32 +371,6 @@
     min-height: 54px;
     padding: 4px;
   }
-  /* Период календаря: даты в одну растянутую строку, зелёный бейдж суммы —
-     отдельной растянутой строкой под ними (было: все 4 элемента в один
-     тесный ряд, бейдж выталкивался margin-left:auto вправо) */
-  .cal-range {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    row-gap: 10px;
-    align-items: center;
-  }
-  .cal-period-tot {
-    grid-column: 1 / -1;
-    margin-left: 0;
-    width: 100%;
-    text-align: center;
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-
-  /* --- 6. Табы Месяц/Неделя/День — на всю ширину --- */
-  .cal-modes {
-    width: 100%;
-  }
-  .cal-modes button {
-    flex: 1;
-  }
-  /* --- 7. Кнопки-инпуты даты/времени покрупнее --- */
   .dp-btn {
     padding: 11px 14px;
     font-size: 14px;
@@ -465,15 +388,8 @@
   .cal-weekdays {
     font-size: 12.5px;
   }
-  #cal-title {
-    font-size: 17px;
-  }
-  .mini-weekdays {
-    font-size: 10.5px;
-  }
 
   /* Строки, которые на десктопе никогда не переносились */
-  .timer-bar,
   .session-item {
     flex-wrap: wrap;
   }

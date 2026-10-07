@@ -87,3 +87,34 @@ test('keepKnown вычищает ссылки на удалённые теги',
   assert.deepEqual(T.keepKnown(tags, null), []);
   assert.deepEqual(T.keepKnown([], ['a']), []);
 });
+
+// --- общие и проектные теги (с 7 октября 2026) ---------------------------------
+
+const scoped = [
+  { id: 'g', name: 'Срочное', color: '#f00', projectId: null },
+  { id: 'p1a', name: 'Макет', color: '#0f0', projectId: 'p1' },
+  { id: 'p2a', name: 'Макет', color: '#00f', projectId: 'p2' },
+];
+
+test('в проекте видны общие теги и его собственные, чужие — нет', () => {
+  assert.deepEqual(T.tagsForProject(scoped, 'p1').map((tg) => tg.id), ['g', 'p1a']);
+  assert.deepEqual(T.tagsForProject(scoped, 'p2').map((tg) => tg.id), ['g', 'p2a']);
+  assert.deepEqual(T.tagsForProject(scoped, null).map((tg) => tg.id), ['g'], 'без проекта — только общие');
+});
+
+test('имя проектного тега занято только тем, что видно в его проекте', () => {
+  assert.equal(T.nameTaken(scoped, 'макет', null, 'p1'), true, 'свой «Макет» уже есть');
+  assert.equal(T.nameTaken(scoped, 'Макет', null, 'p3'), false, 'в третьем проекте «Макет» свободен');
+  assert.equal(T.nameTaken(scoped, 'срочное', null, 'p3'), true, 'общий тег занимает имя везде');
+});
+
+test('общему тегу имя занимает любой тег — он виден всюду', () => {
+  assert.equal(T.nameTaken(scoped, 'Макет', null), true);
+  assert.equal(T.nameTaken(scoped, 'Макет', 'p1a'), true, 'второй «Макет» всё равно мешает');
+});
+
+test('точное совпадение ищется среди видных в проекте', () => {
+  assert.equal(T.exactMatch(scoped, 'макет', 'p1').id, 'p1a');
+  assert.equal(T.exactMatch(scoped, 'макет', 'p3'), null);
+  assert.equal(T.exactMatch(scoped, 'макет').id, 'p1a', 'без области — по всем');
+});

@@ -39,7 +39,7 @@ async function openTask(page, { defaultRate, taskRate }) {
   }, [HOUR, defaultRate, taskRate]);
 }
 
-test('со ставкой сумма стоит справа от времени, по нижнему краю цифр', async ({ page }) => {
+test('со ставкой сумма стоит под временем, по его левому краю и мельче', async ({ page }) => {
   await openTask(page, { defaultRate: 2000, taskRate: null });
   const earned = page.locator('#timer-earned');
   await expect(earned).toBeVisible();
@@ -49,21 +49,12 @@ test('со ставкой сумма стоит справа от времени
   const g = await page.evaluate(() => {
     const d = document.getElementById('timer-display').getBoundingClientRect();
     const e = document.getElementById('timer-earned').getBoundingClientRect();
-    const line = getComputedStyle(document.querySelector('.timer-line'));
-    const color = getComputedStyle(document.getElementById('timer-earned')).color;
-    const probe = document.createElement('span');
-    probe.style.color = 'var(--accent-ink)';
-    document.body.append(probe);
-    const ink = getComputedStyle(probe).color;
-    probe.remove();
-    return { dRight: d.right, eLeft: e.left, dTop: d.top, dBottom: d.bottom, eTop: e.top, eBottom: e.bottom, align: line.alignItems, color, ink };
+    const size = (id) => parseFloat(getComputedStyle(document.getElementById(id)).fontSize);
+    return { dLeft: d.left, dBottom: d.bottom, eLeft: e.left, eTop: e.top, dSize: size('timer-display'), eSize: size('timer-earned') };
   });
-  expect(g.eLeft, 'справа от времени').toBeGreaterThan(g.dRight);
-  expect(g.align, 'выровнены по базовой линии цифр').toBe('baseline');
-  // Сумма мельче времени и стоит внутри его высоты, ближе к низу.
-  expect(g.eBottom).toBeLessThanOrEqual(g.dBottom + 1);
-  expect(g.eTop).toBeGreaterThan(g.dTop);
-  expect(g.color, 'зелёный — текстовым токеном').toBe(g.ink);
+  expect(g.eTop, 'под временем').toBeGreaterThanOrEqual(g.dBottom);
+  expect(Math.abs(g.eLeft - g.dLeft), 'по левому краю цифр').toBeLessThan(2);
+  expect(g.eSize, 'мельче времени').toBeLessThan(g.dSize);
 });
 
 test('своя ставка задачи сильнее общей', async ({ page }) => {

@@ -50,7 +50,7 @@ async function createTag(page, name) {
 
 test('пустой список объясняет, что такое теги, а не молчит', async ({ page }) => {
   await openSettings(page);
-  await expect(page.locator('#tags-list .tags-empty')).toContainText('общие для всего приложения');
+  await expect(page.locator('#tags-list .tags-empty')).toContainText('видны во всех проектах');
 });
 
 test('тег создаётся и появляется в списке с пометкой, что он не используется', async ({ page }) => {
@@ -81,10 +81,7 @@ test('тег вешается на задачу через пикер и сни�
 
   await page.evaluate(() => {
     const task = state.tasks[0];
-    state.ui.view = 'project';
-    selectedId = task.id;
-    loadEditor(task);
-    render();
+    selectTask(task.id);
   });
   await expect(page.locator('#task-props')).toBeVisible();
 
@@ -108,10 +105,7 @@ test('в пикере ищут по имени и оттуда же заводя
   await seedProject(page);
   await createTag(page, 'Срочное');
   await page.evaluate(() => {
-    state.ui.view = 'project';
-    selectedId = state.tasks[0].id;
-    loadEditor(state.tasks[0]);
-    render();
+    selectTask(state.tasks[0].id);
   });
 
   await page.locator('#task-tags-add').click();
@@ -176,6 +170,7 @@ test('чипы показываются там, где договорились,
 
   // Плитка проекта на главной — нет.
   await page.evaluate(() => { state.ui.view = 'home'; render(); });
+  await page.evaluate(() => openView('projects'));
   await expect(page.locator('.ptile .tag-chip')).toHaveCount(0);
 });
 

@@ -15,9 +15,9 @@ const WEB = `http://localhost:${PORT_WEB}`;
 
 const VIEWS = [
   ['обзор', 'home'],
+  ['проекты', 'projects'],
   ['доска', 'board'],
-  ['календарь', 'calendar'],
-  ['статистика', 'stats'],
+  ['время', 'time'],
   ['проект', 'project'],
   ['настройки', 'settings'],
 ];
@@ -112,8 +112,8 @@ async function busyCalendar(page, mode) {
       repeat: { freq: 'week', every: 1, weekdays: [], from: 'due', ends: { kind: 'never' } },
     });
     migrate();
-    state.ui.view = 'calendar';
-    agenda.mode = m;
+    state.ui.view = 'time';
+    state.ui.timeMode = m;
     render();
   }, mode);
 }

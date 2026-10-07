@@ -43,8 +43,7 @@ test('записи — один остров с разделителями, бе
     return { listBorder: list.borderTopWidth, listRadius: list.borderRadius, items };
   });
   expect(m.items).toHaveLength(3);
-  expect(m.listBorder, 'рамка у острова').toBe('1px');
-  expect(m.listRadius).not.toBe('0px');
+  expect(m.listBorder, 'у острова нет обводки — дизайн плоский').toBe('0px');
   for (const it of m.items) {
     expect(it.left, 'у записи своей рамки нет').toBe('0px');
     expect(it.radius).toBe('0px');

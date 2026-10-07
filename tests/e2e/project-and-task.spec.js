@@ -13,6 +13,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function createProject(page, name) {
+  await page.evaluate(() => openView('projects'));
   await page.locator('#create-project-btn').click();
   await expect(page.locator('#pdlg-backdrop')).toBeVisible();
   await page.locator('#pdlg-name').fill(name);
@@ -36,7 +37,9 @@ test('обычный путь: задача создаётся со статус
   await createProject(page, 'Сайт клиента');
   await page.locator('#new-task-btn').click();
 
-  await expect(page.locator('#task-list .task-item')).toHaveCount(1);
+  // Новая задача открывается своей страницей и ждёт названия; в списке
+  // проекта она уже есть.
+  expect(await page.evaluate(() => state.ui.view)).toBe('task');
   await expect(page.locator('#task-title')).toBeFocused();
 
   const task = await page.evaluate(() => {
@@ -49,10 +52,13 @@ test('обычный путь: задача создаётся со статус
   expect(task.done).toBe(false);
 
   await page.locator('#task-title').fill('Свёрстать главную');
+  await page.locator('#task-back').click();
+  await expect(page.locator('#task-list .task-item')).toHaveCount(1);
   await expect(page.locator('#task-list')).toContainText('Свёрстать главную');
 });
 
 test('пустое название: проект не создаётся', async ({ page }) => {
+  await page.evaluate(() => openView('projects'));
   await page.locator('#create-project-btn').click();
   await page.locator('#pdlg-name').fill('');
   await page.locator('#pdlg-save').click();
@@ -67,6 +73,7 @@ test('пустое название: отказ виден пользовате�
   // то, как должно быть, а не то, как есть.
   test.fail(true, 'известная недоработка: пустое название отклоняется молча');
 
+  await page.evaluate(() => openView('projects'));
   await page.locator('#create-project-btn').click();
   await page.locator('#pdlg-name').fill('');
   await page.locator('#pdlg-save').click();
@@ -80,6 +87,7 @@ test('пустое название: отказ виден пользовате�
 });
 
 test('название из одних пробелов ведёт себя как пустое', async ({ page }) => {
+  await page.evaluate(() => openView('projects'));
   await page.locator('#create-project-btn').click();
   await page.locator('#pdlg-name').fill('   ');
   await page.locator('#pdlg-save').click();

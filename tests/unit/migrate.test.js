@@ -252,3 +252,22 @@ test('битое время задачи чинится, а не роняет п
   assert.deepEqual(s.tasks[1].sessions, [{ ms: 5 }], 'целые записи не трогаются');
   assert.equal(s.tasks[1].totalMs, 5);
 });
+
+// --- теги проекта, ставка и валюта проекта (с 7 октября 2026) ------------------
+
+test('тег без projectId — общий, тег исчезнувшего проекта убирается', () => {
+  const s = migrate({
+    projects: [{ id: 'p1', name: 'A' }],
+    tags: [{ id: 'g', name: 'Общий' }, { id: 't1', name: 'Свой', projectId: 'p1' }, { id: 'dead', name: 'Ничей', projectId: 'gone' }],
+    tasks: [{ id: 'a', projectId: 'p1', tagIds: ['g', 't1', 'dead'] }],
+  }, deps());
+  assert.deepEqual(s.tags.map((tg) => [tg.id, tg.projectId]), [['g', null], ['t1', 'p1']]);
+  assert.deepEqual(s.tasks[0].tagIds, ['g', 't1'], 'ссылка на убранный тег вычищена');
+});
+
+test('ставка и валюта проекта: пусто — общие, символ валюты переводится в код', () => {
+  const s = migrate({
+    projects: [{ id: 'p1', name: 'A' }, { id: 'p2', name: 'B', rate: '2500', currency: '$' }, { id: 'p3', name: 'C', rate: 'abc', currency: 'XXX' }],
+  }, deps());
+  assert.deepEqual(s.projects.map((p) => [p.rate, p.currency]), [[null, null], [2500, 'USD'], [null, null]]);
+});

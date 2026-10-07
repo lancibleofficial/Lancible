@@ -1,12 +1,20 @@
 /* Теги — чистая логика, без DOM и без state.
  *
- * Теги общие на всё приложение, а не свои у каждого проекта (в отличие от
- * статусов задач). Один и тот же тег живёт и на проекте, и на задаче в любом
- * другом проекте — поэтому функции ниже получают весь список тегов и все
- * сущности, которые могут на него ссылаться.
+ * Тег бывает общий (projectId пуст: заводится в настройках, виден в любом
+ * проекте) и проектный (projectId задан: заводится в настройках проекта,
+ * виден только в нём). С 7 октября 2026 — до того все теги были общими.
+ * Функции ниже получают весь список тегов и все сущности, которые могут на
+ * него ссылаться; область видимости — tagsForProject.
  */
 (function (global) {
   const getTag = (tags, id) => tags.find((tg) => tg.id === id) || null;
+
+  const isGlobalTag = (tg) => !tg.projectId;
+
+  /** Теги, видные в проекте: общие и его собственные, в порядке общего
+   *  списка. Без projectId — только общие. */
+  const tagsForProject = (tags, projectId) =>
+    tags.filter((tg) => isGlobalTag(tg) || (!!projectId && tg.projectId === projectId));
 
   /** Теги сущности в том порядке, в каком они лежат в общем списке, а не в
    *  порядке проставления: иначе одни и те же два тега на разных задачах
@@ -38,17 +46,24 @@
 
   /** Есть ли уже тег с таким именем. Сравнение без учёта регистра и краевых
    *  пробелов: два тега «Срочное» и «срочное» различить на глаз нельзя, и
-   *  заводить оба бессмысленно. */
-  function nameTaken(tags, name, exceptId) {
+   *  заводить оба бессмысленно.
+   *
+   *  Область: общему тегу имя занимает любой тег (он виден везде), проектному
+   *  — только те, что видны в его проекте: в двух разных проектах по
+   *  «Срочному» — нормально. projectId пуст — проверяем как общий. */
+  function nameTaken(tags, name, exceptId, projectId) {
     const n = String(name || '').trim().toLowerCase();
     if (!n) return false;
-    return tags.some((tg) => tg.id !== exceptId && String(tg.name || '').trim().toLowerCase() === n);
+    const pool = projectId ? tagsForProject(tags, projectId) : tags;
+    return pool.some((tg) => tg.id !== exceptId && String(tg.name || '').trim().toLowerCase() === n);
   }
 
-  /** Точное совпадение имени — по нему решается, предлагать ли «Создать тег». */
-  const exactMatch = (tags, name) => {
+  /** Точное совпадение имени среди видных в проекте — по нему решается,
+   *  предлагать ли «Создать тег». */
+  const exactMatch = (tags, name, projectId) => {
     const n = String(name || '').trim().toLowerCase();
-    return n ? tags.find((tg) => String(tg.name || '').trim().toLowerCase() === n) || null : null;
+    const pool = projectId === undefined ? tags : tagsForProject(tags, projectId);
+    return n ? pool.find((tg) => String(tg.name || '').trim().toLowerCase() === n) || null : null;
   };
 
   /** Убирает ссылки на несуществующие теги. Та же чистка есть в migrate, но
@@ -58,7 +73,7 @@
     return (Array.isArray(ids) ? ids : []).filter((id) => known.has(id));
   };
 
-  const api = { getTag, tagsOf, tagUsage, toggleTag, searchTags, nameTaken, exactMatch, keepKnown };
+  const api = { getTag, isGlobalTag, tagsForProject, tagsOf, tagUsage, toggleTag, searchTags, nameTaken, exactMatch, keepKnown };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);

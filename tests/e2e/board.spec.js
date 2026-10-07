@@ -118,7 +118,7 @@ test('карточка доски поднята над столбцом, а н�
       const board = getComputedStyle(document.querySelector('.board-card')).backgroundColor;
       const column = getComputedStyle(document.querySelector('.board-col')).backgroundColor;
       const page = getComputedStyle(document.body).backgroundColor;
-      state.ui.view = 'home';
+      state.ui.view = 'projects';
       render();
       const t = getComputedStyle(document.querySelector('.ptile'));
       return {
@@ -127,16 +127,16 @@ test('карточка доски поднята над столбцом, а н�
       };
     }, theme);
     // Карточка на ступень светлее того, на чём лежит (с редизайна 6 октября
-    // в тёмной теме так устроены все слои). В светлой «Чистой» всё белое, и
-    // столбец доски — тихая серая полоса, на которой белая карточка видна.
+    // в тёмной теме так устроены все слои). В светлой второй редакции
+    // (7 октября) земля серая, предметы белые: карточка доски белая на сером
+    // столбце, карточка проекта белая на серой странице.
     expect(got.lift, `в теме ${theme} карточка не светлее столбца`).toBeGreaterThan(5);
+    expect(got.tileLift, `в теме ${theme} карточка проекта не светлее страницы`).toBeGreaterThan(5);
     if (theme === 'light') {
       expect(got.board, 'на светлой карточка доски белая').toBe('rgb(255, 255, 255)');
       expect(got.column, 'а столбец под ней — нет').not.toBe(got.board);
-      expect(got.tile, 'карточка проекта белая, как страница').toBe(got.page);
-      expect(got.tileBorder, 'и отделена от страницы рамкой').not.toBe(got.page);
-    } else {
-      expect(got.tileLift, 'в тёмной карточка проекта светлее страницы').toBeGreaterThan(5);
+      expect(got.tile, 'карточка проекта белая').toBe('rgb(255, 255, 255)');
+      expect(got.page, 'а страница — серая земля, не белая').not.toBe(got.tile);
     }
   }
 });
@@ -187,46 +187,36 @@ test('закреплённая задача не заливается цвето
   await expect(plain).toBeVisible();
 });
 
-test('свойства задачи — строкой фишек под названием, без вкладки «Настройки»', async ({ page }) => {
+test('свойства задачи — строками в правой панели, вкладки «Свойства» и «История»', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await seed(page);
   await page.evaluate(() => {
     const task = state.tasks[0];
     task.dueAt = new Date(Date.now() + 3 * 86400000).toISOString();
-    state.ui.view = 'project';
-    selectedId = task.id;
-    loadEditor(task);
-    render();
+    selectTask(task.id);
   });
-  // Свойства видны сразу, вкладки две: «Заметки» и «История».
+  // Свойства видны сразу; вкладки переключают только правую панель.
   await expect(page.locator('#task-props #task-status')).toBeVisible();
-  await expect(page.locator('#task-tabs button')).toHaveText(['Заметки', 'История']);
+  await expect(page.locator('#task-tabs button')).toHaveText(['Свойства', 'История']);
 
-  // Фишки стоят под названием и над полосой таймера, у всех одна высота,
-  // и подложка у заданного свойства есть, а у пустого — нет.
+  // Панель стоит справа от редактора. Строка — подпись слева, управление у
+  // правого края; подписи и управление выровнены по своим колонкам.
   const m = await page.evaluate(() => {
     const r = (sel) => document.querySelector(sel).getBoundingClientRect();
-    const chips = [...document.querySelectorAll('#task-props .task-params > div')].filter((d) => !d.hidden);
-    const bg = (d) => getComputedStyle(d).backgroundColor;
-    const status = document.querySelector('#task-props .status-bar');
-    const repeat = document.querySelector('#task-props .repeat-bar');
+    const rows = [...document.querySelectorAll('#task-props .task-params > div')].filter((d) => !d.hidden && !d.classList.contains('due-custom'));
     return {
-      title: r('#task-title').bottom,
-      chipsTop: Math.min(...chips.map((d) => d.getBoundingClientRect().top)),
-      chipsBottom: Math.max(...chips.map((d) => d.getBoundingClientRect().bottom)),
-      timerTop: r('.timer-bar').top,
-      heights: [...new Set(chips.map((d) => Math.round(d.getBoundingClientRect().height)))],
-      statusBg: bg(status),
-      repeatBg: bg(repeat),
+      editorRight: r('#task-detail').right,
+      panelLeft: r('.task-props-island').left,
+      panelRight: r('.task-props-island').right,
+      labelLefts: [...new Set(rows.map((d) => Math.round(d.querySelector('.due-label, label').getBoundingClientRect().left)))],
+      rowRights: rows.map((d) => Math.max(...[...d.children].filter((c) => !c.hidden).map((c) => c.getBoundingClientRect().right))),
       labelWidth: r('#task-props .status-bar .due-label').width,
     };
   });
-  expect(m.chipsTop, 'фишки под названием').toBeGreaterThanOrEqual(m.title);
-  expect(m.chipsBottom, 'и над полосой таймера').toBeLessThanOrEqual(m.timerTop);
-  expect(m.heights, `у фишек разная высота: ${m.heights}`).toHaveLength(1);
-  expect(m.statusBg, 'у заданного свойства подложка').not.toBe('rgba(0, 0, 0, 0)');
-  expect(m.repeatBg, 'у пустого — нет').toBe('rgba(0, 0, 0, 0)');
-  expect(m.labelWidth, 'подпись спрятана — говорит иконка').toBeLessThanOrEqual(1);
+  expect(m.panelLeft, 'панель справа от редактора').toBeGreaterThanOrEqual(m.editorRight);
+  expect(m.labelWidth, 'подпись видна').toBeGreaterThan(10);
+  expect(m.labelLefts, 'подписи в одну колонку').toHaveLength(1);
+  for (const right of m.rowRights) expect(m.panelRight - right, 'строка доходит до правого края панели').toBeLessThan(24);
 });
 
 test('в окне задачи из календаря свойства остаются колонкой с подписями', async ({ page }) => {
