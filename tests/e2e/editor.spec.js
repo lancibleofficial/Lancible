@@ -698,3 +698,39 @@ test.describe('телефон: настройки рисования', () => {
     expect(inView).toBe(true);
   });
 });
+
+// --- круг 5: задача открывается, даже если заметка не открылась -----------------
+
+test('заметка не открылась — задача и проект всё равно открываются, заметка цела', async ({ page }) => {
+  await page.goto('/index.html');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  const ids = await page.evaluate(() => {
+    const now = new Date().toISOString();
+    const pid = uid();
+    state.projects.push({ id: pid, name: 'Старый проект', color: '#87ff65', description: '', pinnedAt: null, createdAt: now, tagIds: [] });
+    seedProjectStatuses(pid);
+    const id = uid();
+    const notes = { ops: [{ insert: 'старая заметка\n' }], boom: true };
+    state.tasks.push({
+      id, projectId: pid, title: 'Старая задача', done: false, notes, totalMs: 0, sessions: [], rate: null, pinnedAt: null,
+      createdAt: now, updatedAt: now, statusId: orderedStatuses(pid)[1].id, tagIds: [], versionId: null, repeat: null, cancelled: false,
+      dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+    });
+    // Заметка, на которой редактор падает, — как та, что не открывалась у пользователя.
+    const read = Core.readNotes;
+    Core.readNotes = (n) => { if (n && n.boom) throw new Error('битая заметка'); return read(n); };
+    openView('home');
+    return { pid, id, before: JSON.stringify(notes) };
+  });
+  await page.evaluate((pid) => openProject(pid), ids.pid);
+  await expect(page.locator('#project-view')).toBeVisible();
+  await page.evaluate((id) => selectTask(id), ids.id);
+  await expect(page.locator('#task-view')).toBeVisible();
+  await expect(page.locator('#task-title')).toHaveValue('Старая задача');
+  await expect(page.locator('#toast')).toContainText('битая заметка');
+  expect(await page.evaluate(() => editor.view.editable), 'не открывшуюся заметку не правят').toBe(false);
+  await page.waitForTimeout(300);
+  const after = await page.evaluate((id) => JSON.stringify(state.tasks.find((x) => x.id === id).notes), ids.id);
+  expect(after, 'заметка осталась как была').toBe(ids.before);
+});

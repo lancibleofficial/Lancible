@@ -4421,12 +4421,30 @@ function persistNotes(container) {
   scheduleSave();
 }
 
+/** Редактор не смог открыть или сохранить заметку. Задача и проект всё
+ *  равно открываются (до 7 октября 2026 ошибка здесь обрывала selectTask и
+ *  openProject — «нажимаю, и ничего»), а сама заметка не трогается: редактор
+ *  только для чтения и ничего не пишет. Текст ошибки — на экране, чтобы его
+ *  можно было прислать. */
+function editorFailed(e, what) {
+  console.error(`[editor] ${what}`, e);
+  toast(`${t('editor.load_failed')} ${(e && e.message) || e}`);
+}
+
 function loadEditor(task) {
   if (!editor) return;
-  editor.flush();
-  editorTaskId = task ? task.id : null;
+  try { editor.flush(); } catch (e) { editorFailed(e, 'flush'); }
+  editorTaskId = null;
   editorLoadedJSON = task ? JSON.stringify(task.notes || null) : null;
-  editor.setContent(task ? Core.readNotes(task.notes) : null);
+  try {
+    editor.setContent(task ? Core.readNotes(task.notes) : null);
+  } catch (e) {
+    editorFailed(e, 'load');
+    try { editor.setContent(null); } catch { /* пустой тоже не встал — оставляем как есть */ }
+    editor.setEditable(false);
+    return;
+  }
+  editorTaskId = task ? task.id : null;
   editor.setEditable(!!task);
 }
 
@@ -4469,7 +4487,9 @@ const docTitle = (d) => d.title || Core.docTitleGuess(Core.readNotes(d.body).doc
 
 function persistDoc(container) {
   const d = getDocument(state.ui.docId);
-  if (!d) return;
+  // Пишем только в тот документ, что редактор действительно открыл: не
+  // открылся — его тело остаётся как было.
+  if (!d || d.id !== docEditorFor) return;
   d.body = Core.normalizeContainer(container);
   docLoadedJSON = JSON.stringify(d.body);
   d.updatedAt = new Date().toISOString();
@@ -4477,12 +4497,23 @@ function persistDoc(container) {
   scheduleSave();
 }
 
+let docEditorFor = null;
+
 function loadDocEditor(d) {
   setupDocEditor();
   if (!docEditor) return;
-  docEditor.flush();
+  try { docEditor.flush(); } catch (e) { editorFailed(e, 'flush doc'); }
   docLoadedJSON = d ? JSON.stringify(d.body || null) : null;
-  docEditor.setContent(d ? Core.readNotes(d.body) : null);
+  docEditorFor = null;
+  try {
+    docEditor.setContent(d ? Core.readNotes(d.body) : null);
+  } catch (e) {
+    editorFailed(e, 'load doc');
+    try { docEditor.setContent(null); } catch { /* см. loadEditor */ }
+    docEditor.setEditable(false);
+    return;
+  }
+  docEditorFor = d ? d.id : null;
   docEditor.setEditable(!!d);
 }
 
