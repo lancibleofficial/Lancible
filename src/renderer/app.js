@@ -184,6 +184,7 @@ const el = {
   phDot: $('ph-dot'), phName: $('ph-name'), projectMenuBtn: $('project-menu-btn'),
   projTabs: [...document.querySelectorAll('#proj-tabs button')], projList: $('proj-list'),
   projBoard: $('proj-board'), projVersions: $('proj-versions'), ptabVerCount: $('ptab-ver-count'),
+  projDocs: $('proj-docs'), ptabDocCount: $('ptab-doc-count'), pdocList: $('pdoc-list'), pdocEmpty: $('pdoc-empty'), pdocNew: $('pdoc-new'),
   pverList: $('pver-list'), pverEmpty: $('pver-empty'), projBack: $('proj-back'), phDesc: $('ph-desc'),
   ppDone: $('pp-done'), ppOf: $('pp-of'), ppPct: $('pp-pct'), ppBar: $('pp-bar'), ppLegend: $('pp-legend'),
   projVersionsCard: $('proj-versions-card'), pvRows: $('pv-rows'), pvAll: $('pv-all'), psList: $('ps-list'), psEmpty: $('ps-empty'),
@@ -3113,7 +3114,7 @@ function boardCard(task) {
   return card;
 }
 
-const projectTab = () => (['board', 'versions'].includes(state.ui.projectTab) ? state.ui.projectTab : 'list');
+const projectTab = () => (['board', 'versions', 'docs'].includes(state.ui.projectTab) ? state.ui.projectTab : 'list');
 
 /** Экран проекта: шапка и одна из трёх вкладок. */
 function renderProjectPage() {
@@ -3123,14 +3124,52 @@ function renderProjectPage() {
   el.projList.hidden = tab !== 'list';
   el.projBoard.hidden = tab !== 'board';
   el.projVersions.hidden = tab !== 'versions';
+  el.projDocs.hidden = tab !== 'docs';
   if (tab === 'list') {
     renderSidebar();
     renderProjectSide();
   } else if (tab === 'board') {
     renderBoardPage();
+  } else if (tab === 'docs') {
+    renderProjectDocs();
   } else {
     renderVersionsTab();
   }
+}
+
+/** Документы проекта, свежие сверху (закреплённые — первыми, как в разделе). */
+function docsOfProject(pid) {
+  return Core.sortDocuments((state.documents || []).filter((d) => d.projectId === pid));
+}
+
+/** Открыть документ проекта: раздел «Документы» с фильтром по этому проекту
+ *  — рядом в списке окажутся его соседи, а не все документы подряд. */
+function openProjectDoc(d) {
+  docFilter = d.projectId || 'all';
+  docQuery = '';
+  if (el.docSearch) el.docSearch.value = '';
+  openDocs(d.id);
+}
+
+/** Вкладка «Документы» проекта — те же строки .doc-item, что в разделе. */
+function renderProjectDocs() {
+  const pid = state.ui.projectId;
+  const list = docsOfProject(pid);
+  el.pdocList.textContent = '';
+  for (const d of list) {
+    const st = Core.docStats(Core.readNotes(d.body).doc);
+    const b = elt('button', 'doc-item pdoc-item');
+    b.type = 'button';
+    b.dataset.id = d.id;
+    b.append(
+      elt('span', 'doc-item-title', docTitle(d)),
+      elt('span', 'doc-item-meta', `${t('docs.words_n', { n: st.words })} · ${fmtWhenShort(d.updatedAt)}`),
+    );
+    b.addEventListener('click', () => openProjectDoc(d));
+    b.addEventListener('contextmenu', (e) => { e.preventDefault(); openDocMenu(d, b); });
+    el.pdocList.appendChild(b);
+  }
+  el.pdocEmpty.hidden = list.length > 0;
 }
 
 /** Шапка одной строкой: название, вкладки, итоги. Описание — подсказкой на
@@ -3147,6 +3186,7 @@ function renderProjectHeader() {
   // логично там же, где название и цвет, то есть в окне проекта.
   el.phTags.hidden = !tagsOf(p.tagIds).length;
   el.ptabVerCount.textContent = versionsOf(p.id).length || '';
+  el.ptabDocCount.textContent = docsOfProject(p.id).length || '';
 
   const tasks = visibleTasks();
   el.projectEarned.textContent = '';
@@ -3233,8 +3273,39 @@ function renderNavProjects() {
   const pinned = state.projects.filter((p) => p.pinnedAt).sort(byPinned);
   const rest = state.projects.filter((p) => !p.pinnedAt);
   el.navPinnedHead.hidden = el.navPinned.hidden = pinned.length === 0;
-  el.navPinned.replaceChildren(...pinned.map(navProjectItem));
-  el.navProjects.replaceChildren(...rest.map(navProjectItem));
+  el.navPinned.replaceChildren(...pinned.flatMap(navProjectItems));
+  el.navProjects.replaceChildren(...rest.flatMap(navProjectItems));
+}
+
+const NAV_DOCS_MAX = 6;
+
+/** Строка проекта в левом меню, а под открытым проектом — его документы
+ *  (круг 5): свежие, не больше шести, дальше — «Ещё N» на вкладку проекта. */
+function navProjectItems(p) {
+  const items = [navProjectItem(p)];
+  const cur = getDocument(state.ui.docId);
+  const open = ((state.ui.view === 'project' || state.ui.view === 'task') && state.ui.projectId === p.id)
+    || (state.ui.view === 'docs' && cur && cur.projectId === p.id);
+  if (!open) return items;
+  const docs = docsOfProject(p.id);
+  for (const d of docs.slice(0, NAV_DOCS_MAX)) {
+    const b = elt('button', 'nav-item nav-doc');
+    b.type = 'button';
+    b.title = docTitle(d);
+    b.classList.toggle('active', state.ui.view === 'docs' && state.ui.docId === d.id);
+    b.innerHTML = `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.6 1.2h6l3.8 3.8v9.2a.6.6 0 01-.6.6H3.6a.6.6 0 01-.6-.6V1.8a.6.6 0 01.6-.6zm5.4 1.6v3h3zM5 8h6v1.3H5zm0 2.6h6v1.3H5z"/></svg>`;
+    b.append(elt('span', 'nav-label', docTitle(d)));
+    b.addEventListener('click', () => openProjectDoc(d));
+    items.push(b);
+  }
+  if (docs.length > NAV_DOCS_MAX) {
+    const more = elt('button', 'nav-item nav-doc nav-doc-more');
+    more.type = 'button';
+    more.append(elt('span', 'nav-label', t('docs.more_n', { n: docs.length - NAV_DOCS_MAX })));
+    more.addEventListener('click', () => { openProject(p.id); state.ui.projectTab = 'docs'; render(); scheduleSave(); });
+    items.push(more);
+  }
+  return items;
 }
 
 function navProjectItem(p) {
@@ -4822,6 +4893,10 @@ el.pdlgCurrency.addEventListener('click', () => {
 });
 el.pdlgTagAdd.addEventListener('click', () => openTagDialog(null, '', () => renderPdlgTagList(), pdlgProjectId()));
 
+el.pdocNew.addEventListener('click', () => {
+  docFilter = state.ui.projectId || 'all';
+  newDocument(state.ui.projectId);
+});
 el.projTabs.forEach((b) => b.addEventListener('click', () => {
   flushEditor();
   closeMenu();

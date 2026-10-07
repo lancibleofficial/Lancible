@@ -122,6 +122,8 @@ export default function ProjectScreen({ route, navigation }) {
           { key: 'edit', icon: 'settings', label: t(LANG, 'project.menu_edit'), onPress: onEditProject },
           { key: 'stats', icon: 'chart', label: t(LANG, 'project.menu_stats'), onPress: onOpenStats },
           { key: 'board', icon: 'board', label: t(LANG, 'project.menu_board'), onPress: onOpenBoard },
+          // Документы проекта (круг 5) — тот же раздел, отфильтрованный по нему.
+          { key: 'docs', icon: 'doc', label: t(LANG, 'nav.docs'), onPress: () => navigation.navigate('Documents', { projectId }) },
           {
             key: 'pin',
             icon: 'pin',

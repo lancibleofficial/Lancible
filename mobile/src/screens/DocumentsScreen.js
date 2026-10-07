@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { View, FlatList, Pressable, StyleSheet } from 'react-native';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
@@ -15,7 +15,9 @@ import { t, LOCALE_MAP } from '../lib/i18n';
 // Раздел «Документы» на телефоне: тексты отдельно от задач — те же, что на
 // десктопе и в вебе (state.documents, ездят в синхронизации). Список с
 // поиском; открытие — полноэкранный редактор (EditorScreen).
-export default function DocumentsScreen({ navigation }) {
+// С projectId в параметрах (меню проекта, круг 5) — только документы этого
+// проекта, и новый документ сразу кладётся в него.
+export default function DocumentsScreen({ navigation, route }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
@@ -26,11 +28,18 @@ export default function DocumentsScreen({ navigation }) {
   const togglePinDocument = useAppStore((s) => s.togglePinDocument);
   const [query, setQuery] = useState('');
 
-  const list = DocCore.searchDocuments(DocCore.sortDocuments(documents), query);
+  const projectId = (route && route.params && route.params.projectId) || null;
+  const project = projectId ? projects.find((p) => p.id === projectId) : null;
+  const own = projectId ? documents.filter((d) => d.projectId === projectId) : documents;
+  const list = DocCore.searchDocuments(DocCore.sortDocuments(own), query);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: project ? `${t(lang, 'docs.title')} · ${project.name}` : t(lang, 'docs.title') });
+  }, [navigation, project, lang]);
   const titleOf = (d) => d.title || DocCore.docTitleGuess(DocCore.readNotes(d.body).doc) || t(lang, 'docs.untitled');
 
   function open(id) { navigation.navigate('Editor', { kind: 'doc', id }); }
-  function onNew() { open(createDocument(null)); }
+  function onNew() { open(createDocument(projectId)); }
 
   function onMore(d) {
     openSheet(
