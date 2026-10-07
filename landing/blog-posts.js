@@ -26,6 +26,26 @@
 window.LANCIBLE_POSTS = [
   {
     date: '2026-10-07',
+    tag: 'feature',
+    title: {
+      ru: 'Свой редактор текста, рисование пером и раздел «Документы»',
+      en: 'Our own text editor, pen drawing and a Documents section',
+    },
+    body: {
+      ru: [
+        'Заметки задач теперь пишутся в собственном редакторе Lancible — одинаковом на компьютере, в браузере и на телефоне. Заголовки, списки и чек-листы, цитаты и выноски, цвет и маркер, размер и шрифт выделенного текста, ссылки, поиск с заменой и оглавление. Таблицы правятся шестерёнкой прямо на разделителе строк и столбцов, из таблицы одним нажатием получается график, к тексту можно оставлять комментарии. Картинки встают отдельно, в ряд или с обтеканием текстом. Markdown вставляется как оформленный текст, а документ выгружается в Markdown, HTML и на печать.',
+        'Для планшета и стилуса — два режима рисования: холст между абзацами и пометки от руки прямо поверх текста, которые держатся за свой абзац. Ручка, карандаш, маркер, фигуры, ластик целиком или по кусочку, лассо, прозрачность, последние цвета и учёт нажима. Можно рисовать только стилусом, а пальцем листать, или наоборот. Отмена общая для текста и штрихов, а Ctrl+Shift+D переключает рисование и набор.',
+        'Появился раздел «Документы» — для текста, который не задача: бриф, договор, черновик статьи. Документ может быть общим или принадлежать проекту: тогда он виден на вкладке «Документы» в самом проекте и под проектом в левом меню. Шапка задачи стала чище: в ней осталось одно название, а теги и удаление переехали в свойства. Закреплённые проекты собраны в левом меню группой «Быстрый доступ».',
+      ],
+      en: [
+        'Task notes are now written in Lancible’s own editor — the same on desktop, in the browser and on the phone. Headings, lists and checklists, quotes and callouts, text colour and highlighter, size and font for selected text, links, find and replace and an outline. Tables are edited with a gear right on the divider between rows and columns, a table turns into a chart in one click, and text can carry comments. Images sit on their own line, in a row or with text wrapping around them. Markdown pastes as formatted text, and a document exports to Markdown, HTML or print.',
+        'For tablets and styluses there are two drawing modes: a canvas between paragraphs and handwritten notes right over the text that stay attached to their paragraph. Pen, pencil, marker, shapes, an eraser for whole strokes or parts of them, a lasso, opacity, recent colours and pressure. You can draw with the stylus only and scroll with a finger, or the other way round. Undo is shared between text and strokes, and Ctrl+Shift+D switches between drawing and typing.',
+        'There is a new Documents section for text that is not a task: a brief, a contract, a draft article. A document can be shared or belong to a project — then it shows on the project’s Documents tab and under the project in the left menu. The task header is cleaner: only the title remains there, while tags and deletion moved into the properties. Pinned projects are gathered in the left menu as a Quick access group.',
+      ],
+    },
+  },
+  {
+    date: '2026-10-07',
     tag: 'improvement',
     title: {
       ru: 'Новый облик: панели-острова, страница задачи и один раздел «Время»',
