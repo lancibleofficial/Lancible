@@ -25,6 +25,28 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-10-07',
+    tag: 'improvement',
+    title: {
+      ru: 'Новый облик: панели-острова, страница задачи и один раздел «Время»',
+      en: 'A new look: island panels, a task page and a single “Time” section',
+    },
+    body: {
+      ru: [
+        'Lancible на компьютере и в браузере выглядит иначе. Всё содержимое лежит отдельными островами на спокойной земле: без рамок, теней и градиентов, с небольшими скруглениями и воздухом между блоками. Зелёный остался только там, где он нужен, — на главной кнопке экрана, идущем таймере и сегодняшнем дне. Левая панель сворачивается до значков, а идущая задача видна капсулой в шапке на любом экране.',
+        'Разделов четыре. «Сегодня» показывает день: полосу записей по часам, цифры за день, неделю и месяц, три недавних проекта, дедлайны и справа идущую задачу с недавними. «Проекты» — карточки с временем, деньгами и прогрессом и таблица недавних задач. Задача открывается своей страницей: по центру название, теги и редактор во всю высоту, справа таймер и свойства; история записей — на той же правой панели по вкладке.',
+        'Календарь и статистика съехались в один раздел «Время»: день, четыре дня, неделя, месяц и расписание переключаются в одной шапке, фильтр по проекту заменил галочки слева, период по-прежнему выбирается прямо на сетке месяца, а цифры и панель дня можно спрятать, чтобы сетка заняла всю ширину. В браузере на телефоне всё то же самое складывается столбиком с плашкой навигации снизу.',
+        'Заодно на сайте появились документы: политика конфиденциальности, условия использования, возврат, cookies и реквизиты — на четырёх языках. При регистрации приложение спрашивает согласие и подтверждение возраста, а аккаунт можно удалить из настроек вместе с данными.',
+      ],
+      en: [
+        'Lancible looks different on desktop and in the browser. Everything sits as separate islands on a calm ground: no borders, shadows or gradients, small rounded corners and air between blocks. Green stays only where it matters — the screen’s main button, the running timer and today’s date. The left panel collapses to icons, and the running task shows as a capsule in the header on every screen.',
+        'There are four sections. “Today” shows the day: a strip of entries by hour, figures for the day, week and month, three recent projects, deadlines, and on the right the running task with recent ones. “Projects” is cards with time, money and progress plus a table of recent tasks. A task opens as its own page: title, tags and a full-height editor in the middle, the timer and properties on the right; the entry history lives on the same right panel under a tab.',
+        'The calendar and statistics merged into one “Time” section: day, four days, week, month and schedule switch in one header, a project filter replaces the checkboxes on the left, a period is still picked right on the month grid, and the figures and the day panel can be hidden so the grid takes the full width. In the browser on a phone the same screens stack into a column with a navigation bar at the bottom.',
+        'The site also gained its documents: the privacy policy, terms of use, refunds, cookies and company details — in four languages. Signing up now asks for consent and an age confirmation, and an account can be deleted from the settings together with its data.',
+      ],
+    },
+  },
+  {
     date: '2026-09-23',
     tag: 'feature',
     version: '0.3.0',
