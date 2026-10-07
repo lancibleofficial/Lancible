@@ -1,181 +1,245 @@
-// «Проекты»: карточки проектов и остров недавних задач — как на странице
-// «Проекты» веба. Закреплённые первыми, в порядке закрепления; меню
-// карточки — открыть, в быстрый доступ, редактировать, Excel, удалить.
-import { useMemo } from 'react';
-import { View, FlatList, Pressable, StyleSheet } from 'react-native';
+// «Проекты» — колода (макет B2): проекты листаются вбок карточками, в
+// карточке — итоги, поле новой задачи и первые задачи. Перед первой
+// карточкой стоит карточка «+»: тянешь первую вправо — она выезжает слева,
+// отпустил на ней — открывается лист создания проекта.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, FlatList, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
+import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
-import Island, { IslandHead, IslandEmpty } from '../components/Island';
-import ProjectTile from '../components/ProjectTile';
-import RecentTaskRow from '../components/RecentTaskRow';
+import TaskRow from '../components/TaskRow';
+import TabHeader, { HeaderButton, NotificationsButton } from '../components/TabHeader';
 import NewProjectSheet from '../components/NewProjectSheet';
-import MenuSheet from '../components/MenuSheet';
-import ExportPeriodSheet from '../components/ExportPeriodSheet';
-import PrimaryButton from '../components/PrimaryButton';
-import SearchHeader from '../components/SearchHeader';
-import { useAppStore, recentTasks, tasksOf } from '../store/useAppStore';
+import { useAppStore, tasksOf, projectMs, projectMoney } from '../store/useAppStore';
 import { useRates, currencyOf } from '../hooks/useRates';
-import { buildProjectSheets } from '../lib/xlsxReports';
-import { runExport } from '../lib/exportRunner';
-import { confirmSheet } from '../lib/dialogs';
+import { fmtDur, fmtMoney } from '../lib/format';
+import { dueShort } from '../lib/due';
+import { defaultStatusId } from '../lib/statuses';
+import { useTicker } from '../hooks/useTicker';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
-import { useColors, spacing, fontSize, typography, gap } from '../theme';
+import { useColors, spacing, radius, fontSize, displayFamily } from '../theme';
 import { t } from '../lib/i18n';
 
-const byPinned = (a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt);
+// Край следующей карточки виден: по нему понятно, что колода продолжается.
+const PEEK = 58;
+const GAP = 10;
+const ROWS = 6;
+
+/** Порядок задач в карточке: идущая, закреплённые, невыполненные по
+ *  дедлайну и свежести; выполненные не показываются. */
+export function cardTasks(tasks, activeTimer) {
+  const dueMs = (task) => (task.dueAt ? new Date(task.dueAt).getTime() : Infinity);
+  const updMs = (task) => (task.updatedAt ? new Date(task.updatedAt).getTime() : 0);
+  const rank = (task) => (activeTimer && activeTimer.taskId === task.id ? 0 : task.pinnedAt ? 1 : 2);
+  return tasks.filter((task) => !task.done)
+    .sort((a, b) => rank(a) - rank(b) || dueMs(a) - dueMs(b) || updMs(b) - updMs(a));
+}
 
 export default function ProjectsScreen({ navigation }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const styles = makeStyles(colors, insets, useBottomClearance());
+  const { width } = useWindowDimensions();
+  const clearance = useBottomClearance();
+  const cardW = width - PEEK;
+  const styles = useMemo(() => makeStyles(colors, insets, cardW, clearance), [colors, insets, cardW, clearance]);
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
+  const statuses = useAppStore((s) => s.statuses);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const settings = useAppStore((s) => s.settings);
-  const lang = settings.lang;
-  const togglePinProject = useAppStore((s) => s.togglePinProject);
-  const deleteProject = useAppStore((s) => s.deleteProject);
   const openProject = useAppStore((s) => s.openProject);
-  const showToast = useAppStore((s) => s.showToast);
+  const createTaskInStatus = useAppStore((s) => s.createTaskInStatus);
+  const startTimer = useAppStore((s) => s.startTimer);
   const rates = useRates();
+  const lang = settings.lang;
+  useTicker(!!activeTimer);
 
+  const listRef = useRef(null);
+  const [page, setPage] = useState(1);
+  const [drafts, setDrafts] = useState({});
+  const step = cardW + GAP;
+
+  // Закреплённые первыми, как в рейле веба.
   const ordered = useMemo(() => {
-    const pinned = projects.filter((p) => p.pinnedAt).sort(byPinned);
+    const pinned = projects.filter((p) => p.pinnedAt).sort((a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt));
     return [...pinned, ...projects.filter((p) => !p.pinnedAt)];
   }, [projects]);
-  const recent = useMemo(() => recentTasks(tasks, 8, activeTimer), [tasks, activeTimer]);
+  const data = useMemo(() => [{ id: '__new__' }, ...ordered], [ordered]);
 
-  function openProjectScreen(id) {
-    openProject(id);
-    navigation.navigate('Project', { projectId: id });
-  }
+  function openProjectScreen(id) { openProject(id); navigation.navigate('Project', { projectId: id }); }
+  const openTask = (taskId) => navigation.navigate('TaskDetail', { taskId });
 
-  function openTask(task) {
-    openProject(task.projectId);
-    navigation.navigate('TaskDetail', { taskId: task.id });
-  }
-
-  function onNewProject() {
+  const sheetOpen = useRef(false);
+  function openNewProject() {
+    if (sheetOpen.current) return;
+    sheetOpen.current = true;
+    const back = () => {
+      sheetOpen.current = false;
+      closeSheet();
+      if (listRef.current && ordered.length) listRef.current.scrollToOffset({ offset: step, animated: true });
+    };
     openSheet(
       <NewProjectSheet
-        onCancel={closeSheet}
-        onCreated={(project) => { closeSheet(); openProjectScreen(project.id); }}
+        onCancel={back}
+        onCreated={(project) => { sheetOpen.current = false; closeSheet(); openProjectScreen(project.id); }}
       />,
     );
   }
 
-  function onExport(p) {
-    openSheet(
-      <ExportPeriodSheet
-        lang={lang}
-        onCancel={closeSheet}
-        onConfirm={(range) => {
-          closeSheet();
-          runExport(
-            `${p.name} — ${t(lang, 'export.all_tasks')} — ${new Date().toISOString().slice(0, 10)}`,
-            buildProjectSheets(p, tasksOf(tasks, p.id), lang, currencyOf(p, settings), rates, range),
-            lang,
-            showToast,
-          );
-        }}
-      />,
-    );
+  // Остановились на карточке «+» — открываем лист. Создание — это и есть
+  // то, зачем на неё тянут; второй тап был бы лишним.
+  const onMomentumEnd = useCallback((e) => {
+    const index = Math.round(e.nativeEvent.contentOffset.x / step);
+    setPage(index);
+    if (index === 0 && ordered.length) openNewProject();
+  }, [step, ordered.length]);
+
+  function submitDraft(project, start) {
+    const title = (drafts[project.id] || '').trim();
+    if (!title) return;
+    const task = createTaskInStatus(project.id, defaultStatusId(statuses, project.id, false), null, title);
+    setDrafts((d) => ({ ...d, [project.id]: '' }));
+    if (start) startTimer(task.id);
   }
 
-  function onDelete(p) {
-    confirmSheet({
-      title: t(lang, 'confirm.are_you_sure'),
-      message: t(lang, 'confirm.delete_project', { name: p.name }),
-      actions: [
-        { label: t(lang, 'project.delete'), destructive: true, onPress: () => deleteProject(p.id) },
-        { label: t(lang, 'common.cancel'), cancel: true },
-      ],
-    });
-  }
-
-  function onMenu(p) {
-    openSheet(
-      <MenuSheet
-        title={p.name}
-        items={[
-          { key: 'open', icon: 'board', label: t(lang, 'common.open'), onPress: () => openProjectScreen(p.id) },
-          { key: 'pin', icon: 'pin', label: t(lang, p.pinnedAt ? 'pin.quick_remove' : 'pin.quick_add'), onPress: () => togglePinProject(p.id) },
-          {
-            key: 'edit', icon: 'settings', label: t(lang, 'project.menu_edit'),
-            onPress: () => openSheet(<NewProjectSheet project={p} onCancel={closeSheet} onCreated={closeSheet} />),
-          },
-          { key: 'export', icon: 'download', label: t(lang, 'menu.export_excel'), onPress: () => onExport(p) },
-          { key: 'delete', icon: 'trash', label: t(lang, 'project.delete'), danger: true, separated: true, onPress: () => onDelete(p) },
-        ]}
-      />,
-    );
-  }
-
-  const header = (
-    <View style={styles.pageHead}>
-      <Text style={styles.pageTitle}>
-        {t(lang, 'nav.projects')}
-        {projects.length ? <Text style={styles.count}> · {projects.length}</Text> : null}
-      </Text>
-      <View style={{ flex: 1 }} />
-      {projects.length ? (
-        <Pressable onPress={onNewProject} style={styles.newBtn} hitSlop={6} accessibilityRole="button">
-          <Icon name="plus" size={13} color={colors.accentText} />
-          <Text style={styles.newBtnText}>{t(lang, 'home.create')}</Text>
+  const renderCard = ({ item: project }) => {
+    if (project.id === '__new__') {
+      return (
+        <Pressable style={[styles.card, styles.newCard]} onPress={openNewProject} accessibilityRole="button" accessibilityLabel={t(lang, 'deck.new_project')}>
+          <View style={styles.plus}><Icon name="plus" size={28} color={colors.text} /></View>
+          {ordered.length === 0 ? <Text style={styles.newHint}>{t(lang, 'deck.new_hint')}</Text> : null}
         </Pressable>
-      ) : null}
-    </View>
-  );
+      );
+    }
+    const own = tasksOf(tasks, project.id);
+    const done = own.filter((task) => task.done).length;
+    const active = own.filter((task) => !task.done && task.statusId && statuses.some((st) => st.id === task.statusId && st.kind === 'progress')).length;
+    const list = cardTasks(own, activeTimer);
+    const nextDue = own.filter((task) => !task.done && task.dueAt).sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))[0];
+    const pct = own.length ? Math.round((done / own.length) * 100) : 0;
+    const sub = [
+      t(lang, 'deck.tasks_summary', { n: own.length, active }),
+      nextDue ? t(lang, 'deck.deadline', { when: dueShort(nextDue, lang) }) : null,
+      project.rate ? t(lang, 'deck.own_rate', { rate: `${fmtMoney(project.rate, lang, currencyOf(project, settings))}${t(lang, 'rate.per_hour')}` }) : null,
+    ].filter(Boolean).join(' · ');
+    return (
+      <View style={styles.card}>
+        <Pressable style={styles.cardHead} onPress={() => openProjectScreen(project.id)} accessibilityRole="button">
+          <View style={[styles.dot, { backgroundColor: project.color || colors.accent }]} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.name} numberOfLines={1}>{project.name}</Text>
+            <Text style={styles.sub} numberOfLines={1}>{sub}</Text>
+          </View>
+          <Icon name="chevron-right" size={14} color={colors.textFaint} />
+        </Pressable>
+        <View style={styles.kpis}>
+          <Text style={styles.kpiTime}>{fmtDur(projectMs(tasks, project.id, activeTimer), lang)}</Text>
+          <Text style={styles.kpiMoney}>{fmtMoney(projectMoney(tasks, project.id, rates, activeTimer), lang, currencyOf(project, settings))}</Text>
+          <View style={{ flex: 1 }} />
+          <Text style={styles.kpiDone}>{t(lang, 'deck.done_of', { done, total: own.length })}</Text>
+        </View>
+        <View style={styles.bar}><View style={[styles.fill, { width: `${pct}%`, backgroundColor: project.color || colors.accent }]} /></View>
+
+        <View style={styles.qa}>
+          <Icon name="plus" size={14} color={colors.textFaint} />
+          <TextInput
+            style={styles.qaInput}
+            value={drafts[project.id] || ''}
+            onChangeText={(v) => setDrafts((d) => ({ ...d, [project.id]: v }))}
+            placeholder={t(lang, 'tasks.new_ph')}
+            placeholderTextColor={colors.textFaint}
+            returnKeyType="done"
+            onSubmitEditing={() => submitDraft(project, false)}
+            accessibilityLabel={t(lang, 'tasks.new_ph')}
+          />
+          <Pressable hitSlop={6} onPress={() => submitDraft(project, true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(lang, 'agenda.create_btn')}>
+            <Icon name="play" size={11} color={colors.text} />
+          </Pressable>
+        </View>
+
+        <View style={styles.rows}>
+          {list.length === 0 ? <Text style={styles.empty}>{t(lang, 'deck.no_tasks')}</Text> : null}
+          {list.slice(0, ROWS).map((task, i) => (
+            <TaskRow key={task.id} task={task} first={i === 0} compact onPress={() => openTask(task.id)} />
+          ))}
+          <Pressable style={styles.more} onPress={() => openProjectScreen(project.id)} accessibilityRole="button">
+            <Text style={styles.moreText} numberOfLines={1}>
+              {done || list.length > ROWS ? t(lang, 'deck.more', { n: done + Math.max(0, list.length - ROWS) }) : t(lang, 'deck.open')}
+            </Text>
+            <Icon name="chevron-right" size={12} color={colors.textFaint} />
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
+
+  // На первой карточке проекта, а не на «+», при каждом заходе.
+  useEffect(() => {
+    if (!listRef.current || !ordered.length) return;
+    const id = setTimeout(() => listRef.current && listRef.current.scrollToOffset({ offset: step, animated: false }), 0);
+    return () => clearTimeout(id);
+  }, [step, ordered.length > 0]);
 
   return (
     <View style={styles.container}>
-      <SearchHeader navigation={navigation} />
+      <TabHeader title={t(lang, 'nav.projects')} count={ordered.length || null}>
+        <HeaderButton icon="search" label={t(lang, 'search.placeholder')} onPress={() => navigation.navigate('Search')} />
+        <NotificationsButton navigation={navigation} />
+      </TabHeader>
+
       <FlatList
-        data={ordered}
+        ref={listRef}
+        data={data}
         keyExtractor={(p) => p.id}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={header}
-        ListEmptyComponent={(
-          <Island style={styles.emptyCard}>
-            <Icon name="grid" size={32} color={colors.textFaint} />
-            <Text style={styles.emptyTitle}>{t(lang, 'home.empty_title')}</Text>
-            <Text style={styles.emptyText}>{t(lang, 'home.empty_text')}</Text>
-            <PrimaryButton title={t(lang, 'home.new_project_title')} onPress={onNewProject} />
-          </Island>
-        )}
-        renderItem={({ item }) => (
-          <ProjectTile project={item} onPress={() => openProjectScreen(item.id)} onMenu={() => onMenu(item)} />
-        )}
-        ListFooterComponent={projects.length ? (
-          <Island style={styles.recent}>
-            <IslandHead title={t(lang, 'home.recent')} />
-            {recent.length === 0 ? <IslandEmpty>{t(lang, 'home.recent_empty')}</IslandEmpty> : null}
-            {recent.map((task, i) => (
-              <RecentTaskRow key={task.id} task={task} first={i === 0} onPress={() => openTask(task)} />
-            ))}
-          </Island>
-        ) : null}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={step}
+        decelerationRate="fast"
+        contentContainerStyle={styles.deck}
+        ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
+        getItemLayout={(_, index) => ({ length: step, offset: step * index, index })}
+        initialScrollIndex={ordered.length ? 1 : 0}
+        onMomentumScrollEnd={onMomentumEnd}
+        renderItem={renderCard}
+        keyboardShouldPersistTaps="handled"
       />
+
+      {ordered.length > 1 ? (
+        <View style={styles.dots}>
+          {ordered.map((p, i) => <View key={p.id} style={[styles.dotI, page === i + 1 && styles.dotOn]} />)}
+        </View>
+      ) : null}
     </View>
   );
 }
 
-const makeStyles = (colors, insets, clearance) => StyleSheet.create({
+const makeStyles = (colors, insets, cardW, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + clearance, gap },
-  pageHead: { flexDirection: 'row', alignItems: 'center', minHeight: 36, paddingHorizontal: spacing.xs },
-  pageTitle: { ...typography.title, color: colors.text },
-  count: { color: colors.textFaint, fontSize: fontSize.md, fontFamily: 'Onest-Regular' },
-  newBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.accent, borderRadius: 10, paddingHorizontal: spacing.md, height: 32,
-  },
-  newBtnText: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: '700' },
-  recent: { marginTop: spacing.xs },
-  emptyCard: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
-  emptyTitle: { color: colors.text, ...typography.title, textAlign: 'center' },
-  emptyText: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', lineHeight: 20 },
+  deck: { paddingHorizontal: spacing.lg, paddingTop: 2, paddingBottom: spacing.sm },
+  card: { width: cardW, backgroundColor: colors.panel, borderRadius: 18, overflow: 'hidden', alignSelf: 'stretch' },
+  newCard: { backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center', gap: spacing.md, minHeight: 320 },
+  plus: { width: 64, height: 64, borderRadius: 999, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
+  newHint: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: spacing.md, paddingBottom: 6 },
+  dot: { width: 11, height: 11, borderRadius: 4 },
+  name: { color: colors.text, fontSize: 17, fontFamily: displayFamily.bold },
+  sub: { color: colors.textFaint, fontSize: 11.5, marginTop: 1 },
+  kpis: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  kpiTime: { color: colors.text, fontSize: 19, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
+  kpiMoney: { color: colors.textDim, fontSize: fontSize.sm, fontFamily: displayFamily.bold },
+  kpiDone: { color: colors.textFaint, fontSize: 11.5 },
+  bar: { height: 4, borderRadius: 2, backgroundColor: colors.panel2, marginHorizontal: spacing.md, marginBottom: spacing.sm + 2, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 2 },
+  qa: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: 10, height: 42, paddingHorizontal: 10, borderRadius: radius.md, backgroundColor: colors.panel2 },
+  qaInput: { flex: 1, color: colors.text, fontSize: 13.5, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
+  qaGo: { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
+  rows: { marginTop: 6, flex: 1 },
+  empty: { color: colors.textFaint, fontSize: fontSize.xs, textAlign: 'center', paddingVertical: spacing.lg },
+  more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 46, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingHorizontal: spacing.md },
+  moreText: { color: colors.textDim, fontSize: 13, fontWeight: '600', flexShrink: 1 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 5, paddingTop: 2, paddingBottom: clearance - spacing.xl },
+  dotI: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.raise },
+  dotOn: { width: 16, backgroundColor: colors.accent },
 });

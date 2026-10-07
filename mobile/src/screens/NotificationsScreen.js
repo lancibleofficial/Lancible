@@ -42,9 +42,6 @@ export default function NotificationsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.pageHead}>
-        <Text style={styles.pageTitle}>{t(lang, 'notif.title')}</Text>
-      </View>
       <FlatList
         data={[{ key: 'feed' }]}
         keyExtractor={(x) => x.key}

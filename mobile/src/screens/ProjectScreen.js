@@ -11,6 +11,7 @@ import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
+import TextInput from '../components/AppTextInput';
 import NewProjectSheet from '../components/NewProjectSheet';
 import PickerSheet from '../components/PickerSheet';
 import MenuSheet from '../components/MenuSheet';
@@ -48,6 +49,8 @@ export default function ProjectScreen({ route, navigation }) {
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
   const statuses = useAppStore((s) => s.statuses);
+  const createTaskInStatus = useAppStore((s) => s.createTaskInStatus);
+  const startTimer = useAppStore((s) => s.startTimer);
   const versions = useAppStore((s) => s.versions);
   const documents = useAppStore((s) => s.documents || []);
   const activeTimer = useAppStore((s) => s.activeTimer);
@@ -74,6 +77,7 @@ export default function ProjectScreen({ route, navigation }) {
 
   const [tab, setTab] = useState((route.params && route.params.tab) || 'list');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [draft, setDraft] = useState('');
   const versionFilter = (boardVersion && boardVersion[projectId]) || 'all';
   const projectVersions = useMemo(() => Versions.versionsOf(versions, projectId), [versions, projectId]);
   const own = useMemo(() => tasksOf(tasks, projectId), [tasks, projectId]);
@@ -140,6 +144,7 @@ export default function ProjectScreen({ route, navigation }) {
       <MenuSheet
         title={project ? project.name : ''}
         items={[
+          { key: 'task', icon: 'plus', label: t(LANG, 'project.new_task_short'), onPress: onAddTask },
           { key: 'edit', icon: 'settings', label: t(LANG, 'project.menu_settings'), onPress: () => onEditProject('main') },
           { key: 'statuses', icon: 'board', label: t(LANG, 'board.project_statuses'), onPress: () => navigation.navigate('ProjectStatuses', { projectId }) },
           {
@@ -184,6 +189,16 @@ export default function ProjectScreen({ route, navigation }) {
 
   const openTask = (taskId) => navigation.navigate('TaskDetail', { taskId });
 
+  /** Строка быстрого добавления: Enter — завести, ▶ — завести и запустить. */
+  function submitDraft(start) {
+    const title = draft.trim();
+    if (!title) return;
+    const versionId = versionFilter !== 'all' && versionFilter !== 'none' ? versionFilter : null;
+    const task = createTaskInStatus(projectId, defaultStatusId(statuses, projectId, false), versionId, title);
+    setDraft('');
+    if (start) startTimer(task.id);
+  }
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: '',
@@ -215,12 +230,24 @@ export default function ProjectScreen({ route, navigation }) {
       <View style={styles.headRow}>
         <View style={[styles.dot, { backgroundColor: project.color || colors.accent }]} />
         <Text style={styles.name} numberOfLines={2}>{project.name}</Text>
-        <Pressable onPress={onAddTask} style={styles.newBtn} hitSlop={6} accessibilityRole="button">
-          <Icon name="plus" size={13} color={colors.accentText} />
-          <Text style={styles.newBtnText}>{t(LANG, 'project.new_task_short')}</Text>
-        </Pressable>
       </View>
       {project.description ? <Text style={styles.desc} numberOfLines={2}>{project.description}</Text> : null}
+      <View style={styles.qa}>
+        <Icon name="plus" size={14} color={colors.textFaint} />
+        <TextInput
+          style={styles.qaInput}
+          value={draft}
+          onChangeText={setDraft}
+          placeholder={t(LANG, 'tasks.new_ph')}
+          placeholderTextColor={colors.textFaint}
+          returnKeyType="done"
+          onSubmitEditing={() => submitDraft(false)}
+          accessibilityLabel={t(LANG, 'tasks.new_ph')}
+        />
+        <Pressable hitSlop={6} onPress={() => submitDraft(true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(LANG, 'agenda.create_btn')}>
+          <Icon name="play" size={11} color={colors.text} />
+        </Pressable>
+      </View>
       <View style={styles.tabs}>
         {TABS.map((key) => (
           <Pressable key={key} onPress={() => setTab(key)} style={[styles.tab, tab === key && styles.tabOn]}>
@@ -422,8 +449,9 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 12, height: 12, borderRadius: 4 },
   name: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.bold },
-  newBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.accent, borderRadius: radius.md, paddingHorizontal: spacing.md, height: 32 },
-  newBtnText: { color: colors.accentText, fontSize: fontSize.sm, fontWeight: '700' },
+  qa: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 42, paddingHorizontal: 10, borderRadius: radius.md, backgroundColor: colors.panel2 },
+  qaInput: { flex: 1, color: colors.text, fontSize: 13.5, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
+  qaGo: { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
   desc: { color: colors.textFaint, fontSize: fontSize.sm },
   tabs: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 3, gap: 3 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm, paddingHorizontal: 4 },

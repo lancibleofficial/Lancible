@@ -1,30 +1,31 @@
-// Мини-плеер идущего таймера — полоса над таббаром на всех корневых экранах.
+// Плашка идущей задачи — над таббаром на всех корневых экранах (макет B2:
+// квадрат «стоп» слева, название, под ним цвет и имя проекта с заработком,
+// справа время).
 //
 // Зачем: таймер запускают на странице задачи и уходят работать дальше. Без
-// плеера единственный способ узнать, идёт ли он и сколько уже набежало, —
+// плашки единственный способ узнать, идёт ли он и сколько набежало, —
 // вернуться в ту самую задачу; а единственный способ остановить — тоже.
 //
 // Где живёт: на iOS 26+ это нативный bottomAccessory нативного таббара (см.
-// MainTabs.ios.js) — UIKit сам кладёт его над панелью и сам ведёт себя при
-// прокрутке. Везде ещё — абсолютная полоса над таббаром (MainTabBar.js).
-// Поэтому компонент ничего не знает о своём положении: он только рисует
-// содержимое, а размещает его тот, кто вставил.
+// MainTabs.ios.js). Везде ещё — полоса над таббаром (MainTabBar.js). Поэтому
+// компонент ничего не знает о своём положении: только рисует содержимое.
 import { useEffect } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import Text from './AppText';
 import Icon from './Icon';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
+import { useRates, currencyOf } from '../hooks/useRates';
 import { useTicker } from '../hooks/useTicker';
-import { fmtClock } from '../lib/format';
-import { useColors, spacing, radius, fontSize, tabBarClearance } from '../theme';
+import { fmtClock, fmtMoney, earnedOf, earnedShown } from '../lib/format';
+import { useColors, spacing, radius, fontSize, displayFamily, tabBarClearance } from '../theme';
 import { t } from '../lib/i18n';
 
 export const MINI_PLAYER_HEIGHT = 56;
 const FADE_MS = 200;
 
 /** Идёт ли таймер по задаче, которая ещё существует. Задачу могли удалить —
- *  тогда плеера быть не должно, а не должно быть падения. */
+ *  тогда плашки быть не должно, а не должно быть падения. */
 export function useRunningTask() {
   const activeTimer = useAppStore((s) => s.activeTimer);
   const tasks = useAppStore((s) => s.tasks);
@@ -33,24 +34,23 @@ export function useRunningTask() {
 }
 
 /** Нижний отступ для прокручиваемого содержимого корневых экранов: запас
- *  под таббар плюс, пока идёт таймер, ещё и под полосу плеера над ним.
- *  Плеер перекрывает контент, а не раздвигает его, — значит последняя
- *  карточка списка должна кончаться выше. */
+ *  под таббар плюс, пока идёт таймер, ещё и под плашку над ним. */
 export function useBottomClearance() {
   const task = useRunningTask();
   return tabBarClearance + (task ? MINI_PLAYER_HEIGHT + spacing.sm : 0);
 }
+
 export default function TimerMiniPlayer({ onOpen }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const projects = useAppStore((s) => s.projects);
-  const lang = useAppStore((s) => s.settings.lang);
+  const settings = useAppStore((s) => s.settings);
   const stopTimer = useAppStore((s) => s.stopTimer);
+  const rates = useRates();
   const task = useRunningTask();
+  const lang = settings.lang;
 
-  // Тикает раз в секунду, пока плеер на экране, — так же, как счётчик на
-  // странице задачи.
   useTicker(!!task);
 
   const opacity = useSharedValue(0);
@@ -65,55 +65,49 @@ export default function TimerMiniPlayer({ onOpen }) {
   if (!task) return null;
 
   const project = getProject(projects, task.projectId);
-  // Тот же расчёт, что на странице задачи: накопленное плюс текущий заход.
-  const elapsed = (task.totalMs || 0)
-    + (activeTimer ? Date.now() - new Date(activeTimer.startedAt).getTime() : 0);
+  const elapsed = (task.totalMs || 0) + (activeTimer ? Date.now() - new Date(activeTimer.startedAt).getTime() : 0);
+  const earned = earnedOf(task, rates, activeTimer);
+  const sub = [project ? project.name : null, earnedShown(task, rates, earned) ? fmtMoney(earned, lang, currencyOf(project, settings)) : null]
+    .filter(Boolean).join(' · ');
 
   return (
     <Animated.View style={[styles.wrap, anim]} pointerEvents="box-none">
-      <Pressable style={styles.bar} onPress={() => onOpen(task.id)}>
-        <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
-        <View style={styles.main}>
-          <Text style={styles.title} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
-          {project ? <Text style={styles.sub} numberOfLines={1}>{project.name}</Text> : null}
-        </View>
-        <Text style={styles.clock}>{fmtClock(elapsed)}</Text>
-        {/* Своя зона нажатия не меньше 44pt: кнопка рядом с областью, которая
-            открывает задачу, и промахиваться тут дорого. */}
+      <Pressable style={styles.pill} onPress={() => onOpen(task.id)} accessibilityRole="button" accessibilityLabel={task.title || t(lang, 'task.no_name')}>
         <Pressable
           onPress={stopTimer}
-          hitSlop={12}
+          hitSlop={8}
           style={styles.stop}
           accessibilityRole="button"
           accessibilityLabel={t(lang, 'timer.stop')}
         >
-          <View style={styles.stopGlyph} />
+          <Icon name="stop" size={15} color={colors.accentText} />
         </Pressable>
+        <View style={styles.main}>
+          <Text style={styles.title} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
+          <View style={styles.subRow}>
+            <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
+            <Text style={styles.sub} numberOfLines={1}>{sub}</Text>
+          </View>
+        </View>
+        <Text style={styles.clock}>{fmtClock(elapsed)}</Text>
       </Pressable>
     </Animated.View>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  wrap: { paddingHorizontal: spacing.lg },
-  // Капсула идущей задачи — остров без рамки, как #tb-timer в шапке веба:
-  // точка проекта, название, время, квадрат «стоп».
-  bar: {
-    height: MINI_PLAYER_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.panel,
-    borderRadius: radius.lg,
+  wrap: { paddingHorizontal: spacing.md },
+  pill: {
+    height: MINI_PLAYER_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2,
+    paddingLeft: spacing.sm, paddingRight: spacing.md,
+    backgroundColor: colors.panel2, borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
   },
-  dot: { width: 10, height: 10, borderRadius: 3, flex: 0 },
+  stop: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   main: { flex: 1, minWidth: 0 },
-  title: { color: colors.text, fontSize: fontSize.sm },
-  sub: { color: colors.textDim, fontSize: fontSize.xs, marginTop: 1 },
-  clock: { color: colors.text, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
-  stop: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  // Квадрат, а не иконка: «стоп» у плееров всегда так и выглядит, и на 14
-  // пикселях он читается лучше любого глифа.
-  stopGlyph: { width: 14, height: 14, borderRadius: 3, backgroundColor: colors.danger },
+  title: { color: colors.text, fontSize: 13.5, fontWeight: '600' },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 },
+  dot: { width: 8, height: 8, borderRadius: 3 },
+  sub: { color: colors.textFaint, fontSize: 11.5, flexShrink: 1 },
+  clock: { color: colors.text, fontSize: 17, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
 });

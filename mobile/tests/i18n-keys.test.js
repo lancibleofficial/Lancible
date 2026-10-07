@@ -55,11 +55,11 @@ test('ключи, собранные из частей, тоже на месте
   expect(missing).toEqual([]);
 });
 
-test('пять вкладок подписаны как на вебе', () => {
+test('пять вкладок подписаны', () => {
   expect(t('ru', 'nav.home')).toBe('Сегодня');
   expect(t('en', 'nav.home')).toBe('Today');
   for (const lang of LANGS) {
-    for (const key of ['nav.home', 'nav.projects', 'nav.time', 'nav.notifications', 'nav.menu']) {
+    for (const key of ['nav.projects', 'nav.tasks', 'nav.home', 'nav.stats', 'nav.menu']) {
       expect(typeof t(lang, key)).toBe('string');
       expect(t(lang, key)).not.toBe(key);
     }

@@ -4,14 +4,13 @@ import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeStack from './HomeStack';
 import ProjectsStack from './ProjectsStack';
-import TimeStack from './TimeStack';
-import NotificationsStack from './NotificationsStack';
+import TasksStack from './TasksStack';
+import StatsStack from './StatsStack';
 import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
 import TimerMiniPlayer from '../components/TimerMiniPlayer';
 import { DETAIL_ROUTES } from './detailScreens';
 import { useAppStore } from '../store/useAppStore';
-import { notificationFeed } from '../lib/due';
 import { t } from '../lib/i18n';
 import { useColors, spacing } from '../theme';
 
@@ -20,46 +19,33 @@ import { useColors, spacing } from '../theme';
 // hand-built MainTabBar.js used on Android -- on a device running iOS 26
 // this is what actually picks up the system's Liquid Glass tab bar material
 // for free, since it IS the native component Apple itself restyled, not an
-// approximation. Android keeps MainTabBar.js (see MainTabs.android.js) --
-// Liquid Glass has no Android equivalent, so there is nothing to gain from
-// forcing the two to stay pixel-identical here the way desktop Win/Mac do.
+// approximation. Android keeps MainTabBar.js (see MainTabs.android.js).
 //
 // What is and isn't controllable through the native bar:
 // - Icons are the app's own Icon.js glyphs rasterised to PNG template
 //   images (assets/tabs/, 24pt @1x/2x/3x) so the bar matches the rest of
 //   the app instead of stock SF Symbols. iOS tints them itself.
 // - Below iOS 26 the bar is made opaque in the app's panel colour with no
-//   blur material, matching the Android bar; the default translucent
-//   system material followed the device appearance rather than the app
-//   theme and rendered as a dark slab. On iOS 26 these two props are
-//   ignored by design and Liquid Glass stays.
-// - The selected tab's label and icon share one tint on iOS (UITabBar's
-//   tintColor covers both); they cannot be split into black text + green
-//   icon natively.
+//   blur material, matching the Android bar.
+// - The selected tab's label and icon share one tint on iOS.
 //
-// Мини-плеер таймера размещён двумя разными способами, и вот почему.
-// Установленные @react-navigation/bottom-tabs 7.19.1 и react-native-screens
-// 4.26.2 умеют нативный bottomAccessory (screenOptions -> Tabs.Host ios), но
-// сам react-native-screens отдаёт его в UIKit только под флагом
-// isIOS26OrHigher — на iOS 25 и ниже аксессуар просто не рисуется, молча.
-// Поэтому: на iOS 26+ плеер отдан нативному таббару (UIKit сам кладёт его
-// над панелью и сам ведёт при сворачивании), а ниже — своя полоса поверх,
-// через проп `layout` навигатора: только там есть и state с descriptors
-// (чтобы прятать плеер там же, где прячется таббар), и место снаружи
-// нативного контейнера.
+// Плашка идущей задачи размещена двумя разными способами: на iOS 26+ она
+// отдана нативному таббару как bottomAccessory (UIKit сам кладёт её над
+// панелью), а ниже — своя полоса поверх через проп `layout` навигатора:
+// react-native-screens отдаёт аксессуар в UIKit только под флагом
+// isIOS26OrHigher.
 const Tab = createNativeBottomTabNavigator();
 
 const IOS_MAJOR = parseInt(String(Platform.Version), 10) || 0;
 const HAS_LIQUID_GLASS = IOS_MAJOR >= 26;
-// Высота UITabBar в компактной раскладке — та же константа, на которой
-// стоит и JS-таббар самой react-navigation. Нужна только фолбэку.
+// Высота UITabBar в компактной раскладке. Нужна только фолбэку.
 const UIKIT_TAB_BAR_H = 49;
 
 const TAB_ICONS = {
-  home: require('../../assets/tabs/home.png'),
-  projects: require('../../assets/tabs/projects.png'),
+  cards: require('../../assets/tabs/cards.png'),
+  inbox: require('../../assets/tabs/inbox.png'),
   time: require('../../assets/tabs/time.png'),
-  bell: require('../../assets/tabs/bell.png'),
+  chart: require('../../assets/tabs/chart.png'),
   menu: require('../../assets/tabs/menu.png'),
 };
 
@@ -71,8 +57,8 @@ function openTask(navigation, taskId) {
   navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
 }
 
-/** Фолбэк для iOS ниже 26: полоса плеера абсолютом над таббаром. Прячется
- *  вместе с таббаром — признак тот же, что и у MainTabBar.js на Android. */
+/** Фолбэк для iOS ниже 26: плашка абсолютом над таббаром. Прячется вместе
+ *  с таббаром — признак тот же, что и у MainTabBar.js на Android. */
 function LegacyMiniPlayerLayout({ state, navigation, descriptors, children }) {
   const insets = useSafeAreaInsets();
   const focused = descriptors[state.routes[state.index].key];
@@ -95,30 +81,22 @@ function LegacyMiniPlayerLayout({ state, navigation, descriptors, children }) {
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
-  const tasks = useAppStore((s) => s.tasks);
-  const seenAt = useAppStore((s) => s.ui.notifSeenAt);
-  const unread = notificationFeed(tasks, seenAt).filter((n) => n.unread).length;
   // Per-screen tabBarStyle replaces the navigator-level one wholesale (an
   // explicit undefined wipes it too), so every tab's show/hide branch below
   // hands back this same object instead of undefined.
   const legacyTabBarStyle = HAS_LIQUID_GLASS ? undefined : { backgroundColor: colors.panel, shadowColor: colors.border };
 
-  // Одни и те же опции у всех пяти вкладок: стек внутри каждой с теми же
-  // экранами деталей, и таббар с плеером прячутся на них одинаково.
-  const tabOptions = (labelKey, icon, extra) => ({ route, navigation }) => {
+  const tabOptions = (labelKey, icon) => ({ route, navigation }) => {
     const barHidden = DETAIL_ROUTES.includes(getFocusedRouteNameFromRoute(route));
     return {
       headerShown: false,
       tabBarLabel: t(lang, labelKey),
       tabBarIcon: tabIcon(icon),
       tabBarStyle: barHidden ? { display: 'none' } : legacyTabBarStyle,
-      // Аксессуар приходит из screenOptions и пережил бы спрятанный
-      // таббар: на странице задачи у таймера уже есть свой счётчик,
-      // второй под ним не нужен.
+      // На странице задачи у таймера свой шит — вторая плашка не нужна.
       bottomAccessory: barHidden || !HAS_LIQUID_GLASS
         ? undefined
         : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
-      ...extra,
     };
   };
 
@@ -128,27 +106,19 @@ export default function MainTabs() {
       screenOptions={({ navigation }) => ({
         header: (props) => <AppHeader {...props} />,
         tabBarActiveTintColor: colors.accentInk,
-        tabBarInactiveTintColor: colors.textDim,
+        tabBarInactiveTintColor: colors.textFaint,
         tabBarLabelStyle: { fontFamily: 'Onest-Regular', fontSize: 11 },
         tabBarStyle: legacyTabBarStyle,
         tabBarBlurEffect: HAS_LIQUID_GLASS ? undefined : 'none',
-        // UIKit рисует аксессуар дважды — для развёрнутого таббара и для
-        // свёрнутого — и держит на экране тот, который сейчас подходит.
-        // Нам это ничего не стоит: всё состояние плеера лежит в сторе, а не
-        // внутри компонента, так что обе копии показывают одно и то же.
         bottomAccessory: HAS_LIQUID_GLASS
           ? () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />
           : undefined,
       })}
     >
-      <Tab.Screen name="Home" component={HomeStack} options={tabOptions('nav.home', 'home')} />
-      <Tab.Screen name="Projects" component={ProjectsStack} options={tabOptions('nav.projects', 'projects')} />
-      <Tab.Screen name="Time" component={TimeStack} options={tabOptions('nav.time', 'time')} />
-      <Tab.Screen
-        name="Notifications"
-        component={NotificationsStack}
-        options={tabOptions('nav.notifications', 'bell', { tabBarBadge: unread > 0 ? (unread > 9 ? '9+' : String(unread)) : undefined })}
-      />
+      <Tab.Screen name="Projects" component={ProjectsStack} options={tabOptions('nav.projects', 'cards')} />
+      <Tab.Screen name="Tasks" component={TasksStack} options={tabOptions('nav.tasks', 'inbox')} />
+      <Tab.Screen name="Home" component={HomeStack} options={tabOptions('nav.home', 'time')} />
+      <Tab.Screen name="Stats" component={StatsStack} options={tabOptions('nav.stats', 'chart')} />
       <Tab.Screen name="Menu" component={MenuStack} options={tabOptions('nav.menu', 'menu')} />
     </Tab.Navigator>
   );

@@ -1,531 +1,288 @@
-// «Сегодня» — первая вкладка, как на вебе после «островов»: день полосой
-// по часам, «Сейчас идёт» (или «Продолжить»), числа день/неделя/месяц,
-// три недавних проекта, дедлайны и недавние задачи. Порт renderHome()
-// и renderStats() из app.js, острова в один столбец.
+// «Сегодня» (макет B2): неделя столбиками сверху, под ней последняя задача
+// с кнопкой запуска, затем записи выбранного дня по проектам и сроки на
+// сегодня и завтра. Имя вкладки в навигации осталось «Home» — на него
+// ссылаются переходы со всех экранов.
 //
-// Шапка своя, а не навигационная (HomeStack отдаёт этому экрану
-// headerShown: false): поле поиска занимает всю ширину и раскрывается в
-// отдельный режим. Поиск — это режим, а не фильтр: на время поиска экран
-// уступает место результатам целиком, а по «Отмена» возвращается как был.
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, ScrollView, FlatList, Pressable, StyleSheet, BackHandler, Keyboard } from 'react-native';
+// Часовая сетка дня с перетаскиванием (AgendaGrid) не ушла: кнопка в шапке
+// переключает список записей на сетку того же дня и обратно.
+import { useMemo, useState } from 'react';
+import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import Text from '../components/AppText';
-import { useAppStore, recentTasks, getProject, getTask, tasksOf, projectMs, projectMoney } from '../store/useAppStore';
-import { fmtDur, fmtMoney, fmtClock, fmtShort, fmtDateShort, monthLabel, taskElapsedMs, earnedOf, earnedShown } from '../lib/format';
-import { dayKey, mondayOf, aggregateDays, rangeAgg } from '../lib/calendarMath';
-import { notificationFeed, dueShort } from '../lib/due';
-import { hm } from '../lib/sessions';
-import { getStatus } from '../lib/statuses';
-import { useRates, useRatesMain, currencyOf } from '../hooks/useRates';
-import Island, { IslandHead, IslandRow, IslandEmpty } from '../components/Island';
-import RecentTaskRow from '../components/RecentTaskRow';
-import NewProjectSheet from '../components/NewProjectSheet';
-import EntrySheet from '../components/EntrySheet';
-import PrimaryButton from '../components/PrimaryButton';
-import SearchHeader, { SEARCH_HEADER_HEIGHT } from '../components/SearchHeader';
 import Icon from '../components/Icon';
-import { recentProjects, todayStrip } from '../lib/today';
-import { openSheet, closeSheet } from '../store/useSheetStore';
+import Island, { IslandHead, IslandRow, IslandEmpty } from '../components/Island';
+import TaskRow from '../components/TaskRow';
+import TabHeader, { HeaderButton } from '../components/TabHeader';
+import EntrySheet from '../components/EntrySheet';
+import SessionSheet from '../components/SessionSheet';
+import DatePickSheet from '../components/DatePickSheet';
+import AgendaGrid, { hmOf } from '../components/AgendaGrid';
+import { useAppStore, recentTasks, getProject, getTask, lastSessionAt } from '../store/useAppStore';
+import { useRates, useRatesMain, currencyOf } from '../hooks/useRates';
+import { fmtDur, fmtMoney, fmtShort, fmtDateShort, fmtWhen, taskElapsedMs, earnedOf, earnedShown, sessionMoney, capFirst } from '../lib/format';
+import { dayKey, keyToDate, mondayOf, aggregateDays } from '../lib/calendarMath';
 import { useTicker } from '../hooks/useTicker';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColors, spacing, radius, fontSize, typography, displayFamily, gap } from '../theme';
+import { openSheet } from '../store/useSheetStore';
+import Agenda from '../core/agenda.js';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
-import { t, pluralForm, LOCALE_MAP } from '../lib/i18n';
+import { useColors, spacing, radius, fontSize, displayFamily, gap } from '../theme';
+import { t, LOCALE_MAP } from '../lib/i18n';
 
-const pad2 = (n) => String(n).padStart(2, '0');
-export default function HomeScreen({ navigation, route }) {
+const DAY = 86400000;
+const WEEKDAY_KEY = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat'];
+
+export default function HomeScreen({ navigation }) {
   const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const styles = makeStyles(colors, insets, useBottomClearance());
+  const clearance = useBottomClearance();
+  const styles = useMemo(() => makeStyles(colors, clearance), [colors, clearance]);
   const projects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
-  const statuses = useAppStore((s) => s.statuses);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const settings = useAppStore((s) => s.settings);
-  const seenAt = useAppStore((s) => s.ui.notifSeenAt);
   const startTimer = useAppStore((s) => s.startTimer);
-  const stopTimer = useAppStore((s) => s.stopTimer);
-  const openProject = useAppStore((s) => s.openProject);
+  const setSessionSpan = useAppStore((s) => s.setSessionSpan);
   const lang = settings.lang;
+  const locale = LOCALE_MAP[lang] || 'ru-RU';
   const rates = useRates();
   const ratesMain = useRatesMain();
-
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const searchRef = useRef(null);
-
   useTicker(!!activeTimer);
   const now = Date.now();
-  const nowDate = new Date(now);
 
-  useEffect(() => {
-    if (route.params?.openSearch) {
-      openSearch();
-      navigation.setParams({ openSearch: undefined });
-    }
-  }, [route.params?.openSearch]);
+  const [selected, setSelected] = useState(() => dayKey(new Date()));
+  const [view, setView] = useState('list');
+  const selDate = keyToDate(selected);
+  const dayStart = selDate.getTime();
+  const todayKey = dayKey(new Date(now));
 
-  // Системное «назад» на Android закрывает поиск, а не приложение.
-  useEffect(() => {
-    if (!searchOpen) return undefined;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => { closeSearch(); return true; });
-    return () => sub.remove();
-  }, [searchOpen]);
-
-  // --- данные островов ---
+  // --- неделя выбранного дня ---
+  const weekFrom = mondayOf(selDate);
   const agg = useMemo(() => aggregateDays(tasks, ratesMain), [tasks, ratesMain]);
-  const today = agg.get(dayKey(nowDate)) || { ms: 0, money: 0 };
-  const weekFrom = mondayOf(nowDate);
-  const weekTo = new Date(weekFrom.getTime() + 6 * 86400000);
-  weekTo.setHours(23, 59, 59, 999);
-  const week = useMemo(() => rangeAgg(tasks, ratesMain, weekFrom, weekTo), [tasks, ratesMain, dayKey(nowDate)]);
-  const monthFrom = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1);
-  const monthTo = new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0, 23, 59, 59);
-  const month = useMemo(() => rangeAgg(tasks, ratesMain, monthFrom, monthTo), [tasks, ratesMain, dayKey(nowDate)]);
-  const doneCount = tasks.filter((task) => task.done).length;
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekFrom.getTime() + i * DAY);
+    const key = dayKey(d);
+    const e = agg.get(key) || { ms: 0, money: 0 };
+    return { key, d, ms: e.ms, money: e.money };
+  });
+  const weekTotal = weekDays.reduce((a, x) => ({ ms: a.ms + x.ms, money: a.money + x.money }), { ms: 0, money: 0 });
+  const maxMs = Math.max(3_600_000, ...weekDays.map((x) => x.ms));
+  const weekTo = new Date(weekFrom.getTime() + 6 * DAY);
 
-  const strip = todayStrip(tasks, activeTimer, now);
-  const runningTask = activeTimer ? getTask(tasks, activeTimer.taskId) : null;
-  const recent = useMemo(() => recentTasks(tasks, 8, activeTimer), [tasks, activeTimer]);
-  const nowTask = runningTask || recent[0] || null;
-  const nowProject = nowTask ? getProject(projects, nowTask.projectId) : null;
-  const nowEarned = nowTask ? earnedOf(nowTask, rates, activeTimer) : 0;
-  const homeProjects = useMemo(() => recentProjects(projects, tasks, 3), [projects, tasks]);
-  const feed = useMemo(() => notificationFeed(tasks, seenAt).slice(0, 6), [tasks, seenAt, Math.floor(now / 60000)]);
-  const overdue = feed.filter((n) => n.kind === 'overdue').length;
-
-  const q = query.trim().toLowerCase();
-  const foundProjects = useMemo(
-    () => (q ? projects.filter((p) => p.name.toLowerCase().includes(q)) : []),
-    [projects, q],
+  // --- последняя задача (не идущая) ---
+  const lastTask = useMemo(
+    () => recentTasks(tasks, 3, activeTimer).find((task) => !(activeTimer && activeTimer.taskId === task.id)) || null,
+    [tasks, activeTimer],
   );
-  const foundTasks = useMemo(
-    () => (q ? tasks.filter((task) => (task.title || '').toLowerCase().includes(q)) : []),
-    [tasks, q],
-  );
+  const lastProject = lastTask ? getProject(projects, lastTask.projectId) : null;
 
-  function openSearch() { setSearchOpen(true); }
-  function closeSearch() { setSearchOpen(false); setQuery(''); Keyboard.dismiss(); }
+  // --- записи дня по проектам ---
+  const segments = useMemo(() => Agenda.sessionSegments(tasks, dayStart, dayStart + DAY), [tasks, dayStart]);
+  const rows = segments.map((seg) => {
+    const task = getTask(tasks, seg.taskId);
+    const s = task ? (task.sessions || [])[seg.index] : null;
+    return task && s ? { task, seg, money: sessionMoney({ ...s, ms: seg.ms }, task, ratesMain) } : null;
+  }).filter(Boolean);
+  const runningToday = activeTimer && getTask(tasks, activeTimer.taskId)
+    && new Date(activeTimer.startedAt).getTime() < dayStart + DAY && now > dayStart;
+  const runningStart = runningToday ? Math.max(new Date(activeTimer.startedAt).getTime(), dayStart) : 0;
+  const dayTotal = {
+    ms: rows.reduce((a, r) => a + r.seg.ms, 0) + (runningToday ? now - runningStart : 0),
+    money: rows.reduce((a, r) => a + r.money, 0),
+  };
+  const byProject = [];
+  for (const r of rows) {
+    let g = byProject.find((x) => x.projectId === r.task.projectId);
+    if (!g) { g = { projectId: r.task.projectId, project: getProject(projects, r.task.projectId), rows: [], ms: 0, money: 0 }; byProject.push(g); }
+    g.rows.push(r); g.ms += r.seg.ms; g.money += r.money;
+  }
+  byProject.sort((a, b) => b.ms - a.ms);
+  if (runningToday) {
+    const task = getTask(tasks, activeTimer.taskId);
+    let g = byProject.find((x) => x.projectId === task.projectId);
+    if (!g) { g = { projectId: task.projectId, project: getProject(projects, task.projectId), rows: [], ms: 0, money: 0 }; byProject.unshift(g); }
+    g.running = { task, start: runningStart };
+  }
 
-  function openProjectScreen(id) {
-    openProject(id);
-    navigation.navigate('Project', { projectId: id });
-  }
-  function openTask(task) {
-    navigation.navigate('Project', { projectId: task.projectId });
-    navigation.navigate('TaskDetail', { taskId: task.id });
-  }
-  function openTaskById(id) {
-    const task = getTask(tasks, id);
-    if (task) openTask(task);
-  }
-  function openDay() {
-    navigation.navigate('Time', { screen: 'TimeMain', params: { mode: 'day', anchor: dayKey(nowDate) } });
+  // --- сроки сегодня и завтра ---
+  const dueSoon = useMemo(() => tasks.filter((task) => {
+    if (task.done || !task.dueAt) return false;
+    const due = new Date(task.dueAt).getTime();
+    return due < dayStart + 2 * DAY;
+  }).sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt)), [tasks, dayStart]);
+
+  const openTask = (taskId) => navigation.navigate('TaskDetail', { taskId });
+  function onEntry(r) {
+    openSheet(<SessionSheet task={r.task} index={r.seg.index} onOpenTask={openTask} />);
   }
   function addEntry() {
-    openSheet(<EntrySheet initial={{ start: now - 3_600_000, end: now }} onDone={() => {}} />);
+    const base = selected === todayKey ? now : dayStart + 12 * 3_600_000;
+    openSheet(<EntrySheet initial={{ start: base - 3_600_000, end: base }} />);
   }
-  function openNewProjectSheet() {
-    openSheet(
-      <NewProjectSheet
-        onCancel={closeSheet}
-        onCreated={(project) => { closeSheet(); openProjectScreen(project.id); }}
-      />,
-    );
+  function pickDay() {
+    openSheet(<DatePickSheet title={t(lang, 'today.pick_day')} valueKey={selected} onPick={setSelected} />);
   }
 
-  const dayTitleRaw = nowDate.toLocaleDateString(LOCALE_MAP[lang] || 'ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
-  const dayTitle = dayTitleRaw.charAt(0).toUpperCase() + dayTitleRaw.slice(1);
-  const hours = Array.from({ length: strip.h1 - strip.h0 }, (_, i) => strip.h0 + i);
-  // Подписей часов столько, сколько помещается: при 12 часах — каждый
-  // второй, при 16 и больше — каждый третий.
-  const hourStep = hours.length > 14 ? 3 : hours.length > 9 ? 2 : 1;
+  const dayTitle = selected === todayKey
+    ? t(lang, 'calendar.today')
+    : capFirst(selDate.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'long' }));
+  const dayLong = capFirst(selDate.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'long' }));
+
+  const weekIsland = (
+    <Island style={styles.week}>
+      <View style={styles.weekHead}>
+        <Text style={styles.label}>{t(lang, 'today.week_label', { range: `${fmtDateShort(weekFrom, lang)}–${fmtDateShort(weekTo, lang)}` })}</Text>
+        <View style={{ flex: 1 }} />
+        <Text style={styles.weekNum}>{fmtDur(weekTotal.ms, lang)}</Text>
+        <Text style={[styles.weekNum, { color: colors.textDim }]}>{fmtMoney(weekTotal.money, lang, settings.currency)}</Text>
+      </View>
+      <View style={styles.bars}>
+        {weekDays.map((x) => {
+          const on = x.key === selected;
+          return (
+            <Pressable key={x.key} onPress={() => setSelected(x.key)} style={[styles.bar, on && styles.barOn]} accessibilityRole="button" accessibilityLabel={dayLong}>
+              <Text style={styles.barVal}>{x.ms ? fmtShort(x.ms, lang) : ''}</Text>
+              <View style={[styles.barFill, { height: Math.max(4, Math.round((x.ms / maxMs) * 56)) }, on && styles.barFillOn]} />
+              <Text style={[styles.barDay, on && styles.barDayOn]}>{t(lang, WEEKDAY_KEY[x.d.getDay()])}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </Island>
+  );
 
   return (
     <View style={styles.container}>
-      <SearchHeader
-        navigation={navigation}
-        active={searchOpen}
-        value={query}
-        onChangeText={setQuery}
-        onOpen={openSearch}
-        onCancel={closeSearch}
-        inputRef={searchRef}
-      />
+      <TabHeader title={t(lang, 'nav.home')}>
+        <HeaderButton icon="plus" label={t(lang, 'agenda.new_entry')} onPress={addEntry} />
+        <HeaderButton icon="calendar" label={t(lang, 'today.pick_day')} onPress={pickDay} />
+        <HeaderButton icon={view === 'list' ? 'panel' : 'list-bullet'} label={t(lang, view === 'list' ? 'today.grid' : 'today.list')} onPress={() => setView((v) => (v === 'list' ? 'grid' : 'list'))} />
+      </TabHeader>
 
-      {projects.length === 0 && !searchOpen ? (
-        <View style={styles.emptyWrap}>
-          <Island style={styles.emptyCard}>
-            <Icon name="board" size={36} color={colors.textFaint} />
-            <Text style={styles.emptyTitle}>{t(lang, 'home.empty_title')}</Text>
-            <Text style={styles.emptyText}>{t(lang, 'home.empty_text')}</Text>
-            <PrimaryButton title={t(lang, 'home.new_project_title')} onPress={openNewProjectSheet} />
-          </Island>
+      {view === 'grid' ? (
+        <View style={{ flex: 1 }}>
+          <View style={{ paddingHorizontal: spacing.md }}>{weekIsland}</View>
+          <AgendaGrid
+            tasks={tasks}
+            projects={projects}
+            from={dayStart}
+            days={1}
+            nowMs={now}
+            lang={lang}
+            bottomPadding={clearance}
+            onOpenDay={(ms) => setSelected(dayKey(new Date(ms)))}
+            onTapBlock={(taskId, index) => { const task = getTask(tasks, taskId); if (task) openSheet(<SessionSheet task={task} index={index} onOpenTask={openTask} />); }}
+            onTapDeadline={openTask}
+            onCreate={(span) => openSheet(<EntrySheet initial={span} />)}
+            onMove={(taskId, index, start, end) => setSessionSpan(taskId, index, start, end)}
+          />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {/* День */}
-          <Island testID="today-day">
-            <View style={styles.dayHead}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.dayTitle} numberOfLines={1}>{dayTitle}</Text>
-                <Text style={styles.daySub} numberOfLines={2}>
-                  {t(lang, 'home.recorded')}{' '}
-                  <Text style={styles.daySubNum}>{fmtDur(today.ms, lang)}</Text>
-                  {' · '}
-                  <Text style={styles.daySubNum}>{fmtMoney(today.money, lang, settings.currency)}</Text>
-                  {activeTimer ? <Text style={styles.daySubMuted}>{` · ${t(lang, 'home.since', { time: hm(new Date(activeTimer.startedAt)) })}`}</Text> : null}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.track}>
-              {hours.map((h, i) => (i ? <View key={h} style={[styles.gridLine, { left: `${(i / hours.length) * 100}%` }]} /> : null))}
-              {strip.blocks.map((b, i) => {
-                const task = getTask(tasks, b.taskId);
-                const name = task ? (task.title || t(lang, 'task.no_name')) : '';
-                return (
-                  <Pressable
-                    key={`${b.taskId}-${b.start}-${i}`}
-                    style={[styles.blk, b.running && styles.blkRun, { left: `${b.left}%`, width: `${b.width}%` }]}
-                    onPress={() => openTaskById(b.taskId)}
-                    accessibilityLabel={`${name} · ${hm(new Date(b.start))}–${b.running ? '…' : hm(new Date(b.end))}`}
-                  >
-                    {b.width > 14 ? (
-                      <Text style={[styles.blkText, b.running && styles.blkTextRun]} numberOfLines={1}>
-                        {b.running ? `${t(lang, 'task.running_now')} · ${fmtShort(b.end - b.start, lang)}` : name}
-                      </Text>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-              {strip.nowPct != null ? <View style={[styles.nowLine, { left: `${strip.nowPct}%` }]} /> : null}
-            </View>
-            <View style={styles.hoursRow}>
-              {hours.map((h, i) => (
-                <Text key={h} style={[styles.hour, { left: `${(i / hours.length) * 100}%` }]}>
-                  {i % hourStep === 0 ? pad2(h) : ''}
-                </Text>
-              ))}
-            </View>
-            <View style={styles.dayActions}>
-              <Pressable style={styles.softBtn} onPress={addEntry} hitSlop={4}>
-                <Icon name="plus" size={12} color={colors.text} />
-                <Text style={styles.softBtnText}>{t(lang, 'agenda.entry')}</Text>
-              </Pressable>
-              <Pressable style={styles.ghostBtn} onPress={openDay} hitSlop={4}>
-                <Text style={styles.ghostBtnText}>{t(lang, 'home.open_day')} →</Text>
-              </Pressable>
-            </View>
-          </Island>
+          {weekIsland}
 
-          {/* Сейчас идёт / Продолжить */}
-          {nowTask ? (
-            <Island style={runningTask ? styles.nowIsland : null} testID="today-now">
-              <IslandHead
-                title={t(lang, runningTask ? 'home.now_running' : 'home.now_idle')}
-                note={runningTask ? hm(new Date(activeTimer.startedAt)) : t(lang, 'home.continue')}
-              />
-              <Pressable onPress={() => openTask(nowTask)} hitSlop={4}>
-                <Text style={styles.nowTitle} numberOfLines={2}>{nowTask.title || t(lang, 'task.no_name')}</Text>
+          {lastTask ? (
+            <Island style={styles.last}>
+              <Pressable onPress={() => startTimer(lastTask.id)} style={styles.lastPlay} accessibilityRole="button" accessibilityLabel={t(lang, 'timer.start')}>
+                <Icon name="play" size={16} color={colors.accentText} />
               </Pressable>
-              <View style={styles.nowProj}>
-                <View style={[styles.dot, { backgroundColor: nowProject ? nowProject.color : colors.accent }]} />
-                <Text style={styles.nowProjText} numberOfLines={1}>{nowProject ? nowProject.name : ''}</Text>
-              </View>
-              <View style={styles.nowRow}>
-                <Pressable
-                  onPress={() => (runningTask ? stopTimer() : startTimer(nowTask.id))}
-                  style={[styles.sqBtn, runningTask && styles.sqBtnRun]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(lang, runningTask ? 'timer.stop' : 'timer.start')}
-                >
-                  <Icon name={runningTask ? 'stop' : 'play'} size={16} color={runningTask ? colors.accentText : colors.text} />
-                </Pressable>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.nowTime}>{fmtClock(taskElapsedMs(nowTask, activeTimer))}</Text>
-                  {earnedShown(nowTask, rates, nowEarned) ? (
-                    <Text style={styles.nowMoney}>{fmtMoney(nowEarned, lang, currencyOf(nowProject, settings))}</Text>
-                  ) : null}
+              <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => openTask(lastTask.id)}>
+                <Text style={styles.label}>{t(lang, 'today.last_task')}</Text>
+                <Text style={styles.lastName} numberOfLines={1}>{lastTask.title || t(lang, 'task.no_name')}</Text>
+                <View style={styles.lastSub}>
+                  <View style={[styles.dot, { backgroundColor: lastProject ? lastProject.color : colors.accent }]} />
+                  <Text style={styles.lastSubText} numberOfLines={1}>
+                    {[lastProject ? lastProject.name : null, fmtWhen(new Date(lastSessionAt(lastTask, activeTimer)).toISOString(), lang), t(lang, 'task.total_label', { time: fmtShort(taskElapsedMs(lastTask, activeTimer), lang) })].filter(Boolean).join(' · ')}
+                  </Text>
                 </View>
-                <Pressable style={styles.softBtn} onPress={() => openTask(nowTask)} hitSlop={4}>
-                  <Text style={styles.softBtnText}>{t(lang, 'home.open_short')}</Text>
-                </Pressable>
-              </View>
+              </Pressable>
+              {earnedShown(lastTask, rates, earnedOf(lastTask, rates, activeTimer)) ? (
+                <Text style={styles.lastMoney}>{fmtMoney(earnedOf(lastTask, rates, activeTimer), lang, currencyOf(lastProject, settings))}</Text>
+              ) : null}
             </Island>
           ) : null}
 
-          {/* Числа: день, неделя, месяц */}
-          <Island testID="today-kpis">
-            <View style={styles.kpis}>
-              <View style={styles.kpi}>
-                <Text style={styles.kpiLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{t(lang, 'calendar.today')}</Text>
-                <Text style={styles.kpiNum} numberOfLines={1}>{fmtDur(today.ms, lang)}</Text>
-                <Text style={styles.kpiSub} numberOfLines={1}>{fmtMoney(today.money, lang, settings.currency)}</Text>
-              </View>
-              <View style={styles.kpi}>
-                <Text style={styles.kpiLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{t(lang, 'home.week_label', { range: `${fmtDateShort(weekFrom, lang)}–${fmtDateShort(weekTo, lang)}` })}</Text>
-                <Text style={styles.kpiNum} numberOfLines={1}>{fmtDur(week.ms, lang)}</Text>
-                <Text style={styles.kpiSub} numberOfLines={1}>{fmtMoney(week.money, lang, settings.currency)}</Text>
-              </View>
-              <View style={styles.kpi}>
-                <Text style={styles.kpiLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{monthLabel(lang, nowDate.getFullYear(), nowDate.getMonth())}</Text>
-                <Text style={styles.kpiNum} numberOfLines={1}>{fmtDur(month.ms, lang)}</Text>
-                <Text style={styles.kpiSub} numberOfLines={1}>{fmtMoney(month.money, lang, settings.currency)}</Text>
-              </View>
-            </View>
-            {tasks.length ? (
-              <Text style={styles.kpiDone}>{t(lang, 'home.tasks_done', { done: doneCount, total: tasks.length })}</Text>
+          <View style={styles.dayHead}>
+            <Text style={styles.dayTitle}>{dayTitle}</Text>
+            <View style={{ flex: 1 }} />
+            {dayTotal.ms ? (
+              <>
+                <Text style={styles.weekNum}>{fmtDur(dayTotal.ms, lang)}</Text>
+                <Text style={[styles.weekNum, { color: colors.textDim }]}>{fmtMoney(dayTotal.money, lang, settings.currency)}</Text>
+              </>
             ) : null}
-          </Island>
+          </View>
 
-          {/* Недавние проекты */}
-          {homeProjects.length ? (
-            <Island testID="today-projects">
-              <IslandHead
-                title={t(lang, 'home.recent_projects')}
-                note={`${t(lang, 'home.all_projects')} →`}
-                onPressNote={() => navigation.navigate('Projects')}
-              />
-              {homeProjects.map((p, i) => {
-                const own = tasksOf(tasks, p.id);
-                const done = own.filter((task) => task.done).length;
-                const pct = own.length ? Math.round((done / own.length) * 100) : 0;
-                return (
-                  <IslandRow key={p.id} first={i === 0} onPress={() => openProjectScreen(p.id)} style={styles.hpRow}>
-                    <View style={styles.hpHead}>
-                      <View style={[styles.dot, { backgroundColor: p.color || colors.accent }]} />
-                      <Text style={styles.hpName} numberOfLines={1}>{p.name}</Text>
-                      <Text style={styles.hpCount}>{done}/{own.length}</Text>
-                    </View>
-                    <Text style={styles.hpFigs} numberOfLines={1}>
-                      <Text style={styles.hpNum}>{fmtDur(projectMs(tasks, p.id, activeTimer), lang)}</Text>
-                      {' · '}{fmtMoney(projectMoney(tasks, p.id, rates, activeTimer), lang, currencyOf(p, settings))}
-                    </Text>
-                    <View style={styles.hpBar}><View style={[styles.hpFill, { width: `${pct}%`, backgroundColor: p.color || colors.accent }]} /></View>
+          <Island padded={false} style={styles.day}>
+            {byProject.length === 0 ? <View style={{ padding: spacing.md }}><IslandEmpty>{t(lang, 'today.no_entries')}</IslandEmpty></View> : null}
+            {byProject.map((g) => (
+              <View key={g.projectId}>
+                <View style={styles.group}>
+                  <View style={[styles.dot, { backgroundColor: g.project ? g.project.color : colors.accent }]} />
+                  <Text style={styles.groupName} numberOfLines={1}>{g.project ? g.project.name : ''}</Text>
+                  <Text style={styles.groupSum}>{fmtDur(g.ms + (g.running ? now - g.running.start : 0), lang)}{g.money ? ` · ${fmtMoney(g.money, lang, currencyOf(g.project, settings))}` : ''}</Text>
+                </View>
+                {g.rows.map((r, i) => (
+                  <IslandRow key={`${r.task.id}-${r.seg.index}-${r.seg.start}`} first={i === 0} onPress={() => onEntry(r)} style={styles.entry}>
+                    <Text style={styles.entryTime}>{`${hmOf(r.seg.start)}–${hmOf(r.seg.end)}`}</Text>
+                    <Text style={styles.entryName} numberOfLines={1}>{r.task.title || t(lang, 'task.no_name')}</Text>
+                    <Text style={styles.entryDur}>{fmtShort(r.seg.ms, lang)}</Text>
                   </IslandRow>
-                );
-              })}
-            </Island>
-          ) : null}
-
-          {/* Дедлайны */}
-          <Island testID="today-due">
-            <IslandHead
-              title={t(lang, 'home.due')}
-              right={overdue ? <Text style={styles.overdueNote}>{t(lang, 'home.overdue_n', { n: overdue })}</Text> : null}
-            />
-            {feed.length === 0 ? <IslandEmpty>{t(lang, 'notif.empty')}</IslandEmpty> : null}
-            {feed.map((n, i) => {
-              const p = getProject(projects, n.task.projectId);
-              return (
-                <IslandRow key={n.task.id} first={i === 0} onPress={() => openTask(n.task)}>
-                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                    <Text style={styles.rlName} numberOfLines={1}>{n.task.title || t(lang, 'task.no_name')}</Text>
-                    <View style={styles.rlSubRow}>
-                      <View style={[styles.dotSm, { backgroundColor: p ? p.color : colors.accent }]} />
-                      <Text style={styles.rlSub} numberOfLines={1}>
-                        {p ? p.name : ''}{n.kind === 'reminder' ? ` · ${t(lang, 'notif.reminder')}` : ''}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.rlWhen, n.kind === 'overdue' && styles.rlOverdue]} numberOfLines={1}>{dueShort(n.task, lang)}</Text>
-                </IslandRow>
-              );
-            })}
-          </Island>
-
-          {/* Недавние задачи */}
-          <Island testID="today-recent">
-            <IslandHead title={t(lang, 'home.recent')} />
-            {recent.length === 0 ? <IslandEmpty>{t(lang, 'home.recent_empty')}</IslandEmpty> : null}
-            {recent.map((task, i) => (
-              <RecentTaskRow key={task.id} task={task} first={i === 0} onPress={() => openTask(task)} />
+                ))}
+                {g.running ? (
+                  <IslandRow first={g.rows.length === 0} onPress={() => openTask(g.running.task.id)} style={[styles.entry, styles.entryRun]}>
+                    <Text style={styles.entryTime}>{hmOf(g.running.start)}–<Text style={{ color: colors.accentInk }}>{t(lang, 'tasks.now').toLowerCase()}</Text></Text>
+                    <Text style={styles.entryName} numberOfLines={1}>{g.running.task.title || t(lang, 'task.no_name')}</Text>
+                    <Text style={[styles.entryDur, { color: colors.accentInk }]}>{fmtShort(now - g.running.start, lang)}</Text>
+                  </IslandRow>
+                ) : null}
+              </View>
             ))}
           </Island>
+
+          {dueSoon.length ? (
+            <Island padded={false} style={styles.day}>
+              <View style={styles.group}>
+                <Icon name="clock" size={13} color={colors.textDim} />
+                <Text style={[styles.groupName, { color: colors.textDim }]}>{t(lang, 'today.deadlines')}</Text>
+              </View>
+              {dueSoon.map((task, i) => <TaskRow key={task.id} task={task} first={i === 0} showProject onPress={() => openTask(task.id)} />)}
+            </Island>
+          ) : null}
         </ScrollView>
       )}
-
-      {searchOpen ? (
-        <SearchResults
-          query={q}
-          recent={recent}
-          projects={foundProjects}
-          tasks={foundTasks}
-          allProjects={projects}
-          allTasks={tasks}
-          statuses={statuses}
-          lang={lang}
-          colors={colors}
-          styles={styles}
-          onProject={openProjectScreen}
-          onTask={openTask}
-        />
-      ) : null}
     </View>
   );
 }
 
-/** Результаты поиска поверх «Сегодня». Отдельным слоем, а не подменой
- *  данных: экран под ними остаётся смонтированным и по выходу показывает
- *  ту же позицию прокрутки. */
-function SearchResults({
-  query, recent, projects, tasks, allProjects, allTasks, statuses,
-  lang, colors, styles, onProject, onTask,
-}) {
-  const empty = query && !projects.length && !tasks.length;
-  const rows = [];
-  if (!query) {
-    if (recent.length) rows.push({ key: 'h-recent', head: t(lang, 'home.recent') });
-    for (const task of recent) rows.push({ key: 't-' + task.id, task });
-  } else {
-    if (projects.length) rows.push({ key: 'h-p', head: t(lang, 'search.projects_group') });
-    for (const p of projects) rows.push({ key: 'p-' + p.id, project: p });
-    if (tasks.length) rows.push({ key: 'h-t', head: t(lang, 'search.tasks_group') });
-    for (const task of tasks) rows.push({ key: 't-' + task.id, task });
-  }
-
-  return (
-    <View style={styles.results}>
-      {empty ? (
-        <Text style={styles.resultsEmpty}>{t(lang, 'search.nothing_found')}</Text>
-      ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(row) => row.key}
-          contentContainerStyle={styles.content}
-          keyboardDismissMode="on-drag"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
-            if (item.head) return <Text style={styles.sectionTitle}>{item.head}</Text>;
-            if (item.project) {
-              const count = tasksOf(allTasks, item.project.id).length;
-              return (
-                <Pressable style={styles.resultRow} onPress={() => onProject(item.project.id)}>
-                  <View style={[styles.dot, { backgroundColor: item.project.color }]} />
-                  <Text style={styles.resultTitle} numberOfLines={1}>{item.project.name}</Text>
-                  <Text style={styles.resultCount}>{t(lang, 'search.project_sub', { n: count, plural: pluralForm(lang, count, 'plural.task') })}</Text>
-                </Pressable>
-              );
-            }
-            const project = getProject(allProjects, item.task.projectId);
-            const status = getStatus(statuses, item.task.statusId);
-            return (
-              <Pressable style={styles.resultRow} onPress={() => onTask(item.task)}>
-                <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
-                <View style={styles.resultBody}>
-                  <Text style={styles.resultTitle} numberOfLines={1}>
-                    {item.task.title || t(lang, 'task.no_name')}
-                  </Text>
-                  <View style={styles.rlSubRow}>
-                    <Text style={styles.rlSub} numberOfLines={1}>{project ? project.name : ''}</Text>
-                    {status ? (
-                      <>
-                        <Text style={styles.rlSub}>·</Text>
-                        <View style={[styles.dotSm, { backgroundColor: status.color }]} />
-                        <Text style={styles.rlSub} numberOfLines={1}>{status.name}</Text>
-                      </>
-                    ) : null}
-                  </View>
-                </View>
-              </Pressable>
-            );
-          }}
-        />
-      )}
-    </View>
-  );
-}
-
-const makeStyles = (colors, insets, clearance) => StyleSheet.create({
+const makeStyles = (colors, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: {
-    paddingHorizontal: spacing.lg, paddingTop: spacing.xs,
-    paddingBottom: insets.bottom + clearance + spacing.xl, gap,
-  },
-
-  dayHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  dayTitle: { color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.bold },
-  daySub: { color: colors.textDim, fontSize: fontSize.sm, marginTop: 2 },
-  daySubNum: { color: colors.text, fontWeight: '700' },
-  daySubMuted: { color: colors.textFaint },
-  // Полоса дня: ступень panel2, сетка часов тонкими линиями, записи —
-  // блоками accentMuted, идущая — акцентом, «сейчас» — красной чертой.
-  track: { height: 40, borderRadius: radius.sm, backgroundColor: colors.panel2, marginTop: spacing.md, overflow: 'hidden' },
-  gridLine: { position: 'absolute', top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: colors.border },
-  blk: { position: 'absolute', top: 4, bottom: 4, borderRadius: 4, backgroundColor: colors.accentMuted, justifyContent: 'center', paddingHorizontal: 4, overflow: 'hidden' },
-  blkRun: { backgroundColor: colors.accent },
-  blkText: { color: colors.accentInk, fontSize: 10, fontWeight: '700' },
-  blkTextRun: { color: colors.accentText },
-  nowLine: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: colors.danger },
-  hoursRow: { height: 14, marginTop: 2 },
-  hour: { position: 'absolute', top: 0, color: colors.textFaint, fontSize: 10, fontVariant: ['tabular-nums'] },
-  dayActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  softBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.panel2, borderRadius: radius.md, paddingHorizontal: spacing.md, height: 32 },
-  softBtnText: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  ghostBtn: { paddingHorizontal: spacing.sm, height: 32, justifyContent: 'center', marginLeft: 'auto' },
-  ghostBtnText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-
-  // Идущая задача — остров с акцентной подложкой (.now-island на вебе).
-  nowIsland: { backgroundColor: colors.accentMuted },
-  nowTitle: { color: colors.text, fontSize: 17, fontFamily: displayFamily.bold, marginTop: spacing.xs },
-  nowProj: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 4 },
-  nowProjText: { color: colors.textDim, fontSize: fontSize.xs, flexShrink: 1 },
-  nowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md },
-  sqBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
-  sqBtnRun: { backgroundColor: colors.accent },
-  nowTime: { color: colors.text, fontSize: 22, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
-  nowMoney: { color: colors.textDim, fontSize: fontSize.xs },
-
-  kpis: { flexDirection: 'row', gap: spacing.sm },
-  kpi: { flex: 1, minWidth: 0, gap: 2 },
-  kpiLabel: { color: colors.textFaint, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
-  kpiNum: { color: colors.text, fontSize: 18, fontFamily: displayFamily.bold },
-  kpiSub: { color: colors.textDim, fontSize: fontSize.xs },
-  kpiDone: { color: colors.textFaint, fontSize: fontSize.xs, marginTop: spacing.sm },
-
-  hpRow: { flexDirection: 'column', alignItems: 'stretch', gap: 4 },
-  hpHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  hpName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
-  hpCount: { color: colors.textFaint, fontSize: fontSize.xs },
-  hpFigs: { color: colors.textDim, fontSize: fontSize.xs },
-  hpNum: { color: colors.text, fontWeight: '700' },
-  hpBar: { height: 4, borderRadius: 2, backgroundColor: colors.panel2, overflow: 'hidden', marginTop: 2 },
-  hpFill: { height: '100%' },
-
-  overdueNote: { color: colors.danger, ...typography.islandNote },
-  rlName: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  rlSubRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  rlSub: { color: colors.textFaint, fontSize: fontSize.xs, flexShrink: 1 },
-  rlWhen: { color: colors.textDim, fontSize: fontSize.xs, fontWeight: '600' },
-  rlOverdue: { color: colors.danger },
-  dot: { width: 10, height: 10, borderRadius: 3 },
-  dotSm: { width: 7, height: 7, borderRadius: 2 },
-
-  sectionTitle: {
-    color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700',
-    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: spacing.xs,
-  },
-
-  emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  emptyCard: { alignItems: 'center', gap: spacing.md, alignSelf: 'stretch', padding: spacing.xl },
-  emptyTitle: { color: colors.text, ...typography.title, textAlign: 'center' },
-  emptyText: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', lineHeight: 20 },
-
-  // Результаты кладутся поверх, а не вместо. Координаты расписаны руками:
-  // в React Native 0.86 absoluteFillObject нет, остался только absoluteFill.
-  results: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    top: insets.top + SEARCH_HEADER_HEIGHT + spacing.sm * 2,
-    backgroundColor: colors.bg,
-  },
-  resultsEmpty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.xxl },
-  resultRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.panel, borderRadius: radius.md,
-    padding: spacing.md, marginBottom: spacing.sm,
-  },
-  resultBody: { flex: 1, gap: 2 },
-  resultTitle: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  resultCount: { color: colors.textFaint, fontSize: fontSize.xs },
+  content: { paddingHorizontal: spacing.md, paddingTop: 2, paddingBottom: clearance, gap },
+  label: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
+  week: { paddingHorizontal: spacing.md, paddingVertical: 10 },
+  weekHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, marginBottom: 4 },
+  weekNum: { color: colors.text, fontSize: 15, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
+  bars: { flexDirection: 'row', gap: 5, height: 100, alignItems: 'flex-end' },
+  bar: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'flex-end', gap: 5, borderRadius: 9, paddingVertical: 5 },
+  barOn: { backgroundColor: colors.panel2 },
+  barVal: { color: colors.textFaint, fontSize: 10, fontVariant: ['tabular-nums'] },
+  barFill: { width: '100%', maxWidth: 26, borderRadius: 6, backgroundColor: colors.raise },
+  barFillOn: { backgroundColor: colors.accent },
+  barDay: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
+  barDayOn: { color: colors.text },
+  last: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 10 },
+  lastPlay: { width: 46, height: 46, borderRadius: 999, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  lastName: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600', marginTop: 1 },
+  lastSub: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  lastSubText: { color: colors.textFaint, fontSize: 11.5, flexShrink: 1 },
+  lastMoney: { color: colors.textDim, fontSize: fontSize.sm, fontFamily: displayFamily.bold },
+  dot: { width: 8, height: 8, borderRadius: 3 },
+  dayHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, paddingHorizontal: spacing.xs },
+  dayTitle: { color: colors.text, fontSize: 16, fontFamily: displayFamily.bold },
+  day: { overflow: 'hidden', paddingBottom: 4 },
+  group: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 3 },
+  groupName: { flex: 1, color: colors.text, fontSize: 12.5, fontWeight: '700' },
+  groupSum: { color: colors.textDim, fontSize: 12, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
+  entry: { paddingHorizontal: spacing.md, minHeight: 46 },
+  entryRun: { backgroundColor: colors.accentMuted },
+  entryTime: { width: 82, color: colors.textFaint, fontSize: 12, fontVariant: ['tabular-nums'] },
+  entryName: { flex: 1, color: colors.text, fontSize: 13.5, fontWeight: '600' },
+  entryDur: { color: colors.textDim, fontSize: 13, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
 });
