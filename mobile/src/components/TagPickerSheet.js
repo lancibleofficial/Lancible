@@ -7,17 +7,23 @@ import TagBadge from './TagBadge';
 import TagEditSheet from './TagEditSheet';
 import PrimaryButton from './PrimaryButton';
 import { useAppStore } from '../store/useAppStore';
-import { searchTags, exactMatch, toggleTag, tagsOf } from '../lib/tags';
+import { searchTags, exactMatch, toggleTag, tagsOf, tagsForProject, isGlobalTag } from '../lib/tags';
 import { t } from '../lib/i18n';
 import { openSheet, setSheetFooter } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 /** Пикер тегов — один на оба места, где теги вешают: задача и проект.
  *  Поле ввода служит и поиском, и входом в создание: если набранного имени
- *  нет ни у одного тега, внизу появляется «Создать тег».
+ *  нет ни у одного видимого тега, внизу появляется «Создать тег».
+ *
+ *  Видны общие теги и теги проекта (core/tags.js, tagsForProject); тег,
+ *  заведённый отсюда с projectId, — проектный. Общий помечен подписью:
+ *  у двух тегов с одним именем в разных областях иначе не понять, который
+ *  чей.
  *  @param {string[]} value — выбранные теги
+ *  @param {string} [projectId] — проект задачи: его теги видны и создаются
  *  @param {function} onChange — новый набор */
-export default function TagPickerSheet({ value, onChange, onDone }) {
+export default function TagPickerSheet({ value, projectId, onChange, onDone }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
@@ -36,9 +42,10 @@ export default function TagPickerSheet({ value, onChange, onDone }) {
     return () => setSheetFooter(null);
   }, [ids, lang]);
 
-  const found = searchTags(tags, query);
+  const pool = tagsForProject(tags, projectId);
+  const found = searchTags(pool, query);
   const typed = query.trim();
-  const offerCreate = typed && !exactMatch(tags, typed);
+  const offerCreate = typed && !exactMatch(pool, typed);
   const picked = tagsOf(tags, ids);
 
   return (
@@ -58,7 +65,7 @@ export default function TagPickerSheet({ value, onChange, onDone }) {
         value={query}
         onChangeText={setQuery}
         placeholder={t(lang, 'tag.search_ph')}
-        placeholderTextColor={colors.textDim}
+        placeholderTextColor={colors.textFaint}
         autoCorrect={false}
       />
 
@@ -69,6 +76,7 @@ export default function TagPickerSheet({ value, onChange, onDone }) {
             <Pressable key={tag.id} onPress={() => apply(toggleTag(ids, tag.id))} style={styles.row}>
               <View style={[styles.dot, { backgroundColor: tag.color }]} />
               <Text style={styles.rowName} numberOfLines={1}>{tag.name}</Text>
+              {projectId && isGlobalTag(tag) ? <Text style={styles.scope}>{t(lang, 'tag.scope_global')}</Text> : null}
               {on ? <Icon name="check" size={14} color={colors.accentInk} /> : null}
             </Pressable>
           );
@@ -78,7 +86,7 @@ export default function TagPickerSheet({ value, onChange, onDone }) {
           <Pressable
             style={[styles.row, styles.createRow]}
             onPress={() => openSheet(
-              <TagEditSheet presetName={typed} onSaved={(made) => apply([...ids, made.id])} />,
+              <TagEditSheet presetName={typed} projectId={projectId} onSaved={(made) => apply([...ids, made.id])} />,
             )}
           >
             <Icon name="plus" size={14} color={colors.textDim} />
@@ -88,7 +96,7 @@ export default function TagPickerSheet({ value, onChange, onDone }) {
           </Pressable>
         ) : null}
 
-        {!tags.length && !typed ? <Text style={styles.empty}>{t(lang, 'tag.none')}</Text> : null}
+        {!pool.length && !typed ? <Text style={styles.empty}>{t(lang, 'tag.none')}</Text> : null}
       </ScrollView>
     </View>
   );
@@ -112,6 +120,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   dot: { width: 10, height: 10, borderRadius: 3 },
   rowName: { flex: 1, color: colors.text, fontSize: fontSize.md },
+  scope: { color: colors.textFaint, fontSize: fontSize.xs },
   createRow: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, borderRadius: 0, marginTop: spacing.xs },
   createText: { flex: 1, color: colors.textDim, fontSize: fontSize.sm },
   empty: { color: colors.textDim, fontSize: fontSize.sm, padding: spacing.md, lineHeight: 20 },

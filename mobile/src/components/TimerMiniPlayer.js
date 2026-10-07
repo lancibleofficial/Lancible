@@ -96,6 +96,8 @@ export default function TimerMiniPlayer({ onOpen }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   wrap: { paddingHorizontal: spacing.lg },
+  // Капсула идущей задачи — остров без рамки, как #tb-timer в шапке веба:
+  // точка проекта, название, время, квадрат «стоп».
   bar: {
     height: MINI_PLAYER_HEIGHT,
     flexDirection: 'row',
@@ -103,9 +105,7 @@ const makeStyles = (colors) => StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.panel,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: radius.lg,
   },
   dot: { width: 10, height: 10, borderRadius: 3, flex: 0 },
   main: { flex: 1, minWidth: 0 },

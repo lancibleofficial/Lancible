@@ -1,7 +1,7 @@
 import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import Icon from './Icon';
-import { useColors, spacing, fontSize } from '../theme';
+import { useColors, spacing, radius, fontSize } from '../theme';
 
 // Строка настроек в духе референса пользователя: иконка + подпись слева,
 // текущее значение (или произвольный right-элемент вроде свитчера) справа,
@@ -27,12 +27,26 @@ export default function SettingsRow({ icon, label, value, right, onPress, last, 
   return onPress ? <Pressable onPress={onPress}>{body}</Pressable> : body;
 }
 
-export function SettingsCard({ children }) {
+/** Остров настроек: подпись раздела ВНУТРИ острова, как .settings-card с
+ *  .settings-section-label на вебе, — снаружи она висела между островами
+ *  и читалась ничьей. */
+export function SettingsCard({ title, children }) {
   const colors = useColors();
-  return <View style={{ backgroundColor: colors.panel, borderRadius: 16, overflow: 'hidden' }}>{children}</View>;
+  const styles = makeStyles(colors);
+  return (
+    <View style={styles.card}>
+      {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
+      {children}
+    </View>
+  );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
+  card: { backgroundColor: colors.panel, borderRadius: radius.lg, overflow: 'hidden' },
+  cardTitle: {
+    color: colors.textFaint, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 2,
+  },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, minHeight: 56,

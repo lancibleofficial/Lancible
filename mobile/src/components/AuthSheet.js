@@ -163,7 +163,7 @@ const makeStyles = (colors) => StyleSheet.create({
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
   tabActive: { backgroundColor: colors.tabActiveBg },
   tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  // См. комментарий у modeTextActive в CalendarScreen.js — тот же принцип.
+  // См. комментарий у modeTextOn в TimeScreen.js — тот же принцип.
   tabTextActive: { color: colors.text },
   field: { gap: spacing.xs },
   label: { color: colors.textDim, fontSize: fontSize.xs },

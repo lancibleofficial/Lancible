@@ -170,7 +170,6 @@ export default function SettingsScreen({ navigation }) {
           </Pressable>
         ) : null}
 
-        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_account')}</Text>
         {authStatus === 'signedIn' ? (
           <Pressable style={styles.profileCard} onPress={onOpenProfile}>
             <View style={styles.profileCardTop}>
@@ -203,8 +202,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingsRow icon="doc" label={t(settings.lang, 'nav.docs')} value={documentsCount ? String(documentsCount) : ''} onPress={() => navigation.navigate('Home', { screen: 'Documents' })} last />
         </SettingsCard>
 
-        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_main')}</Text>
-        <SettingsCard>
+        <SettingsCard title={t(settings.lang, 'settings.section_main')}>
           <SettingsRow icon="globe" label={t(settings.lang, 'nav.language')} value={LANG_NAMES[settings.lang]} onPress={onOpenLanguage} />
           <SettingsRow
             icon="sun"
@@ -214,14 +212,12 @@ export default function SettingsScreen({ navigation }) {
           />
         </SettingsCard>
 
-        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_work')}</Text>
-        <SettingsCard>
+        <SettingsCard title={t(settings.lang, 'settings.section_work')}>
           <SettingsRow icon="wallet" label={t(settings.lang, 'settings.rate_label')} value={fmtMoney(settings.hourlyRate || 0, settings.lang, settings.currency)} onPress={onOpenRate} />
           <SettingsRow icon="wallet" label={t(settings.lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} last />
         </SettingsCard>
 
-        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_tags')}</Text>
-        <SettingsCard>
+        <SettingsCard title={t(settings.lang, 'settings.section_tags')}>
           {tags.length ? tags.map((tag) => (
             <SettingsRow
               key={tag.id}
@@ -245,8 +241,7 @@ export default function SettingsScreen({ navigation }) {
 
         {authStatus === 'signedIn' ? (
           <>
-            <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_data')}</Text>
-            <SettingsCard>
+            <SettingsCard title={t(settings.lang, 'settings.section_data')}>
               <SettingsRow
                 icon="cloud"
                 label={t(settings.lang, 'sync.toggle_label')}
@@ -265,8 +260,7 @@ export default function SettingsScreen({ navigation }) {
           </>
         ) : null}
 
-        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_notifications')}</Text>
-        <SettingsCard>
+        <SettingsCard title={t(settings.lang, 'settings.section_notifications')}>
           <SettingsRow
             icon="bell"
             label={t(settings.lang, 'notif.enable')}
@@ -289,8 +283,7 @@ export default function SettingsScreen({ navigation }) {
           />
         </SettingsCard>
 
-        <Text style={styles.sectionLabel}>{t(settings.lang, 'settings.section_about')}</Text>
-        <SettingsCard>
+        <SettingsCard title={t(settings.lang, 'settings.section_about')}>
           <SettingsRow icon="link" label={t(settings.lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
           <SettingsRow icon="list-bullet" label={t(settings.lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} />
           <SettingsRow icon="lock" label={t(settings.lang, 'about.privacy')} onPress={() => openLegal('privacy', settings.lang)} />
@@ -325,9 +318,5 @@ const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   guestActions: { flexDirection: 'row', gap: spacing.sm },
   tagsHint: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   tagsHintText: { color: colors.textDim, fontSize: fontSize.sm, lineHeight: 20 },
-  sectionLabel: {
-    color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6,
-    marginTop: spacing.sm, marginLeft: spacing.xs,
-  },
   footer: { color: colors.textDim, fontSize: fontSize.xs, textAlign: 'center', marginTop: spacing.lg },
 });

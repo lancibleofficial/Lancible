@@ -3,13 +3,15 @@ import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/un
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeStack from './HomeStack';
-import StatsScreen from '../screens/StatsScreen';
-import CalendarScreen from '../screens/CalendarScreen';
-import BoardStack from './BoardStack';
-import SettingsScreen from '../screens/SettingsScreen';
+import ProjectsStack from './ProjectsStack';
+import TimeStack from './TimeStack';
+import NotificationsStack from './NotificationsStack';
+import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
 import TimerMiniPlayer from '../components/TimerMiniPlayer';
+import { DETAIL_ROUTES } from './detailScreens';
 import { useAppStore } from '../store/useAppStore';
+import { notificationFeed } from '../lib/due';
 import { t } from '../lib/i18n';
 import { useColors, spacing } from '../theme';
 
@@ -55,9 +57,9 @@ const UIKIT_TAB_BAR_H = 49;
 
 const TAB_ICONS = {
   home: require('../../assets/tabs/home.png'),
-  board: require('../../assets/tabs/board.png'),
-  calendar: require('../../assets/tabs/calendar.png'),
-  chart: require('../../assets/tabs/chart.png'),
+  projects: require('../../assets/tabs/projects.png'),
+  time: require('../../assets/tabs/time.png'),
+  bell: require('../../assets/tabs/bell.png'),
   menu: require('../../assets/tabs/menu.png'),
 };
 
@@ -93,20 +95,37 @@ function LegacyMiniPlayerLayout({ state, navigation, descriptors, children }) {
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
+  const tasks = useAppStore((s) => s.tasks);
+  const seenAt = useAppStore((s) => s.ui.notifSeenAt);
+  const unread = notificationFeed(tasks, seenAt).filter((n) => n.unread).length;
   // Per-screen tabBarStyle replaces the navigator-level one wholesale (an
-  // explicit undefined wipes it too), so the Home tab's show/hide branch
-  // below has to hand back this same object instead of undefined -- that
-  // is what left Home with the translucent default bar while every other
-  // tab had the opaque panel one.
+  // explicit undefined wipes it too), so every tab's show/hide branch below
+  // hands back this same object instead of undefined.
   const legacyTabBarStyle = HAS_LIQUID_GLASS ? undefined : { backgroundColor: colors.panel, shadowColor: colors.border };
+
+  // Одни и те же опции у всех пяти вкладок: стек внутри каждой с теми же
+  // экранами деталей, и таббар с плеером прячутся на них одинаково.
+  const tabOptions = (labelKey, icon, extra) => ({ route, navigation }) => {
+    const barHidden = DETAIL_ROUTES.includes(getFocusedRouteNameFromRoute(route));
+    return {
+      headerShown: false,
+      tabBarLabel: t(lang, labelKey),
+      tabBarIcon: tabIcon(icon),
+      tabBarStyle: barHidden ? { display: 'none' } : legacyTabBarStyle,
+      // Аксессуар приходит из screenOptions и пережил бы спрятанный
+      // таббар: на странице задачи у таймера уже есть свой счётчик,
+      // второй под ним не нужен.
+      bottomAccessory: barHidden || !HAS_LIQUID_GLASS
+        ? undefined
+        : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
+      ...extra,
+    };
+  };
 
   return (
     <Tab.Navigator
       layout={HAS_LIQUID_GLASS ? undefined : LegacyMiniPlayerLayout}
       screenOptions={({ navigation }) => ({
-      // Поиск и уведомления живут только на Главной, в её собственной
-      // шапке: на доске или в календаре искать проекты незачем, а две
-      // иконки в каждой шапке съедали место у заголовка.
         header: (props) => <AppHeader {...props} />,
         tabBarActiveTintColor: colors.accentInk,
         tabBarInactiveTintColor: colors.textDim,
@@ -122,60 +141,15 @@ export default function MainTabs() {
           : undefined,
       })}
     >
+      <Tab.Screen name="Home" component={HomeStack} options={tabOptions('nav.home', 'home')} />
+      <Tab.Screen name="Projects" component={ProjectsStack} options={tabOptions('nav.projects', 'projects')} />
+      <Tab.Screen name="Time" component={TimeStack} options={tabOptions('nav.time', 'time')} />
       <Tab.Screen
-        name="Home"
-        component={HomeStack}
-        options={({ route, navigation }) => {
-          // Same nested-route hide as Android -- see the detailed comment in
-          // MainTabs.android.js for why this has to be recomputed here
-          // rather than left to the nested stack.
-          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents'].includes(getFocusedRouteNameFromRoute(route));
-          return {
-            headerShown: false,
-            tabBarLabel: t(lang, 'nav.home'),
-            tabBarIcon: tabIcon('home'),
-            tabBarStyle: barHidden ? { display: 'none' } : legacyTabBarStyle,
-            // Аксессуар приходит из screenOptions и пережил бы спрятанный
-            // таббар: на странице задачи у таймера уже есть свой счётчик,
-            // второй под ним не нужен. Значение затирается так же, как
-            // tabBarStyle выше, — своим на уровне экрана.
-            bottomAccessory: barHidden || !HAS_LIQUID_GLASS
-              ? undefined
-              : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
-          };
-        }}
+        name="Notifications"
+        component={NotificationsStack}
+        options={tabOptions('nav.notifications', 'bell', { tabBarBadge: unread > 0 ? (unread > 9 ? '9+' : String(unread)) : undefined })}
       />
-      <Tab.Screen
-        name="Board"
-        component={BoardStack}
-        options={({ route, navigation }) => {
-          const barHidden = ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents'].includes(getFocusedRouteNameFromRoute(route));
-          return {
-            headerShown: false,
-            tabBarLabel: t(lang, 'nav.board'),
-            tabBarIcon: tabIcon('board'),
-            tabBarStyle: barHidden ? { display: 'none' } : legacyTabBarStyle,
-            bottomAccessory: barHidden || !HAS_LIQUID_GLASS
-              ? undefined
-              : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
-          };
-        }}
-      />
-      <Tab.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{ headerShown: false, tabBarLabel: t(lang, 'nav.calendar'), tabBarIcon: tabIcon('calendar') }}
-      />
-      <Tab.Screen
-        name="Stats"
-        component={StatsScreen}
-        options={{ headerShown: false, tabBarLabel: t(lang, 'nav.stats'), tabBarIcon: tabIcon('chart') }}
-      />
-      <Tab.Screen
-        name="Menu"
-        component={SettingsScreen}
-        options={{ headerShown: false, tabBarLabel: t(lang, 'nav.menu'), tabBarIcon: tabIcon('menu') }}
-      />
+      <Tab.Screen name="Menu" component={MenuStack} options={tabOptions('nav.menu', 'menu')} />
     </Tab.Navigator>
   );
 }

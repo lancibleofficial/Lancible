@@ -24,3 +24,28 @@ jest.mock('expo-notifications/build/setNotificationChannelAsync', () => ({ setNo
 jest.mock('expo-notifications/build/scheduleNotificationAsync', () => ({ scheduleNotificationAsync: jest.fn(async () => 'id') }));
 jest.mock('expo-notifications/build/cancelScheduledNotificationAsync', () => ({ cancelScheduledNotificationAsync: jest.fn(async () => undefined) }));
 jest.mock('expo-notifications/build/cancelAllScheduledNotificationsAsync', () => ({ cancelAllScheduledNotificationsAsync: jest.fn(async () => undefined) }));
+
+// Жесты, анимации и безопасные поля. У всех трёх в Node нет нативной части,
+// и без подмен экран с жестом (список проекта, сетка «Времени») не
+// отрисуется вовсе. Подмены — те, что везут сами библиотеки.
+require('react-native-gesture-handler/jestSetup');
+// Reanimated 4 стоит на react-native-worklets, и его собственная подмена
+// (reanimated/mock) всё равно поднимает worklets — а у тех в Node нет
+// нативного модуля (loadUnpackers). Поэтому первыми подменяются worklets,
+// их подменой из той же библиотеки; reanimated тогда грузится сам.
+jest.mock('react-native-worklets', () => require('react-native-worklets/lib/module/mock'));
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+// Безопасные поля — нули: своя подмена, потому что библиотечная (jest/mock)
+// не отдаёт useSafeAreaInsets функцией.
+jest.mock('react-native-safe-area-context', () => {
+  const insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  const frame = { x: 0, y: 0, width: 390, height: 844 };
+  return {
+    SafeAreaProvider: ({ children }) => children,
+    SafeAreaView: ({ children }) => children,
+    useSafeAreaInsets: () => insets,
+    useSafeAreaFrame: () => frame,
+    initialWindowMetrics: { insets, frame },
+  };
+});
+jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(async () => undefined), ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' } }));

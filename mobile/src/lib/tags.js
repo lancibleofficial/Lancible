@@ -5,15 +5,15 @@
 // файлами значило однажды разойтись молча. Теперь за совпадением следит
 // tests/unit/mobile-core.test.js.
 //
-// Теги общие на всё приложение, а не свои у каждого проекта: один и тот же
-// тег живёт и на проекте, и на задаче в любом другом проекте.
+// Теги бывают общие (видны везде) и проектные (tag.projectId) — область
+// видимости считает ядро, tagsForProject.
 //
 // Своё здесь только то, чего на десктопе нет и быть не может, — расчёт цветов
 // бейджа: в React Native нет color-mix, и смешивать приходится руками.
 import Core from '../core/tags.js';
 
 export const {
-  getTag, tagsOf, tagUsage, toggleTag, searchTags, nameTaken, exactMatch, keepKnown,
+  getTag, isGlobalTag, tagsForProject, tagsOf, tagUsage, toggleTag, searchTags, nameTaken, exactMatch, keepKnown,
 } = Core;
 
 /** Цвет надписи на бейдже: цвет тега смешивается с цветом текста темы.

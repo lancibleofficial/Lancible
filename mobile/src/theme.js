@@ -11,33 +11,40 @@
 import { useColorScheme } from 'react-native';
 import { useAppStore } from './store/useAppStore';
 
-// Палитры — те же, что на десктопе и в вебе после редизайна 6 октября 2026
-// (src/renderer/styles.css, «Палитра»): тёмная — глубокий графит, где каждый
-// слой выше светлее нижнего; светлая «Чистая» — белая, с нейтральными серыми
-// без синевы и почти чёрным текстом. Свои у телефона только оттенок danger
-// на тёмной (ярче, на маленьком экране приглушённый красный выцветал) и
-// несколько токенов, которых нет на десктопе: accentMuted, inputBg.
+// Палитры — те же, что на десктопе и в вебе после редизайна «острова»
+// 7 октября 2026 (src/renderer/styles.css, «Палитра»): содержимое лежит
+// островами на земле, без обводок и теней. Земля (bg) — самое тёмное или
+// самое серое; остров (panel) — ступень над ней; поле внутри острова
+// (panel2) — ещё ступень; raise — нажатие и выбранное. Линии (border,
+// borderSoft) — полупрозрачные: разделители внутри острова, а не рамки.
+// Свои у телефона только оттенок danger на тёмной (ярче, на маленьком экране
+// приглушённый красный выцветал) и несколько токенов, которых нет на
+// десктопе: accentMuted, inputBg, textOnColor, scrim.
 const dark = {
-  bg: '#141518', panel: '#1b1c20', panel2: '#25262b',
-  border: '#2f3137', borderStrong: '#45474f',
-  text: '#f2f3f5', textDim: '#a9acb5',
+  bg: '#111215', panel: '#1a1b1f', panel2: '#232428', raise: '#2a2b31',
+  border: 'rgba(255,255,255,0.06)', borderStrong: '#3a3c44',
+  text: '#f2f3f5', textDim: '#aeb1ba',
   accent: '#87ff65', accentHover: '#aceb98', accentText: '#16220e', accentMuted: 'rgba(135,255,101,0.16)',
   // Акцент как текст и иконка — свой токен: на тёмном он совпадает с
   // заливкой, на белом неоновый зелёный буквами не читается.
   accentInk: '#87ff65',
   danger: '#ff5c50',
-  // Фон выбранного таба (Заметки/История, Месяц/Неделя/День) — ступень
-  // светлее дорожки, как на десктопе.
-  tabActiveBg: '#34363d',
+  // Фон выбранного таба (сегменты «Свойства/История», режимы «Времени») —
+  // ступень светлее дорожки, как на десктопе.
+  tabActiveBg: '#2a2b31',
   // Фон полей ввода (там, где пользователь печатает).
-  inputBg: '#25262b',
+  inputBg: '#232428',
 
   // Третья ступень цвета текста: подписи дней, счётчики, мелкие пометки.
-  textFaint: '#8e919b',
-  // Внутренняя линейка: сетка календаря, разделители внутри карточек.
-  borderSoft: '#232429',
-  // Столбец доски — ступень над фоном, карточка в нём ещё светлее.
-  boardCol: '#1b1c20', boardCard: '#27282e',
+  textFaint: '#8f929c',
+  // Значки без своего цвета.
+  icon: '#979ba5',
+  // Внутренняя линейка: сетка календаря, тонкие разделители.
+  borderSoft: 'rgba(255,255,255,0.05)',
+  // Столбец доски — поле внутри острова, карточка в нём ещё светлее.
+  boardCol: '#232428', boardCard: '#2a2b31',
+  // Подложка выбранного дня и строки.
+  sel: 'rgba(135,255,101,0.10)',
 
   // Белое поверх насыщенной заливки: текст опасной кнопки, цифра в значке,
   // бегунок тумблера. Затемнение под шторкой. Красная подложка просроченного
@@ -48,21 +55,22 @@ const dark = {
   dangerMuted: 'rgba(255,92,80,0.18)',
 };
 
-// Светлая — та же «Чистая», с одним отличием: на телефоне содержимое лежит
-// карточками без рамок, и белые карточки на белой странице пропадали. Поэтому
-// страница — нейтральный светло-серый, карточки белые (как списки в iOS).
+// Светлая — серая земля и белые острова, как на десктопе: белые предметы
+// на серой странице видны без рамок.
 const light = {
-  bg: '#f2f2f4', panel: '#ffffff', panel2: '#f1f1f2',
-  border: '#e2e2e5', borderStrong: '#b4b4ba',
-  text: '#09090b', textDim: '#3c3c43',
-  accent: '#7ae65b', accentHover: '#66d447', accentText: '#0d1a07', accentMuted: 'rgba(122,230,91,0.18)',
-  accentInk: '#1d7a0b',
+  bg: '#eceef1', panel: '#ffffff', panel2: '#f1f2f4', raise: '#e6e8ec',
+  border: 'rgba(10,10,12,0.07)', borderStrong: '#9d9da5',
+  text: '#0a0a0c', textDim: '#45454d',
+  accent: '#62d841', accentHover: '#52c932', accentText: '#0d1a07', accentMuted: 'rgba(98,216,65,0.16)',
+  accentInk: '#157308',
   danger: '#c22a1d',
   tabActiveBg: '#ffffff',
-  inputBg: '#f1f1f2',
-  textFaint: '#5f5f68',
-  borderSoft: '#ececee',
-  boardCol: '#e8e8eb', boardCard: '#ffffff',
+  inputBg: '#f1f2f4',
+  textFaint: '#6a6a73',
+  icon: '#55555d',
+  borderSoft: 'rgba(10,10,12,0.06)',
+  boardCol: '#f1f2f4', boardCard: '#ffffff',
+  sel: 'rgba(98,216,65,0.14)',
   textOnColor: '#fff',
   scrim: 'rgba(0,0,0,0.5)',
   dangerMuted: 'rgba(194,42,29,0.18)',
@@ -126,12 +134,12 @@ export function editorCssVars(mode) {
   const m = mode === 'light' ? 'light' : 'dark';
   const sh = editorShadows[m];
   const vars = {
-    '--bg': c.bg, '--panel': c.panel, '--panel-2': c.panel2, '--raise': c.panel2,
-    '--line': c.borderSoft, '--border': c.border, '--border-soft': c.borderSoft, '--border-strong': c.borderStrong,
-    '--text': c.text, '--text-dim': c.textDim, '--text-faint': c.textFaint, '--icon': c.textDim,
+    '--bg': c.bg, '--panel': c.panel, '--panel-2': c.panel2, '--raise': c.raise,
+    '--line': c.border, '--border': c.border, '--border-soft': c.borderSoft, '--border-strong': c.borderStrong,
+    '--text': c.text, '--text-dim': c.textDim, '--text-faint': c.textFaint, '--icon': c.icon,
     '--accent': c.accent, '--accent-hover': c.accentHover, '--accent-text': c.accentText, '--accent-ink': c.accentInk,
     '--link': c.accentInk, '--danger': c.danger, '--text-on-color': c.textOnColor, '--scrim': c.scrim,
-    '--code-bg': sh.codeBg, '--tab-active-bg': c.tabActiveBg, '--nav-active-bg': c.panel2, '--sel': c.accentMuted,
+    '--code-bg': sh.codeBg, '--tab-active-bg': c.tabActiveBg, '--nav-active-bg': c.panel2, '--sel': c.sel,
     '--shadow-pop': sh.pop, '--shadow-modal': sh.modal,
     '--ease': 'cubic-bezier(0.22, 0.61, 0.36, 1)', '--radius': '14px', '--radius-sm': '10px',
     '--font-ui': "'Onest', -apple-system, Roboto, 'Segoe UI', sans-serif", '--font-display': 'var(--font-ui)', '--fw-text': '400',
@@ -142,6 +150,9 @@ export function editorCssVars(mode) {
 }
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
+
+// Зазор между островами и поле страницы — те же, что на десктопе (--gap 12).
+export const gap = spacing.md;
 
 // Кастомный таббар (MainTabBar.js) не сообщает React Navigation свою
 // реальную высоту через её внутренний height-callback context (это делает
@@ -154,7 +165,9 @@ export const tabBarClearance = 108;
 // (таббар, "Сегодня", свотчи цвета) сюда не относятся, у них своя логика.
 export const buttonHeight = 52;
 
-export const radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 };
+// Скругления — как у десктопа после «островов»: остров 14 (lg), поле и
+// кнопка 10 (md), мелкие фишки 8 (sm), шторки 20 (xl).
+export const radius = { sm: 8, md: 10, lg: 14, xl: 20, pill: 999 };
 
 export const fontSize = { xs: 12, sm: 14, md: 16, lg: 20, xl: 28 };
 
@@ -195,4 +208,8 @@ export const typography = {
   caption: { fontFamily: fontFamily.regular, fontSize: fontSize.sm },
   label: { fontFamily: fontFamily.bold, fontSize: fontSize.xs, textTransform: 'uppercase', letterSpacing: 0.6 },
   button: { fontFamily: fontFamily.bold, fontSize: fontSize.md },
+  // Подзаголовок острова и тихая подпись справа от него — .island-title и
+  // .island-note десктопа.
+  islandTitle: { fontFamily: fontFamily.bold, fontSize: fontSize.sm },
+  islandNote: { fontFamily: fontFamily.regular, fontSize: fontSize.xs },
 };

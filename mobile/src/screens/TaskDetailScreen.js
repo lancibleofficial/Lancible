@@ -1,11 +1,20 @@
+// Страница задачи — три острова, как на десктопе после «островов»:
+// название, теги и заметки; таймер с квадратной кнопкой; свойства и история
+// в одном острове с вкладками — переключается только он.
+//
+// Заметки пишутся в полноэкранном редакторе (EditorScreen): там у
+// редактора вся высота, своя прокрутка и рисование пером без спора с
+// прокруткой страницы. Здесь — предпросмотр, касание открывает редактор.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, ScrollView, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import DocEditor from '../components/DocEditor';
 import DocCore from '../core/doc.js';
+import Island, { IslandRow } from '../components/Island';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
-import { fmtClock, fmtMoney, fmtWhen, earnedOf, parseNum, sessionMoney, capFirst } from '../lib/format';
+import { fmtClock, fmtMoney, fmtWhen, fmtShort, earnedOf, earnedShown, effectiveRate, parseNum, sessionMoney, capFirst, moneyFmt, CURRENCY_SYMBOLS } from '../lib/format';
+import { useRates, currencyOf } from '../hooks/useRates';
 import TaskClock from '../components/TaskClock';
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
@@ -17,15 +26,18 @@ import DueSheet from '../components/DueSheet';
 import TagPickerSheet from '../components/TagPickerSheet';
 import PickerSheet from '../components/PickerSheet';
 import RepeatSheet from '../components/RepeatSheet';
+import SessionSheet from '../components/SessionSheet';
 import { orderedStatuses, getStatus } from '../lib/statuses';
 import Repeat from '../core/repeat.js';
 import Versions from '../core/versions.js';
+import CoreMoney from '../core/money.js';
 import { TagBadgeRow } from '../components/TagBadge';
 import { tagsOf } from '../lib/tags';
 import { dueShort, remindKey, REMIND_LABEL } from '../lib/due';
+import { presetRule, isPresetRule, REPEAT_PRESETS, hm } from '../lib/sessions';
 import { useTicker } from '../hooks/useTicker';
 import Icon from '../components/Icon';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+import { useColors, spacing, radius, fontSize, typography, displayFamily, gap } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 // Дни недели в подписи правила: 0 — воскресенье, как в Date.getDay().
@@ -38,14 +50,15 @@ export default function TaskDetailScreen({ route, navigation }) {
   const tasks = useAppStore((s) => s.tasks);
   const projects = useAppStore((s) => s.projects);
   const activeTimer = useAppStore((s) => s.activeTimer);
-  const hourlyRate = useAppStore((s) => s.settings.hourlyRate);
-  const LANG = useAppStore((s) => s.settings.lang);
-  const currency = useAppStore((s) => s.settings.currency);
+  const settings = useAppStore((s) => s.settings);
+  const LANG = settings.lang;
   const updateTask = useAppStore((s) => s.updateTask);
   const setTaskDue = useAppStore((s) => s.setTaskDue);
   const setTaskTags = useAppStore((s) => s.setTaskTags);
+  const setTaskDone = useAppStore((s) => s.setTaskDone);
   const allTags = useAppStore((s) => s.tags);
   const deleteTask = useAppStore((s) => s.deleteTask);
+  const deleteSession = useAppStore((s) => s.deleteSession);
   const startTimer = useAppStore((s) => s.startTimer);
   const stopTimer = useAppStore((s) => s.stopTimer);
   const showToast = useAppStore((s) => s.showToast);
@@ -54,8 +67,11 @@ export default function TaskDetailScreen({ route, navigation }) {
   const setTaskStatus = useAppStore((s) => s.setTaskStatus);
   const setTaskVersion = useAppStore((s) => s.setTaskVersion);
   const setTaskRepeat = useAppStore((s) => s.setTaskRepeat);
+  const rates = useRates();
 
   const task = getTask(tasks, taskId);
+  const project = getProject(projects, task ? task.projectId : null);
+  const currency = currencyOf(project, settings);
   const taskTags = tagsOf(allTags, task ? task.tagIds : []);
   const status = task ? getStatus(statuses, task.statusId) : null;
   const projectVersions = task ? Versions.versionsOf(versions, task.projectId) : [];
@@ -76,10 +92,10 @@ export default function TaskDetailScreen({ route, navigation }) {
     if (!next) return t(LANG, 'repeat.series_done');
     return t(LANG, 'repeat.next', { date: new Date(next).toLocaleDateString(LOCALE_MAP[LANG] || 'ru-RU', { day: 'numeric', month: 'short' }) });
   })();
-  const isRunning = activeTimer && activeTimer.taskId === taskId;
-  useTicker(!!isRunning);
+  const isRunning = !!activeTimer && activeTimer.taskId === taskId;
+  useTicker(isRunning);
 
-  const [tab, setTab] = useState('notes');
+  const [tab, setTab] = useState('props');
   const [title, setTitle] = useState(task ? task.title : '');
   const [rateText, setRateText] = useState(task && task.rate != null ? String(task.rate) : '');
   const titleTimer = useRef(null);
@@ -91,19 +107,15 @@ export default function TaskDetailScreen({ route, navigation }) {
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
-  // Заметки пишутся в полноэкранном редакторе (EditorScreen): там у
-  // редактора вся высота, своя прокрутка и рисование пером без спора с
-  // прокруткой страницы. Здесь — предпросмотр, касание открывает редактор.
   function openEditor() {
     navigation.navigate('Editor', { kind: 'task', id: taskId });
   }
 
   function onExport() {
     if (!task) return;
-    const project = getProject(projects, task.projectId);
     runExport(
       `${project ? project.name : t(LANG, 'export.project_fallback')} — ${task.title || t(LANG, 'export.task_fallback')} — ${new Date().toISOString().slice(0, 10)}`,
-      buildTaskSheets(task, project, LANG, currency, hourlyRate),
+      buildTaskSheets(task, project, LANG, currency, rates),
       LANG,
       showToast,
     );
@@ -112,7 +124,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <Pressable hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn}>
+        <Pressable hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn} accessibilityLabel={t(LANG, 'project.opts')}>
           <Icon name="kebab" size={18} color={colors.text} />
         </Pressable>
       ),
@@ -123,21 +135,18 @@ export default function TaskDetailScreen({ route, navigation }) {
     openSheet(
       <MenuSheet
         title={(task && task.title) || t(LANG, 'task.no_name')}
-        // Закрепить — только из списков, удалить — в «Настройках» задачи
-        // (круг 4, 7 октября 2026): внутри задачи — её название и работа.
         items={[
+          { key: 'project', icon: 'grid', label: t(LANG, 'task.open_project'), onPress: onOpenProject },
           { key: 'export', icon: 'download', label: t(LANG, 'menu.export_excel'), onPress: onExport },
+          { key: 'delete', icon: 'trash', label: t(LANG, 'task.delete_title'), danger: true, separated: true, onPress: onDelete },
         ]}
       />,
     );
   }
 
-  const project = getProject(projects, task ? task.projectId : null);
-
   /** Открыть проект задачи. Если мы пришли с его же страницы, возвращаемся
    *  назад, а не кладём в стек второй такой же экран: иначе «назад» потом
-   *  проводит через ту же страницу дважды. Предыдущий экран смотрим в
-   *  состоянии навигатора — параметры маршрута об этом не знают. */
+   *  проводит через ту же страницу дважды. */
   function onOpenProject() {
     if (!project) return;
     const state = navigation.getState();
@@ -146,13 +155,7 @@ export default function TaskDetailScreen({ route, navigation }) {
       navigation.goBack();
       return;
     }
-    // В стеке доски экрана проекта нет вовсе — там он живёт в «Главной».
-    if (state.routes.some((r) => r.name === 'Project')
-      || state.routeNames.includes('Project')) {
-      navigation.navigate('Project', { projectId: project.id });
-      return;
-    }
-    navigation.navigate('Home', { screen: 'Project', params: { projectId: project.id } });
+    navigation.navigate('Project', { projectId: project.id });
   }
 
   function onDelete() {
@@ -180,28 +183,15 @@ export default function TaskDetailScreen({ route, navigation }) {
   }
 
   function onDeleteSession(index) {
-    if (!task) return;
     confirmSheet({
       title: t(LANG, 'confirm.are_you_sure'),
       message: t(LANG, 'session.delete_title'),
       actions: [
-        {
-          label: t(LANG, 'project.delete'), destructive: true,
-          onPress: () => {
-            const removed = task.sessions[index];
-            const sessions = task.sessions.filter((_, i) => i !== index);
-            updateTask(taskId, { sessions, totalMs: Math.max(0, (task.totalMs || 0) - removed.ms) });
-          },
-        },
+        { label: t(LANG, 'common.delete'), destructive: true, onPress: () => deleteSession(taskId, index) },
         { label: t(LANG, 'common.cancel'), cancel: true },
       ],
     });
   }
-
-  const fmtHm = (iso) => {
-    const d = new Date(iso);
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  };
 
   function onOpenDue() {
     openSheet(
@@ -218,6 +208,7 @@ export default function TaskDetailScreen({ route, navigation }) {
     openSheet(
       <TagPickerSheet
         value={task.tagIds || []}
+        projectId={task.projectId}
         onChange={(ids) => setTaskTags(taskId, ids)}
       />,
     );
@@ -237,33 +228,54 @@ export default function TaskDetailScreen({ route, navigation }) {
   }
 
   function onOpenVersion() {
-    const own = Versions.versionsOf(versions, task.projectId);
     openSheet(
       <PickerSheet
         title={t(LANG, 'version.label')}
         value={task.versionId || ''}
         options={[
           { value: '', label: t(LANG, 'version.none') },
-          ...own.map((v) => ({ value: v.id, label: v.name })),
+          ...projectVersions.map((v) => ({ value: v.id, label: v.name })),
         ]}
         onSelect={(id) => setTaskVersion(taskId, id || null)}
       />,
     );
   }
 
+  /** Повторение — сперва пресеты, как в меню на десктопе; «Настроить…»
+   *  открывает полный лист. */
   function onOpenRepeat() {
     // Повторение считается от дедлайна — предлагать его раньше было бы
     // обманом: возвращаться задаче некуда.
     if (!task.dueAt) { showToast(t(LANG, 'repeat.needs_due')); return; }
-    openSheet(
-      <RepeatSheet
-        lang={LANG}
-        dueAt={task.dueAt}
-        rule={task.repeat}
-        onApply={(rule) => setTaskRepeat(taskId, rule)}
-        onClear={() => setTaskRepeat(taskId, null)}
-      />,
-    );
+    const items = [
+      { key: 'none', icon: !task.repeat ? 'check' : undefined, label: t(LANG, 'repeat.none'), onPress: () => setTaskRepeat(taskId, null) },
+      ...REPEAT_PRESETS.map((p) => ({
+        key: p.key,
+        icon: isPresetRule(task.repeat, p.freq, p.weekdays) ? 'check' : undefined,
+        label: t(LANG, `repeat.${p.key}`),
+        onPress: () => setTaskRepeat(taskId, presetRule(p.freq, p.weekdays)),
+      })),
+      {
+        key: 'custom', icon: 'settings', label: t(LANG, 'repeat.custom'), separated: true,
+        onPress: () => openSheet(
+          <RepeatSheet
+            lang={LANG}
+            dueAt={task.dueAt}
+            rule={task.repeat}
+            onApply={(rule) => setTaskRepeat(taskId, rule)}
+            onClear={() => setTaskRepeat(taskId, null)}
+          />,
+        ),
+      },
+    ];
+    openSheet(<MenuSheet title={t(LANG, 'repeat.label')} items={items} />);
+  }
+
+  function onAddSession() {
+    openSheet(<SessionSheet task={task} index={null} />);
+  }
+  function onEditSession(index) {
+    openSheet(<SessionSheet task={task} index={index} />);
   }
 
   useEffect(() => () => { clearTimeout(titleTimer.current); }, []);
@@ -271,22 +283,19 @@ export default function TaskDetailScreen({ route, navigation }) {
   if (!task) return null;
 
   const elapsedMs = isRunning ? Date.now() - new Date(activeTimer.startedAt).getTime() + (task.totalMs || 0) : (task.totalMs || 0);
-  const earned = earnedOf(task, hourlyRate, activeTimer);
+  const earned = earnedOf(task, rates, activeTimer);
+  const rateNow = effectiveRate(task, rates);
+  const baseRate = CoreMoney.baseRate(task, rates);
+  const sym = CURRENCY_SYMBOLS[currency] || currency;
   const sessions = [...(task.sessions || [])].map((s, i) => ({ s, i })).sort((a, b) => new Date(b.s.start) - new Date(a.s.start));
+  const notesEmpty = DocCore.isDocEmpty(DocCore.readNotes(task.notes));
 
-  // На Android и KeyboardAvoidingView behavior="height", и "padding" зависят
-  // от того, как ОС резайзит окно (windowSoftInputMode) — а под Expo Go этот
-  // манифест не наш, приложение грузится в чужой контейнер (см. историю
-  // правок этого файла: два предыдущих захода на "height" не сработали на
-  // реальном устройстве, хотя выглядели корректно и даже проверялись на
-  // эмуляторе). Вместо попытки угадать поведение автоматического режима —
-  // считаем сами: keyboardHeight уже отслеживается ниже (Keyboard.addListener)
-  // для автопрокрутки каретки, используем то же число напрямую как
-  // marginBottom тулбара и paddingBottom скролла на Android. Это не зависит
-  // ни от какого manifest/resize-режима — просто сдвигает контент на
-  // измеренную высоту клавиатуры, минуя автоматику совсем.
+  // На Android KeyboardAvoidingView зависит от того, как ОС резайзит окно
+  // (windowSoftInputMode) — под Expo Go этот манифест не наш. Считаем сами:
+  // высота клавиатуры уже отслеживается выше, используем её напрямую как
+  // paddingBottom прокрутки, пока открыты свойства с полем ставки.
   const isIOS = Platform.OS === 'ios';
-  const androidKeyboardOffset = !isIOS && tab === 'settings' ? keyboardHeight : 0;
+  const androidKeyboardOffset = !isIOS && tab === 'props' ? keyboardHeight : 0;
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={isIOS ? 'padding' : undefined}>
@@ -295,14 +304,13 @@ export default function TaskDetailScreen({ route, navigation }) {
         contentContainerStyle={[styles.scrollContent, androidKeyboardOffset ? { paddingBottom: androidKeyboardOffset } : null]}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          {/* Из какого проекта задача — первое, что нужно знать, открыв её
-              из поиска или мини-плеера: там контекста не было вовсе. */}
+        {/* Остров 1: из какого проекта задача, название, теги, заметки. */}
+        <Island>
           {project ? (
-            <Pressable style={styles.projectRow} onPress={onOpenProject}>
-              <View style={[styles.projectDot, { backgroundColor: project.color }]} />
-              <Text style={styles.projectName} numberOfLines={1}>{project.name}</Text>
-              <Icon name="chevron-right" size={12} color={colors.textDim} />
+            <Pressable style={styles.crumb} onPress={onOpenProject} hitSlop={6}>
+              <View style={[styles.crumbDot, { backgroundColor: project.color }]} />
+              <Text style={styles.crumbName} numberOfLines={1}>{project.name}</Text>
+              <Icon name="chevron-right" size={11} color={colors.textFaint} />
             </Pressable>
           ) : null}
           <TextInput
@@ -310,38 +318,20 @@ export default function TaskDetailScreen({ route, navigation }) {
             value={title}
             onChangeText={onTitleChange}
             placeholder={t(LANG, 'task.title_ph')}
-            placeholderTextColor={colors.textDim}
+            placeholderTextColor={colors.textFaint}
+            multiline
           />
-
-          <View style={styles.timerCard}>
-            <TaskClock task={task} elapsedMs={elapsedMs} />
-            <Pressable
-              style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
-              onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
-            >
-              <Icon name={isRunning ? 'pause' : 'play'} size={20} color={isRunning ? colors.accentText : colors.text} />
+          <View style={styles.tagsRow}>
+            {taskTags.length ? (
+              <TagBadgeRow tags={taskTags} onRemove={(tag) => setTaskTags(taskId, (task.tagIds || []).filter((x) => x !== tag.id))} />
+            ) : null}
+            <Pressable style={styles.tagAdd} onPress={onOpenTags} hitSlop={6} accessibilityLabel={t(LANG, 'tag.pick')}>
+              <Icon name="plus" size={11} color={colors.textDim} />
+              {taskTags.length ? null : <Text style={styles.tagAddText}>{t(LANG, 'tag.pick')}</Text>}
             </Pressable>
           </View>
-
-          {/* Ставка, срок и теги переехали во вкладку «Настройки» — как на
-              десктопе. Над вкладками остаётся то, ради чего задачу открывают:
-              название и таймер. */}
-          <View style={styles.tabRow}>
-            <Pressable style={[styles.tab, tab === 'notes' && styles.tabActive]} onPress={() => setTab('notes')}>
-              <Text style={[styles.tabText, tab === 'notes' && styles.tabTextActive]}>{t(LANG, 'tabs.notes')}</Text>
-            </Pressable>
-            <Pressable style={[styles.tab, tab === 'settings' && styles.tabActive]} onPress={() => setTab('settings')}>
-              <Text style={[styles.tabText, tab === 'settings' && styles.tabTextActive]}>{t(LANG, 'tabs.settings')}</Text>
-            </Pressable>
-            <Pressable style={[styles.tab, tab === 'history' && styles.tabActive]} onPress={() => setTab('history')}>
-              <Text style={[styles.tabText, tab === 'history' && styles.tabTextActive]}>{t(LANG, 'tabs.history')}</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {tab === 'notes' ? (
           <View style={styles.notes}>
-            {DocCore.isDocEmpty(DocCore.readNotes(task.notes)) ? (
+            {notesEmpty ? (
               <Pressable style={styles.notesEmpty} onPress={openEditor}>
                 <Text style={styles.notesEmptyText}>{t(LANG, 'editor.empty')}</Text>
               </Pressable>
@@ -353,138 +343,171 @@ export default function TaskDetailScreen({ route, navigation }) {
               <Icon name="chevron-right" size={12} color={colors.accentInk} />
             </Pressable>
           </View>
-        ) : tab === 'settings' ? (
-          <View style={styles.settingsPanel}>
-            <View style={styles.splitRow}>
-              <View style={styles.splitHalf}>
-                <Text style={styles.label}>{t(LANG, 'task.rate_label')}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={rateText}
-                  onChangeText={onRateChange}
-                  keyboardType="decimal-pad"
-                  placeholder={String(hourlyRate || 0)}
-                  placeholderTextColor={colors.textDim}
-                />
-              </View>
-              {/* Заработано стоит рядом со ставкой, а не отдельно: это её
-                  результат, и врозь они читаются хуже. */}
-              <View style={styles.splitHalf}>
-                <Text style={styles.label}>{t(LANG, 'task.earned_label')}</Text>
-                <View style={styles.earnedBox}>
-                  <Text style={styles.earnedValue}>{fmtMoney(earned, LANG, currency)}</Text>
-                </View>
-              </View>
-            </View>
+        </Island>
 
-            <Pressable style={styles.dueRow} onPress={onOpenDue}>
-              <Icon name="clock" size={15} color={colors.textDim} />
-              <View style={styles.dueMain}>
-                <Text style={styles.dueLabel}>{t(LANG, 'due.label')}</Text>
-                {task.dueAt ? (
-                  <Text style={styles.dueRemind}>{t(LANG, REMIND_LABEL[remindKey(task)])}</Text>
-                ) : null}
-              </View>
-              {task.dueAt ? (
-                <Text style={styles.dueValue}>{`${dueShort(task, LANG)}, ${fmtHm(task.dueAt)}`}</Text>
-              ) : (
-                <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
-              )}
-              <Icon name="chevron-right" size={14} color={colors.textDim} />
+        {/* Остров 2: таймер. Квадратная кнопка — старт, в работе — стоп. */}
+        <Island>
+          <View style={styles.timerRow}>
+            <Pressable
+              style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
+              onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
+              accessibilityRole="button"
+              accessibilityLabel={t(LANG, isRunning ? 'timer.stop' : 'timer.start')}
+            >
+              <Icon name={isRunning ? 'stop' : 'play'} size={18} color={isRunning ? colors.accentText : colors.text} />
             </Pressable>
-
-            {/* Теги задачи. Строка устроена как строка срока: подпись слева,
-                значение справа, тап открывает лист выбора. Бейджи переносятся
-                по строкам — их может быть больше, чем влезает в ширину. */}
-            <Pressable style={styles.dueRow} onPress={onOpenTags}>
-              <Icon name="pin" size={15} color={colors.textDim} />
-              <View style={styles.dueMain}>
-                <Text style={styles.dueLabel}>{t(LANG, 'tag.pick')}</Text>
-              </View>
-              {taskTags.length ? (
-                <TagBadgeRow tags={taskTags} style={styles.tagRowValue} />
-              ) : (
-                <Text style={styles.dueNone}>{t(LANG, 'tag.not_set')}</Text>
-              )}
-              <Icon name="chevron-right" size={14} color={colors.textDim} />
-            </Pressable>
-
-            {/* Статус задачи. Он же столбец на доске — менять его можно и
-                отсюда, не открывая доску. */}
-            <Pressable style={styles.dueRow} onPress={onOpenStatus}>
-              <Icon name="check" size={15} color={colors.textDim} />
-              <View style={styles.dueMain}>
-                <Text style={styles.dueLabel}>{t(LANG, 'task.status_label')}</Text>
-              </View>
-              {status ? (
-                <View style={styles.statusValue}>
-                  <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-                  <Text style={styles.dueValue}>{status.name}</Text>
-                </View>
-              ) : (
-                <Text style={styles.dueNone}>{t(LANG, 'due.none')}</Text>
-              )}
-              <Icon name="chevron-right" size={14} color={colors.textDim} />
-            </Pressable>
-
-            {/* Версия принадлежит проекту, поэтому строки нет, пока у него
-                не заведено ни одной. */}
-            {projectVersions.length ? (
-              <Pressable style={styles.dueRow} onPress={onOpenVersion}>
-                <Icon name="list-ordered" size={15} color={colors.textDim} />
-                <View style={styles.dueMain}>
-                  <Text style={styles.dueLabel}>{t(LANG, 'version.label')}</Text>
-                </View>
-                <Text style={version ? styles.dueValue : styles.dueNone}>
-                  {version ? version.name : t(LANG, 'version.none')}
-                </Text>
-                <Icon name="chevron-right" size={14} color={colors.textDim} />
-              </Pressable>
-            ) : null}
-
-            {/* Повторение — последним: оно про будущее задачи, а не про
-                то, чем она является сейчас. */}
-            <Pressable style={styles.dueRow} onPress={onOpenRepeat}>
-              <Icon name="clock" size={15} color={colors.textDim} />
-              <View style={styles.dueMain}>
-                <Text style={styles.dueLabel}>{t(LANG, 'repeat.label')}</Text>
-                {repeatNext ? <Text style={styles.dueRemind}>{repeatNext}</Text> : null}
-              </View>
-              <Text style={task.repeat ? styles.dueValue : styles.dueNone} numberOfLines={1}>
-                {repeatSummary || t(LANG, 'repeat.none')}
-              </Text>
-              <Icon name="chevron-right" size={14} color={colors.textDim} />
-            </Pressable>
-
-            {/* Удаление — последней строкой свойств, как на десктопе:
-                в шапке задачи остаётся одно название. */}
-            <PrimaryButton
-              title={t(LANG, 'task.delete_title')}
-              icon="trash"
-              variant="danger"
-              onPress={onDelete}
-              style={styles.deleteBtn}
-            />
+            <TaskClock task={task} elapsedMs={elapsedMs} />
           </View>
-        ) : (
-          <View style={styles.historyScroll}>
-            {sessions.length === 0 ? <Text style={styles.historyEmpty}>{t(LANG, 'history.empty')}</Text> : null}
-            {sessions.map(({ s, i }) => (
-              <View key={i} style={styles.sessionRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.sessionWhen}>{fmtWhen(s.start, LANG)}{s.recovered ? t(LANG, 'session.recovered') : s.manual ? t(LANG, 'session.manual') : ''}</Text>
-                  <Text style={styles.sessionMoney}>{fmtMoney(sessionMoney(s, task, hourlyRate), LANG, currency)}</Text>
-                </View>
-                <Text style={styles.sessionDur}>{fmtClock(s.ms)}</Text>
-                <Pressable hitSlop={10} onPress={() => onDeleteSession(i)} style={{ paddingLeft: spacing.sm }}>
-                  <Icon name="x" size={14} color={colors.textDim} />
-                </Pressable>
-              </View>
+          <Text style={styles.timerSub} numberOfLines={1}>
+            {isRunning
+              ? t(LANG, 'timer.recording', { time: fmtClock(Date.now() - new Date(activeTimer.startedAt).getTime()) })
+              : t(LANG, 'timer.sub_default')}
+          </Text>
+        </Island>
+
+        {/* Остров 3: свойства и история — переключается только он. */}
+        <Island>
+          <View style={styles.tabRow}>
+            {['props', 'history'].map((key) => (
+              <Pressable key={key} style={[styles.tab, tab === key && styles.tabActive]} onPress={() => setTab(key)}>
+                <Text style={[styles.tabText, tab === key && styles.tabTextActive]}>
+                  {t(LANG, key === 'props' ? 'task.props' : 'tabs.history')}
+                </Text>
+              </Pressable>
             ))}
           </View>
-        )}
-      </ScrollView>
 
+          {tab === 'props' ? (
+            <View>
+              <IslandRow first onPress={onOpenStatus}>
+                <Text style={styles.propLabel}>{t(LANG, 'task.status_label')}</Text>
+                <View style={{ flex: 1 }} />
+                {status ? (
+                  <View style={styles.statusValue}>
+                    <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+                    <Text style={styles.propValue} numberOfLines={1}>{status.name}</Text>
+                  </View>
+                ) : <Text style={styles.propNone}>{t(LANG, 'due.none')}</Text>}
+                <Icon name="chevron-right" size={12} color={colors.textFaint} />
+              </IslandRow>
+
+              {/* Версия принадлежит проекту, поэтому строки нет, пока у него
+                  не заведено ни одной. */}
+              {projectVersions.length ? (
+                <IslandRow onPress={onOpenVersion}>
+                  <Text style={styles.propLabel}>{t(LANG, 'version.label')}</Text>
+                  <View style={{ flex: 1 }} />
+                  <Text style={version ? styles.propValue : styles.propNone} numberOfLines={1}>
+                    {version ? version.name : t(LANG, 'version.none')}
+                  </Text>
+                  <Icon name="chevron-right" size={12} color={colors.textFaint} />
+                </IslandRow>
+              ) : null}
+
+              {/* Ставка: своя у задачи, иначе проекта или общая — подсказка
+                  говорит, какая. Под строкой — расчёт, как на десктопе. */}
+              <IslandRow style={styles.rateRow}>
+                <View style={styles.rateMain}>
+                  <Text style={styles.propLabel}>{t(LANG, 'task.rate_label')}</Text>
+                  <View style={{ flex: 1 }} />
+                  <TextInput
+                    style={styles.rateInput}
+                    value={rateText}
+                    onChangeText={onRateChange}
+                    keyboardType="decimal-pad"
+                    placeholder={String(baseRate || 0)}
+                    placeholderTextColor={colors.textFaint}
+                  />
+                  <Text style={styles.rateUnit}>{sym}{t(LANG, 'rate.per_hour')}</Text>
+                </View>
+                <Text style={styles.calc} numberOfLines={1}>
+                  {earnedShown(task, rates, earned)
+                    ? `${t(LANG, 'money.calc', { time: fmtShort(elapsedMs, LANG), rate: moneyFmt(LANG).format(rateNow), cur: sym })} ${fmtMoney(earned, LANG, currency)}`
+                    : (task.rate == null && project && project.rate != null && project.rate !== '')
+                      ? t(LANG, 'money.project_rate')
+                      : t(LANG, 'money.no_rate')}
+                </Text>
+              </IslandRow>
+
+              <IslandRow onPress={onOpenDue}>
+                <View style={styles.propMain}>
+                  <Text style={styles.propLabel}>{t(LANG, 'due.label')}</Text>
+                  {task.dueAt ? <Text style={styles.propSub}>{t(LANG, REMIND_LABEL[remindKey(task)])}</Text> : null}
+                </View>
+                {task.dueAt ? (
+                  <Text style={styles.propValue}>{`${dueShort(task, LANG)}, ${hm(task.dueAt)}`}</Text>
+                ) : (
+                  <Text style={styles.propNone}>{t(LANG, 'due.none')}</Text>
+                )}
+                <Icon name="chevron-right" size={12} color={colors.textFaint} />
+              </IslandRow>
+
+              {/* Повторение — последним: оно про будущее задачи, а не про
+                  то, чем она является сейчас. Без дедлайна строка тихая. */}
+              <IslandRow onPress={onOpenRepeat}>
+                <View style={styles.propMain}>
+                  <Text style={styles.propLabel}>{t(LANG, 'repeat.label')}</Text>
+                  {repeatNext ? <Text style={styles.propSub}>{repeatNext}</Text> : null}
+                </View>
+                <Text style={task.repeat ? styles.propValue : styles.propNone} numberOfLines={1}>
+                  {repeatSummary || t(LANG, 'repeat.none')}
+                </Text>
+                <Icon name="chevron-right" size={12} color={colors.textFaint} />
+              </IslandRow>
+
+              <View style={styles.actions}>
+                <PrimaryButton
+                  compact
+                  variant="ghost"
+                  icon={task.done ? undefined : 'check'}
+                  title={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')}
+                  onPress={() => setTaskDone(taskId, !task.done)}
+                  style={styles.actionBtn}
+                  shrinkText
+                />
+                <PrimaryButton
+                  compact
+                  variant="danger"
+                  icon="trash"
+                  title={t(LANG, 'common.delete')}
+                  onPress={onDelete}
+                  style={styles.actionBtn}
+                  shrinkText
+                />
+              </View>
+            </View>
+          ) : (
+            <View>
+              <View style={styles.historyHead}>
+                <Text style={styles.historyCount}>{t(LANG, 'history.count', { n: sessions.length })}</Text>
+                <View style={{ flex: 1 }} />
+                <Pressable style={styles.addBtn} onPress={onAddSession} hitSlop={6} accessibilityRole="button">
+                  <Icon name="plus" size={12} color={colors.accentText} />
+                  <Text style={styles.addBtnText}>{t(LANG, 'history.add_short')}</Text>
+                </Pressable>
+              </View>
+              {sessions.length === 0 ? <Text style={styles.historyEmpty}>{t(LANG, 'history.empty')}</Text> : null}
+              {sessions.map(({ s, i }, k) => (
+                <IslandRow key={`${s.start}-${i}`} first={k === 0} onPress={() => onEditSession(i)}>
+                  <View style={styles.sessionMain}>
+                    <Text style={styles.sessionWhen} numberOfLines={1}>
+                      {fmtWhen(s.start, LANG)}{s.recovered ? t(LANG, 'session.recovered') : s.manual ? t(LANG, 'session.manual') : ''}
+                    </Text>
+                    <Text style={styles.sessionMoney}>{fmtMoney(sessionMoney(s, task, rates), LANG, currency)}</Text>
+                  </View>
+                  <Text style={styles.sessionDur}>{fmtClock(s.ms)}</Text>
+                  <Pressable hitSlop={10} onPress={() => onDeleteSession(i)} style={styles.sessionDel} accessibilityLabel={t(LANG, 'session.delete_title')}>
+                    <Icon name="x" size={13} color={colors.textFaint} />
+                  </Pressable>
+                </IslandRow>
+              ))}
+              {sessions.length ? (
+                <PrimaryButton compact variant="ghost" icon="download" title={t(LANG, 'export.short')} onPress={onExport} style={styles.excelBtn} />
+              ) : null}
+            </View>
+          )}
+        </Island>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -492,85 +515,63 @@ export default function TaskDetailScreen({ route, navigation }) {
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  scrollContent: { flexGrow: 1 },
-  header: { padding: spacing.lg, paddingBottom: spacing.sm },
-  notes: { marginHorizontal: spacing.lg, marginBottom: spacing.lg, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.panel, gap: spacing.sm },
-  notesEmpty: { paddingVertical: spacing.xl, alignItems: 'center' },
-  notesEmptyText: { color: colors.textFaint, fontSize: fontSize.sm, textAlign: 'center' },
-  openEditor: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 44, borderRadius: radius.md, backgroundColor: colors.panel2 },
-  openEditorText: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: '600' },
+  scrollContent: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xl, gap },
   menuBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  // Высота 44 — не для красоты: строка узкая, а промахиваться по ней
-  // означает уехать в чужой проект.
-  projectRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    height: 44,
+
+  crumb: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 24 },
+  crumbDot: { width: 8, height: 8, borderRadius: 2 },
+  crumbName: { color: colors.textDim, fontSize: fontSize.sm, flexShrink: 1 },
+  titleInput: { color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.bold, paddingVertical: spacing.xs, paddingHorizontal: 0, backgroundColor: 'transparent' },
+  tagsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+  tagAdd: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, height: 24, paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill, backgroundColor: colors.panel2,
   },
-  projectDot: { width: 8, height: 8, borderRadius: 3 },
-  projectName: { color: colors.textDim, fontSize: fontSize.sm },
-  // marginBottom меньше, чем зазор между остальными блоками ниже (timerCard/
-  // splitRow/tabRow держат spacing.lg сами) — раньше был общий gap на .header,
-  // одинаковый везде; тут именно название-таймер должен быть теснее.
-  titleInput: { color: colors.text, ...typography.title, paddingVertical: spacing.sm, marginBottom: spacing.xs },
-  timerCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.lg,
-  },
-  timerBtn: {
-    width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.panel2,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  tagAddText: { color: colors.textDim, fontSize: fontSize.xs },
+  notes: { marginTop: spacing.md, gap: spacing.sm },
+  notesEmpty: { paddingVertical: spacing.lg, alignItems: 'center', borderRadius: radius.md, backgroundColor: colors.panel2 },
+  notesEmptyText: { color: colors.textFaint, fontSize: fontSize.sm, textAlign: 'center' },
+  openEditor: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 40, borderRadius: radius.md, backgroundColor: colors.panel2 },
+  openEditorText: { color: colors.accentInk, fontSize: fontSize.sm, fontWeight: '600' },
+
+  timerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  timerBtn: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   timerBtnOn: { backgroundColor: colors.accent },
-  label: { color: colors.textDim, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  input: {
-    backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
-    textAlignVertical: 'center',
-  },
-  splitRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
-  splitHalf: { flex: 1, gap: spacing.xs },
-  // Та же геометрия, что у поля ставки слева (minHeight 48, тот же
-  // горизонтальный паддинг), сумма прижата к левому краю и отцентрована по
-  // вертикали контейнером, а не текстовыми свойствами — textAlignVertical
-  // работает только на Android.
-  earnedBox: {
-    backgroundColor: colors.panel, borderRadius: radius.md, minHeight: 48,
-    paddingHorizontal: spacing.md, justifyContent: 'center',
-  },
-  earnedValue: { color: colors.accentInk, fontSize: fontSize.md, fontWeight: '700' },
-  dueRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.panel, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, marginBottom: spacing.lg,
-  },
-  dueMain: { flex: 1 },
-  dueLabel: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
-  dueRemind: { color: colors.textDim, fontSize: fontSize.xs, marginTop: 1 },
-  dueValue: { color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
-  // Бейджи выравниваются вправо, как и остальные значения в этих строках,
-  // и переносятся: их может быть больше, чем влезает в одну строку.
-  tagRowValue: { flex: 1, justifyContent: "flex-end" },
-  deleteBtn: { marginTop: spacing.lg },
-  statusValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
-  statusDot: { width: 8, height: 8, borderRadius: 3 },
-  dueNone: { color: colors.textDim, fontSize: fontSize.sm },
-  tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
+  timerSub: { color: colors.textFaint, fontSize: fontSize.xs, marginTop: spacing.sm, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+
+  tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 3, marginBottom: spacing.xs },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
   tabActive: { backgroundColor: colors.tabActiveBg },
   tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  // См. комментарий у modeTextActive в CalendarScreen.js — тот же принцип.
   tabTextActive: { color: colors.text },
-  // Те же поля и отступы, что были над вкладками, — переехал только адрес.
-  // Воздух между полосой вкладок и первой подписью: без него подпись
-  // «Ставка в час» прилипала к вкладкам. На десктопе исправлено тем же.
-  settingsPanel: { padding: spacing.lg, paddingTop: spacing.md, gap: spacing.sm },
-  historyScroll: { padding: spacing.lg, paddingTop: 0, gap: spacing.sm },
-  historyEmpty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.lg },
-  sessionRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.panel, borderRadius: radius.md, padding: spacing.md,
+
+  propMain: { flex: 1, minWidth: 0, gap: 1 },
+  propLabel: { color: colors.textDim, fontSize: fontSize.sm },
+  propSub: { color: colors.textFaint, fontSize: fontSize.xs },
+  propValue: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
+  propNone: { color: colors.textFaint, fontSize: fontSize.sm },
+  statusValue: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
+  statusDot: { width: 8, height: 8, borderRadius: 2 },
+  rateRow: { flexDirection: 'column', alignItems: 'stretch', gap: spacing.xs },
+  rateMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rateInput: {
+    width: 88, textAlign: 'right', backgroundColor: colors.inputBg, borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm, paddingVertical: 6, color: colors.text, fontSize: fontSize.sm,
   },
+  rateUnit: { color: colors.textFaint, fontSize: fontSize.xs },
+  calc: { color: colors.textFaint, fontSize: fontSize.xs },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  actionBtn: { flex: 1, width: undefined },
+
+  historyHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+  historyCount: { color: colors.textFaint, fontSize: fontSize.xs },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 30, paddingHorizontal: spacing.md, borderRadius: radius.sm, backgroundColor: colors.accent },
+  addBtnText: { color: colors.accentText, fontSize: fontSize.xs, fontWeight: '700' },
+  historyEmpty: { color: colors.textFaint, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
+  sessionMain: { flex: 1, minWidth: 0, gap: 2 },
   sessionWhen: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
-  sessionMoney: { color: colors.textDim, fontSize: fontSize.xs, marginTop: 2 },
+  sessionMoney: { color: colors.textFaint, fontSize: fontSize.xs },
   sessionDur: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  sessionDel: { paddingLeft: spacing.xs },
+  excelBtn: { marginTop: spacing.md },
 });

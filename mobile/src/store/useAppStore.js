@@ -14,6 +14,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyState, migrate, uid, PALETTE } from '../lib/migrate';
 import { scheduleTaskReminder, cancelTaskReminder, rescheduleAll } from '../lib/notifications';
 import { effectiveRate, earnedOf, taskElapsedMs } from '../lib/format';
+import { ratesOf } from '../lib/rates';
+import CoreMoney from '../core/money.js';
 import { seedProjectStatuses, defaultStatusId, getStatus, orderedStatuses, planStatusDelete, planTaskDone } from '../lib/statuses';
 import { t } from '../lib/i18n';
 import Repeat from '../core/repeat.js';
@@ -49,7 +51,7 @@ export const useAppStore = create(
       },
 
       // --- проекты ---
-      createProject({ name, color, description, tagIds }) {
+      createProject({ name, color, description, tagIds, rate, currency }) {
         const now = new Date().toISOString();
         const project = {
           id: uid(),
@@ -57,6 +59,10 @@ export const useAppStore = create(
           color: color || PALETTE[get().projects.length % PALETTE.length],
           description: description || '',
           tagIds: Array.isArray(tagIds) ? tagIds : [],
+          // Своя ставка и валюта проекта (7 октября 2026): пусто — общие из
+          // настроек. Правила расчёта — core/money.js.
+          rate: rate === undefined || rate === '' ? null : rate,
+          currency: currency || null,
           createdAt: now,
           pinnedAt: null,
         };
@@ -84,6 +90,8 @@ export const useAppStore = create(
           return {
             tasks: s.tasks.filter((task) => task.projectId !== id),
             projects: s.projects.filter((p) => p.id !== id),
+            // Свои теги проекта уходят вместе с ним; общие остаются.
+            tags: s.tags.filter((tg) => tg.projectId !== id),
             // Документы проекта не удаляются вместе с ним — становятся общими.
             documents: (s.documents || []).map((d) => (d.projectId === id ? { ...d, projectId: null } : d)),
             activeTimer: dropActiveTimer ? null : s.activeTimer,
@@ -131,13 +139,14 @@ export const useAppStore = create(
         return task;
       },
       // --- теги ---
-      // Общие на всё приложение: один тег живёт и на проекте, и на задаче в
-      // любом другом проекте. Чистая часть — в lib/tags.js.
-      createTag({ name, color }) {
+      // Общие (без projectId) видны во всех проектах; свои у проекта — только
+      // в нём (core/tags.js, tagsForProject). Чистая часть — в lib/tags.js.
+      createTag({ name, color, projectId }) {
         const tag = {
           id: uid(),
           name: (name || '').trim(),
           color: color || PALETTE[get().tags.length % PALETTE.length],
+          projectId: projectId || null,
         };
         set((s) => ({ tags: [...s.tags, tag] }));
         return tag;
@@ -394,7 +403,7 @@ export const useAppStore = create(
                     ...task,
                     sessions: [
                       ...(task.sessions || []),
-                      { start: startedAt, end: end.toISOString(), ms, rate: effectiveRate(task, s.settings.hourlyRate) },
+                      { start: startedAt, end: end.toISOString(), ms, rate: effectiveRate(task, ratesOf(s.settings, s.projects)) },
                     ],
                     totalMs: (task.totalMs || 0) + ms,
                     updatedAt: end.toISOString(),
@@ -402,6 +411,67 @@ export const useAppStore = create(
                 : task))
             : s.tasks,
           activeTimer: null,
+        }));
+      },
+
+      // --- записи времени ---
+      // Правило — в ядре (core/money.js, planSessionEdit): ставка запоминается
+      // такой, какая сейчас, у правленой записи остаётся прежняя. Здесь
+      // только применение к задаче, как applySessionEdit на десктопе.
+
+      /** Новая запись (index null) или правка записи по индексу. span —
+       *  { start, end, ms } из lib/sessions.js. */
+      saveSession(taskId, index, span) {
+        const task = get().tasks.find((t2) => t2.id === taskId);
+        if (!task || !span) return;
+        const upd = CoreMoney.planSessionEdit(task, index, span, ratesOf(get().settings, get().projects), Date.now());
+        set((s) => ({ tasks: s.tasks.map((t2) => (t2.id === taskId ? { ...t2, ...upd } : t2)) }));
+      },
+
+      deleteSession(taskId, index) {
+        set((s) => ({
+          tasks: s.tasks.map((t2) => {
+            if (t2.id !== taskId || !t2.sessions || !t2.sessions[index]) return t2;
+            const removed = t2.sessions[index];
+            return {
+              ...t2,
+              sessions: t2.sessions.filter((_, i) => i !== index),
+              totalMs: Math.max(0, (t2.totalMs || 0) - (removed.ms || 0)),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
+      },
+
+      /** Переписывает время записи, сохраняя всё остальное: ставку и пометки
+       *  о ручном вводе и восстановлении. Происхождение записи не меняется
+       *  от того, что её подвинули на сетке. */
+      setSessionSpan(taskId, index, startMs, endMs) {
+        set((s) => ({
+          tasks: s.tasks.map((t2) => {
+            const old = t2.id === taskId && t2.sessions ? t2.sessions[index] : null;
+            if (!old) return t2;
+            const ms = endMs - startMs;
+            const sessions = t2.sessions.slice();
+            sessions[index] = { ...old, start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString(), ms };
+            return { ...t2, sessions, totalMs: Math.max(0, (t2.totalMs || 0) - (old.ms || 0) + ms), updatedAt: new Date().toISOString() };
+          }),
+        }));
+      },
+
+      /** Запись, заведённая прямо на сетке: ставка такая, какая сейчас. */
+      addSessionSpan(taskId, startMs, endMs) {
+        const ms = endMs - startMs;
+        set((s) => ({
+          tasks: s.tasks.map((t2) => (t2.id === taskId ? {
+            ...t2,
+            sessions: [...(t2.sessions || []), {
+              start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString(), ms,
+              rate: effectiveRate(t2, ratesOf(s.settings, s.projects)), manual: true,
+            }],
+            totalMs: (t2.totalMs || 0) + ms,
+            updatedAt: new Date().toISOString(),
+          } : t2)),
         }));
       },
 
@@ -529,6 +599,21 @@ export const useAppStore = create(
       markSwipeHintShown() {
         set((s) => ({ ui: { ...s.ui, homeSwipeHintShown: true } }));
       },
+      /** Свёрнутые группы списка задач — по проектам, только на этом
+       *  устройстве: положение экрана, а не данные. */
+      /** «Свернуть статистику» на «Времени» — как state.ui.timeStatsHidden
+       *  на вебе: способ смотреть, а не данные. */
+      toggleTimeStats() {
+        set((s) => ({ ui: { ...s.ui, timeStatsHidden: !s.ui.timeStatsHidden } }));
+      },
+      toggleListGroup(projectId, key) {
+        set((s) => {
+          const all = s.ui.listCollapsed || {};
+          const mine = all[projectId] || [];
+          const next = mine.includes(key) ? mine.filter((x) => x !== key) : [...mine, key];
+          return { ui: { ...s.ui, listCollapsed: { ...all, [projectId]: next } } };
+        });
+      },
       /** Свёрнутые ряды версий — тоже по проектам и тоже только на этом
        *  устройстве: это положение экрана, а не данные. */
       toggleBoardLane(projectId, laneId) {
@@ -587,17 +672,21 @@ export const projectMs = (tasks, projectId, activeTimer) =>
 export const projectMoney = (tasks, projectId, hourlyRate, activeTimer) =>
   tasksOf(tasks, projectId).reduce((a, task) => a + earnedOf(task, hourlyRate, activeTimer), 0);
 
-/** Порт recentTasks() из app.js:1495-1508 — незавершённые задачи, по
- * которым недавно была активность (сессия или правка), новые сверху. */
-export function recentTasks(tasks, limit) {
+/** Когда по задаче последний раз шло время; 0 — записей не было. Идущая
+ *  считается идущей сейчас. Недавнее — это то, над чем работали, а не то,
+ *  что только что завели (то же правило, что lastSessionAt на десктопе). */
+export function lastSessionAt(task, activeTimer) {
+  let last = 0;
+  for (const s of task.sessions || []) last = Math.max(last, new Date(s.end || s.start).getTime());
+  if (activeTimer && activeTimer.taskId === task.id) last = Math.max(last, Date.now());
+  return last;
+}
+
+/** Незавершённые задачи, по которым недавно шло время, свежие сверху. */
+export function recentTasks(tasks, limit, activeTimer) {
   return tasks
     .filter((task) => !task.done)
-    .map((task) => {
-      let last = 0;
-      for (const s of task.sessions || []) last = Math.max(last, new Date(s.end || s.start).getTime());
-      if (!last) last = new Date(task.updatedAt || task.createdAt || 0).getTime();
-      return { task, last };
-    })
+    .map((task) => ({ task, last: lastSessionAt(task, activeTimer) }))
     .filter((x) => x.last > 0)
     .sort((a, b) => b.last - a.last)
     .slice(0, limit)

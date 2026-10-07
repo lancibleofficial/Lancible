@@ -89,8 +89,6 @@ const MOBILE_LEGIT = {
   'components/AuthSheet.js "#34A853"': 1,
   'components/AuthSheet.js "#FBBC05"': 1,
   'components/AuthSheet.js "#EA4335"': 1,
-  // Тень панели вкладок чёрная в обеих темах.
-  "navigation/MainTabBar.js '#000'": 1,
   // Подложка тега считается из цвета, который выбрал пользователь.
   'lib/tags.js rgba(${r}, ${g}, ${b}, ${alpha})': 1,
 };

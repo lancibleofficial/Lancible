@@ -54,8 +54,8 @@ export function emptyState() {
     // а значит остаются на устройстве и не ездят в синхронизации.
     ui: {
       view: 'home', projectId: null, boardProjectId: null,
-      boardVersion: {}, boardCollapsed: {},
-      quickAddProjectId: null, homeSwipeHintShown: false,
+      boardVersion: {}, boardCollapsed: {}, listCollapsed: {},
+      quickAddProjectId: null, homeSwipeHintShown: false, timeStatsHidden: false,
     },
     settings: { hourlyRate: 0, currency: 'RUB', theme: 'system', lang: 'ru', syncEnabled: true, notifyEnabled: true, syncResolvedFor: null },
   };
@@ -79,8 +79,9 @@ function fixUi(state, { known, fallback }) {
   };
   state.ui.boardVersion = byProject(state.ui.boardVersion);
   state.ui.boardCollapsed = byProject(state.ui.boardCollapsed);
-  for (const id of Object.keys(state.ui.boardCollapsed)) {
-    if (!Array.isArray(state.ui.boardCollapsed[id])) state.ui.boardCollapsed[id] = [];
+  state.ui.listCollapsed = byProject(state.ui.listCollapsed);
+  for (const bag of [state.ui.boardCollapsed, state.ui.listCollapsed]) {
+    for (const id of Object.keys(bag)) if (!Array.isArray(bag[id])) bag[id] = [];
   }
 }
 

@@ -15,8 +15,10 @@ import { useColors, spacing, radius, fontSize, typography } from '../theme';
  *  когда появится, встанет в этот же лист третьим полем.
  *  @param {object} [tag] — правим существующий или заводим новый
  *  @param {string} [presetName] — имя, набранное в пикере
+ *  @param {string} [projectId] — новый тег будет тегом этого проекта;
+ *    без него — общий. Имя занято только в своей области видимости.
  *  @param {function} [onSaved] — что сделать с созданным тегом */
-export default function TagEditSheet({ tag, presetName, onSaved }) {
+export default function TagEditSheet({ tag, presetName, projectId, onSaved }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
@@ -36,7 +38,8 @@ export default function TagEditSheet({ tag, presetName, onSaved }) {
     if (!trimmed) return;
     // Два тега с одинаковым именем на глаз не различить — отказываем с
     // объяснением, а не заводим молча второй.
-    if (nameTaken(tags, trimmed, tag ? tag.id : null)) {
+    const scope = tag ? tag.projectId : projectId;
+    if (nameTaken(tags, trimmed, tag ? tag.id : null, scope || null)) {
       setError(t(lang, 'tag.name_taken'));
       return;
     }
@@ -44,7 +47,7 @@ export default function TagEditSheet({ tag, presetName, onSaved }) {
       updateTag(tag.id, { name: trimmed, color });
       closeSheet();
     } else {
-      const made = createTag({ name: trimmed, color });
+      const made = createTag({ name: trimmed, color, projectId: projectId || null });
       closeSheet();
       if (onSaved) onSaved(made);
     }
@@ -81,7 +84,7 @@ export default function TagEditSheet({ tag, presetName, onSaved }) {
 
   return (
     <View style={styles.content}>
-      <Text style={styles.title}>{t(lang, tag ? 'tag.dialog_edit' : 'tag.dialog_new')}</Text>
+      <Text style={styles.title}>{t(lang, tag ? 'tag.dialog_edit' : projectId ? 'tag.project_add' : 'tag.dialog_new')}</Text>
 
       <TextInput
         style={styles.input}
