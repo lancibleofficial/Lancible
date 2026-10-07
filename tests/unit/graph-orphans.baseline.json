@@ -989,37 +989,37 @@
       "id": "src_editor_drawing_drawingview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/drawing.js",
-      "at": "L249"
+      "at": "L271"
     },
     {
       "id": "src_editor_drawing_drawingview_destroy",
       "label": ".destroy()",
       "file": "src/editor/drawing.js",
-      "at": "L255"
+      "at": "L277"
     },
     {
       "id": "src_editor_drawing_drawingview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/drawing.js",
-      "at": "L253"
+      "at": "L275"
     },
     {
       "id": "src_editor_drawing_drawingview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/drawing.js",
-      "at": "L247"
+      "at": "L269"
     },
     {
       "id": "src_editor_drawing_drawingview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/drawing.js",
-      "at": "L251"
+      "at": "L273"
     },
     {
       "id": "src_editor_drawing_drawingview_update",
       "label": ".update()",
       "file": "src/editor/drawing.js",
-      "at": "L234"
+      "at": "L256"
     },
     {
       "id": "src_editor_find_findbar_constructor",
@@ -1079,139 +1079,139 @@
       "id": "src_editor_index_decorationsetfor",
       "label": "DecorationSetFor()",
       "file": "src/editor/index.js",
-      "at": "L888"
+      "at": "L909"
     },
     {
       "id": "src_editor_index_editor_chartfromtable",
       "label": ".chartFromTable()",
       "file": "src/editor/index.js",
-      "at": "L738"
+      "at": "L759"
     },
     {
       "id": "src_editor_index_editor_constructor",
       "label": ".constructor()",
       "file": "src/editor/index.js",
-      "at": "L169"
+      "at": "L172"
     },
     {
       "id": "src_editor_index_editor_copymarkdown",
       "label": ".copyMarkdown()",
       "file": "src/editor/index.js",
-      "at": "L803"
+      "at": "L824"
     },
     {
       "id": "src_editor_index_editor_destroy",
       "label": ".destroy()",
       "file": "src/editor/index.js",
-      "at": "L877"
+      "at": "L898"
     },
     {
       "id": "src_editor_index_editor_exportas",
       "label": ".exportAs()",
       "file": "src/editor/index.js",
-      "at": "L795"
+      "at": "L816"
     },
     {
       "id": "src_editor_index_editor_imagefromurl",
       "label": ".imageFromUrl()",
       "file": "src/editor/index.js",
-      "at": "L692"
+      "at": "L713"
     },
     {
       "id": "src_editor_index_editor_print",
       "label": ".print()",
       "file": "src/editor/index.js",
-      "at": "L814"
+      "at": "L835"
     },
     {
       "id": "src_editor_index_editor_setcontent",
       "label": ".setContent()",
       "file": "src/editor/index.js",
-      "at": "L442"
+      "at": "L452"
     },
     {
       "id": "src_editor_index_editor_seteditable",
       "label": ".setEditable()",
       "file": "src/editor/index.js",
-      "at": "L463"
+      "at": "L473"
     },
     {
       "id": "src_editor_index_editor_threads",
       "label": ".threads()",
       "file": "src/editor/index.js",
-      "at": "L461"
+      "at": "L471"
     },
     {
       "id": "src_editor_index_editor_user",
       "label": ".user()",
       "file": "src/editor/index.js",
-      "at": "L474"
+      "at": "L484"
     },
     {
       "id": "src_editor_ink_inkinput_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L335"
+      "at": "L345"
     },
     {
       "id": "src_editor_ink_inkinput_destroy",
       "label": ".destroy()",
       "file": "src/editor/ink.js",
-      "at": "L424"
+      "at": "L434"
     },
     {
       "id": "src_editor_ink_inkinput_ondown",
       "label": ".onDown()",
       "file": "src/editor/ink.js",
-      "at": "L384"
+      "at": "L394"
     },
     {
       "id": "src_editor_ink_inkinput_onmove",
       "label": ".onMove()",
       "file": "src/editor/ink.js",
-      "at": "L407"
+      "at": "L417"
     },
     {
       "id": "src_editor_ink_inkinput_ontouch",
       "label": ".onTouch()",
       "file": "src/editor/ink.js",
-      "at": "L377"
+      "at": "L387"
     },
     {
       "id": "src_editor_ink_inkinput_onup",
       "label": ".onUp()",
       "file": "src/editor/ink.js",
-      "at": "L417"
+      "at": "L427"
     },
     {
       "id": "src_editor_ink_inksurface_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L449"
+      "at": "L459"
     },
     {
       "id": "src_editor_ink_inksurface_destroy",
       "label": ".destroy()",
       "file": "src/editor/ink.js",
-      "at": "L724"
+      "at": "L735"
     },
     {
       "id": "src_editor_ink_inktoolbar_colormenu",
       "label": ".colorMenu()",
       "file": "src/editor/ink.js",
-      "at": "L825"
+      "at": "L872"
     },
     {
       "id": "src_editor_ink_inktoolbar_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L747"
+      "at": "L758"
     },
     {
       "id": "src_editor_ink_inktoolbar_set",
       "label": ".set()",
       "file": "src/editor/ink.js",
-      "at": "L755"
+      "at": "L766"
     },
     {
       "id": "src_editor_menus_blockhandle_constructor",
@@ -1259,19 +1259,19 @@
       "id": "src_editor_overlay_inkoverlay_constructor",
       "label": ".constructor()",
       "file": "src/editor/overlay.js",
-      "at": "L18"
+      "at": "L19"
     },
     {
       "id": "src_editor_overlay_inkoverlay_destroy",
       "label": ".destroy()",
       "file": "src/editor/overlay.js",
-      "at": "L177"
+      "at": "L216"
     },
     {
       "id": "src_editor_overlay_inkoverlay_seton",
       "label": ".setOn()",
       "file": "src/editor/overlay.js",
-      "at": "L148"
+      "at": "L186"
     },
     {
       "id": "src_editor_schema_colormark",
@@ -1325,7 +1325,7 @@
       "id": "src_editor_toolbar_toolbar_update",
       "label": ".update()",
       "file": "src/editor/toolbar.js",
-      "at": "L232"
+      "at": "L233"
     },
     {
       "id": "src_editor_views_codeblockview_constructor",
@@ -1824,6 +1824,12 @@
       "label": "savedNotes()",
       "file": "tests/e2e/editor.spec.js",
       "at": "L52"
+    },
+    {
+      "id": "tests_e2e_editor_spec_scribble",
+      "label": "scribble()",
+      "file": "tests/e2e/editor.spec.js",
+      "at": "L363"
     },
     {
       "id": "tests_e2e_editor_spec_tableshape",

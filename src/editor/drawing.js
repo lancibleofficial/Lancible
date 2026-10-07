@@ -9,7 +9,7 @@
 // На другой ширине рисунок целиком масштабируется. Холст сам растёт вниз,
 // когда рисуешь у нижнего края.
 import { h, icon, debounce, downloadBlob } from './util.js';
-import { InkSurface, InkToolbar, BACKGROUNDS, strokeBounds, strokesToPng, resolveInkColor } from './ink.js';
+import { InkSurface, InkToolbar, BACKGROUNDS, strokeBounds, strokesToPng, resolveInkColor, fingerDraws } from './ink.js';
 import { menu } from './ui.js';
 
 const GROW_MARGIN = 60;
@@ -34,7 +34,8 @@ export class DrawingView {
       surface: () => this.surface,
       settings: () => ctx.inkSettings(),
       setSettings: (patch) => { ctx.setInkSettings(patch); this.syncCursor(); this.toolbar.render(); },
-      extra: () => this.extraButtons(),
+      rows: !!ctx.mobile,
+      extra: (bar) => this.extraButtons(bar),
     });
     this.toolbar.dom.classList.add('led-draw-bar');
     this.dom = h('div', { class: 'led-drawing', contenteditable: 'false' }, this.toolbar.dom, this.area, this.grip);
@@ -109,15 +110,24 @@ export class DrawingView {
   syncCursor() {
     const s = this.ctx.inkSettings();
     this.area.dataset.tool = s.tool;
-    // Пальцы прокручивают, пока холст не открыт или когда рисовать можно
-    // только пером; иначе касание — штрих, и прокрутку надо выключить.
-    this.area.dataset.touch = this.active && s.stylus === 'any' ? 'draw' : 'scroll';
+    // Пальцы прокручивают, пока холст не открыт или когда палец не рисует
+    // (переключатель в панели); иначе касание — штрих, и прокрутку надо
+    // выключить.
+    this.area.dataset.touch = this.active && fingerDraws(s, this.surface && this.surface.input) ? 'draw' : 'scroll';
   }
 
-  extraButtons() {
+  extraButtons(bar) {
     const t = this.t;
     // Панель собирается раньше самого блока — this.dom тогда ещё нет.
     const full = !!this.dom && this.dom.classList.contains('full');
+    if (this.ctx.mobile) {
+      // Телефон: фон, размер и настройки — в «ещё», чтобы ряд влез.
+      const more = h('button', { type: 'button', class: 'led-btn', title: t('more'), 'aria-label': t('more'), onclick: () => this.moreMenu(more, bar) }, icon('more'));
+      return [
+        more,
+        h('button', { type: 'button', class: 'led-btn led-draw-done led-ink-done', title: t('draw.done'), 'aria-label': t('draw.done'), onclick: () => this.deactivate() }, icon('check')),
+      ];
+    }
     return [
       h('span', { class: 'led-bar-sep' }),
       h('button', { type: 'button', class: 'led-btn', title: t('draw.background'), onclick: (e) => this.bgMenu(e.currentTarget) }, icon('rows')),
@@ -134,8 +144,20 @@ export class DrawingView {
     })));
   }
 
-  moreMenu(anchor) {
+  moreMenu(anchor, bar) {
+    const full = this.dom.classList.contains('full');
+    const phone = bar ? [
+      { heading: this.t('draw.background') },
+      ...BACKGROUNDS.map((b) => ({
+        label: this.t(`draw.bg_${b}`), active: (this.node.attrs.bg || 'plain') === b,
+        run: () => { this.flush({ bg: b }); this.ctx.setInkSettings({ bg: b }); },
+      })),
+      'sep',
+      { label: this.t(full ? 'draw.exit_full' : 'draw.full'), icon: full ? 'minimize' : 'maximize', run: () => this.toggleFull() },
+      { label: this.t('ink.settings'), icon: 'settings', run: () => bar.settingsPanel(anchor) },
+    ] : [];
     menu(this.ctx.root, anchor, [
+      ...phone,
       { label: this.t('draw.download'), icon: 'download', run: () => this.download() },
       { label: this.t('draw.clear'), icon: 'eraser', run: () => this.surface.clear() },
       'sep',

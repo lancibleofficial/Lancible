@@ -212,6 +212,7 @@ export class Toolbar {
       { label: ed.t('view.smart'), icon: 'quote', active: s.smart, run: set({ smart: !s.smart }) },
       { label: ed.t('view.spellcheck'), icon: 'check', active: s.spellcheck, run: set({ spellcheck: !s.spellcheck }) },
       { label: ed.t('view.stats'), icon: 'text', active: s.stats, run: set({ stats: !s.stats }) },
+      { label: ed.t('view.show_ink'), icon: s.inkHidden ? 'eyeOff' : 'eye', active: !s.inkHidden, run: set({ inkHidden: !s.inkHidden }) },
       'sep',
       { label: ed.t(ed.fullscreen ? 'view.exit_fullscreen' : 'view.fullscreen'), icon: ed.fullscreen ? 'minimize' : 'fullscreen', kbd: 'Mod-Shift-Enter', run: () => ed.toggleFullscreen() },
     ], { class: 'led-view-menu' });

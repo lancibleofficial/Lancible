@@ -358,3 +358,154 @@ test('Tab в последней ячейке добавляет строку, а
   await page.keyboard.type('новая');
   await expect(pm(page).locator('table tr').nth(2).locator('td').first()).toHaveText('новая');
 });
+
+/** Провести штрих мышью по слою пометок над абзацем. */
+async function scribble(page, box, dy) {
+  await page.mouse.move(box.x + 12, box.y + (dy || 8));
+  await page.mouse.down();
+  for (let i = 1; i <= 15; i++) await page.mouse.move(box.x + 12 + i * 9, box.y + (dy || 8) + (i % 3) * 4);
+  await page.mouse.up();
+}
+
+test('пометки на десктопе: скрыть, стереть все с вопросом, вернуть отменой', async ({ page }) => {
+  const id = await openTask(page);
+  await pm(page).click();
+  await page.keyboard.type('Абзац с пометкой');
+  await page.locator('#editor-wrap .led-toolbar button[title="Пометки от руки поверх текста"]').click();
+  const bar = page.locator('#editor-wrap .led-overlay-bar');
+  await scribble(page, await pm(page).locator('p').first().boundingBox());
+  expect(await page.evaluate(() => editor.ink.length)).toBe(1);
+
+  await bar.locator('button[title="Стереть все пометки"]').click();
+  await page.locator('#ledmodal-backdrop button', { hasText: 'Стереть' }).click();
+  expect(await page.evaluate(() => editor.ink.length)).toBe(0);
+  await bar.locator('button[title^="Отменить"]').click();
+  expect(await page.evaluate(() => editor.ink.length), 'стёртое возвращается отменой').toBe(1);
+
+  await bar.locator('button[title="Скрыть пометки"]').click();
+  expect(await page.evaluate(() => editor.annotating), 'скрыть — значит и выйти из пометок').toBe(false);
+  expect(await page.evaluate(() => state.settings.editor.inkHidden)).toBe(true);
+  const notes = await savedNotes(page, id);
+  expect(notes.lancible.ink, 'скрытые пометки остаются в заметке').toHaveLength(1);
+  await page.locator('#editor-wrap .led-toolbar button[title="Вид"]').click();
+  await page.locator('.led-pop .ctx-item', { hasText: 'Показывать пометки от руки' }).click();
+  expect(await page.evaluate(() => state.settings.editor.inkHidden)).toBe(false);
+});
+
+test('прозрачность пера: ползунок рядом с толщиной, штрих её запоминает', async ({ page }) => {
+  await openTask(page);
+  await pm(page).click();
+  await page.keyboard.type('Абзац');
+  await page.locator('#editor-wrap .led-toolbar button[title="Пометки от руки поверх текста"]').click();
+  await page.locator('#editor-wrap .led-overlay-bar .led-ink-size').click();
+  const range = page.locator('.led-pop .led-setting', { hasText: 'Непрозрачность' }).locator('input[type=range]');
+  await range.fill('0.5');
+  await page.keyboard.press('Escape');
+  await scribble(page, await pm(page).locator('p').first().boundingBox());
+  const st = await page.evaluate(() => editor.ink[0]);
+  expect(st.opacity).toBe(0.5);
+});
+
+test.describe('телефон', () => {
+  // 360 — самый узкий из ходовых Android.
+  test.use({ viewport: { width: 360, height: 780 }, hasTouch: true, isMobile: true });
+
+  test('панель пера — сверху, на месте панели редактора, вся в экране', async ({ page }) => {
+    await openTask(page);
+    expect(await page.evaluate(() => editor.isMobile)).toBe(true);
+    await page.locator('#editor-wrap .led-toolbar button[title="Пометки от руки поверх текста"]').click();
+    const bar = page.locator('#editor-wrap .led-overlay-bar');
+    await expect(bar).toBeVisible();
+    await expect(page.locator('#editor-wrap .led-toolbar'), 'панель редактора уступает место').toBeHidden();
+    const geo = await page.evaluate(() => {
+      const r = (el) => el.getBoundingClientRect();
+      const b = document.querySelector('#editor-wrap .led-overlay-bar');
+      const tabbar = document.getElementById('mobile-tabbar');
+      const btns = [...b.querySelectorAll('button')].map((x) => ({ t: x.title || x.textContent, ...JSON.parse(JSON.stringify(r(x))) }));
+      return { bar: JSON.parse(JSON.stringify(r(b))), scroller: r(document.querySelector('#editor-wrap .led-scroll')).top, tab: tabbar && tabbar.offsetParent ? r(tabbar).top : Infinity, btns, vw: innerWidth };
+    });
+    expect(geo.bar.bottom, 'панель над текстом, а не под ним').toBeLessThanOrEqual(geo.scroller + 1);
+    expect(geo.bar.bottom, 'и не под нижним меню').toBeLessThan(geo.tab);
+    for (const b of geo.btns) {
+      expect(b.left, `кнопка «${b.t}» не уехала влево`).toBeGreaterThanOrEqual(geo.bar.left - 1);
+      expect(b.right, `кнопка «${b.t}» не уехала за край`).toBeLessThanOrEqual(Math.min(geo.bar.right, geo.vw) + 1);
+    }
+    for (const title of ['Ручка', 'Ластик', 'Лассо: выделить и передвинуть', 'Цвет', 'Готово']) {
+      await expect(bar.locator(`button[title="${title}"]`), `нет «${title}»`).toBeVisible();
+    }
+    await expect(bar.locator('.led-ink-size')).toBeVisible();
+    await bar.locator('button[title="Готово"]').click();
+    await expect(page.locator('#editor-wrap .led-toolbar')).toBeVisible();
+  });
+
+  test('палец рисует или листает — переключатель в панели', async ({ page }) => {
+    await openTask(page);
+    await page.locator('#editor-wrap .led-toolbar button[title="Пометки от руки поверх текста"]').click();
+    const finger = page.locator('#editor-wrap .led-overlay-bar .led-ink-finger');
+    await expect(finger).toHaveAttribute('aria-pressed', 'true');
+    await finger.click();
+    expect(await page.evaluate(() => state.settings.editor.ink.stylus)).toBe('only');
+    await expect(finger).toHaveAttribute('aria-pressed', 'false');
+    await finger.click();
+    expect(await page.evaluate(() => state.settings.editor.ink.stylus)).toBe('any');
+  });
+
+  test('«ещё»: стереть все, скрыть, настройки — и цвет меняется', async ({ page }) => {
+    await openTask(page);
+    await pm(page).click();
+    await page.keyboard.type('Абзац');
+    await page.locator('#editor-wrap .led-toolbar button[title="Пометки от руки поверх текста"]').click();
+    const bar = page.locator('#editor-wrap .led-overlay-bar');
+    await bar.locator('button[title="Цвет"]').click();
+    await page.locator('.led-pop .ink-red').click();
+    await scribble(page, await pm(page).locator('p').first().boundingBox());
+    expect(await page.evaluate(() => editor.ink[0].color)).toBe('red');
+
+    await bar.locator('button[title="Ещё"]').click();
+    for (const item of ['Скрыть пометки', 'Стереть все пометки', 'Настройки рисования']) {
+      await expect(page.locator('.ctx-menu .ctx-item', { hasText: item })).toBeVisible();
+    }
+    await page.locator('.ctx-menu .ctx-item', { hasText: 'Стереть все пометки' }).click();
+    await page.locator('#ledmodal-backdrop button', { hasText: 'Стереть' }).click();
+    expect(await page.evaluate(() => editor.ink.length)).toBe(0);
+  });
+});
+
+test.describe('телефон: рисунок', () => {
+  test.use({ viewport: { width: 360, height: 780 }, hasTouch: true, isMobile: true });
+
+  test('панель рисунка в два ряда, все кнопки в экране, фон и размер — в «ещё»', async ({ page }) => {
+    await openTask(page);
+    await pm(page).click();
+    await page.evaluate(() => editor.exec('drawing'));
+    const area = page.locator('#editor-wrap .led-draw-area');
+    await area.click();
+    const bar = page.locator('#editor-wrap .led-draw-bar');
+    await expect(bar).toBeVisible();
+    const rows = await bar.locator('.led-ink-row').evaluateAll((els) => els.map((x) => [x.clientWidth, x.scrollWidth]));
+    expect(rows).toHaveLength(2);
+    for (const [client, scroll] of rows) expect(scroll, 'ряд не прокручивается вбок — всё видно').toBeLessThanOrEqual(client);
+    await bar.locator('button[title="Ещё"]').click();
+    for (const item of ['Чистый', 'Во весь экран', 'Настройки рисования', 'Очистить холст']) {
+      await expect(page.locator('.ctx-menu .ctx-item', { hasText: item }), `нет «${item}»`).toBeVisible();
+    }
+  });
+});
+
+test.describe('телефон: всплывашки пера', () => {
+  test.use({ viewport: { width: 360, height: 780 }, hasTouch: true, isMobile: true });
+
+  test('толщина и прозрачность помещаются в экран целиком', async ({ page }) => {
+    await openTask(page);
+    await page.locator('#editor-wrap .led-toolbar button[title="Пометки от руки поверх текста"]').click();
+    await page.locator('#editor-wrap .led-overlay-bar .led-ink-size').click();
+    const geo = await page.locator('.led-pop').evaluate((p) => {
+      p.getAnimations().forEach((a) => a.finish()); // появление с масштабом искажает размеры
+      const r = p.getBoundingClientRect();
+      return { left: r.left, right: r.right, vw: innerWidth, overflow: [...p.querySelectorAll('*')].filter((k) => k.scrollWidth > k.clientWidth + 1 && getComputedStyle(k).overflowX === 'visible').map((k) => k.className) };
+    });
+    expect(geo.left).toBeGreaterThanOrEqual(0);
+    expect(geo.right).toBeLessThanOrEqual(geo.vw);
+    expect(geo.overflow, 'ничего не вылезает из своей строки').toEqual([]);
+  });
+});

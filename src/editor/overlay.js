@@ -9,12 +9,13 @@
 // Холст размером с видимую часть, а не со весь документ: у холста высотой в
 // двадцать экранов кончается память. Он лежит поверх прокрутки и
 // перерисовывается при прокрутке.
-import { h } from './util.js';
+import { h, icon } from './util.js';
+import { menu, modal } from './ui.js';
 import { InkSurface, InkToolbar } from './ink.js';
 
 export class InkOverlay {
   /** ctx: { root, t, toast, inkSettings, setInkSettings, getInk(), setInk(list),
-   *  scroller, page, view } */
+   *  scroller, page, view, mobile, hidden(), hide() } */
   constructor(ctx) {
     this.ctx = ctx;
     this.on = false;
@@ -26,11 +27,9 @@ export class InkOverlay {
       surface: () => this.surface,
       settings: () => ctx.inkSettings(),
       setSettings: (patch) => { ctx.setInkSettings(patch); this.dom.dataset.tool = ctx.inkSettings().tool; this.toolbar.render(); },
-      above: true,
-      extra: () => [
-        h('span', { class: 'led-bar-sep' }),
-        h('button', { type: 'button', class: 'btn-soft led-overlay-done', onclick: () => ctx.setAnnotate(false) }, ctx.t('draw.done')),
-      ],
+      above: !ctx.mobile,
+      rows: !!ctx.mobile,
+      extra: (bar) => this.extraButtons(bar),
     });
     this.toolbar.dom.classList.add('led-overlay-bar');
     this.toolbar.dom.hidden = true;
@@ -71,7 +70,8 @@ export class InkOverlay {
     this.onKey = (e) => {
       if (!this.on) return;
       const mod = e.metaKey || e.ctrlKey;
-      if (e.key === 'Escape') { e.preventDefault(); ctx.setAnnotate(false); }
+      // Escape при открытом меню или окне закрывает их, а не режим пометок.
+      if (e.key === 'Escape') { if (!document.querySelector('.led-pop, #ledmodal-backdrop')) { e.preventDefault(); ctx.setAnnotate(false); } }
       else if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) this.surface.redo(); else this.surface.undo(); }
       else if ((e.key === 'Delete' || e.key === 'Backspace') && this.surface.selected.size) { e.preventDefault(); this.surface.deleteSelected(); this.toolbar.render(); }
     };
@@ -79,6 +79,44 @@ export class InkOverlay {
   }
 
   strokes() { return this.ctx.getInk(); }
+
+  /** Кнопки слоя в панели пера: скрыть пометки, стереть все, «Готово».
+   *  На телефоне первые две и настройки — в меню «ещё», чтобы ряд влез. */
+  extraButtons(bar) {
+    const { t } = this.ctx;
+    if (this.ctx.mobile) {
+      const more = h('button', {
+        type: 'button', class: 'led-btn', title: t('more'), 'aria-label': t('more'),
+        onclick: () => menu(this.ctx.root, more, [
+          { label: t('ink.hide'), icon: 'eyeOff', run: () => this.ctx.hide() },
+          { label: t('ink.clear_all'), icon: 'eraser', danger: true, run: () => this.confirmClear() },
+          'sep',
+          { label: t('ink.settings'), icon: 'settings', run: () => bar.settingsPanel(more) },
+        ]),
+      }, icon('more'));
+      return [
+        more,
+        h('button', { type: 'button', class: 'led-btn led-ink-done', title: t('draw.done'), 'aria-label': t('draw.done'), onclick: () => this.ctx.setAnnotate(false) }, icon('check')),
+      ];
+    }
+    return [
+      h('span', { class: 'led-bar-sep' }),
+      h('button', { type: 'button', class: 'led-btn', title: t('ink.hide'), onclick: () => this.ctx.hide() }, icon('eyeOff')),
+      h('button', { type: 'button', class: 'led-btn', title: t('ink.clear_all'), onclick: () => this.confirmClear() }, icon('eraser')),
+      h('button', { type: 'button', class: 'btn-soft led-overlay-done', onclick: () => this.ctx.setAnnotate(false) }, t('draw.done')),
+    ];
+  }
+
+  /** Стереть все пометки — с вопросом: одним касанием терять всё нельзя.
+   *  Стёртое возвращается отменой, пока заметка открыта. */
+  confirmClear() {
+    const { t } = this.ctx;
+    if (!this.strokes().length) { this.ctx.toast(t('ink.nothing_to_clear')); return; }
+    modal(this.ctx.root, t('ink.clear_title'), h('p', { class: 'confirm-text' }, t('ink.clear_body')), [
+      { label: t('common.cancel'), run: (close) => close() },
+      { label: t('ink.clear_do'), danger: true, primary: true, run: (close) => { this.surface.clear(); this.toolbar.render(); close(); } },
+    ]);
+  }
 
   /** Штрихи в координатах страницы → обратно к своим блокам. Нетронутый
    *  штрих остаётся прежним объектом; новый или изменённый — заново
@@ -164,7 +202,8 @@ export class InkOverlay {
     this.dom.style.height = `${sc.clientHeight}px`;
     this.dom.style.width = `${sc.clientWidth}px`;
     this.dom.style.left = `${sc.offsetLeft}px`;
-    if (!this.strokes().length && !this.on) {
+    // Скрытые пометки не рисуются, пока слой не открыт для рисования.
+    if (!this.on && (!this.strokes().length || this.ctx.hidden())) {
       const c = this.canvas.getContext('2d');
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.clearRect(0, 0, this.canvas.width, this.canvas.height);

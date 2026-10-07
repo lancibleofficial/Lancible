@@ -39,6 +39,7 @@ export function defaultInkSettings() {
     penButtonEraser: true,
     eraser: 'stroke', // stroke | partial
     holdToShape: true,
+    opacity: 1, // множитель к прозрачности инструмента: маркер и при 100% полупрозрачен
     bg: 'plain',
     presets: [
       { tool: 'pen', color: 'ink', size: 3 },
@@ -58,6 +59,7 @@ export function normalizeInkSettings(s) {
   if (!Array.isArray(o.presets) || !o.presets.length) o.presets = d.presets;
   o.size = clamp(Number(o.size) || 3, 1, 60);
   o.smoothing = clamp(Number(o.smoothing), 0, 1);
+  o.opacity = clamp(Number(o.opacity) || 1, 0.1, 1);
   return o;
 }
 
@@ -329,6 +331,14 @@ export function moveStroke(st, dx, dy) {
 
 // --- ввод с пера -------------------------------------------------------------------
 
+/** Рисует ли сейчас палец. «Авто» — да, пока на этом устройстве не видели
+ *  пера: у кого есть стилус, тот пальцем листает. */
+export function fingerDraws(s, input) {
+  if (s.stylus === 'any') return true;
+  if (s.stylus === 'only') return false;
+  return !(input && input.penSeen);
+}
+
 /** Ввод на элементе. handlers: begin(p, info) → bool, move(points), end(),
  *  cancel(). Точка — [x, y, pressure] в пикселях элемента. */
 export class InkInput {
@@ -532,6 +542,7 @@ export class InkSurface {
     const base = tool === 'shape'
       ? { tool: 'shape', shape: s.shape, color: s.color, size: Math.max(1.5, s.size), _live: true }
       : { tool, color: s.color, size: tool === 'marker' ? Math.max(8, s.size * (s.size < 8 ? 4 : 1)) : s.size, _live: true, pr: info.type === 'pen' ? undefined : false };
+    if (s.opacity < 1) base.opacity = Math.round((TOOL_STYLE[base.tool] || TOOL_STYLE.pen).opacity * s.opacity * 100) / 100;
     this.live = Object.assign({ id: shortId() }, base, { _pts: [lp] });
     this.lastMoveAt = Date.now();
     this.armHold();
@@ -760,6 +771,11 @@ export class InkToolbar {
   render() {
     const t = this.t;
     const s = this.api.settings();
+    // Телефон — два ряда во всю ширину: инструменты и история сверху, цвет,
+    // толщина и остальное под ними. В один ряд на 360 пикселях это не
+    // влезает, и половина кнопок уезжала за край (круг 3, 7 октября 2026).
+    const rows = !!this.api.rows;
+    const sep = () => h('span', { class: 'led-bar-sep' });
     const tools = TOOLS.map((tool) => {
       const b = h('button', {
         type: 'button', class: `led-btn${s.tool === tool ? ' on' : ''}`, title: t(`ink.tool_${tool}`), 'aria-pressed': String(s.tool === tool),
@@ -788,29 +804,60 @@ export class InkToolbar {
     const colorBtn = h('button', {
       type: 'button', class: 'led-btn led-ink-colorbtn', title: t('ink.color'),
       onclick: (e) => this.colorMenu(e.currentTarget),
-    }, inkDot(s.color, 16));
+    }, inkDot(s.color, 13));
     const sizeBtn = h('button', {
-      type: 'button', class: 'led-btn led-ink-size', title: t('ink.size'),
+      type: 'button', class: 'led-btn led-ink-size', title: `${t('ink.size')} · ${t('ink.opacity')}`,
       onclick: (e) => this.sizeMenu(e.currentTarget),
-    }, h('span', { class: 'led-ink-size-dot', style: `--sz:${Math.min(18, 2 + s.size)}px` }));
+    }, h('span', { class: 'led-ink-size-dot', style: `--sz:${Math.min(18, 2 + s.size)}px;opacity:${s.opacity}` }));
     const surface = this.api.surface();
     const selActions = surface && surface.selected.size ? [
-      h('span', { class: 'led-bar-sep' }),
       h('button', { type: 'button', class: 'led-btn', title: t('ink.sel_duplicate'), onclick: () => { surface.duplicateSelected(); this.render(); } }, icon('copy')),
       h('button', { type: 'button', class: 'led-btn', title: t('ink.sel_recolor'), onclick: (e) => this.colorMenu(e.currentTarget, true) }, icon('palette')),
       h('button', { type: 'button', class: 'led-btn', title: t('ink.sel_delete'), onclick: () => { surface.deleteSelected(); this.render(); } }, icon('trash')),
-    ] : [];
-    this.dom.replaceChildren(
-      h('div', { class: 'led-ink-group' }, tools),
-      h('span', { class: 'led-bar-sep' }),
-      presets, colorBtn, sizeBtn,
-      ...selActions,
-      h('span', { class: 'led-bar-sep' }),
+    ] : null;
+    const history = [
       h('button', { type: 'button', class: 'led-btn', title: `${t('undo')} (Ctrl+Z)`, onclick: () => surface && surface.undo() }, icon('undo')),
       h('button', { type: 'button', class: 'led-btn', title: t('redo'), onclick: () => surface && surface.redo() }, icon('redo')),
-      ...(this.api.extra ? this.api.extra() : []),
+    ];
+    const finger = this.fingerButton(s, surface);
+    const extra = this.api.extra ? this.api.extra(this) : [];
+    this.dom.classList.toggle('led-inkbar-rows', rows);
+    if (rows) {
+      // Настройки на телефоне — в меню «ещё» у владельца панели (extra).
+      this.dom.replaceChildren(
+        h('div', { class: 'led-ink-row' }, h('div', { class: 'led-ink-group' }, tools), sep(), ...history),
+        h('div', { class: 'led-ink-row' }, ...(selActions || [presets, colorBtn, sizeBtn]), finger, h('span', { class: 'led-ink-spacer' }), ...extra),
+      );
+      return;
+    }
+    this.dom.replaceChildren(
+      h('div', { class: 'led-ink-group' }, tools),
+      sep(),
+      presets, colorBtn, sizeBtn,
+      ...(selActions ? [sep(), ...selActions] : []),
+      sep(),
+      ...history,
+      finger,
+      ...extra,
       h('button', { type: 'button', class: 'led-btn', title: t('ink.settings'), onclick: (e) => this.settingsPanel(e.currentTarget) }, icon('settings')),
     );
+  }
+
+  /** «Палец рисует / листает» — быстрый переключатель того же, что
+   *  «Стилус» в настройках. Без сенсорного экрана пальца нет и кнопки. */
+  fingerButton(s, surface) {
+    const touch = this.api.rows || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0);
+    if (!touch) return null;
+    const draws = fingerDraws(s, surface && surface.input);
+    const title = this.t(draws ? 'ink.finger_draws' : 'ink.finger_scrolls');
+    return h('button', {
+      type: 'button', class: `led-btn led-ink-finger${draws ? ' on' : ''}`, title, 'aria-label': title, 'aria-pressed': String(draws),
+      dataset: { finger: draws ? 'draw' : 'scroll' },
+      onclick: () => {
+        this.set({ stylus: draws ? 'only' : 'any' });
+        this.ctx.toast(this.t(draws ? 'ink.finger_scrolls_toast' : 'ink.finger_draws_toast'));
+      },
+    }, icon(draws ? 'finger' : 'hand'));
   }
 
   shapeMenu(anchor) {
@@ -849,7 +896,8 @@ export class InkToolbar {
       onclick: () => { this.set({ size: z }); p.close(); },
     }, h('span', { class: 'led-ink-size-dot', style: `--sz:${Math.min(22, 2 + z)}px` }))));
     const sl = slider(this.t('ink.size'), s.size, 1, 40, 1, (v) => this.api.setSettings({ size: v }));
-    const p = popup(this.ctx.root, anchor, h('div', {}, row, sl), { above: this.api.above, onClose: () => this.render() });
+    const op = slider(this.t('ink.opacity'), s.opacity, 0.1, 1, 0.05, (v) => this.api.setSettings({ opacity: v }), (v) => `${Math.round(v * 100)}%`);
+    const p = popup(this.ctx.root, anchor, h('div', { class: 'led-ink-sizepop' }, row, sl, op), { above: this.api.above, onClose: () => this.render() });
   }
 
   settingsPanel(anchor) {

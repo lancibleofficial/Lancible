@@ -55,6 +55,9 @@ export const DEFAULT_SETTINGS = {
   smart: true,
   spellcheck: true,
   stats: true,
+  // Пометки от руки спрятаны: остаются в заметке, но не мешают читать.
+  // Возвращаются кнопкой пометок или пунктом в меню «Вид».
+  inkHidden: false,
   ink: defaultInkSettings(),
 };
 
@@ -216,9 +219,15 @@ class Editor {
       scroller: this.scroller,
       page: this.page,
       view: this.view,
+      mobile: this.isMobile,
+      hidden: () => !!this.settings().inkHidden,
+      hide: () => this.hideInk(),
     });
     this.viewport.append(this.overlay.dom);
-    this.root.append(this.overlay.toolbar.dom);
+    // Телефон: панель пера встаёт на место панели редактора (та на время
+    // пометок прячется). Плавающая снизу уезжала под нижнее меню приложения.
+    if (this.isMobile) this.toolbar.dom.after(this.overlay.toolbar.dom);
+    else this.root.append(this.overlay.toolbar.dom);
     this.applySettings();
     this.updateUi();
     this.renderStatus();
@@ -364,6 +373,7 @@ class Editor {
       ask: (anchor, o, cb) => this.ask(anchor, o, cb),
       inkSettings: () => this.settings().ink,
       setInkSettings: (p) => this.setInkSettings(p),
+      mobile: this.isMobile,
       onDrawingActive: (dv, on) => {
         this.activeDrawing = on ? dv : (this.activeDrawing === dv ? null : this.activeDrawing);
         this.root.classList.toggle('led-drawing-active', !!this.activeDrawing);
@@ -506,6 +516,7 @@ class Editor {
       this.view.setProps({ attributes: () => this.pmAttributes() });
       this.updateUi();
     }
+    if (this.overlay && before && before.inkHidden !== s.inkHidden) this.overlay.render();
   }
 
   // --- панели ---------------------------------------------------------------
@@ -560,12 +571,22 @@ class Editor {
 
   setAnnotate(on) {
     if (on && !this.view.editable) return;
+    // Открыли пометки — спрятанные показываются: рисовать вслепую нельзя.
+    if (on && this.settings().inkHidden) this.setSettings({ inkHidden: false });
     this.annotating = !!on;
     this.root.classList.toggle('led-annotating', this.annotating);
     this.overlay.setOn(this.annotating);
     if (this.annotating && !this.settings().ink) this.setInkSettings({});
     this.updateUi();
     if (this.opts.onDrawingActive) this.opts.onDrawingActive(this.annotating);
+  }
+
+  /** Спрятать пометки и выйти из режима пометок. */
+  hideInk() {
+    this.setSettings({ inkHidden: true });
+    if (this.annotating) this.setAnnotate(false);
+    this.overlay.render();
+    this.toast(this.t('ink.hidden_toast'));
   }
 
   toggleFullscreen(force) {

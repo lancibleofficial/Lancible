@@ -15,6 +15,7 @@ import {
   TriangleAlert, Type, Underline, Undo2, Unlink, ZoomIn, ZoomOut,
   ArrowLeft, ArrowRight, PanelLeft, PanelRight, ImagePlus, SquareSplitHorizontal,
   BetweenVerticalStart, BetweenVerticalEnd, BetweenHorizontalStart, BetweenHorizontalEnd,
+  Pointer, Eye, EyeOff,
 } from 'lucide';
 
 export const uid = () => {
@@ -79,6 +80,7 @@ const ICONS = {
   arrowLeft: ArrowLeft, arrowRight: ArrowRight, wrapLeft: PanelLeft, wrapRight: PanelRight, imagePlus: ImagePlus,
   unrow: SquareSplitHorizontal, colBefore: BetweenVerticalStart, colAfter: BetweenVerticalEnd,
   rowBefore: BetweenHorizontalStart, rowAfter: BetweenHorizontalEnd,
+  finger: Pointer, eye: Eye, eyeOff: EyeOff,
 };
 
 export function icon(name, size) {
@@ -122,7 +124,10 @@ export function placePopup(el, x, y, opts) {
   const o = opts || {};
   el.style.left = '0px';
   el.style.top = '0px';
-  const r = el.getBoundingClientRect();
+  // Размер — без трансформаций: всплывашка появляется с масштабом
+  // (popIn), и getBoundingClientRect в этот миг меньше настоящего — у края
+  // экрана она вылезала за него на ширину этой разницы.
+  const r = { width: el.offsetWidth, height: el.offsetHeight };
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   let left = o.center ? x - r.width / 2 : x;
