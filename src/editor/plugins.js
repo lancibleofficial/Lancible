@@ -9,7 +9,7 @@ import { keymap } from 'prosemirror-keymap';
 import {
   baseKeymap, chainCommands, deleteSelection, joinBackward, selectNodeBackward,
 } from 'prosemirror-commands';
-import { goToNextCell } from 'prosemirror-tables';
+import { goToNextCell, isInTable, addRowAfter } from 'prosemirror-tables';
 import { findWrapping } from 'prosemirror-transform';
 import { schema } from './schema.js';
 import * as C from './commands.js';
@@ -40,6 +40,29 @@ export const blockIds = new Plugin({
       seen.add(bid);
     });
     if (tr) tr.setMeta('addToHistory', false);
+    return tr;
+  },
+});
+
+// --- ряд из одной картинки ------------------------------------------------------
+
+/** Ряд, в котором осталась одна картинка (остальные удалили или вынесли), —
+ *  уже не ряд: становится обычной картинкой по центру. */
+export const galleryNormalize = new Plugin({
+  key: new PluginKey('led-gallery'),
+  appendTransaction(trs, _old, state) {
+    if (!trs.some((tr) => tr.docChanged)) return null;
+    let tr = null;
+    const lonely = [];
+    state.doc.descendants((node, pos) => {
+      if (node.type === N.gallery && node.childCount === 1) lonely.push({ node, pos });
+      return node.type !== N.gallery && node.isBlock && !node.isTextblock;
+    });
+    for (const { node, pos } of lonely.reverse()) {
+      tr = tr || state.tr;
+      const img = node.firstChild;
+      tr.replaceWith(pos, pos + node.nodeSize, N.image.create(Object.assign({}, img.attrs, { width: null, align: 'center', bid: node.attrs.bid })));
+    }
     return tr;
   },
 });
@@ -199,7 +222,15 @@ export function buildKeymaps(actions) {
       return true;
     },
     Enter: C.splitItem,
-    Tab: chainCommands(goToNextCell(1), C.indent, (s, d) => {
+    Tab: chainCommands(goToNextCell(1), (s, d, view) => {
+      // Tab в последней ячейке — новая строка и курсор в неё, а не уход
+      // фокуса из таблицы на кнопки.
+      if (!isInTable(s)) return false;
+      if (!d || !view) return true;
+      addRowAfter(s, d);
+      goToNextCell(1)(view.state, view.dispatch);
+      return true;
+    }, C.indent, (s, d) => {
       // Табуляция в коде — два пробела, а не уход фокуса.
       if (s.selection.$from.parent.type !== N.code_block) return false;
       if (d) d(s.tr.insertText('  '));

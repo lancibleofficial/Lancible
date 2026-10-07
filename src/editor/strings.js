@@ -36,8 +36,7 @@ const ru = {
   'link.url': 'Адрес ссылки', 'link.text': 'Текст ссылки', 'link.open': 'Открыть ссылку', 'link.remove': 'Убрать ссылку',
 
   'table.pick_size': 'Размер таблицы', 'table.with_header': 'Строка заголовков', 'table.tools': 'Таблица',
-  'table.row_above': 'Строка выше', 'table.row_below': 'Строка ниже', 'table.col_left': 'Столбец слева', 'table.col_right': 'Столбец справа',
-  'table.row': 'строка', 'table.col': 'столбец', 'table.merge': 'Объединить ячейки', 'table.split': 'Разделить ячейку',
+  'table.row_above': 'Строка выше', 'table.row_below': 'Строка ниже', 'table.col_left': 'Столбец слева', 'table.col_right': 'Столбец справа', 'table.merge': 'Объединить ячейки', 'table.split': 'Разделить ячейку',
   'table.header_row': 'Строка заголовков', 'table.fill': 'Заливка ячеек', 'table.to_chart': 'График из таблицы',
   'table.delete': 'Удалить таблицу', 'table.no_numbers': 'В таблице нет чисел для графика: нужна строка названий и столбец подписей',
 
@@ -103,6 +102,22 @@ const ru = {
   'ink.hold_shape_hint': 'Задержите перо в конце штриха: линия, прямоугольник, эллипс', 'ink.eraser_mode': 'Ластик стирает',
   'ink.eraser_stroke': 'Штрих целиком', 'ink.eraser_partial': 'По кусочку', 'ink.smoothing': 'Сглаживание',
   'ink.presets_hint': 'Правый щелчок или долгое касание по кружку пера — запомнить на нём текущее перо.',
+
+  'image.align_wrap_left': 'Обтекание: картинка слева',
+  'image.align_wrap_right': 'Обтекание: картинка справа',
+  'image.add_beside': 'Добавить картинку рядом',
+  'image.move_left': 'Левее',
+  'image.move_right': 'Правее',
+  'image.unwrap_row': 'Вынести из ряда',
+  'table.line_menu': 'Строки и столбцы',
+  'table.col_insert_here': 'Вставить столбец здесь',
+  'table.col_delete_left': 'Удалить столбец слева',
+  'table.col_delete_right': 'Удалить столбец справа',
+  'table.row_insert_here': 'Вставить строку здесь',
+  'table.row_delete_above': 'Удалить строку выше',
+  'table.row_delete_below': 'Удалить строку ниже',
+  'table.row_delete': 'Удалить строку',
+  'table.col_delete': 'Удалить столбец',
 };
 
 const en = {
@@ -137,8 +152,7 @@ const en = {
   'link.url': 'Link address', 'link.text': 'Link text', 'link.open': 'Open link', 'link.remove': 'Remove link',
 
   'table.pick_size': 'Table size', 'table.with_header': 'Header row', 'table.tools': 'Table',
-  'table.row_above': 'Row above', 'table.row_below': 'Row below', 'table.col_left': 'Column left', 'table.col_right': 'Column right',
-  'table.row': 'row', 'table.col': 'column', 'table.merge': 'Merge cells', 'table.split': 'Split cell',
+  'table.row_above': 'Row above', 'table.row_below': 'Row below', 'table.col_left': 'Column left', 'table.col_right': 'Column right', 'table.merge': 'Merge cells', 'table.split': 'Split cell',
   'table.header_row': 'Header row', 'table.fill': 'Cell fill', 'table.to_chart': 'Chart from table',
   'table.delete': 'Delete table', 'table.no_numbers': 'No numbers for a chart: the table needs a header row and a label column',
 
@@ -204,6 +218,22 @@ const en = {
   'ink.hold_shape_hint': 'Hold the pen at the end of a stroke: line, rectangle, ellipse', 'ink.eraser_mode': 'Eraser removes',
   'ink.eraser_stroke': 'Whole stroke', 'ink.eraser_partial': 'Bit by bit', 'ink.smoothing': 'Smoothing',
   'ink.presets_hint': 'Right-click or long-press a pen circle to save the current pen on it.',
+
+  'image.align_wrap_left': 'Wrap text: image on the left',
+  'image.align_wrap_right': 'Wrap text: image on the right',
+  'image.add_beside': 'Add an image beside',
+  'image.move_left': 'Move left',
+  'image.move_right': 'Move right',
+  'image.unwrap_row': 'Take out of the row',
+  'table.line_menu': 'Rows and columns',
+  'table.col_insert_here': 'Insert column here',
+  'table.col_delete_left': 'Delete column on the left',
+  'table.col_delete_right': 'Delete column on the right',
+  'table.row_insert_here': 'Insert row here',
+  'table.row_delete_above': 'Delete row above',
+  'table.row_delete_below': 'Delete row below',
+  'table.row_delete': 'Delete row',
+  'table.col_delete': 'Delete column',
 };
 
 const uk = {
@@ -238,8 +268,7 @@ const uk = {
   'link.url': 'Адреса посилання', 'link.text': 'Текст посилання', 'link.open': 'Відкрити посилання', 'link.remove': 'Прибрати посилання',
 
   'table.pick_size': 'Розмір таблиці', 'table.with_header': 'Рядок заголовків', 'table.tools': 'Таблиця',
-  'table.row_above': 'Рядок вище', 'table.row_below': 'Рядок нижче', 'table.col_left': 'Стовпець ліворуч', 'table.col_right': 'Стовпець праворуч',
-  'table.row': 'рядок', 'table.col': 'стовпець', 'table.merge': "Об'єднати клітинки", 'table.split': 'Розділити клітинку',
+  'table.row_above': 'Рядок вище', 'table.row_below': 'Рядок нижче', 'table.col_left': 'Стовпець ліворуч', 'table.col_right': 'Стовпець праворуч', 'table.merge': "Об'єднати клітинки", 'table.split': 'Розділити клітинку',
   'table.header_row': 'Рядок заголовків', 'table.fill': 'Заливка клітинок', 'table.to_chart': 'Графік з таблиці',
   'table.delete': 'Видалити таблицю', 'table.no_numbers': 'У таблиці немає чисел для графіка: потрібні рядок назв і стовпець підписів',
 
@@ -305,6 +334,22 @@ const uk = {
   'ink.hold_shape_hint': 'Затримайте перо наприкінці штриха: лінія, прямокутник, еліпс', 'ink.eraser_mode': 'Гумка стирає',
   'ink.eraser_stroke': 'Штрих цілком', 'ink.eraser_partial': 'Потроху', 'ink.smoothing': 'Згладжування',
   'ink.presets_hint': 'Правий клік або довге торкання кружечка пера — запам’ятати на ньому поточне перо.',
+
+  'image.align_wrap_left': 'Обтікання: зображення ліворуч',
+  'image.align_wrap_right': 'Обтікання: зображення праворуч',
+  'image.add_beside': 'Додати зображення поруч',
+  'image.move_left': 'Лівіше',
+  'image.move_right': 'Правіше',
+  'image.unwrap_row': 'Винести з ряду',
+  'table.line_menu': 'Рядки і стовпці',
+  'table.col_insert_here': 'Вставити стовпець тут',
+  'table.col_delete_left': 'Видалити стовпець ліворуч',
+  'table.col_delete_right': 'Видалити стовпець праворуч',
+  'table.row_insert_here': 'Вставити рядок тут',
+  'table.row_delete_above': 'Видалити рядок вище',
+  'table.row_delete_below': 'Видалити рядок нижче',
+  'table.row_delete': 'Видалити рядок',
+  'table.col_delete': 'Видалити стовпець',
 };
 
 const kk = {
@@ -339,8 +384,7 @@ const kk = {
   'link.url': 'Сілтеме мекенжайы', 'link.text': 'Сілтеме мәтіні', 'link.open': 'Сілтемені ашу', 'link.remove': 'Сілтемені алып тастау',
 
   'table.pick_size': 'Кесте өлшемі', 'table.with_header': 'Тақырып жолы', 'table.tools': 'Кесте',
-  'table.row_above': 'Жоғарыға жол', 'table.row_below': 'Төменге жол', 'table.col_left': 'Солға баған', 'table.col_right': 'Оңға баған',
-  'table.row': 'жол', 'table.col': 'баған', 'table.merge': 'Ұяшықтарды біріктіру', 'table.split': 'Ұяшықты бөлу',
+  'table.row_above': 'Жоғарыға жол', 'table.row_below': 'Төменге жол', 'table.col_left': 'Солға баған', 'table.col_right': 'Оңға баған', 'table.merge': 'Ұяшықтарды біріктіру', 'table.split': 'Ұяшықты бөлу',
   'table.header_row': 'Тақырып жолы', 'table.fill': 'Ұяшықтарды бояу', 'table.to_chart': 'Кестеден график',
   'table.delete': 'Кестені жою', 'table.no_numbers': 'Кестеде график үшін сан жоқ: атаулар жолы мен белгілер бағаны керек',
 
@@ -406,6 +450,22 @@ const kk = {
   'ink.hold_shape_hint': 'Сызықтың соңында қаламды ұстаңыз: түзу, тіктөртбұрыш, эллипс', 'ink.eraser_mode': 'Өшіргіш өшіреді',
   'ink.eraser_stroke': 'Тұтас сызықты', 'ink.eraser_partial': 'Бөлшектеп', 'ink.smoothing': 'Тегістеу',
   'ink.presets_hint': 'Қалам дөңгелегін оң жақпен басыңыз немесе ұзақ басыңыз — ағымдағы қаламды соған сақтау.',
+
+  'image.align_wrap_left': 'Ағын: сурет сол жақта',
+  'image.align_wrap_right': 'Ағын: сурет оң жақта',
+  'image.add_beside': 'Қасына сурет қосу',
+  'image.move_left': 'Солға',
+  'image.move_right': 'Оңға',
+  'image.unwrap_row': 'Қатардан шығару',
+  'table.line_menu': 'Жолдар мен бағандар',
+  'table.col_insert_here': 'Осы жерге баған қою',
+  'table.col_delete_left': 'Сол жақтағы бағанды жою',
+  'table.col_delete_right': 'Оң жақтағы бағанды жою',
+  'table.row_insert_here': 'Осы жерге жол қою',
+  'table.row_delete_above': 'Жоғарыдағы жолды жою',
+  'table.row_delete_below': 'Төмендегі жолды жою',
+  'table.row_delete': 'Жолды жою',
+  'table.col_delete': 'Бағанды жою',
 };
 
 // Ключи, которые собираются в коде из частей, — чтобы их было видно поиском.

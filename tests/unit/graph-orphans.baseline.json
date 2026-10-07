@@ -725,7 +725,7 @@
       "id": "scripts_watch_main",
       "label": "main()",
       "file": "scripts/watch.js",
-      "at": "L212"
+      "at": "L215"
     },
     {
       "id": "scripts_worklog_main",
@@ -824,6 +824,12 @@
       "at": "L285"
     },
     {
+      "id": "src_editor_commands_addimagebeside",
+      "label": "addImageBeside()",
+      "file": "src/editor/commands.js",
+      "at": "L343"
+    },
+    {
       "id": "src_editor_commands_clearformatting",
       "label": "clearFormatting()",
       "file": "src/editor/commands.js",
@@ -833,13 +839,13 @@
       "id": "src_editor_commands_deleteblock",
       "label": "deleteBlock()",
       "file": "src/editor/commands.js",
-      "at": "L411"
+      "at": "L473"
     },
     {
       "id": "src_editor_commands_duplicateblock",
       "label": "duplicateBlock()",
       "file": "src/editor/commands.js",
-      "at": "L401"
+      "at": "L463"
     },
     {
       "id": "src_editor_commands_formatstate",
@@ -887,7 +893,13 @@
       "id": "src_editor_commands_moveblock",
       "label": "moveBlock()",
       "file": "src/editor/commands.js",
-      "at": "L373"
+      "at": "L435"
+    },
+    {
+      "id": "src_editor_commands_moveingallery",
+      "label": "moveInGallery()",
+      "file": "src/editor/commands.js",
+      "at": "L362"
     },
     {
       "id": "src_editor_commands_outdent",
@@ -929,7 +941,13 @@
       "id": "src_editor_commands_tablerowsatcursor",
       "label": "tableRowsAtCursor()",
       "file": "src/editor/commands.js",
-      "at": "L349"
+      "at": "L411"
+    },
+    {
+      "id": "src_editor_commands_takeoutofgallery",
+      "label": "takeOutOfGallery()",
+      "file": "src/editor/commands.js",
+      "at": "L379"
     },
     {
       "id": "src_editor_commands_toggle",
@@ -947,7 +965,7 @@
       "id": "src_editor_commands_turninto",
       "label": "turnInto()",
       "file": "src/editor/commands.js",
-      "at": "L423"
+      "at": "L485"
     },
     {
       "id": "src_editor_comments_commentspanel_add",
@@ -1025,109 +1043,109 @@
       "id": "src_editor_image_imageview_constructor",
       "label": ".constructor()",
       "file": "src/editor/image.js",
-      "at": "L8"
+      "at": "L23"
     },
     {
       "id": "src_editor_image_imageview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/image.js",
-      "at": "L131"
+      "at": "L217"
     },
     {
       "id": "src_editor_image_imageview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/image.js",
-      "at": "L137"
+      "at": "L223"
     },
     {
       "id": "src_editor_image_imageview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/image.js",
-      "at": "L129"
+      "at": "L215"
     },
     {
       "id": "src_editor_image_imageview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/image.js",
-      "at": "L133"
+      "at": "L219"
     },
     {
       "id": "src_editor_image_imageview_update",
       "label": ".update()",
       "file": "src/editor/image.js",
-      "at": "L121"
+      "at": "L207"
     },
     {
       "id": "src_editor_index_decorationsetfor",
       "label": "DecorationSetFor()",
       "file": "src/editor/index.js",
-      "at": "L858"
+      "at": "L888"
     },
     {
       "id": "src_editor_index_editor_chartfromtable",
       "label": ".chartFromTable()",
       "file": "src/editor/index.js",
-      "at": "L710"
+      "at": "L738"
     },
     {
       "id": "src_editor_index_editor_constructor",
       "label": ".constructor()",
       "file": "src/editor/index.js",
-      "at": "L166"
+      "at": "L169"
     },
     {
       "id": "src_editor_index_editor_copymarkdown",
       "label": ".copyMarkdown()",
       "file": "src/editor/index.js",
-      "at": "L773"
+      "at": "L803"
     },
     {
       "id": "src_editor_index_editor_destroy",
       "label": ".destroy()",
       "file": "src/editor/index.js",
-      "at": "L847"
+      "at": "L877"
     },
     {
       "id": "src_editor_index_editor_exportas",
       "label": ".exportAs()",
       "file": "src/editor/index.js",
-      "at": "L765"
+      "at": "L795"
     },
     {
       "id": "src_editor_index_editor_imagefromurl",
       "label": ".imageFromUrl()",
       "file": "src/editor/index.js",
-      "at": "L664"
+      "at": "L692"
     },
     {
       "id": "src_editor_index_editor_print",
       "label": ".print()",
       "file": "src/editor/index.js",
-      "at": "L784"
+      "at": "L814"
     },
     {
       "id": "src_editor_index_editor_setcontent",
       "label": ".setContent()",
       "file": "src/editor/index.js",
-      "at": "L432"
+      "at": "L442"
     },
     {
       "id": "src_editor_index_editor_seteditable",
       "label": ".setEditable()",
       "file": "src/editor/index.js",
-      "at": "L453"
+      "at": "L463"
     },
     {
       "id": "src_editor_index_editor_threads",
       "label": ".threads()",
       "file": "src/editor/index.js",
-      "at": "L451"
+      "at": "L461"
     },
     {
       "id": "src_editor_index_editor_user",
       "label": ".user()",
       "file": "src/editor/index.js",
-      "at": "L464"
+      "at": "L474"
     },
     {
       "id": "src_editor_ink_inkinput_constructor",
@@ -1259,7 +1277,7 @@
       "id": "src_editor_schema_colormark",
       "label": "colorMark()",
       "file": "src/editor/schema.js",
-      "at": "L272"
+      "at": "L285"
     },
     {
       "id": "src_editor_schema_readalign",
@@ -1280,6 +1298,24 @@
       "at": "L30"
     },
     {
+      "id": "src_editor_tablehandles_tablehandles_constructor",
+      "label": ".constructor()",
+      "file": "src/editor/tablehandles.js",
+      "at": "L20"
+    },
+    {
+      "id": "src_editor_tablehandles_tablehandles_mount",
+      "label": ".mount()",
+      "file": "src/editor/tablehandles.js",
+      "at": "L33"
+    },
+    {
+      "id": "src_editor_tablehandles_tablehandles_track",
+      "label": ".track()",
+      "file": "src/editor/tablehandles.js",
+      "at": "L48"
+    },
+    {
       "id": "src_editor_toolbar_toolbar_constructor",
       "label": ".constructor()",
       "file": "src/editor/toolbar.js",
@@ -1289,7 +1325,7 @@
       "id": "src_editor_toolbar_toolbar_update",
       "label": ".update()",
       "file": "src/editor/toolbar.js",
-      "at": "L227"
+      "at": "L232"
     },
     {
       "id": "src_editor_views_codeblockview_constructor",
@@ -1760,10 +1796,22 @@
       "at": "L13"
     },
     {
+      "id": "tests_e2e_editor_spec_linemenu",
+      "label": "lineMenu()",
+      "file": "tests/e2e/editor.spec.js",
+      "at": "L137"
+    },
+    {
       "id": "tests_e2e_editor_spec_opentask",
       "label": "openTask()",
       "file": "tests/e2e/editor.spec.js",
       "at": "L10"
+    },
+    {
+      "id": "tests_e2e_editor_spec_pickimage",
+      "label": "pickImage()",
+      "file": "tests/e2e/editor.spec.js",
+      "at": "L46"
     },
     {
       "id": "tests_e2e_editor_spec_pm",
@@ -1774,6 +1822,12 @@
     {
       "id": "tests_e2e_editor_spec_savednotes",
       "label": "savedNotes()",
+      "file": "tests/e2e/editor.spec.js",
+      "at": "L52"
+    },
+    {
+      "id": "tests_e2e_editor_spec_tableshape",
+      "label": "tableShape()",
       "file": "tests/e2e/editor.spec.js",
       "at": "L39"
     },

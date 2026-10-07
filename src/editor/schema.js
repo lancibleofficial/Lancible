@@ -173,8 +173,10 @@ export const nodes = {
       src: { default: '' },
       alt: { default: '' },
       caption: { default: '' },
-      // Ширина в процентах полосы текста; null — как есть, но не шире полосы.
+      // Ширина в процентах полосы текста (в ряду — ряда); null — как есть,
+      // но не шире полосы.
       width: { default: null },
+      // left | center | right | full | wrap-left | wrap-right (обтекание).
       align: { default: 'center' },
     },
     parseDOM: [{
@@ -201,6 +203,17 @@ export const nodes = {
       if (a.caption) fig.push(['figcaption', a.caption]);
       return fig;
     },
+  },
+
+  // Ряд картинок: две и больше на одной строке, ширина делится между ними.
+  // Ряд из одной картинки разбирает плагин (plugins.js: galleryNormalize).
+  gallery: {
+    group: 'block',
+    content: 'image+',
+    draggable: true,
+    attrs: { bid: { default: null } },
+    parseDOM: [{ tag: 'div.led-gallery', getAttrs: (dom) => ({ bid: readBid(dom) }) }],
+    toDOM: (node) => ['div', withBlock({ class: 'led-gallery' }, node), 0],
   },
 
   chart: {

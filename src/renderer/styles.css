@@ -803,7 +803,7 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .led.led-fullscreen .led-scroll { background: var(--panel); }
 
 /* --- панели --- */
-.led-toolbar, .led-tablebar {
+.led-toolbar {
   flex: none; display: flex; align-items: center; gap: 2px;
   padding: 6px 8px; overflow-x: auto; overflow-y: hidden;
   border-bottom: 1px solid var(--line);
@@ -813,8 +813,23 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
    На телефоне — одна строка с прокруткой (.led-mobile ниже). */
 .led-toolbar { flex-wrap: wrap; row-gap: 4px; }
 .led-mobile .led-toolbar { flex-wrap: nowrap; }
-.led-tablebar { background: var(--panel-2); padding: 4px 8px; }
-.led-tablebar-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); margin-right: 8px; flex: none; }
+/* Остров таблицы — тем же видом, что панель над выделением: плавает под
+   таблицей, пока в ней курсор (положение — из JS, editor placeTableBar). */
+.led-tablebar {
+  position: absolute; z-index: 6; display: flex; align-items: center; gap: 1px;
+  max-width: calc(100% - 16px); padding: 4px; overflow-x: auto;
+  border-radius: 11px; background: var(--panel); box-shadow: var(--shadow-pop);
+  animation: popIn 0.12s var(--ease);
+}
+.led-tablebar .led-btn:hover { background: var(--panel-2); }
+/* Линия таблицы под указателем и шестерёнка у её конца (tablehandles.js). */
+.led-tline { position: absolute; z-index: 5; background: var(--accent); border-radius: 1px; pointer-events: none; }
+.led-tgear {
+  position: absolute; z-index: 6; width: 22px; height: 22px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 50%; background: var(--panel); color: var(--text-dim); box-shadow: var(--shadow-pop); cursor: pointer;
+  animation: popIn 0.1s var(--ease);
+}
+.led-tgear:hover { background: var(--accent); color: var(--accent-text); }
 .led-toolbar::-webkit-scrollbar, .led-tablebar::-webkit-scrollbar { height: 0; }
 .led-group { display: flex; align-items: center; gap: 1px; flex: none; padding-right: 5px; margin-right: 3px; border-right: 1px solid var(--line); }
 .led-group:last-child { border-right: 0; padding-right: 0; margin-right: 0; }
@@ -828,7 +843,6 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   transition: background 0.1s var(--ease), color 0.1s var(--ease);
 }
 .led-btn:hover { background: var(--panel-2); color: var(--text); }
-.led-tablebar .led-btn:hover { background: var(--raise); }
 .led-btn.on { background: var(--sel); color: var(--accent-ink); }
 .led-btn:disabled { opacity: 0.35; cursor: default; background: none; }
 .led-btn.danger { color: var(--danger); }
@@ -942,7 +956,8 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .led-task[data-checked='true'] > .led-task-text > p:first-child { color: var(--text-faint); text-decoration: line-through; text-decoration-color: var(--border-strong); }
 
 /* Таблицы (prosemirror-tables) */
-.led-pm .tableWrapper { overflow-x: auto; margin: 0.6em 0 0.9em; }
+/* Сверху места больше: туда встаёт шестерёнка столбца (tablehandles.js). */
+.led-pm .tableWrapper { overflow-x: auto; margin: 1.5em 0 0.9em; }
 .led-pm table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0; overflow: hidden; }
 .led-pm td, .led-pm th { position: relative; vertical-align: top; box-sizing: border-box; min-width: 48px; padding: 6px 9px; border: 1px solid var(--border-strong); }
 .led-pm th { background: var(--panel-2); font-weight: 600; text-align: left; }
@@ -966,19 +981,40 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .led-pm .led-figure.align-right { align-items: flex-end; }
 .led-img-frame { position: relative; max-width: 100%; }
 .led-img-frame img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
-.led-figure.align-full .led-img-frame, .led-figure.align-full img { width: 100%; }
+.led-figure.align-full .led-img-frame, .led-figure.align-full img,
+.led-figure.align-row img, .led-figure.align-wrap-left img, .led-figure.align-wrap-right img { width: 100%; }
 .led-figure.sel .led-img-frame { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
 .led-img-status { min-width: 220px; min-height: 120px; display: grid; place-items: center; padding: 12px; border-radius: 8px; background: var(--panel-2); color: var(--text-faint); font-size: 12.5px; text-align: center; }
+.led-figure.align-row .led-img-status, .led-figure.align-wrap-left .led-img-status, .led-figure.align-wrap-right .led-img-status { min-width: 0; }
 .led-img-handle { position: absolute; top: 50%; right: -7px; width: 8px; height: 44px; margin-top: -22px; border-radius: 4px; background: var(--accent); cursor: ew-resize; opacity: 0; transition: opacity 0.12s var(--ease); touch-action: none; }
-.led-figure.align-right .led-img-handle { right: auto; left: -7px; }
+.led-figure.align-right .led-img-handle, .led-figure.align-wrap-right .led-img-handle { right: auto; left: -7px; }
 .led-figure.sel .led-img-handle, .led-figure:hover .led-img-handle { opacity: 1; }
 .led-readonly .led-img-handle { display: none; }
 .led-caption { width: 100%; max-width: 100%; margin-top: 6px; padding: 2px 4px; border: 0; background: none; outline: none; color: var(--text-dim); font: inherit; font-size: 0.85em; text-align: center; }
 .led-figure.align-left .led-caption { text-align: left; }
 .led-figure.align-right .led-caption { text-align: right; }
 
+/* Обтекание: картинка прижата к краю, текст идёт рядом. Ширину держит сама
+   фигура (из JS — доля полосы, данные пользователя). */
+.led-pm .led-figure.align-wrap-left { float: left; margin: 0.3em 1.4em 0.6em 0; }
+.led-pm .led-figure.align-wrap-right { float: right; margin: 0.3em 0 0.6em 1.4em; }
+/* Полоса держит плавающие картинки внутри себя, а блоки, которым рядом с
+   картинкой тесно, встают под неё. Списки, цитаты и выноски — рядом, но
+   своим прямоугольником: маркеры и подложка не уезжают под картинку. */
+.led-pm { display: flow-root; }
+.led-pm > ul, .led-pm > ol, .led-pm > blockquote, .led-pm > .led-callout { display: flow-root; }
+.led-pm > .tableWrapper, .led-pm > .led-gallery, .led-pm > .led-chart, .led-pm > .led-drawing, .led-pm > pre, .led-pm > hr,
+.led-pm > .led-figure.align-left, .led-pm > .led-figure.align-center, .led-pm > .led-figure.align-right, .led-pm > .led-figure.align-full { clear: both; }
+
+/* Ряд картинок */
+.led-pm .led-gallery { display: flex; align-items: flex-start; gap: 10px; margin: 1em 0; }
+.led-pm .led-gallery > .led-figure { margin: 0; min-width: 0; }
+.led-gallery.ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 10px; }
+
 /* Панель у выбранного блока: картинка, график */
 .led-node-bar { position: absolute; top: 8px; right: 8px; z-index: 3; display: none; gap: 1px; padding: 3px; border-radius: 9px; background: var(--panel); box-shadow: var(--shadow-pop); }
+.led-node-group { display: flex; gap: 1px; }
+.led-figure.align-row .led-node-bar, .led-figure.align-wrap-left .led-node-bar, .led-figure.align-wrap-right .led-node-bar { flex-wrap: wrap; max-width: calc(100% - 16px); }
 .led-figure.sel .led-node-bar, .led-chart.sel .led-node-bar, .led-chart:hover .led-node-bar { display: flex; }
 .led-readonly .led-node-bar { display: none !important; }
 
@@ -1207,6 +1243,14 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
   .led-handle { display: none !important; }
   .led-side { position: absolute; left: 0; right: 0; bottom: 0; z-index: 25; width: auto; max-height: 62%; border: 0; border-radius: 14px 14px 0 0; box-shadow: var(--shadow-modal); }
   .led-chart-editor, .led-help { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Ширина телефона: рядом с картинкой тексту места нет — она встаёт строкой,
+   ряд картинок складывается в столбик. */
+@container led (max-width: 520px) {
+  .led-pm .led-figure.align-wrap-left, .led-pm .led-figure.align-wrap-right { float: none; width: auto !important; margin: 1em 0; }
+  .led-pm .led-gallery { flex-direction: column; }
+  .led-pm .led-gallery > .led-figure { flex: none !important; width: 100%; }
 }
 
 /* Телефон: кнопки крупнее, ручки блоков нет — блок двигают из меню. */

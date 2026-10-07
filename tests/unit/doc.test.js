@@ -338,3 +338,12 @@ test('Markdown: график — его данные таблицей, с наз
   const doc = { type: 'doc', content: [{ type: 'chart', attrs: { chart: { title: 'Выручка', labels: ['Янв', 'Фев'], series: [{ name: 'Часы', values: [10, 14] }] } } }] };
   assert.equal(D.docToMarkdown(doc), '**Выручка**\n\n| | Часы |\n| --- | --- |\n| Янв | 10 |\n| Фев | 14 |\n');
 });
+
+test('ряд картинок: старые версии и Markdown получают картинки по одной', () => {
+  const img = (src) => ({ type: 'image', attrs: { src, alt: src, caption: '', width: null, align: 'center' } });
+  const doc = { type: 'doc', content: [{ type: 'gallery', content: [img('https://x/a.png'), img('https://x/b.png')] }] };
+  const ops = D.docToDelta(doc);
+  assert.deepEqual(ops.filter((o) => typeof o.insert === 'object').map((o) => o.insert.image), ['https://x/a.png', 'https://x/b.png']);
+  assert.equal(D.docToMarkdown(doc), '![https://x/a.png](https://x/a.png)\n\n![https://x/b.png](https://x/b.png)\n');
+  assert.equal(D.isDocEmpty({ doc }), false, 'ряд из картинок — не пустой документ');
+});

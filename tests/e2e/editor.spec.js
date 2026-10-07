@@ -35,6 +35,19 @@ async function openTask(page, notes) {
 
 const pm = (page) => page.locator('#editor-wrap .led-pm');
 
+/** Таблица в редакторе: строки и ячейки первой строки. */
+const tableShape = (page) => page.evaluate(() => {
+  const rows = document.querySelectorAll('#editor-wrap .led-pm table tr');
+  return { rows: rows.length, cols: rows[0] ? rows[0].children.length : 0 };
+});
+
+/** Картинка 40×30 — вставляется через настоящий выбор файла. */
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAACgAAAAeCAIAAADRv8uKAAAAK0lEQVR4nO3NMQ0AAAgDsMlGGMKQgAw4mvRvqudExGKxWCwWi8VisVj8N14iEuPIyklx+wAAAABJRU5ErkJggg==', 'base64');
+async function pickImage(page, click) {
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), click()]);
+  await chooser.setFiles({ name: 'photo.png', mimeType: 'image/png', buffer: PNG });
+}
+
 /** Заметки задачи — как их видит хранилище: контейнер и Delta для старых версий. */
 const savedNotes = (page, id) => page.evaluate(async (taskId) => {
   editor.flush();
@@ -94,26 +107,79 @@ test('markdown-сокращения: заголовок, список, чек-л
   await expect(pm(page).locator('p').last()).toHaveText('это важно — «да»');
 });
 
-test('меню «/»: таблица вставляется с клавиатуры, панель таблицы видна', async ({ page }) => {
+test('меню «/»: таблица вставляется с клавиатуры, остров таблицы — под ней', async ({ page }) => {
   const id = await openTask(page);
   await pm(page).click();
   await page.keyboard.type('/табл');
   await expect(page.locator('.led-slash')).toBeVisible();
   await page.keyboard.press('Enter');
-  const shape = () => page.evaluate(() => {
-    const rows = document.querySelectorAll('#editor-wrap .led-pm table tr');
-    return { rows: rows.length, cols: rows[0] ? rows[0].children.length : 0 };
+  expect(await tableShape(page)).toEqual({ rows: 3, cols: 3 });
+  // Остров, а не полоса во всю ширину: скруглён, уже редактора, стоит под таблицей.
+  const bar = page.locator('#editor-wrap .led-tablebar');
+  await expect(bar).toBeVisible();
+  const m = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const b = document.querySelector('#editor-wrap .led-tablebar');
+    return { bar: r('#editor-wrap .led-tablebar'), table: r('#editor-wrap .led-pm table'), ed: r('#editor-wrap .led'), radius: parseFloat(getComputedStyle(b).borderTopLeftRadius) };
   });
-  expect(await shape()).toEqual({ rows: 3, cols: 3 });
-  await expect(page.locator('#editor-wrap .led-tablebar')).toBeVisible();
-  await page.locator('#editor-wrap .led-tablebar [data-tt="rowBelow"]').click();
-  expect(await shape()).toEqual({ rows: 4, cols: 3 });
-  await page.locator('#editor-wrap .led-tablebar [data-tt="colRight"]').click();
-  expect(await shape()).toEqual({ rows: 4, cols: 4 });
-  await page.locator('#editor-wrap .led-tablebar [data-tt="tableDel"]').click();
-  expect(await shape()).toEqual({ rows: 0, cols: 0 });
+  expect(m.radius).toBeGreaterThan(6);
+  expect(m.bar.width).toBeLessThan(m.ed.width - 40);
+  expect(m.bar.top).toBeGreaterThanOrEqual(m.table.bottom);
+  // Строк и столбцов в острове на десктопе нет — они на разделителях.
+  await expect(bar.locator('[data-tt="rowBelow"], [data-tt="colRight"]')).toHaveCount(0);
+  await bar.locator('[data-tt="tableDel"]').click();
+  expect(await tableShape(page)).toEqual({ rows: 0, cols: 0 });
   const notes = await savedNotes(page, id);
   expect(notes.lancible.doc.content.some((n) => n.type === 'table')).toBe(false);
+});
+
+/** Навести на линию таблицы и открыть меню шестерёнки. kind — 'col' или 'row'. */
+async function lineMenu(page, kind, row, col) {
+  const cell = page.locator('#editor-wrap .led-pm table tr').nth(row).locator('td, th').nth(col);
+  const box = await cell.boundingBox();
+  if (kind === 'col') await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2);
+  else await page.mouse.move(box.x + box.width / 2, box.y + box.height - 2);
+  const line = page.locator('#editor-wrap .led-tline');
+  await expect(line).toBeVisible();
+  // Линия горит акцентом — тем же цветом, что ручка ширины столбца.
+  const accent = await page.evaluate(() => {
+    const probe = document.createElement('div');
+    probe.style.background = 'var(--accent)';
+    document.body.append(probe);
+    const c = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return c;
+  });
+  await expect(line).toHaveCSS('background-color', accent);
+  const gear = page.locator('#editor-wrap .led-tgear');
+  await expect(gear).toBeVisible();
+  await gear.click();
+  return page.locator('.led-pop .ctx-item');
+}
+
+test('разделители таблицы: шестерёнка вставляет и удаляет столбцы и строки', async ({ page }) => {
+  await openTask(page);
+  await pm(page).click();
+  await page.evaluate(() => editor.exec('table', { rows: 3, cols: 3, header: true }));
+  // Вертикальная линия между 1-м и 2-м столбцом: шестерёнка над таблицей.
+  let items = await lineMenu(page, 'col', 1, 0);
+  const gearBox = await page.locator('#editor-wrap .led-tgear').boundingBox();
+  const tableBox = await page.locator('#editor-wrap .led-pm table').boundingBox();
+  expect(gearBox.y + gearBox.height, 'шестерёнка столбца — над таблицей').toBeLessThanOrEqual(tableBox.y + 1);
+  await items.filter({ hasText: 'Вставить столбец здесь' }).click();
+  expect(await tableShape(page)).toEqual({ rows: 3, cols: 4 });
+  items = await lineMenu(page, 'col', 1, 0);
+  await items.filter({ hasText: 'Удалить столбец справа' }).click();
+  expect(await tableShape(page)).toEqual({ rows: 3, cols: 3 });
+  // Горизонтальная линия под первой строкой данных: шестерёнка слева.
+  items = await lineMenu(page, 'row', 1, 1);
+  const g2 = await page.locator('#editor-wrap .led-tgear').boundingBox();
+  expect(g2.x + g2.width, 'шестерёнка строки — слева от таблицы').toBeLessThanOrEqual(tableBox.x + 1);
+  await items.filter({ hasText: 'Вставить строку здесь' }).click();
+  expect(await tableShape(page)).toEqual({ rows: 4, cols: 3 });
+  items = await lineMenu(page, 'row', 1, 1);
+  await items.filter({ hasText: 'Удалить строку выше' }).click();
+  expect(await tableShape(page)).toEqual({ rows: 3, cols: 3 });
 });
 
 test('график из таблицы: числа переезжают в график, график — в документ', async ({ page }) => {
@@ -121,8 +187,10 @@ test('график из таблицы: числа переезжают в гр�
   await pm(page).click();
   await page.evaluate(() => editor.exec('table', { rows: 3, cols: 2, header: true }));
   const k = page.keyboard;
-  for (const cell of ['Месяц', 'Часы', 'Янв', '10', 'Фев', '14,5']) { await k.type(cell); await k.press('Tab'); }
-  await page.locator('#editor-wrap .led-tablebar button', { hasText: 'График из таблицы' }).click();
+  const cells = ['Месяц', 'Часы', 'Янв', '10', 'Фев', '14,5'];
+  // Tab — между ячейками: в последней он добавил бы новую строку.
+  for (const [i, cell] of cells.entries()) { await k.type(cell); if (i < cells.length - 1) await k.press('Tab'); }
+  await page.locator('#editor-wrap .led-tablebar [data-tt="toChart"]').click();
   await expect(page.locator('#ledmodal-backdrop')).toBeVisible();
   await page.locator('#ledmodal-backdrop .modal-buttons .primary').click();
   await expect(pm(page).locator('.led-chart svg rect.led-series-0')).toHaveCount(2);
@@ -211,6 +279,66 @@ test('пометки поверх текста держатся за свой а
   expect(notes.lancible.ink[0].anchor, 'штрих привязан ко второму абзацу').toBe(bids[1]);
 });
 
+test('картинки в ряд: вторая встаёт рядом, ряд разбирается обратно', async ({ page }) => {
+  const id = await openTask(page);
+  await pm(page).click();
+  await pickImage(page, () => page.locator('#editor-wrap .led-toolbar button[title="Картинка"]').click());
+  const fig = pm(page).locator('.led-figure').first();
+  await expect(fig.locator('img')).toHaveAttribute('src', /^blob:/);
+  await fig.click();
+  await pickImage(page, () => fig.locator('button[title="Добавить картинку рядом"]').click());
+  const row = pm(page).locator('.led-gallery');
+  await expect(row.locator('.led-figure')).toHaveCount(2);
+  const [a, b] = await row.locator('.led-figure').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().toJSON()));
+  expect(Math.abs(a.top - b.top), 'одна строка').toBeLessThan(2);
+  expect(b.left, 'вторая правее первой').toBeGreaterThan(a.right - 1);
+  let notes = await savedNotes(page, id);
+  expect(notes.lancible.doc.content.find((n) => n.type === 'gallery').content).toHaveLength(2);
+  // Вынести вторую из ряда — ряд из одной разбирается в обычную картинку.
+  await row.locator('.led-figure').nth(1).click();
+  await row.locator('.led-figure').nth(1).locator('button[title="Вынести из ряда"]').click();
+  await expect(pm(page).locator('.led-gallery')).toHaveCount(0);
+  await expect(pm(page).locator('.led-figure')).toHaveCount(2);
+  notes = await savedNotes(page, id);
+  expect(notes.lancible.doc.content.filter((n) => n.type === 'image')).toHaveLength(2);
+});
+
+test('обтекание: текст идёт рядом с картинкой', async ({ page }) => {
+  const id = await openTask(page);
+  await pm(page).click();
+  await pickImage(page, () => page.locator('#editor-wrap .led-toolbar button[title="Картинка"]').click());
+  const fig = pm(page).locator('.led-figure').first();
+  // Картинка вставляется, когда файл прочитан, — печатаем после неё.
+  await expect(fig.locator('img')).toHaveAttribute('src', /^blob:/);
+  await page.keyboard.type('Текст рядом с картинкой, который должен идти справа от неё, пока хватает её высоты.');
+  await fig.click();
+  await fig.locator('button[title="Обтекание: картинка слева"]').click();
+  const m = await page.evaluate(() => {
+    const f = document.querySelector('#editor-wrap .led-figure').getBoundingClientRect();
+    const range = document.createRange();
+    const p = [...document.querySelectorAll('#editor-wrap .led-pm p')].find((x) => x.textContent.startsWith('Текст рядом'));
+    range.selectNodeContents(p);
+    const line = range.getClientRects()[0];
+    return { fig: f.toJSON(), line: line.toJSON() };
+  });
+  expect(m.line.left, 'первая строка текста — справа от картинки').toBeGreaterThanOrEqual(m.fig.right);
+  expect(m.line.top, 'и на её высоте').toBeLessThan(m.fig.bottom);
+  const notes = await savedNotes(page, id);
+  const img = notes.lancible.doc.content.find((n) => n.type === 'image');
+  expect(img.attrs.align).toBe('wrap-left');
+  expect(img.attrs.width).toBe(40);
+});
+
+test('по умолчанию текст — во всю ширину окна редактора', async ({ page }) => {
+  await openTask(page);
+  const m = await page.evaluate(() => ({
+    pm: document.querySelector('#editor-wrap .led-pm').getBoundingClientRect().width,
+    scroll: document.querySelector('#editor-wrap .led-scroll').clientWidth,
+  }));
+  // Поля по краям остаются (ручка блока слева), но полоса не ограничена 760 px.
+  expect(m.scroll - m.pm).toBeLessThanOrEqual(120);
+});
+
 test('вид редактора — настройка устройства, не данные задачи', async ({ page }) => {
   const id = await openTask(page);
   await page.locator('#editor-wrap .led-toolbar button[title="Вид"]').click();
@@ -219,4 +347,14 @@ test('вид редактора — настройка устройства, н�
   await expect(page.locator('#editor-wrap .led')).toHaveClass(/led-f-serif/);
   const notes = await savedNotes(page, id);
   expect(JSON.stringify(notes || {})).not.toContain('serif');
+});
+
+test('Tab в последней ячейке добавляет строку, а не уводит фокус из таблицы', async ({ page }) => {
+  await openTask(page);
+  await pm(page).click();
+  await page.evaluate(() => editor.exec('table', { rows: 2, cols: 2, header: true }));
+  for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
+  expect(await tableShape(page)).toEqual({ rows: 3, cols: 2 });
+  await page.keyboard.type('новая');
+  await expect(pm(page).locator('table tr').nth(2).locator('td').first()).toHaveText('новая');
 });

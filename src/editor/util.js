@@ -13,6 +13,8 @@ import {
   Rows3, Search, Settings2, Shapes, Signature, Slash, Square, SquareCode,
   SquarePen, Strikethrough, Subscript, Superscript, Table, TableCellsMerge, TableCellsSplit, Trash2,
   TriangleAlert, Type, Underline, Undo2, Unlink, ZoomIn, ZoomOut,
+  ArrowLeft, ArrowRight, PanelLeft, PanelRight, ImagePlus, SquareSplitHorizontal,
+  BetweenVerticalStart, BetweenVerticalEnd, BetweenHorizontalStart, BetweenHorizontalEnd,
 } from 'lucide';
 
 export const uid = () => {
@@ -74,6 +76,9 @@ const ICONS = {
   header: PanelTop, fill: PaintBucket, rows: Rows3, columns: Columns3, palette: Palette,
   info: Info, warn: TriangleAlert, ok: CircleCheck, idea: Lightbulb, type: Type,
   wide: MoveHorizontal, edit: SquarePen, select: MousePointer2, fullscreen: Expand, zoomIn: ZoomIn, zoomOut: ZoomOut,
+  arrowLeft: ArrowLeft, arrowRight: ArrowRight, wrapLeft: PanelLeft, wrapRight: PanelRight, imagePlus: ImagePlus,
+  unrow: SquareSplitHorizontal, colBefore: BetweenVerticalStart, colAfter: BetweenVerticalEnd,
+  rowBefore: BetweenHorizontalStart, rowAfter: BetweenHorizontalEnd,
 };
 
 export function icon(name, size) {

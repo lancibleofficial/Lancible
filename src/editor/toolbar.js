@@ -81,6 +81,10 @@ export class Toolbar {
     this.tableBar = this.buildTableBar();
   }
 
+  /** Остров таблицы: плавает под таблицей, пока курсор в ней, — тем же
+   *  видом, что панель над выделением. Строки и столбцы вставляются и
+   *  удаляются шестерёнкой на разделителях (tablehandles.js); на телефоне
+   *  наводить нечем, и там эти кнопки остаются здесь. */
   buildTableBar() {
     const { ed } = this;
     const t = ed.t;
@@ -90,26 +94,27 @@ export class Toolbar {
       const p = popup(ed.root, fill, colorGrid('hl', null, (c) => { T.fill(c)(ed.view.state, ed.view.dispatch); p.close(); ed.view.focus(); }, t));
     });
     this.tb = {
-      merge: btn('merge', t('table.merge'), run(T.merge)),
-      split: btn('split', t('table.split'), run(T.split)),
+      merge: btn('merge', t('table.merge'), run(T.merge), { 'data-tt': 'merge' }),
+      split: btn('split', t('table.split'), run(T.split), { 'data-tt': 'split' }),
     };
+    const sep = () => h('span', { class: 'led-bar-sep' });
+    const rowsCols = ed.isMobile ? [
+      btn('rowBefore', t('table.row_above'), run(T.rowAbove), { 'data-tt': 'rowAbove' }),
+      btn('rowAfter', t('table.row_below'), run(T.rowBelow), { 'data-tt': 'rowBelow' }),
+      btn('colBefore', t('table.col_left'), run(T.colLeft), { 'data-tt': 'colLeft' }),
+      btn('colAfter', t('table.col_right'), run(T.colRight), { 'data-tt': 'colRight' }),
+      btn('rows', t('table.row_delete'), run(T.rowDel), { 'data-tt': 'rowDel' }),
+      btn('columns', t('table.col_delete'), run(T.colDel), { 'data-tt': 'colDel' }),
+      sep(),
+    ] : [];
     return h('div', { class: 'led-tablebar', hidden: true, role: 'toolbar', 'aria-label': t('table.tools') },
-      h('span', { class: 'led-tablebar-label' }, icon('table', 16), t('block.table')),
-      h('div', { class: 'led-group' },
-        btn('rowAbove', t('table.row_above'), run(T.rowAbove), { 'data-tt': 'rowAbove' }),
-        btn('rowBelow', t('table.row_below'), run(T.rowBelow), { 'data-tt': 'rowBelow' }),
-        btn('colLeft', t('table.col_left'), run(T.colLeft), { 'data-tt': 'colLeft' }),
-        btn('colRight', t('table.col_right'), run(T.colRight), { 'data-tt': 'colRight' })),
-      h('div', { class: 'led-group' },
-        h('button', { type: 'button', class: 'led-btn led-text-btn', 'data-tt': 'rowDel', onmousedown: (e) => e.preventDefault(), onclick: run(T.rowDel) }, `− ${t('table.row')}`),
-        h('button', { type: 'button', class: 'led-btn led-text-btn', 'data-tt': 'colDel', onmousedown: (e) => e.preventDefault(), onclick: run(T.colDel) }, `− ${t('table.col')}`)),
-      h('div', { class: 'led-group' }, this.tb.merge, this.tb.split,
-        btn('header', t('table.header_row'), run(T.headerRow), { 'data-tt': 'headerRow' }),
-        fill),
-      h('div', { class: 'led-group' },
-        h('button', { type: 'button', class: 'led-btn led-text-btn', onmousedown: (e) => e.preventDefault(), onclick: () => ed.chartFromTable() }, icon('chart', 16), t('table.to_chart'))),
-      h('div', { class: 'led-spacer' }),
-      h('button', { type: 'button', class: 'led-btn led-text-btn danger', 'data-tt': 'tableDel', onmousedown: (e) => e.preventDefault(), onclick: run(T.tableDel) }, icon('trash', 16), t('table.delete')));
+      ...rowsCols,
+      this.tb.merge, this.tb.split,
+      btn('header', t('table.header_row'), run(T.headerRow), { 'data-tt': 'headerRow' }),
+      fill,
+      sep(),
+      btn('chart', t('table.to_chart'), () => ed.chartFromTable(), { 'data-tt': 'toChart' }),
+      btn('trash', t('table.delete'), run(T.tableDel), { 'data-tt': 'tableDel', class: 'led-btn danger' }));
   }
 
   blockMenu(anchor) {
@@ -246,6 +251,7 @@ export class Toolbar {
     const open = this.ed.threads().filter((th) => !th.resolved && !th.draft).length;
     b.comments.dataset.count = open ? String(open) : '';
     this.tableBar.hidden = !fs.inTable;
+    if (fs.inTable) this.ed.placeTableBar();
     this.tb.merge.disabled = !fs.cellSelection;
   }
 }

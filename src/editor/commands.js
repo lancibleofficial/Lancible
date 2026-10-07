@@ -328,6 +328,68 @@ export const insertImage = (attrs) => insertBlock(N.image.create(attrs));
 export const insertChart = (chart) => insertBlock(N.chart.create({ chart }));
 export const insertDrawing = (attrs) => insertBlock(N.drawing.create(attrs || {}));
 
+// --- ряд картинок --------------------------------------------------------------------
+
+/** Картинка по позиции и её ряд, если она в ряду. */
+function imageAt(state, pos) {
+  const node = state.doc.nodeAt(pos);
+  if (!node || node.type !== N.image) return null;
+  const $p = state.doc.resolve(pos);
+  const inRow = $p.parent.type === N.gallery;
+  return { node, pos, inRow, rowPos: inRow ? $p.before() : null, row: inRow ? $p.parent : null, index: $p.index() };
+}
+
+/** Ещё картинка справа от данной: отдельная становится рядом из двух. */
+export function addImageBeside(pos, attrs) {
+  return (state, dispatch) => {
+    const at = imageAt(state, pos);
+    if (!at) return false;
+    if (dispatch) {
+      const added = N.image.create(Object.assign({ align: 'center' }, attrs));
+      const tr = state.tr;
+      if (at.inRow) tr.insert(pos + at.node.nodeSize, added);
+      else {
+        const first = N.image.create(Object.assign({}, at.node.attrs, { align: 'center', width: null, bid: null }));
+        tr.replaceWith(pos, pos + at.node.nodeSize, N.gallery.create({ bid: at.node.attrs.bid }, [first, added]));
+      }
+      dispatch(tr.scrollIntoView());
+    }
+    return true;
+  };
+}
+
+/** Поменять картинку местами с соседкой по ряду. */
+export function moveInGallery(pos, dir) {
+  return (state, dispatch) => {
+    const at = imageAt(state, pos);
+    if (!at || !at.inRow) return false;
+    const to = at.index + dir;
+    if (to < 0 || to >= at.row.childCount) return false;
+    if (dispatch) {
+      const kids = [];
+      at.row.forEach((n) => kids.push(n));
+      [kids[at.index], kids[to]] = [kids[to], kids[at.index]];
+      dispatch(state.tr.replaceWith(at.rowPos, at.rowPos + at.row.nodeSize, N.gallery.create(at.row.attrs, kids)));
+    }
+    return true;
+  };
+}
+
+/** Вынести картинку из ряда — отдельной строкой сразу под ним. */
+export function takeOutOfGallery(pos) {
+  return (state, dispatch) => {
+    const at = imageAt(state, pos);
+    if (!at || !at.inRow) return false;
+    if (dispatch) {
+      const alone = N.image.create(Object.assign({}, at.node.attrs, { width: null, bid: null }));
+      const tr = state.tr.insert(at.rowPos + at.row.nodeSize, alone);
+      tr.delete(pos, pos + at.node.nodeSize);
+      dispatch(tr.scrollIntoView());
+    }
+    return true;
+  };
+}
+
 // --- таблицы -----------------------------------------------------------------------
 
 export const table = {

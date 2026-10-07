@@ -25,7 +25,7 @@ import markdownit from 'markdown-it';
 import Core from '../renderer/core/doc.js';
 import { schema } from './schema.js';
 import * as C from './commands.js';
-import { blockIds, placeholder, buildInputRules, buildKeymaps } from './plugins.js';
+import { blockIds, placeholder, buildInputRules, buildKeymaps, galleryNormalize } from './plugins.js';
 import { commentsPlugin, CommentsPanel, commentsKey } from './comments.js';
 import { findPlugin, FindBar } from './find.js';
 import { slashPlugin, SlashMenu, BubbleMenu, BlockHandle } from './menus.js';
@@ -35,6 +35,7 @@ import { ChartView, editChart, defaultChart } from './chart.js';
 import { DrawingView } from './drawing.js';
 import { InkOverlay } from './overlay.js';
 import { TaskItemView, CodeBlockView } from './views.js';
+import { TableHandles } from './tablehandles.js';
 import { normalizeInkSettings, defaultInkSettings, clearInkColorCache } from './ink.js';
 import { createAssetStore } from './assets.js';
 import { h, icon, debounce, downloadBlob, keyLabel } from './util.js';
@@ -44,7 +45,9 @@ import { translate } from './strings.js';
 const N = schema.nodes;
 
 export const DEFAULT_SETTINGS = {
-  width: 'normal',
+  // Во всю ширину окна редактора (круг 2, 7 октября 2026); узкая полоса
+  // для чтения — в меню «Вид».
+  width: 'full',
   font: 'sans',
   size: 16,
   focus: false,
@@ -191,7 +194,7 @@ class Editor {
       handlePaste: (view, e) => this.onPaste(view, e),
       handleDrop: (view, e) => this.onDrop(view, e),
       handleDOMEvents: {
-        mousemove: (view, e) => { this.handle.track(e); return false; },
+        mousemove: (view, e) => { this.handle.track(e); this.tableHandles.track(e); return false; },
         focus: () => { this.updateUi(); return false; },
         blur: () => { setTimeout(() => this.updateUi(), 0); return false; },
       },
@@ -234,7 +237,10 @@ class Editor {
     this.outline = h('nav', { class: 'led-side led-outline', hidden: true, 'aria-label': this.t('outline.title') });
     this.page = h('div', { class: 'led-page' });
     this.handle = new BlockHandle(this);
-    this.scroller = h('div', { class: 'led-scroll' }, h('div', { class: 'led-page-wrap' }, this.handle.dom, this.page));
+    this.tableHandles = new TableHandles(this);
+    this.pageWrap = h('div', { class: 'led-page-wrap' }, this.handle.dom, this.page, this.toolbar.tableBar);
+    this.tableHandles.mount(this.pageWrap);
+    this.scroller = h('div', { class: 'led-scroll' }, this.pageWrap);
     this.viewport = h('div', { class: 'led-viewport' }, this.scroller);
     this.status = h('div', { class: 'led-status' });
     this.fileInput = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: (e) => this.onFiles(e) });
@@ -243,7 +249,6 @@ class Editor {
     this.bubble = new BubbleMenu(this);
     this.root.append(
       this.toolbar.dom,
-      this.toolbar.tableBar,
       this.find.dom,
       h('div', { class: 'led-body' }, this.outline, this.viewport, this.commentsPanel.dom),
       this.status,
@@ -251,7 +256,11 @@ class Editor {
       this.toastEl,
     );
     this.scroller.addEventListener('mouseleave', () => this.handle.hide());
-    this.scroller.addEventListener('scroll', () => { this.bubble.update(this.view, this.view.hasFocus()); }, { passive: true });
+    this.scroller.addEventListener('scroll', () => {
+      this.bubble.update(this.view, this.view.hasFocus());
+      if (!this.toolbar.tableBar.hidden) this.placeTableBar();
+    }, { passive: true });
+    this.scroller.addEventListener('mouseleave', () => this.tableHandles.scheduleHide());
     this.root.addEventListener('keydown', (e) => this.onRootKey(e));
     this.mount.append(this.root);
   }
@@ -306,6 +315,7 @@ class Editor {
       columnResizing({ cellMinWidth: 48 }),
       tableEditing(),
       blockIds,
+      galleryNormalize,
       placeholder(() => this.opts.placeholder || this.t('placeholder'), () => this.t('placeholder_line')),
       commentsPlugin({
         threads: () => this.comments,
@@ -571,6 +581,24 @@ class Editor {
     }
   }
 
+  /** Остров таблицы — под таблицей с курсором. Таблица выше экрана —
+   *  остров прилипает к нижнему краю видимой части, чтобы не искать его. */
+  placeTableBar() {
+    const bar = this.toolbar.tableBar;
+    const found = C.findParent(this.view.state, [N.table]);
+    const dom = found && this.view.nodeDOM(found.pos);
+    if (!dom || !dom.getBoundingClientRect) return;
+    const box = (dom.closest && dom.closest('.tableWrapper')) || dom;
+    const t = box.getBoundingClientRect();
+    const w = this.pageWrap.getBoundingClientRect();
+    const sc = this.scroller.getBoundingClientRect();
+    const hgt = bar.offsetHeight || 40;
+    let top = t.bottom + 8;
+    if (top + hgt > sc.bottom - 8 && t.top < sc.bottom - hgt - 16) top = sc.bottom - hgt - 8;
+    bar.style.top = `${Math.round(top - w.top)}px`;
+    bar.style.left = `${Math.round(Math.max(t.left, sc.left + 8) - w.left)}px`;
+  }
+
   // --- ссылки, вопросы, тост -------------------------------------------------------
 
   ask(anchor, o, cb) {
@@ -757,7 +785,9 @@ class Editor {
 <style>body{font:16px/1.6 system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;color:#1d1f22}
 img,svg{max-width:100%;height:auto}table{border-collapse:collapse}td,th{border:1px solid #c9ccd1;padding:4px 8px}
 pre{background:#f3f4f6;padding:12px;border-radius:8px;overflow:auto}blockquote{border-left:3px solid #c9ccd1;margin-left:0;padding-left:14px;color:#555}
-.led-callout{background:#f3f6ee;border-radius:8px;padding:10px 14px}ul[data-type=tasks]{list-style:none;padding-left:4px}
+.led-callout{background:#f3f6ee;border-radius:8px;padding:10px 14px}
+.led-gallery{display:flex;gap:10px;margin:16px 0}.led-gallery figure{flex:1 1 0;margin:0}
+.align-wrap-left{float:left;width:40%;margin:4px 20px 8px 0}.align-wrap-right{float:right;width:40%;margin:4px 0 8px 20px}ul[data-type=tasks]{list-style:none;padding-left:4px}
 li[data-checked=true]::before{content:"☑ "}li[data-checked=false]::before{content:"☐ "}figure{margin:16px 0}figcaption{color:#666;font-size:13px;text-align:center}
 mark{padding:0 2px}</style></head><body>${box.innerHTML}</body></html>`;
   }
