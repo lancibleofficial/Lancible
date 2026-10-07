@@ -105,6 +105,13 @@
 
       <!-- Проекты прямо в меню: открыть проект — один щелчок с любого экрана.
            Доска стала вкладкой проекта, поэтому отдельного пункта у неё нет. -->
+      <!-- Быстрый доступ — закреплённые проекты своей группой над остальными.
+           Закрепляют из меню проекта; пусто — группы нет. -->
+      <div class="nav-sec nav-sec-pinned" id="nav-pinned-head" hidden>
+        <span class="nav-label"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z"/></svg><span data-i18n="nav.pinned">Быстрый доступ</span></span>
+      </div>
+      <div class="nav-projects nav-pinned" id="nav-pinned" hidden></div>
+
       <div class="nav-sec" id="nav-projects-head">
         <span class="nav-label" data-i18n="nav.projects">Проекты</span>
         <button type="button" class="nav-sec-add" id="nav-new-project" data-i18n-title="project.new_title" title="Новый проект"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg></button>
@@ -409,6 +416,8 @@
            сетка, справа день; статистику можно спрятать — сетка займёт всё. -->
       <div id="time-view" class="view" hidden>
         <div class="island time-head period-head">
+          <!-- «Свернуть» — первой слева: прячет числа и панель дня. -->
+          <button type="button" id="time-stats-toggle" class="icon-btn" aria-pressed="false" data-i18n-title="time.hide_stats" title="Скрыть статистику" data-i18n-aria="time.hide_stats" aria-label="Скрыть статистику"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 2h10.8A1.6 1.6 0 0115 3.6v8.8a1.6 1.6 0 01-1.6 1.6H2.6A1.6 1.6 0 011 12.4V3.6A1.6 1.6 0 012.6 2zm.1 1.6v8.8h6.6V3.6H2.7zm8.2 0v8.8h2.5V3.6h-2.5z"/></svg></button>
           <div class="segmented time-modes" id="time-modes">
             <button type="button" data-mode="day" data-i18n="calendar.day">День</button>
             <button type="button" data-mode="days4" data-i18n="agenda.days4">4 дня</button>
@@ -428,9 +437,10 @@
             <button type="button" class="dp-btn" id="sf-version" hidden></button>
             <button type="button" class="filter-reset" id="sf-reset" hidden data-i18n="version.filter_reset">Сбросить</button>
           </div>
-          <button type="button" id="time-stats-toggle" class="icon-btn" aria-pressed="false" data-i18n-title="time.hide_stats" title="Скрыть статистику" data-i18n-aria="time.hide_stats" aria-label="Скрыть статистику"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 2h10.8A1.6 1.6 0 0115 3.6v8.8a1.6 1.6 0 01-1.6 1.6H2.6A1.6 1.6 0 011 12.4V3.6A1.6 1.6 0 012.6 2zm.1 1.6v8.8h6.6V3.6H2.7zm8.2 0v8.8h2.5V3.6h-2.5z"/></svg></button>
-          <button type="button" id="ag-create" class="btn-soft ag-create"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
-          <button type="button" id="export-period-btn" class="icon-btn" data-i18n-title="export.pick_period" title="Excel за период" data-i18n-aria="export.pick_period" aria-label="Excel за период"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg></button>
+          <!-- Действия у правого края: выгрузка — вторичная, «+ Запись» — главная
+               кнопка экрана и стоит последней. -->
+          <button type="button" id="export-period-btn" class="btn-soft time-export" data-i18n-title="export.pick_period" title="Excel за период"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg><span data-i18n="export.excel">Экспорт</span></button>
+          <button type="button" id="ag-create" class="btn-accent ag-create"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
         </div>
 
         <div class="time-body" id="time-body">
@@ -454,7 +464,6 @@
                 <div><b id="sp-done">0</b><span data-i18n="stats.done">задач выполнено</span></div>
               </div>
             </div>
-              <button id="export-all-btn" class="linklike kpi-export-all"><span data-i18n="export.all_excel">Скачать всё в Excel</span></button>
             </div>
             <div class="island ag-main" id="ag-main">
             <div class="ag-time" id="ag-time">

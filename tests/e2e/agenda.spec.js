@@ -534,3 +534,24 @@ test('пустая строка «весь день» не обзаводитс�
   expect(m.overflow, 'прокручивать нечего').toBeLessThanOrEqual(0);
   expect(m.labelFits, 'подпись помещается в строку').toBe(true);
 });
+
+// Клетка месяца и строка расписания лежат на острове сетки. Пока их заливка
+// совпадала с островом (--panel), от месяца оставались одни числа, а от
+// расписания — цветные полоски слева. Теперь это поле внутри острова.
+for (const theme of ['dark', 'light']) {
+  test(`${theme}: клетки месяца и строки расписания отличаются от острова`, async ({ page }) => {
+    await seed(page);
+    await page.evaluate((th) => { state.settings.theme = th; applyTheme(); openView('time'); }, theme);
+    const mode = (m) => page.locator(`#time-modes button[data-mode="${m}"]`).click();
+    const bg = (sel) => page.evaluate((s) => getComputedStyle(document.querySelector(s)).backgroundColor, sel);
+
+    await mode('month');
+    const island = await bg('#cal-main');
+    expect(await bg('#cal-days .cal-cell:not(.empty)'), 'клетка месяца').not.toBe(island);
+    expect(await bg('#cal-days .cal-cell.empty'), 'пустая клетка вне месяца — без заливки').toBe('rgba(0, 0, 0, 0)');
+
+    await mode('agenda');
+    await expect(page.locator('.ag-list-row:not(.ghost)').first()).toBeVisible();
+    expect(await bg('.ag-list-row:not(.ghost)'), 'строка расписания').not.toBe(await bg('#ag-main'));
+  });
+}

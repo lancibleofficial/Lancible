@@ -51,18 +51,20 @@ async function seed(page) {
   }, HOUR);
 }
 
-test('проекты — в левом меню: закреплённые сверху, открытый подсвечен, «Обзор» не горит', async ({ page }) => {
+test('проекты — в левом меню: закреплённые сверху группой, открытый подсвечен, «Обзор» не горит', async ({ page }) => {
   await seed(page);
-  const items = page.locator('#nav-projects .nav-project');
+  // Закреплённые — своей группой «Быстрый доступ» над остальными.
+  const items = page.locator('#navrail .nav-project');
   await expect(items).toHaveText([/Брендинг/, /Сайт клиента/]);
-  await expect(page.locator('#nav-projects .nav-project.active')).toHaveText(/Сайт клиента/);
+  await expect(page.locator('#nav-pinned .nav-project')).toHaveText([/Брендинг/]);
+  await expect(page.locator('#navrail .nav-project.active')).toHaveText(/Сайт клиента/);
   await expect(page.locator('#navrail .nav-item[data-view="home"]')).not.toHaveClass(/active/);
   // Рядом с проектом — сколько задач ещё не готово.
-  await expect(page.locator('#nav-projects .nav-project.active .nav-pcount')).toHaveText('3');
+  await expect(page.locator('#navrail .nav-project.active .nav-pcount')).toHaveText('3');
 
   await items.filter({ hasText: 'Брендинг' }).click();
   await expect(page.locator('#ph-name')).toHaveText('Брендинг');
-  await expect(page.locator('#nav-projects .nav-project.active')).toHaveText(/Брендинг/);
+  await expect(page.locator('#navrail .nav-project.active')).toHaveText(/Брендинг/);
 });
 
 test('итоги проекта — в шапке: время, деньги, готовые из всех; описание — подсказкой', async ({ page }) => {

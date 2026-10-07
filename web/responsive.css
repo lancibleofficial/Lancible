@@ -227,8 +227,7 @@
   .projects-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .ptile-menu,
-  .ptile-pin {
+  .ptile-menu {
     opacity: 1;
   }
   .recent-head,
