@@ -15,6 +15,7 @@ export default function MenuStack() {
     <Stack.Navigator
       screenOptions={{
         header: (props) => <AppHeader {...props} />,
+        animation: 'ios_from_right',
         contentStyle: { backgroundColor: colors.bg },
       }}
     >

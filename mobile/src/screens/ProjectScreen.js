@@ -7,7 +7,8 @@
 // независимых отбора расходились бы молча: на доске смотришь v1.0, а в
 // списке задач почему-то всё.
 import { useLayoutEffect, useMemo, useState } from 'react';
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import Tap from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
@@ -203,9 +204,9 @@ export default function ProjectScreen({ route, navigation }) {
     navigation.setOptions({
       title: '',
       headerRight: () => (
-        <Pressable hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn} accessibilityLabel={t(LANG, 'project.opts')}>
+        <Tap hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn} accessibilityLabel={t(LANG, 'project.opts')}>
           <Icon name="kebab" size={18} color={colors.text} />
-        </Pressable>
+        </Tap>
       ),
     });
   }, [navigation, project, colors, LANG, versionFilter]);
@@ -244,19 +245,19 @@ export default function ProjectScreen({ route, navigation }) {
           onSubmitEditing={() => submitDraft(false)}
           accessibilityLabel={t(LANG, 'tasks.new_ph')}
         />
-        <Pressable hitSlop={6} onPress={() => submitDraft(true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(LANG, 'agenda.create_btn')}>
+        <Tap hitSlop={6} onPress={() => submitDraft(true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(LANG, 'agenda.create_btn')}>
           <Icon name="play" size={11} color={colors.text} />
-        </Pressable>
+        </Tap>
       </View>
       <View style={styles.tabs}>
         {TABS.map((key) => (
-          <Pressable key={key} onPress={() => setTab(key)} style={[styles.tab, tab === key && styles.tabOn]}>
+          <Tap key={key} onPress={() => setTab(key)} style={[styles.tab, tab === key && styles.tabOn]}>
             <Text style={[styles.tabText, tab === key && styles.tabTextOn]} numberOfLines={1}>
               {t(LANG, TAB_KEY[key])}
               {key === 'versions' && projectVersions.length ? ` ${projectVersions.length}` : ''}
               {key === 'docs' && projectDocs.length ? ` ${projectDocs.length}` : ''}
             </Text>
-          </Pressable>
+          </Tap>
         ))}
       </View>
       {own.length ? (
@@ -276,10 +277,10 @@ export default function ProjectScreen({ route, navigation }) {
         <View style={styles.boardHead}>
           {head}
           {projectVersions.length ? (
-            <Pressable style={styles.versionChip} onPress={onPickVersion} hitSlop={6}>
+            <Tap style={styles.versionChip} onPress={onPickVersion} hitSlop={6}>
               <Text style={styles.versionChipText} numberOfLines={1}>{versionLabel}</Text>
               <Icon name="chevron-down" size={11} color={colors.textFaint} />
-            </Pressable>
+            </Tap>
           ) : null}
         </View>
         <BoardView projectId={projectId} versionFilter={versionFilter} onOpenTask={openTask} bottomPadding={insets.bottom} />
@@ -298,23 +299,23 @@ export default function ProjectScreen({ route, navigation }) {
               <View style={styles.filterRow}>
                 <View style={styles.seg}>
                   {['all', 'active', 'done'].map((key) => (
-                    <Pressable key={key} onPress={() => setStatusFilter(key)} style={[styles.segBtn, statusFilter === key && styles.segBtnOn]}>
+                    <Tap key={key} onPress={() => setStatusFilter(key)} style={[styles.segBtn, statusFilter === key && styles.segBtnOn]}>
                       <Text style={[styles.segText, statusFilter === key && styles.segTextOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{t(LANG, `filter.${key}`)}</Text>
-                    </Pressable>
+                    </Tap>
                   ))}
                 </View>
                 {projectVersions.length ? (
-                  <Pressable style={styles.versionChip} onPress={onPickVersion} hitSlop={6}>
+                  <Tap style={styles.versionChip} onPress={onPickVersion} hitSlop={6}>
                     <Text style={styles.versionChipText} numberOfLines={1}>{versionLabel}</Text>
                     <Icon name="chevron-down" size={11} color={colors.textFaint} />
-                  </Pressable>
+                  </Tap>
                 ) : null}
               </View>
 
               {groups.length === 0 ? <IslandEmpty>{t(LANG, 'sidebar.empty_default')}</IslandEmpty> : null}
               {groups.map((g, gi) => (
                 <View key={g.key}>
-                  <Pressable
+                  <Tap
                     style={[styles.group, gi === 0 && styles.groupFirst]}
                     onPress={() => toggleListGroup(projectId, g.key)}
                     accessibilityRole="button"
@@ -326,7 +327,7 @@ export default function ProjectScreen({ route, navigation }) {
                     <Text style={styles.groupCount}>{g.tasks.length}</Text>
                     <View style={{ flex: 1 }} />
                     <Text style={styles.groupTime}>{fmtDur(g.ms, LANG)}</Text>
-                  </Pressable>
+                  </Tap>
                   {g.collapsed ? null : g.tasks.map((task) => (
                     <SwipeRow
                       key={task.id}

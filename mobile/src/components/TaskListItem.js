@@ -1,4 +1,5 @@
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Tap from './Tap';
 import Text from './AppText';
 import { useAppStore } from '../store/useAppStore';
 import { fmtDateShort } from '../lib/format';
@@ -43,8 +44,8 @@ export default function TaskListItem({ task, onPress, showStatus = true }) {
   useTicker(v.running);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-      <Pressable
+    <Tap onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+      <Tap
         hitSlop={10}
         onPress={() => toggleTaskDone(task.id)}
         style={[styles.checkbox, v.done && styles.checkboxOn]}
@@ -53,7 +54,7 @@ export default function TaskListItem({ task, onPress, showStatus = true }) {
         accessibilityLabel={t(lang, 'task.mark_done')}
       >
         {v.done ? <Icon name="check" size={12} color={colors.accentText} /> : null}
-      </Pressable>
+      </Tap>
 
       <View style={styles.mid}>
         <Text style={[styles.title, v.done && styles.titleDone]} numberOfLines={1}>
@@ -89,7 +90,7 @@ export default function TaskListItem({ task, onPress, showStatus = true }) {
 
       {v.running ? <View style={styles.liveDot} /> : null}
       <Text style={[styles.time, v.running && styles.timeRunning]}>{v.time}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 

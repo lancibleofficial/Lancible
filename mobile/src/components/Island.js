@@ -5,9 +5,14 @@
 // IslandHead — строка «подзаголовок слева, тихая подпись или действие
 // справа» (.island-head / .island-title / .island-note). IslandRow — строка
 // внутри острова с линией сверху (списки записей, дедлайнов, свойств).
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import Tap from './Tap';
 import Text from './AppText';
 import { useColors, spacing, radius, typography } from '../theme';
+
+// Появление: лёгкий подъём с проявлением, ease out. Одно на все острова.
+const appear = FadeInDown.duration(280);
 
 export default function Island({ children, style, padded = true, onPress, onLongPress, ...rest }) {
   const colors = useColors();
@@ -18,17 +23,18 @@ export default function Island({ children, style, padded = true, onPress, onLong
   ];
   if (onPress || onLongPress) {
     return (
-      <Pressable
+      <Tap
+        entering={appear}
         onPress={onPress}
         onLongPress={onLongPress}
-        style={({ pressed }) => [base, pressed && { opacity: 0.9 }]}
+        style={base}
         {...rest}
       >
         {children}
-      </Pressable>
+      </Tap>
     );
   }
-  return <View style={base} {...rest}>{children}</View>;
+  return <Animated.View entering={appear} style={base} {...rest}>{children}</Animated.View>;
 }
 
 /** Шапка острова: подзаголовок и, справа, подпись или элемент. */
@@ -36,9 +42,9 @@ export function IslandHead({ title, note, right, onPressNote, style }) {
   const colors = useColors();
   const noteNode = note ? (
     onPressNote ? (
-      <Pressable onPress={onPressNote} hitSlop={8}>
+      <Tap onPress={onPressNote} hitSlop={8}>
         <Text style={[typography.islandNote, { color: colors.accentInk }]}>{note}</Text>
-      </Pressable>
+      </Tap>
     ) : <Text style={[typography.islandNote, { color: colors.textFaint }]} numberOfLines={1}>{note}</Text>
   ) : null;
   return (
@@ -60,9 +66,9 @@ export function IslandRow({ children, first, onPress, onLongPress, style }) {
   ];
   if (onPress || onLongPress) {
     return (
-      <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [rowStyle, pressed && { opacity: 0.75 }]}>
+      <Tap onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [rowStyle, pressed && { opacity: 0.75 }]}>
         {children}
-      </Pressable>
+      </Tap>
     );
   }
   return <View style={rowStyle}>{children}</View>;

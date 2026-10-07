@@ -1,4 +1,7 @@
-import { View, Pressable, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring } from 'react-native-reanimated';
+import Tap from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
@@ -8,6 +11,20 @@ import { useColors, spacing } from '../theme';
 // Пять вкладок макета B2: Проекты · Задачи · Сегодня · Цифры · Меню.
 // Внутренние имена Home и Menu прежние — на них ссылаются переходы.
 const ICON_NAMES = { Projects: 'cards', Tasks: 'inbox', Home: 'clock', Stats: 'chart', Menu: 'menu' };
+
+/** Иконка вкладки: став активной, подпрыгивает на пружине. */
+function TabIcon({ focused, name, color, styles }) {
+  const s = useSharedValue(1);
+  useEffect(() => {
+    if (focused) s.value = withSequence(withSpring(1.18, { damping: 9, stiffness: 340, mass: 0.7 }), withSpring(1, { damping: 14, stiffness: 260 }));
+  }, [focused]);
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
+  return (
+    <Animated.View style={[styles.iconSlot, focused && styles.iconSlotOn, anim]}>
+      <Icon name={name} size={20} color={color} />
+    </Animated.View>
+  );
+}
 
 // Плоский таббар у нижнего края, над ним — плашка идущей задачи.
 //
@@ -36,19 +53,18 @@ export default function MainTabBar({ state, navigation, descriptors }) {
           const color = isFocused ? colors.accentInk : colors.textFaint;
           const label = descriptors[route.key].options.tabBarLabel ?? route.name;
           return (
-            <Pressable
+            <Tap
               key={route.key}
+              scale={0.9}
               onPress={() => navigation.navigate(route.name)}
               style={styles.tabItem}
               accessibilityRole="button"
               accessibilityLabel={label}
               accessibilityState={isFocused ? { selected: true } : {}}
             >
-              <View style={[styles.iconSlot, isFocused && styles.iconSlotOn]}>
-                <Icon name={ICON_NAMES[route.name]} size={20} color={color} />
-              </View>
+              <TabIcon focused={isFocused} name={ICON_NAMES[route.name]} color={color} styles={styles} />
               <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>{label}</Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>

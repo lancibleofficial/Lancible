@@ -44,6 +44,12 @@
       "at": "L99"
     },
     {
+      "id": "mobile_src_components_bottomsheet_bottomsheet_animateclose",
+      "label": "animateClose()",
+      "file": "mobile/src/components/BottomSheet.js",
+      "at": "L55"
+    },
+    {
       "id": "mobile_src_components_changepasswordsheet_changepasswordsheet_save",
       "label": "save()",
       "file": "mobile/src/components/ChangePasswordSheet.js",
@@ -260,12 +266,6 @@
       "at": "L56"
     },
     {
-      "id": "mobile_src_lib_i18n_pluralform",
-      "label": "pluralForm()",
-      "file": "mobile/src/lib/i18n.js",
-      "at": "L1435"
-    },
-    {
       "id": "mobile_src_lib_statuses_isclosedstatus",
       "label": "isClosedStatus()",
       "file": "mobile/src/lib/statuses.js",
@@ -329,37 +329,37 @@
       "id": "mobile_src_screens_editorscreen_editorscreen_onchange",
       "label": "onChange()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L55"
+      "at": "L60"
     },
     {
       "id": "mobile_src_screens_editorscreen_editorscreen_ontitle",
       "label": "onTitle()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L67"
+      "at": "L68"
     },
     {
       "id": "mobile_src_screens_editorscreen_editorscreen_pickproject",
       "label": "pickProject()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L72"
+      "at": "L73"
     },
     {
       "id": "mobile_src_screens_homescreen_homescreen_addentry",
       "label": "addEntry()",
       "file": "mobile/src/screens/HomeScreen.js",
-      "at": "L115"
+      "at": "L116"
     },
     {
       "id": "mobile_src_screens_homescreen_homescreen_onentry",
       "label": "onEntry()",
       "file": "mobile/src/screens/HomeScreen.js",
-      "at": "L112"
+      "at": "L113"
     },
     {
       "id": "mobile_src_screens_homescreen_homescreen_pickday",
       "label": "pickDay()",
       "file": "mobile/src/screens/HomeScreen.js",
-      "at": "L119"
+      "at": "L120"
     },
     {
       "id": "mobile_src_screens_notificationsscreen_notificationsscreen_onopen",
@@ -371,31 +371,31 @@
       "id": "mobile_src_screens_projectscreen_projectscreen_onopenmenu",
       "label": "onOpenMenu()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L142"
+      "at": "L143"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_onpickversion",
       "label": "onPickVersion()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L162"
+      "at": "L163"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_submitdraft",
       "label": "submitDraft()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L193"
+      "at": "L194"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectsscreen_opennewproject",
       "label": "openNewProject()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L75"
+      "at": "L76"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectsscreen_submitdraft",
       "label": "submitDraft()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L99"
+      "at": "L100"
     },
     {
       "id": "mobile_src_screens_projectstatusesscreen_projectstatusesscreen_onadd",
@@ -443,55 +443,55 @@
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onexcel",
       "label": "onExcel()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L121"
+      "at": "L122"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopencurrency",
       "label": "onOpenCurrency()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L108"
+      "at": "L109"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopenlanguage",
       "label": "onOpenLanguage()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L98"
+      "at": "L99"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopenrate",
       "label": "onOpenRate()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L118"
+      "at": "L119"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopensystemnotifications",
       "label": "onOpenSystemNotifications()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L94"
+      "at": "L95"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onupdatepress",
       "label": "onUpdatePress()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L64"
+      "at": "L65"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_oncell",
       "label": "onCell()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L112"
+      "at": "L113"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_onexcel",
       "label": "onExcel()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L131"
+      "at": "L132"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_pickproject",
       "label": "pickProject()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L121"
+      "at": "L122"
     },
     {
       "id": "mobile_src_screens_tagsscreen_tagsscreen_usagelabel",
@@ -503,61 +503,61 @@
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ondeletesession",
       "label": "onDeleteSession()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L192"
+      "at": "L199"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopendue",
       "label": "onOpenDue()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L169"
+      "at": "L176"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenmenu",
       "label": "onOpenMenu()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L148"
+      "at": "L155"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopentags",
       "label": "onOpenTags()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L179"
+      "at": "L186"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onpreset",
       "label": "onPreset()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L188"
+      "at": "L195"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onratechange",
       "label": "onRateChange()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L165"
+      "at": "L172"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ontitlechange",
       "label": "onTitleChange()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L160"
+      "at": "L167"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_openeditor",
       "label": "openEditor()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L119"
+      "at": "L126"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_picktargetproject",
       "label": "pickTargetProject()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L66"
+      "at": "L67"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_submit",
       "label": "submit()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L58"
+      "at": "L59"
     },
     {
       "id": "mobile_src_store_useappstore_sortedprojecttasks",
@@ -671,13 +671,13 @@
       "id": "mobile_tests_taskdetailscreen_test_at",
       "label": "at()",
       "file": "mobile/tests/TaskDetailScreen.test.js",
-      "at": "L13"
+      "at": "L17"
     },
     {
       "id": "mobile_tests_taskdetailscreen_test_screen",
       "label": "screen()",
       "file": "mobile/tests/TaskDetailScreen.test.js",
-      "at": "L34"
+      "at": "L38"
     },
     {
       "id": "mobile_tests_tasklistitem_test_task",
@@ -2034,12 +2034,6 @@
       "label": "taskState()",
       "file": "tests/e2e/repeat.spec.js",
       "at": "L52"
-    },
-    {
-      "id": "tests_e2e_stats_spec_cards",
-      "label": "cards()",
-      "file": "tests/e2e/stats.spec.js",
-      "at": "L71"
     },
     {
       "id": "tests_e2e_stats_spec_seed",

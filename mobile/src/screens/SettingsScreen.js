@@ -2,7 +2,8 @@
 // напоминания · Теги, «Работа» (ставка, валюта, Excel), «Приложение»
 // (язык, тема, напоминания, о приложении и юридические страницы).
 import { useEffect, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet, Linking, Switch } from 'react-native';
+import { View, ScrollView, StyleSheet, Linking, Switch } from 'react-native';
+import Tap from '../components/Tap';
 import Constants from 'expo-constants';
 import Text from '../components/AppText';
 import PrimaryButton from '../components/PrimaryButton';
@@ -166,7 +167,7 @@ export default function SettingsScreen({ navigation }) {
       </TabHeader>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {update ? (
-          <Pressable style={styles.updateBanner} onPress={onUpdatePress} disabled={updating}>
+          <Tap style={styles.updateBanner} onPress={onUpdatePress} disabled={updating}>
             <Icon name="download" size={18} color={colors.accentText} />
             <Text style={styles.updateText} numberOfLines={1}>
               {updating
@@ -174,7 +175,7 @@ export default function SettingsScreen({ navigation }) {
                 : t(lang, 'settings.update_available', { version: update.version })}
             </Text>
             {updating ? null : <Text style={styles.updateAction}>{t(lang, update.canInstall ? 'settings.update_install' : 'settings.update_download')}</Text>}
-          </Pressable>
+          </Tap>
         ) : null}
 
         {authStatus === 'signedIn' ? (

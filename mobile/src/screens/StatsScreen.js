@@ -2,7 +2,8 @@
 // периода двумя тапами, сводка и «По проектам». Режимы: неделя, месяц,
 // период, всё время. Фильтр по проекту — чип в шапке, Excel — кнопка.
 import { useMemo, useState } from 'react';
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import Tap from '../components/Tap';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
 import Island, { IslandHead, IslandEmpty } from '../components/Island';
@@ -160,20 +161,20 @@ export default function StatsScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <TabHeader title={t(lang, 'nav.stats')}>
-        <Pressable onPress={pickProject} style={[styles.chip, project && styles.chipOn]} accessibilityRole="button" accessibilityLabel={t(lang, 'filter.project')}>
+        <Tap onPress={pickProject} style={[styles.chip, project && styles.chipOn]} accessibilityRole="button" accessibilityLabel={t(lang, 'filter.project')}>
           <View style={[styles.dot, { backgroundColor: project ? project.color : colors.textDim }]} />
           <Text style={styles.chipText} numberOfLines={1}>{project ? project.name : t(lang, 'filter.all_projects')}</Text>
           <Icon name="chevron-down" size={10} color={colors.textFaint} />
-        </Pressable>
+        </Tap>
         <HeaderButton icon="download" label={t(lang, 'menu.export_excel')} onPress={onExcel} />
       </TabHeader>
 
       <View style={styles.segWrap}>
         <View style={styles.seg}>
           {MODES.map((m) => (
-            <Pressable key={m} onPress={() => setMode(m)} style={[styles.segBtn, mode === m && styles.segOn]}>
+            <Tap key={m} onPress={() => setMode(m)} style={[styles.segBtn, mode === m && styles.segOn]}>
               <Text style={[styles.segText, mode === m && styles.segTextOn]} numberOfLines={1}>{t(lang, MODE_KEY[m])}</Text>
-            </Pressable>
+            </Tap>
           ))}
         </View>
       </View>
@@ -182,9 +183,9 @@ export default function StatsScreen({ navigation }) {
         {mode === 'week' ? (
           <Island style={styles.cal}>
             <View style={styles.calHead}>
-              <Pressable onPress={() => shiftWeek(-1)} style={styles.arrow} accessibilityLabel={t(lang, 'common.back')}><Icon name="chevron-left" size={15} color={colors.text} /></Pressable>
+              <Tap onPress={() => shiftWeek(-1)} style={styles.arrow} accessibilityLabel={t(lang, 'common.back')}><Icon name="chevron-left" size={15} color={colors.text} /></Tap>
               <Text style={styles.calTitle}>{`${fmtDateShort(weekFrom, lang)} – ${fmtDateShort(new Date(weekFrom.getTime() + 6 * DAY), lang)}`}</Text>
-              <Pressable onPress={() => shiftWeek(1)} style={styles.arrow}><Icon name="chevron-right" size={15} color={colors.text} /></Pressable>
+              <Tap onPress={() => shiftWeek(1)} style={styles.arrow}><Icon name="chevron-right" size={15} color={colors.text} /></Tap>
             </View>
             <View style={styles.bars}>
               {weekDays.map((x) => (
@@ -201,9 +202,9 @@ export default function StatsScreen({ navigation }) {
         {mode === 'month' || mode === 'period' ? (
           <Island style={styles.cal}>
             <View style={styles.calHead}>
-              <Pressable onPress={() => shiftMonth(-1)} style={styles.arrow} accessibilityLabel={t(lang, 'common.back')}><Icon name="chevron-left" size={15} color={colors.text} /></Pressable>
+              <Tap onPress={() => shiftMonth(-1)} style={styles.arrow} accessibilityLabel={t(lang, 'common.back')}><Icon name="chevron-left" size={15} color={colors.text} /></Tap>
               <Text style={styles.calTitle}>{monthLabel(lang, year, month)}</Text>
-              <Pressable onPress={() => shiftMonth(1)} style={styles.arrow}><Icon name="chevron-right" size={15} color={colors.text} /></Pressable>
+              <Tap onPress={() => shiftMonth(1)} style={styles.arrow}><Icon name="chevron-right" size={15} color={colors.text} /></Tap>
             </View>
             <View style={styles.wdRow}>
               {WEEKDAY_KEYS.map((k) => <Text key={k} style={styles.wd}>{t(lang, k)}</Text>)}
@@ -216,7 +217,7 @@ export default function StatsScreen({ navigation }) {
                   const sel = mode === 'period' && rangeBounds && d >= rangeBounds[0] && d <= rangeBounds[1];
                   const end = mode === 'period' && (c.key === range.from || c.key === range.to);
                   return (
-                    <Pressable
+                    <Tap
                       key={c.key}
                       onPress={() => onCell(c.key)}
                       style={[styles.cell, c.off && styles.cellOff, sel && styles.cellIn, end && styles.cellEnd, c.key === todayKey && styles.cellToday]}
@@ -224,7 +225,7 @@ export default function StatsScreen({ navigation }) {
                     >
                       <Text style={[styles.cellNum, c.off && styles.cellNumOff, end && styles.cellNumEnd]}>{c.day}</Text>
                       {e && e.ms ? <Text style={[styles.cellMs, end && styles.cellNumEnd]}>{fmtShort(e.ms, lang)}</Text> : null}
-                    </Pressable>
+                    </Tap>
                   );
                 })}
               </View>
@@ -235,7 +236,7 @@ export default function StatsScreen({ navigation }) {
                 <Text style={styles.periodRange} numberOfLines={1}>{periodLabel}</Text>
                 <View style={{ flex: 1 }} />
                 {rangeBounds ? <Text style={styles.periodSum}>{fmtDur(total.ms, lang)} · {fmtMoney(total.money, lang, currency)}</Text> : null}
-                {rangeBounds ? <Pressable hitSlop={8} onPress={() => setRange({ from: null, to: null, picking: false })}><Text style={styles.periodClear}>{t(lang, 'stats.clear_period')}</Text></Pressable> : null}
+                {rangeBounds ? <Tap hitSlop={8} onPress={() => setRange({ from: null, to: null, picking: false })}><Text style={styles.periodClear}>{t(lang, 'stats.clear_period')}</Text></Tap> : null}
               </View>
             ) : (
               <View style={styles.periodBar}>
@@ -267,7 +268,7 @@ export default function StatsScreen({ navigation }) {
           <Text style={styles.label}>{t(lang, 'stats.by_project_period')}</Text>
           {byProject.length === 0 ? <View style={{ padding: spacing.md }}><IslandEmpty>{t(lang, 'stats.period_empty')}</IslandEmpty></View> : null}
           {byProject.map((x, i) => (
-            <Pressable key={x.project.id} onPress={() => navigation.navigate('Project', { projectId: x.project.id })} style={[styles.pr, i > 0 && styles.prBorder]}>
+            <Tap key={x.project.id} onPress={() => navigation.navigate('Project', { projectId: x.project.id })} style={[styles.pr, i > 0 && styles.prBorder]}>
               <View style={[styles.dot, { backgroundColor: x.project.color }]} />
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={styles.prHead}>
@@ -276,7 +277,7 @@ export default function StatsScreen({ navigation }) {
                 </View>
                 <View style={styles.prBar}><View style={[styles.prFill, { width: `${Math.round((x.ms / maxProjectMs) * 100)}%`, backgroundColor: x.project.color }]} /></View>
               </View>
-            </Pressable>
+            </Tap>
           ))}
         </Island>
       </ScrollView>

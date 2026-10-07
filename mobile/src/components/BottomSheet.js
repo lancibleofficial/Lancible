@@ -49,6 +49,17 @@ export default function BottomSheet() {
   const [renderedContent, setRenderedContent] = useState(null);
   const [renderedFooter, setRenderedFooter] = useState(null);
   const translateY = useRef(new Animated.Value(windowHeight)).current;
+  const backdrop = useRef(new Animated.Value(0)).current;
+
+  // Уход вниз: лист ease in, подложка гаснет вместе с ним.
+  function animateClose() {
+    Animated.parallel([
+      Animated.timing(translateY, { toValue: windowHeight, duration: CLOSE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(backdrop, { toValue: 0, duration: CLOSE_MS, useNativeDriver: true }),
+    ]).start(({ finished }) => {
+      if (finished) setVisible(false);
+    });
+  }
 
   useEffect(() => {
     if (content) {
@@ -56,17 +67,16 @@ export default function BottomSheet() {
       setRenderedFooter(footer);
       setVisible(true);
       translateY.setValue(windowHeight);
+      backdrop.setValue(0);
       requestAnimationFrame(() => {
-        Animated.timing(translateY, {
-          toValue: 0, duration: OPEN_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true,
-        }).start();
+        // Выезд на пружине: ease out с лёгким перелётом.
+        Animated.parallel([
+          Animated.spring(translateY, { toValue: 0, useNativeDriver: true, stiffness: 230, damping: 22, mass: 0.9 }),
+          Animated.timing(backdrop, { toValue: 1, duration: OPEN_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        ]).start();
       });
     } else if (visible) {
-      Animated.timing(translateY, {
-        toValue: windowHeight, duration: CLOSE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true,
-      }).start(({ finished }) => {
-        if (finished) setVisible(false);
-      });
+      animateClose();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]);
@@ -84,14 +94,10 @@ export default function BottomSheet() {
       },
       onPanResponderRelease: (_e, g) => {
         if (g.dy > DRAG_CLOSE_DISTANCE || g.vy > DRAG_CLOSE_VELOCITY) {
-          Animated.timing(translateY, {
-            toValue: windowHeight, duration: CLOSE_MS, easing: Easing.in(Easing.cubic), useNativeDriver: true,
-          }).start(({ finished }) => {
-            if (finished) setVisible(false);
-          });
+          animateClose();
           closeSheet();
         } else {
-          Animated.spring(translateY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+          Animated.spring(translateY, { toValue: 0, useNativeDriver: true, stiffness: 230, damping: 22, mass: 0.9 }).start();
         }
       },
     }),
@@ -107,6 +113,7 @@ export default function BottomSheet() {
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={closeSheet}>
       <KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: backdrop }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
         <Animated.View style={[styles.sheet, { maxHeight, paddingBottom: insets.bottom || spacing.md, transform: [{ translateY }] }]}>
           <View {...panResponder.panHandlers} style={styles.grabberZone}>
@@ -128,7 +135,7 @@ export default function BottomSheet() {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.scrim },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.panel, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
     overflow: 'hidden',

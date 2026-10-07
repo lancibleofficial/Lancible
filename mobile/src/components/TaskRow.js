@@ -1,7 +1,8 @@
 // Строка задачи в колоде проектов и в ленте «Задачи» (макет B2): кружок
 // статуса (тап — выполнено), название, тихая мета (идёт · дедлайн · версия
 // · время), справа круглая кнопка плей/стоп. В ленте — ещё плашка проекта.
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Tap from './Tap';
 import Text from './AppText';
 import Icon from './Icon';
 import { useAppStore, getProject } from '../store/useAppStore';
@@ -38,12 +39,12 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
   if (!running && elapsed > 0) meta.push({ text: fmtShort(elapsed, lang), color: colors.textFaint });
 
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       style={({ pressed }) => [styles.row, compact && styles.rowCompact, !first && styles.rowBorder, running && styles.rowRunning, pressed && styles.pressed]}
       accessibilityRole="button"
     >
-      <Pressable
+      <Tap
         hitSlop={10}
         onPress={() => toggleTaskDone(task.id)}
         style={[styles.circ, task.done && styles.circOn]}
@@ -52,7 +53,7 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
         accessibilityLabel={t(lang, 'task.mark_done')}
       >
         {task.done ? <Icon name="check" size={11} color={colors.accentText} /> : null}
-      </Pressable>
+      </Tap>
       <View style={styles.mid}>
         <Text style={[styles.title, task.done && styles.titleDone]} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
         {(showProject && project) || meta.length ? (
@@ -70,7 +71,7 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
           </View>
         ) : null}
       </View>
-      <Pressable
+      <Tap
         hitSlop={8}
         onPress={() => (running ? stopTimer() : startTimer(task.id))}
         style={[styles.play, running && styles.playOn]}
@@ -78,8 +79,8 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
         accessibilityLabel={t(lang, running ? 'timer.stop' : 'timer.start')}
       >
         <Icon name={running ? 'stop' : 'play'} size={12} color={running ? colors.accentText : colors.text} />
-      </Pressable>
-    </Pressable>
+      </Tap>
+    </Tap>
   );
 }
 

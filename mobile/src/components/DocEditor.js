@@ -33,7 +33,7 @@ function buildHtml(init, mode) {
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style>${editorCssVars(mode)}
 ${EDITOR_CSS}
-html,body{margin:0;padding:0;background:var(--panel);color:var(--text);font-family:var(--font-ui);-webkit-text-size-adjust:100%;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);-webkit-text-size-adjust:100%;}
 html,body,#host{height:100%;}
 #host{display:flex;flex-direction:column;}
 ${preview ? `html,body,#host{height:auto;overflow:hidden;}
@@ -41,6 +41,7 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
 .led .led-scroll{overflow:visible;}
 .led .led-page-wrap{padding:8px 4px 8px;}
 .led .led-toolbar,.led .led-status,.led .led-tablebar{display:none;}
+.led-pm .led-empty::before,.led-pm .led-empty-line::before{display:none;}
 #tap{position:fixed;inset:0;z-index:1000;}` : ''}
 </style></head><body><div id="host"></div>${preview ? '<div id="tap"></div>' : ''}
 <script>${EDITOR_JS}</script>
@@ -140,7 +141,7 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
         originWhitelist={['*']}
         source={{ html, baseUrl: BASE_URL }}
         onMessage={onMessage}
-        style={[styles.web, { backgroundColor: colors.panel }]}
+        style={[styles.web, { backgroundColor: colors.bg }]}
         scrollEnabled={!preview}
         nestedScrollEnabled={false}
         overScrollMode="never"

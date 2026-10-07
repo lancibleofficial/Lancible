@@ -6,7 +6,8 @@
 // Часовая сетка дня с перетаскиванием (AgendaGrid) не ушла: кнопка в шапке
 // переключает список записей на сетку того же дня и обратно.
 import { useMemo, useState } from 'react';
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import Tap from '../components/Tap';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
 import Island, { IslandHead, IslandRow, IslandEmpty } from '../components/Island';
@@ -137,11 +138,11 @@ export default function HomeScreen({ navigation }) {
         {weekDays.map((x) => {
           const on = x.key === selected;
           return (
-            <Pressable key={x.key} onPress={() => setSelected(x.key)} style={[styles.bar, on && styles.barOn]} accessibilityRole="button" accessibilityLabel={dayLong}>
+            <Tap key={x.key} onPress={() => setSelected(x.key)} style={[styles.bar, on && styles.barOn]} accessibilityRole="button" accessibilityLabel={dayLong}>
               <Text style={styles.barVal}>{x.ms ? fmtShort(x.ms, lang) : ''}</Text>
               <View style={[styles.barFill, { height: Math.max(4, Math.round((x.ms / maxMs) * 56)) }, on && styles.barFillOn]} />
               <Text style={[styles.barDay, on && styles.barDayOn]}>{t(lang, WEEKDAY_KEY[x.d.getDay()])}</Text>
-            </Pressable>
+            </Tap>
           );
         })}
       </View>
@@ -180,10 +181,10 @@ export default function HomeScreen({ navigation }) {
 
           {lastTask ? (
             <Island style={styles.last}>
-              <Pressable onPress={() => startTimer(lastTask.id)} style={styles.lastPlay} accessibilityRole="button" accessibilityLabel={t(lang, 'timer.start')}>
+              <Tap onPress={() => startTimer(lastTask.id)} style={styles.lastPlay} accessibilityRole="button" accessibilityLabel={t(lang, 'timer.start')}>
                 <Icon name="play" size={16} color={colors.accentText} />
-              </Pressable>
-              <Pressable style={{ flex: 1, minWidth: 0 }} onPress={() => openTask(lastTask.id)}>
+              </Tap>
+              <Tap style={{ flex: 1, minWidth: 0 }} onPress={() => openTask(lastTask.id)}>
                 <Text style={styles.label}>{t(lang, 'today.last_task')}</Text>
                 <Text style={styles.lastName} numberOfLines={1}>{lastTask.title || t(lang, 'task.no_name')}</Text>
                 <View style={styles.lastSub}>
@@ -192,7 +193,7 @@ export default function HomeScreen({ navigation }) {
                     {[lastProject ? lastProject.name : null, fmtWhen(new Date(lastSessionAt(lastTask, activeTimer)).toISOString(), lang), t(lang, 'task.total_label', { time: fmtShort(taskElapsedMs(lastTask, activeTimer), lang) })].filter(Boolean).join(' · ')}
                   </Text>
                 </View>
-              </Pressable>
+              </Tap>
               {earnedShown(lastTask, rates, earnedOf(lastTask, rates, activeTimer)) ? (
                 <Text style={styles.lastMoney}>{fmtMoney(earnedOf(lastTask, rates, activeTimer), lang, currencyOf(lastProject, settings))}</Text>
               ) : null}

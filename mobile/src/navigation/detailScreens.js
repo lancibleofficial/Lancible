@@ -24,7 +24,7 @@ export function detailScreens(Stack, lang) {
     <Stack.Screen key="Project" name="Project" component={ProjectScreen} />,
     <Stack.Screen key="TaskDetail" name="TaskDetail" component={TaskDetailScreen} options={{ headerShown: false }} />,
     <Stack.Screen key="Documents" name="Documents" component={DocumentsScreen} options={{ title: t(lang, 'docs.title') }} />,
-    <Stack.Screen key="Editor" name="Editor" component={EditorScreen} options={{ title: '' }} />,
+    <Stack.Screen key="Editor" name="Editor" component={EditorScreen} options={{ headerShown: false }} />,
     <Stack.Screen key="ProjectStatuses" name="ProjectStatuses" component={ProjectStatusesScreen} options={{ title: t(lang, 'board.project_statuses') }} />,
     <Stack.Screen key="Notifications" name="Notifications" component={NotificationsScreen} options={{ title: t(lang, 'notif.title') }} />,
     <Stack.Screen key="Search" name="Search" component={SearchScreen} options={{ headerShown: false }} />,

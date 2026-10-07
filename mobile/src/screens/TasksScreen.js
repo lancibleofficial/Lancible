@@ -3,7 +3,8 @@
 // отбирают, поле под ними заводит задачу в выбранный проект, свайп строки
 // справа налево закрепляет. Группы считает lib/inbox.js.
 import { useMemo, useState } from 'react';
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
+import Tap from '../components/Tap';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
@@ -84,22 +85,22 @@ export default function TasksScreen({ navigation }) {
       </TabHeader>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
-        <Pressable onPress={() => setFilter('all')} style={[styles.chip, filter === 'all' && styles.chipOn]}>
+        <Tap onPress={() => setFilter('all')} style={[styles.chip, filter === 'all' && styles.chipOn]}>
           <Text style={[styles.chipText, filter === 'all' && styles.chipTextOn]}>{t(lang, 'filter.all')}</Text>
-        </Pressable>
+        </Tap>
         {projects.map((p) => {
           const n = tasksOf(tasks, p.id).filter((task) => !task.done).length;
           return (
-            <Pressable key={p.id} onPress={() => setFilter(p.id)} style={[styles.chip, filter === p.id && styles.chipOn]}>
+            <Tap key={p.id} onPress={() => setFilter(p.id)} style={[styles.chip, filter === p.id && styles.chipOn]}>
               <View style={[styles.dot, { backgroundColor: p.color }]} />
               <Text style={[styles.chipText, filter === p.id && styles.chipTextOn]} numberOfLines={1}>{p.name}</Text>
               {n ? <Text style={styles.chipCount}>{n}</Text> : null}
-            </Pressable>
+            </Tap>
           );
         })}
-        <Pressable onPress={() => setShowDone((v) => !v)} style={[styles.chip, showDone && styles.chipOn]} accessibilityRole="switch" accessibilityState={{ checked: showDone }} accessibilityLabel={t(lang, 'tasks.show_done')}>
+        <Tap onPress={() => setShowDone((v) => !v)} style={[styles.chip, showDone && styles.chipOn]} accessibilityRole="switch" accessibilityState={{ checked: showDone }} accessibilityLabel={t(lang, 'tasks.show_done')}>
           <Icon name="list-check" size={15} color={showDone ? colors.text : colors.textDim} />
-        </Pressable>
+        </Tap>
       </ScrollView>
 
       <View style={styles.qa}>
@@ -116,11 +117,11 @@ export default function TasksScreen({ navigation }) {
           accessibilityLabel={t(lang, 'tasks.new_ph')}
         />
         {targetProject ? (
-          <Pressable onPress={pickTargetProject} style={styles.qaProject} hitSlop={6} accessibilityLabel={t(lang, 'board.pick_project')}>
+          <Tap onPress={pickTargetProject} style={styles.qaProject} hitSlop={6} accessibilityLabel={t(lang, 'board.pick_project')}>
             <View style={[styles.dot, { backgroundColor: targetProject.color }]} />
             <Text style={styles.qaProjectText} numberOfLines={1}>{targetProject.name}</Text>
             <Icon name="chevron-down" size={10} color={colors.textFaint} />
-          </Pressable>
+          </Tap>
         ) : null}
       </View>
 

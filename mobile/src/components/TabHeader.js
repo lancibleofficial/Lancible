@@ -4,7 +4,8 @@
 //
 // Навигационная шапка на вкладках выключена, поэтому отступ под статус-бар
 // берётся здесь.
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Tap from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
@@ -18,7 +19,7 @@ export function HeaderButton({ icon, label, onPress, badge, accent, testID }) {
   const colors = useColors();
   const styles = makeStyles(colors, { top: 0 });
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       hitSlop={6}
       style={[styles.btn, accent && styles.btnAccent]}
@@ -28,7 +29,7 @@ export function HeaderButton({ icon, label, onPress, badge, accent, testID }) {
     >
       <Icon name={icon} size={18} color={accent ? colors.accentText : colors.textDim} />
       {badge ? <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View> : null}
-    </Pressable>
+    </Tap>
   );
 }
 

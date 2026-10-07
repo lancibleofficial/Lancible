@@ -29,7 +29,11 @@ export default function MainTabs() {
       tabBar={(props) => <MainTabBar {...props} />}
       // Шапка у корневых экранов своя (components/TabHeader.js), навигационная
       // выключена целиком: двух шапок подряд быть не должно.
-      screenOptions={{ header: (props) => <AppHeader {...props} />, animation: 'shift' }}
+      screenOptions={{
+        header: (props) => <AppHeader {...props} />,
+        animation: 'shift',
+        transitionSpec: { animation: 'spring', config: { stiffness: 230, damping: 24, mass: 0.9 } },
+      }}
     >
       <Tab.Screen name="Projects" component={ProjectsStack} options={tab('nav.projects')} />
       <Tab.Screen name="Tasks" component={TasksStack} options={tab('nav.tasks')} />

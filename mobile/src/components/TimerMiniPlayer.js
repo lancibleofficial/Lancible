@@ -10,7 +10,8 @@
 // MainTabs.ios.js). Везде ещё — полоса над таббаром (MainTabBar.js). Поэтому
 // компонент ничего не знает о своём положении: только рисует содержимое.
 import { useEffect } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import Tap from './Tap';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import Text from './AppText';
 import Icon from './Icon';
@@ -72,8 +73,8 @@ export default function TimerMiniPlayer({ onOpen }) {
 
   return (
     <Animated.View style={[styles.wrap, anim]} pointerEvents="box-none">
-      <Pressable style={styles.pill} onPress={() => onOpen(task.id)} accessibilityRole="button" accessibilityLabel={task.title || t(lang, 'task.no_name')}>
-        <Pressable
+      <Tap style={styles.pill} onPress={() => onOpen(task.id)} accessibilityRole="button" accessibilityLabel={task.title || t(lang, 'task.no_name')}>
+        <Tap
           onPress={stopTimer}
           hitSlop={8}
           style={styles.stop}
@@ -81,7 +82,7 @@ export default function TimerMiniPlayer({ onOpen }) {
           accessibilityLabel={t(lang, 'timer.stop')}
         >
           <Icon name="stop" size={15} color={colors.accentText} />
-        </Pressable>
+        </Tap>
         <View style={styles.main}>
           <Text style={styles.title} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
           <View style={styles.subRow}>
@@ -90,7 +91,7 @@ export default function TimerMiniPlayer({ onOpen }) {
           </View>
         </View>
         <Text style={styles.clock}>{fmtClock(elapsed)}</Text>
-      </Pressable>
+      </Tap>
     </Animated.View>
   );
 }

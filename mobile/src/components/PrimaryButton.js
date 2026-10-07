@@ -1,4 +1,5 @@
 import { Pressable, View, StyleSheet, ActivityIndicator } from 'react-native';
+import Tap from './Tap';
 import Text from './AppText';
 import Icon from './Icon';
 import { useColors, radius, spacing, fontSize, buttonHeight } from '../theme';
@@ -13,7 +14,7 @@ export default function PrimaryButton({ title, onPress, disabled, loading, varia
   const iconColor = isGhost ? colors.text : colors.accentText;
   const isDisabled = disabled || loading;
   return (
-    <Pressable
+    <Tap
       // На Android Pressable, изначально смонтированный с disabled=true, при
       // последующем disabled=false может оставить нативную зону касания
       // прилипшей к исходным (маленьким) границам — реально воспроизводится
@@ -52,7 +53,7 @@ export default function PrimaryButton({ title, onPress, disabled, loading, varia
           ) : null}
         </View>
       )}
-    </Pressable>
+    </Tap>
   );
 }
 

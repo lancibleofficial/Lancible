@@ -3,7 +3,8 @@
 // карточкой стоит карточка «+»: тянешь первую вправо — она выезжает слева,
 // отпустил на ней — открывается лист создания проекта.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, FlatList, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, FlatList, StyleSheet, useWindowDimensions } from 'react-native';
+import Tap from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
@@ -107,10 +108,10 @@ export default function ProjectsScreen({ navigation }) {
   const renderCard = ({ item: project }) => {
     if (project.id === '__new__') {
       return (
-        <Pressable style={[styles.card, styles.newCard]} onPress={openNewProject} accessibilityRole="button" accessibilityLabel={t(lang, 'deck.new_project')}>
+        <Tap style={[styles.card, styles.newCard]} onPress={openNewProject} accessibilityRole="button" accessibilityLabel={t(lang, 'deck.new_project')}>
           <View style={styles.plus}><Icon name="plus" size={28} color={colors.text} /></View>
           {ordered.length === 0 ? <Text style={styles.newHint}>{t(lang, 'deck.new_hint')}</Text> : null}
-        </Pressable>
+        </Tap>
       );
     }
     const own = tasksOf(tasks, project.id);
@@ -126,14 +127,14 @@ export default function ProjectsScreen({ navigation }) {
     ].filter(Boolean).join(' · ');
     return (
       <View style={styles.card}>
-        <Pressable style={styles.cardHead} onPress={() => openProjectScreen(project.id)} accessibilityRole="button">
+        <Tap style={styles.cardHead} onPress={() => openProjectScreen(project.id)} accessibilityRole="button">
           <View style={[styles.dot, { backgroundColor: project.color || colors.accent }]} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.name} numberOfLines={1}>{project.name}</Text>
             <Text style={styles.sub} numberOfLines={1}>{sub}</Text>
           </View>
           <Icon name="chevron-right" size={14} color={colors.textFaint} />
-        </Pressable>
+        </Tap>
         <View style={styles.kpis}>
           <Text style={styles.kpiTime}>{fmtDur(projectMs(tasks, project.id, activeTimer), lang)}</Text>
           <Text style={styles.kpiMoney}>{fmtMoney(projectMoney(tasks, project.id, rates, activeTimer), lang, currencyOf(project, settings))}</Text>
@@ -154,9 +155,9 @@ export default function ProjectsScreen({ navigation }) {
             onSubmitEditing={() => submitDraft(project, false)}
             accessibilityLabel={t(lang, 'tasks.new_ph')}
           />
-          <Pressable hitSlop={6} onPress={() => submitDraft(project, true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(lang, 'agenda.create_btn')}>
+          <Tap hitSlop={6} onPress={() => submitDraft(project, true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(lang, 'agenda.create_btn')}>
             <Icon name="play" size={11} color={colors.text} />
-          </Pressable>
+          </Tap>
         </View>
 
         <View style={styles.rows}>
@@ -164,12 +165,12 @@ export default function ProjectsScreen({ navigation }) {
           {list.slice(0, ROWS).map((task, i) => (
             <TaskRow key={task.id} task={task} first={i === 0} compact onPress={() => openTask(task.id)} />
           ))}
-          <Pressable style={styles.more} onPress={() => openProjectScreen(project.id)} accessibilityRole="button">
+          <Tap style={styles.more} onPress={() => openProjectScreen(project.id)} accessibilityRole="button">
             <Text style={styles.moreText} numberOfLines={1}>
               {done || list.length > ROWS ? t(lang, 'deck.more', { n: done + Math.max(0, list.length - ROWS) }) : t(lang, 'deck.open')}
             </Text>
             <Icon name="chevron-right" size={12} color={colors.textFaint} />
-          </Pressable>
+          </Tap>
         </View>
       </View>
     );

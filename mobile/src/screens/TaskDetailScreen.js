@@ -9,6 +9,7 @@
 // прокруткой страницы. Здесь — предпросмотр.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Pressable, StyleSheet, ScrollView, Switch, useWindowDimensions } from 'react-native';
+import Tap from '../components/Tap';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS, interpolate } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import TextInput from '../components/AppTextInput';
 import DocEditor from '../components/DocEditor';
 import DocCore from '../core/doc.js';
 import Icon from '../components/Icon';
+import DetailHeader, { DetailButton } from '../components/DetailHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import MenuSheet from '../components/MenuSheet';
 import DueSheet from '../components/DueSheet';
@@ -40,13 +42,13 @@ import Repeat from '../core/repeat.js';
 import Versions from '../core/versions.js';
 import CoreMoney from '../core/money.js';
 import { useTicker } from '../hooks/useTicker';
-import { useColors, spacing, radius, fontSize, displayFamily } from '../theme';
+import { useColors, spacing, radius, fontSize, displayFamily, buttonHeight } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 const WEEKDAY_KEY = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat'];
 // Свёрнутый шит: ручка, таймер 58, переключатель вкладок.
 const SHEET_COLLAPSED = 158;
-const SPRING = { damping: 26, stiffness: 260, mass: 0.8, overshootClamping: true };
+const SPRING = { damping: 19, stiffness: 230, mass: 0.9 };
 
 export default function TaskDetailScreen({ route, navigation }) {
   const colors = useColors();
@@ -234,14 +236,14 @@ export default function TaskDetailScreen({ route, navigation }) {
 
   const timerBlock = (
     <View style={styles.timerRow}>
-      <Pressable
+      <Tap
         style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
         onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
         accessibilityRole="button"
         accessibilityLabel={t(LANG, isRunning ? 'timer.stop' : 'timer.start')}
       >
         <Icon name={isRunning ? 'stop' : 'play'} size={22} color={isRunning ? colors.accentText : colors.text} />
-      </Pressable>
+      </Tap>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.clock}>{fmtClock(isRunning ? runMs : elapsedMs)}</Text>
         <View style={styles.earnRow}>
@@ -255,30 +257,30 @@ export default function TaskDetailScreen({ route, navigation }) {
   );
 
   const chip = (label, on, onPress, dot) => (
-    <Pressable key={label} onPress={onPress} style={[styles.chip, on && styles.chipOn]} accessibilityRole="button" accessibilityState={{ selected: !!on }}>
+    <Tap key={label} onPress={onPress} style={[styles.chip, on && styles.chipOn]} accessibilityRole="button" accessibilityState={{ selected: !!on }}>
       {dot ? <View style={[styles.dot, { backgroundColor: dot }]} /> : null}
       <Text style={[styles.chipText, on && styles.chipTextOn]} numberOfLines={1}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.head}>
-        <Pressable hitSlop={8} onPress={() => navigation.goBack()} style={styles.hbtn} accessibilityLabel={t(LANG, 'common.back')}>
-          <Icon name="chevron-left" size={18} color={colors.text} />
-        </Pressable>
-        <Pressable style={styles.crumb} onPress={onOpenProject} hitSlop={6}>
-          {project ? <View style={[styles.dot, { backgroundColor: project.color }]} /> : null}
-          <Text style={styles.crumbText} numberOfLines={1}>{project ? project.name : ''}</Text>
-          {own.length && task.statusId ? <Text style={styles.crumbFaint} numberOfLines={1}>› {(own.find((s) => s.id === task.statusId) || {}).name || ''}</Text> : null}
-        </Pressable>
-        <Pressable hitSlop={6} onPress={() => setTaskDone(taskId, !task.done)} style={[styles.hbtn, task.done && styles.hbtnOn]} accessibilityRole="button" accessibilityLabel={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')}>
-          <Icon name="check" size={17} color={task.done ? colors.accentText : colors.textDim} />
-        </Pressable>
-        <Pressable hitSlop={6} onPress={onOpenMenu} style={styles.hbtn} accessibilityLabel={t(LANG, 'project.opts')}>
-          <Icon name="kebab" size={17} color={colors.textDim} />
-        </Pressable>
-      </View>
+      <DetailHeader
+        onBack={() => navigation.goBack()}
+        backLabel={t(LANG, 'common.back')}
+        color={project ? project.color : null}
+        title={project ? project.name : ''}
+        sub={own.length && task.statusId ? (own.find((s) => s.id === task.statusId) || {}).name || '' : ''}
+        onTitle={onOpenProject}
+        running={isRunning}
+        runMs={runMs}
+        right={(
+          <>
+            <DetailButton icon="check" on={task.done} onPress={() => setTaskDone(taskId, !task.done)} label={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')} />
+            <DetailButton icon="kebab" onPress={onOpenMenu} label={t(LANG, 'project.opts')} />
+          </>
+        )}
+      />
 
       <ScrollView contentContainerStyle={[styles.body, { paddingBottom: headH + insets.bottom + spacing.lg }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <TextInput
@@ -291,17 +293,17 @@ export default function TaskDetailScreen({ route, navigation }) {
         />
         <View style={styles.tagsRow}>
           {taskTags.length ? <TagBadgeRow tags={taskTags} onRemove={(tag) => setTaskTags(taskId, (task.tagIds || []).filter((x) => x !== tag.id))} /> : null}
-          <Pressable style={styles.tagAdd} onPress={onOpenTags} hitSlop={6} accessibilityLabel={t(LANG, 'tag.pick')}>
+          <Tap style={styles.tagAdd} onPress={onOpenTags} hitSlop={6} accessibilityLabel={t(LANG, 'tag.pick')}>
             <Icon name="plus" size={10} color={colors.textFaint} />
             <Text style={styles.tagAddText}>{t(LANG, 'tag.pick').toLowerCase()}</Text>
-          </Pressable>
+          </Tap>
         </View>
-        <Pressable style={styles.notes} onPress={openEditor} accessibilityRole="button" accessibilityLabel={t(LANG, 'editor.open')}>
+        <Tap style={styles.notes} onPress={openEditor} accessibilityRole="button" accessibilityLabel={t(LANG, 'editor.open')}>
           {notesEmpty
             ? <Text style={styles.notesEmpty}>{t(LANG, 'editor.empty')}</Text>
             : <DocEditor preview content={DocCore.readNotes(task.notes)} lang={LANG} onOpen={openEditor} />}
           {notesEmpty ? null : <Text style={styles.tapHint}>{t(LANG, 'task.tap_to_edit')}</Text>}
-        </Pressable>
+        </Tap>
       </ScrollView>
 
       <Animated.View style={[styles.scrim, scrimStyle]} pointerEvents={expanded ? 'auto' : 'none'}>
@@ -315,9 +317,9 @@ export default function TaskDetailScreen({ route, navigation }) {
             {timerBlock}
             <View style={styles.seg}>
               {[['details', t(LANG, 'task.details')], ['history', t(LANG, 'task.history_n', { n: sessions.length })]].map(([key, label]) => (
-                <Pressable key={key} onPress={() => openTab(key)} style={[styles.segBtn, expanded && tab === key && styles.segOn]} accessibilityRole="tab" accessibilityState={{ selected: expanded && tab === key }}>
+                <Tap key={key} onPress={() => openTab(key)} style={[styles.segBtn, expanded && tab === key && styles.segOn]} accessibilityRole="tab" accessibilityState={{ selected: expanded && tab === key }}>
                   <Text style={[styles.segText, expanded && tab === key && styles.segTextOn]}>{label}</Text>
-                </Pressable>
+                </Tap>
               ))}
             </View>
           </View>
@@ -340,12 +342,12 @@ export default function TaskDetailScreen({ route, navigation }) {
               ) : null}
 
               <View style={styles.rows}>
-                <Pressable style={[styles.row, styles.rowFirst]} onPress={onOpenDue} accessibilityRole="button">
+                <Tap style={[styles.row, styles.rowFirst]} onPress={onOpenDue} accessibilityRole="button">
                   <Icon name="calendar" size={17} color={colors.textDim} />
                   <Text style={styles.rowK}>{t(LANG, 'due.label')}</Text>
                   <Text style={[styles.rowV, task.dueAt && styles.rowVWarn]} numberOfLines={1}>{task.dueAt ? `${dueShort(task, LANG)}, ${hm(task.dueAt)}` : t(LANG, 'due.none')}</Text>
                   <Icon name="chevron-right" size={12} color={colors.textFaint} />
-                </Pressable>
+                </Tap>
                 {task.dueAt ? (
                   <View style={styles.row}>
                     <Icon name="bell" size={17} color={colors.textDim} />
@@ -370,17 +372,17 @@ export default function TaskDetailScreen({ route, navigation }) {
               <Text style={styles.label}>{t(LANG, 'tag.pick')}</Text>
               <View style={styles.chips}>
                 {taskTags.length ? <TagBadgeRow tags={taskTags} onRemove={(tag) => setTaskTags(taskId, (task.tagIds || []).filter((x) => x !== tag.id))} /> : null}
-                <Pressable style={styles.chip} onPress={onOpenTags}><Text style={styles.chipText}>+ {t(LANG, 'tag.pick').toLowerCase()}</Text></Pressable>
+                <Tap style={styles.chip} onPress={onOpenTags}><Text style={styles.chipText}>+ {t(LANG, 'tag.pick').toLowerCase()}</Text></Tap>
               </View>
 
               <View style={styles.rows}>
-                <Pressable style={[styles.row, styles.rowFirst]} onPress={onOpenProject} accessibilityRole="button">
+                <Tap style={[styles.row, styles.rowFirst]} onPress={onOpenProject} accessibilityRole="button">
                   <Icon name="cards" size={17} color={colors.textDim} />
                   <Text style={styles.rowK}>{t(LANG, 'board.pick_project')}</Text>
                   {project ? <View style={[styles.dot, { backgroundColor: project.color }]} /> : null}
                   <Text style={styles.rowV} numberOfLines={1}>{project ? project.name : ''}</Text>
                   <Icon name="chevron-right" size={12} color={colors.textFaint} />
-                </Pressable>
+                </Tap>
                 <View style={styles.row}>
                   <Icon name="wallet" size={17} color={colors.textDim} />
                   <Text style={styles.rowK}>{t(LANG, 'task.rate_label')}</Text>
@@ -408,8 +410,10 @@ export default function TaskDetailScreen({ route, navigation }) {
               </View>
 
               <View style={styles.actions}>
-                <PrimaryButton compact variant="ghost" icon={task.done ? undefined : 'check'} title={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')} onPress={() => setTaskDone(taskId, !task.done)} style={{ flex: 1 }} shrinkText />
-                <PrimaryButton compact variant="danger" icon="trash" title={t(LANG, 'task.delete_title')} onPress={onDelete} shrinkText />
+                <PrimaryButton variant={task.done ? 'ghost' : 'primary'} icon="check" title={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')} onPress={() => setTaskDone(taskId, !task.done)} style={{ flex: 1 }} shrinkText />
+                <Tap scale={0.9} style={styles.deleteBtn} onPress={onDelete} accessibilityRole="button" accessibilityLabel={t(LANG, 'task.delete_title')}>
+                  <Icon name="trash" size={18} color={colors.danger} />
+                </Tap>
               </View>
             </>
           ) : (
@@ -431,18 +435,18 @@ export default function TaskDetailScreen({ route, navigation }) {
                 <View key={g.key}>
                   <Text style={styles.label}>{g.label}</Text>
                   {g.rows.map(({ s, i }, j) => (
-                    <Pressable key={i} style={[styles.hrow, j === 0 && styles.hrowFirst]} onPress={() => openSheet(<SessionSheet task={task} index={i} />)} onLongPress={() => onDeleteSession(i)} accessibilityRole="button">
+                    <Tap key={i} style={[styles.hrow, j === 0 && styles.hrowFirst]} onPress={() => openSheet(<SessionSheet task={task} index={i} />)} onLongPress={() => onDeleteSession(i)} accessibilityRole="button">
                       <Text style={styles.hTime}>{hm(s.start)} – {s.end ? hm(s.end) : '…'}</Text>
                       <Text style={styles.hNote} numberOfLines={1}>{[earnedShown(task, rates, earned) ? fmtMoney(sessionMoney(s, task, rates), LANG, currency) : null, s.manual ? t(LANG, 'task.manual_mark') : null].filter(Boolean).join(' · ')}</Text>
                       <Text style={styles.hDur}>{fmtShort(s.ms, LANG)}</Text>
-                    </Pressable>
+                    </Tap>
                   ))}
                 </View>
               ))}
-              <Pressable style={[styles.hrow, { justifyContent: 'center', gap: 8 }]} onPress={() => openSheet(<SessionSheet task={task} index={null} />)} accessibilityRole="button">
+              <Tap style={[styles.hrow, { justifyContent: 'center', gap: 8 }]} onPress={() => openSheet(<SessionSheet task={task} index={null} />)} accessibilityRole="button">
                 <Icon name="plus" size={14} color={colors.textDim} />
                 <Text style={[styles.hNote, { flex: 0, color: colors.textDim, fontWeight: '600' }]}>{t(LANG, 'task.add_manual')}</Text>
-              </Pressable>
+              </Tap>
             </>
           )}
         </Animated.ScrollView>
@@ -459,12 +463,6 @@ export default function TaskDetailScreen({ route, navigation }) {
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: 6 },
-  hbtn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  hbtnOn: { backgroundColor: colors.accent },
-  crumb: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  crumbText: { color: colors.textDim, fontSize: 13, flexShrink: 1 },
-  crumbFaint: { color: colors.textFaint, fontSize: 13, flexShrink: 1 },
   dot: { width: 8, height: 8, borderRadius: 3 },
   body: { paddingHorizontal: spacing.lg, paddingTop: 4 },
   title: { color: colors.text, fontSize: 22, fontFamily: displayFamily.bold, backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 4, lineHeight: 28 },
@@ -505,7 +503,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   rowV: { color: colors.textDim, fontSize: 13, flexShrink: 1 },
   rowVWarn: { color: colors.warn, fontWeight: '700' },
   rateInput: { width: 84, textAlign: 'right', color: colors.text, fontSize: fontSize.sm, backgroundColor: colors.panel2, borderWidth: 0, borderRadius: radius.sm, paddingVertical: 6, paddingHorizontal: 8 },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg },
+  deleteBtn: { width: buttonHeight, height: buttonHeight, borderRadius: radius.md, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   histHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, paddingTop: 10 },
   histCount: { color: colors.textDim, fontSize: 13 },
   histNum: { color: colors.text, fontSize: fontSize.sm, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },

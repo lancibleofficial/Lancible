@@ -1,9 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import TextInput from '../components/AppTextInput';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
 import DocEditor from '../components/DocEditor';
+import DetailHeader from '../components/DetailHeader';
+import { useTicker } from '../hooks/useTicker';
 import { openSheet } from '../store/useSheetStore';
 import PickerSheet from '../components/PickerSheet';
 import { useAppStore, getTask } from '../store/useAppStore';
@@ -33,6 +35,9 @@ export default function EditorScreen({ route, navigation }) {
   const task = useAppStore((s) => (kind === 'task' ? getTask(s.tasks, id) : null));
   const doc = useAppStore((s) => (kind === 'doc' ? (s.documents || []).find((d) => d.id === id) : null));
   const profile = useAuthStore((s) => s.user);
+  const activeTimer = useAppStore((s) => s.activeTimer);
+  const isRunning = kind === 'task' && !!activeTimer && activeTimer.taskId === id;
+  useTicker(isRunning);
   const auth = useEditorAuth();
 
   // Содержимое берётся один раз при открытии: дальше хозяин текста —
@@ -60,10 +65,6 @@ export default function EditorScreen({ route, navigation }) {
   useEffect(() => navigation.addListener('beforeRemove', save), [navigation]);
   useEffect(() => () => save(), []);
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: kind === 'task' ? (task && task.title) || t(lang, 'tabs.notes') : '' });
-  }, [navigation, kind, task && task.title, lang]);
-
   function onTitle(v) {
     setTitle(v);
     updateDocument(id, { title: v });
@@ -82,10 +83,21 @@ export default function EditorScreen({ route, navigation }) {
   }
 
   if (kind === 'task' ? !task : !doc) return null;
-  const project = doc && doc.projectId ? projects.find((p) => p.id === doc.projectId) : null;
+  const projectId = kind === 'task' ? task.projectId : doc.projectId;
+  const project = projectId ? projects.find((p) => p.id === projectId) : null;
+  const runMs = isRunning ? Date.now() - new Date(activeTimer.startedAt).getTime() : 0;
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+      <DetailHeader
+        onBack={() => navigation.goBack()}
+        backLabel={t(lang, 'common.back')}
+        color={project ? project.color : null}
+        title={kind === 'task' ? (project ? project.name : '') : t(lang, 'docs.title')}
+        sub={kind === 'task' ? (task.title || t(lang, 'task.no_name')) : ''}
+        running={isRunning}
+        runMs={runMs}
+      />
       {kind === 'doc' ? (
         <View style={styles.docHead}>
           <TextInput
@@ -118,7 +130,7 @@ export default function EditorScreen({ route, navigation }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.panel },
+  container: { flex: 1, backgroundColor: colors.bg },
   docHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs },
   title: { ...typography.title, flex: 1, color: colors.text, paddingVertical: spacing.xs, backgroundColor: 'transparent', borderWidth: 0 },
   projectChip: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: 150, paddingHorizontal: spacing.md, height: 32, borderRadius: radius.pill, backgroundColor: colors.panel2 },
