@@ -2,8 +2,8 @@
 //
 // Карточки: имя, сводка по задачам, строка быстрого добавления, список
 // задач карточки (cardTasks — чистая функция, проверяется числами).
-import { render, fireEvent } from '@testing-library/react-native';
-import ProjectsScreen, { cardTasks } from '../src/screens/ProjectsScreen';
+import { render, fireEvent, act } from '@testing-library/react-native';
+import ProjectsScreen, { cardTasks, nextPinTop } from '../src/screens/ProjectsScreen';
 import { useAppStore } from '../src/store/useAppStore';
 import { t } from '../src/lib/i18n';
 
@@ -47,12 +47,51 @@ test('карточки проектов: имя, сводка и задачи', 
   getByText(t('ru', 'deck.done_of', { done: 1, total: 2 }));
 });
 
-test('строка быстрого добавления на карточке заводит задачу в её проект', async () => {
-  const { getAllByLabelText } = await render(<ProjectsScreen navigation={nav()} />);
+test('строка быстрого добавления на карточке заводит задачу в её проект и открывает её', async () => {
+  const navigation = nav();
+  const { getAllByLabelText } = await render(<ProjectsScreen navigation={navigation} />);
   const inputs = getAllByLabelText(t('ru', 'tasks.new_ph'));
   await fireEvent.changeText(inputs[1], 'Деплой');
   await fireEvent(inputs[1], 'submitEditing');
   const added = useAppStore.getState().tasks.find((x) => x.title === 'Деплой');
   expect(added.projectId).toBe('p2');
   expect(added.statusId).toBe('s2');
+  expect(navigation.navigate).toHaveBeenLastCalledWith('TaskDetail', { taskId: added.id });
+  expect(useAppStore.getState().activeTimer).toBeNull();
+});
+
+test('nextPinTop: идущая держится первой, пока её таймер идёт', () => {
+  expect(nextPinTop('a', { taskId: 'a' })).toBe('a');
+  expect(nextPinTop('a', null)).toBeNull();
+  expect(nextPinTop('a', { taskId: 'b' })).toBeNull();
+  expect(nextPinTop(null, { taskId: 'b' })).toBeNull();
+});
+
+describe('идущая задача в карточке', () => {
+  const ago = (min) => new Date(Date.now() - min * 60_000).toISOString();
+  beforeEach(() => {
+    useAppStore.setState({
+      tasks: [
+        task('a', 'p1', 'Старая', { updatedAt: '2026-01-01T00:00:00.000Z' }),
+        task('b', 'p1', 'Свежая', { updatedAt: '2026-09-01T00:00:00.000Z' }),
+      ],
+      activeTimer: null,
+    });
+  });
+  const order = (q) => q.getAllByText(/^(Старая|Свежая)$/).map((n) => n.props.children);
+
+  test('идущая на входе — первая', async () => {
+    useAppStore.setState({ activeTimer: { taskId: 'a', startedAt: ago(5), heartbeatAt: ago(0) } });
+    const q = await render(<ProjectsScreen navigation={nav()} />);
+    expect(order(q)).toEqual(['Старая', 'Свежая']);
+  });
+
+  test('запустили — не прыгает; остановили — уезжает наверх по свежести', async () => {
+    const q = await render(<ProjectsScreen navigation={nav()} />);
+    expect(order(q)).toEqual(['Свежая', 'Старая']);
+    await act(async () => { useAppStore.setState({ activeTimer: { taskId: 'a', startedAt: ago(5), heartbeatAt: ago(0) } }); });
+    expect(order(q)).toEqual(['Свежая', 'Старая']);
+    await act(async () => { useAppStore.getState().stopTimer(); });
+    expect(order(q)).toEqual(['Старая', 'Свежая']);
+  });
 });

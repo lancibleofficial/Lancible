@@ -51,7 +51,6 @@ export default function ProjectScreen({ route, navigation }) {
   const tasks = useAppStore((s) => s.tasks);
   const statuses = useAppStore((s) => s.statuses);
   const createTaskInStatus = useAppStore((s) => s.createTaskInStatus);
-  const startTimer = useAppStore((s) => s.startTimer);
   const versions = useAppStore((s) => s.versions);
   const documents = useAppStore((s) => s.documents || []);
   const activeTimer = useAppStore((s) => s.activeTimer);
@@ -190,14 +189,14 @@ export default function ProjectScreen({ route, navigation }) {
 
   const openTask = (taskId) => navigation.navigate('TaskDetail', { taskId });
 
-  /** Строка быстрого добавления: Enter — завести, ▶ — завести и запустить. */
-  function submitDraft(start) {
+  /** Строка быстрого добавления: завести задачу и сразу открыть её. */
+  function submitDraft() {
     const title = draft.trim();
     if (!title) return;
     const versionId = versionFilter !== 'all' && versionFilter !== 'none' ? versionFilter : null;
     const task = createTaskInStatus(projectId, defaultStatusId(statuses, projectId, false), versionId, title);
     setDraft('');
-    if (start) startTimer(task.id);
+    openTask(task.id);
   }
 
   useLayoutEffect(() => {
@@ -242,11 +241,11 @@ export default function ProjectScreen({ route, navigation }) {
           placeholder={t(LANG, 'tasks.new_ph')}
           placeholderTextColor={colors.textFaint}
           returnKeyType="done"
-          onSubmitEditing={() => submitDraft(false)}
+          onSubmitEditing={submitDraft}
           accessibilityLabel={t(LANG, 'tasks.new_ph')}
         />
-        <Tap hitSlop={6} onPress={() => submitDraft(true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(LANG, 'agenda.create_btn')}>
-          <Icon name="play" size={11} color={colors.text} />
+        <Tap scale={0.92} hitSlop={6} onPress={submitDraft} style={[styles.qaGo, draft.trim() && styles.qaGoOn]} accessibilityRole="button" accessibilityLabel={t(LANG, 'agenda.create_btn')}>
+          <Text style={[styles.qaGoText, draft.trim() && styles.qaGoTextOn]}>{t(LANG, 'agenda.create_btn')}</Text>
         </Tap>
       </View>
       <View style={styles.tabs}>
@@ -451,7 +450,10 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   name: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.bold },
   qa: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 42, paddingHorizontal: 10, borderRadius: radius.md, backgroundColor: colors.panel2 },
   qaInput: { flex: 1, color: colors.text, fontSize: 13.5, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
-  qaGo: { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
+  qaGo: { height: 30, paddingHorizontal: 11, borderRadius: 8, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
+  qaGoOn: { backgroundColor: colors.accent },
+  qaGoText: { color: colors.textDim, fontSize: 12.5, fontWeight: '700' },
+  qaGoTextOn: { color: colors.accentText },
   desc: { color: colors.textFaint, fontSize: fontSize.sm },
   tabs: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 3, gap: 3 },
   tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm, paddingHorizontal: 4 },

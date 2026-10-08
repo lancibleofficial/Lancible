@@ -60,8 +60,9 @@ test('свёрнутая группа прячет свои задачи, заг
   getByText('Макет');
 });
 
-test('строка быстрого добавления заводит задачу по Enter, ▶ — заводит и запускает', async () => {
-  const { getByLabelText } = await render(<ProjectScreen navigation={nav()} route={{ params: { projectId: 'p1' } }} />);
+test('строка быстрого добавления: Enter и «Создать» заводят задачу и открывают её', async () => {
+  const navigation = nav();
+  const { getByLabelText } = await render(<ProjectScreen navigation={navigation} route={{ params: { projectId: 'p1' } }} />);
   const input = getByLabelText(t('ru', 'tasks.new_ph'));
   await fireEvent.changeText(input, 'Тесты');
   await fireEvent(input, 'submitEditing');
@@ -69,10 +70,12 @@ test('строка быстрого добавления заводит зада
   expect(added).toBeTruthy();
   expect(added.projectId).toBe('p1');
   expect(added.statusId).toBe('s1');
-  expect(useAppStore.getState().activeTimer).toBeNull();
+  expect(navigation.navigate).toHaveBeenLastCalledWith('TaskDetail', { taskId: added.id });
 
   await fireEvent.changeText(input, 'Деплой');
   await fireEvent.press(getByLabelText(t('ru', 'agenda.create_btn')));
-  const started = useAppStore.getState().tasks.find((x) => x.title === 'Деплой');
-  expect(useAppStore.getState().activeTimer.taskId).toBe(started.id);
+  const second = useAppStore.getState().tasks.find((x) => x.title === 'Деплой');
+  expect(navigation.navigate).toHaveBeenLastCalledWith('TaskDetail', { taskId: second.id });
+  // Создание не запускает таймер — это отдельное действие.
+  expect(useAppStore.getState().activeTimer).toBeNull();
 });

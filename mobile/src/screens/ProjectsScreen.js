@@ -2,6 +2,11 @@
 // во всю высоту до точек пагинации, внутри — итоги, поле новой задачи и
 // список задач со своей прокруткой.
 //
+// Идущая задача не прыгает наверх, пока таймер идёт: порядок в карточке
+// замораживается на входе на экран (nextPinTop). Остановили — задача
+// пружиной уезжает на своё место по свежести; ушли и вернулись — идущая
+// уже первая.
+//
 // Колода едет на своём жесте, а не на прокрутке списка: так у неё настоящие
 // пружины. Отпустил — карточка встаёт на место с лёгким перелётом. Слева от
 // первой карточки спрятана узкая карточка «+»: тянешь первую вправо — «+»
@@ -10,9 +15,9 @@
 // возвращается на место. Не дотянул — просто возвращается.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
-import { Gesture, GestureDetector, FlatList } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, Extrapolation, runOnJS,
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, Extrapolation, runOnJS, LinearTransition,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import Tap from '../components/Tap';
@@ -37,6 +42,8 @@ import { t } from '../lib/i18n';
 const PEEK = 40;
 const GAP = 10;
 const PLUS_W = 84;
+// Карточка «+» уходит далеко влево: её левого края не видно, сколько ни тяни.
+const PLUS_TAIL = 600;
 /** Насколько вытянуть «+», чтобы отпускание создало проект. */
 export const PULL_TRIGGER = 70;
 // Пружина колоды: быстрая, с небольшим перелётом.
@@ -50,6 +57,15 @@ export function cardTasks(tasks, activeTimer) {
   const rank = (task) => (activeTimer && activeTimer.taskId === task.id ? 0 : task.pinnedAt ? 1 : 2);
   return tasks.filter((task) => !task.done)
     .sort((a, b) => rank(a) - rank(b) || dueMs(a) - dueMs(b) || updMs(b) - updMs(a));
+}
+
+/** Какая задача стоит в карточках первой как идущая. Берётся на входе на
+ *  экран и держится, пока её таймер идёт; остановили или запустили
+ *  другую — первой не стоит никто (новая идущая не прыгает наверх до
+ *  следующего входа). */
+export function nextPinTop(pinTop, activeTimer) {
+  if (!pinTop) return null;
+  return activeTimer && activeTimer.taskId === pinTop ? pinTop : null;
 }
 
 /** Куда встать колоде после отпускания: по положению с поправкой на
@@ -83,6 +99,17 @@ export default function ProjectsScreen({ navigation }) {
   const count = ordered.length;
 
   const [page, setPage] = useState(0);
+  const [pinTop, setPinTop] = useState(() => (activeTimer ? activeTimer.taskId : null));
+  // Вход на экран (и возврат с задачи или другой вкладки) — идущая первой.
+  useEffect(() => {
+    if (!navigation.addListener) return undefined;
+    return navigation.addListener('focus', () => {
+      const timer = useAppStore.getState().activeTimer;
+      setPinTop(timer ? timer.taskId : null);
+    });
+  }, [navigation]);
+  // Пока экран открыт: остановили — задача уезжает на своё место.
+  useEffect(() => { setPinTop((p) => nextPinTop(p, activeTimer)); }, [activeTimer ? activeTimer.taskId : null]);
   const x = useSharedValue(0);
   const startX = useSharedValue(0);
   const startPage = useSharedValue(0);
@@ -104,11 +131,11 @@ export default function ProjectsScreen({ navigation }) {
   function openProjectScreen(id) { openProject(id); navigation.navigate('Project', { projectId: id }); }
   const openTask = useCallback((taskId) => navigation.navigate('TaskDetail', { taskId }), [navigation]);
 
-  const sheetOpen = useRef(false);
+  // Без защёлки «лист уже открыт»: лист закрывают и мимо onCancel (тап по
+  // подложке, свайп вниз), и защёлка оставалась взведённой — после первой
+  // отмены рывок больше ничего не открывал.
   const openNewProject = useCallback(() => {
-    if (sheetOpen.current) return;
-    sheetOpen.current = true;
-    const done = () => { sheetOpen.current = false; closeSheet(); };
+    const done = () => closeSheet();
     openSheet(
       <NewProjectSheet
         onCancel={done}
@@ -170,15 +197,24 @@ export default function ProjectsScreen({ navigation }) {
             <Animated.View style={[styles.strip, stripStyle]}>
               <View style={styles.plusCard} accessibilityLabel={t(lang, 'deck.new_project')}>
                 <Animated.View style={[StyleSheet.absoluteFill, styles.plusOn, plusFill]} />
-                <Animated.View style={[styles.plusCircle, plusIcon]}>
-                  <Icon name="plus" size={22} color={colors.text} />
-                </Animated.View>
-                <Text style={styles.plusText} numberOfLines={2}>{t(lang, 'deck.new_project')}</Text>
+                <View style={styles.plusBody}>
+                  <Animated.View style={plusIcon}>
+                    <Icon name="plus" size={26} color={colors.text} />
+                    <Animated.View style={[styles.plusOver, plusFill]}><Icon name="plus" size={26} color={colors.accentText} /></Animated.View>
+                  </Animated.View>
+                  <View>
+                    <Text style={styles.plusText} numberOfLines={2}>{t(lang, 'deck.new_project')}</Text>
+                    <Animated.View style={[styles.plusOver, plusFill]}>
+                      <Text style={[styles.plusText, { color: colors.accentText }]} numberOfLines={2}>{t(lang, 'deck.new_project')}</Text>
+                    </Animated.View>
+                  </View>
+                </View>
               </View>
               {ordered.map((project, i) => (Math.abs(i - page) <= 1 ? (
                 <ProjectCard
                   key={project.id}
                   project={project}
+                  pinTop={pinTop}
                   styles={styles}
                   onOpen={() => openProjectScreen(project.id)}
                   onOpenTask={openTask}
@@ -200,22 +236,34 @@ export default function ProjectsScreen({ navigation }) {
 
 /** Карточка проекта: шапка, числа, поле новой задачи, задачи со своей
  *  прокруткой, внизу — переход на страницу проекта. */
-function ProjectCard({ project, styles, onOpen, onOpenTask }) {
+function ProjectCard({ project, pinTop, styles, onOpen, onOpenTask }) {
   const colors = useColors();
   const tasks = useAppStore((s) => s.tasks);
   const statuses = useAppStore((s) => s.statuses);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const settings = useAppStore((s) => s.settings);
   const createTaskInStatus = useAppStore((s) => s.createTaskInStatus);
-  const startTimer = useAppStore((s) => s.startTimer);
   const rates = useRates();
   const lang = settings.lang;
   const [draft, setDraft] = useState('');
+  // Остановленная задача на время переезда наверх — поверх соседей: без
+  // этого строки на пересечении просвечивали друг сквозь друга.
+  const [rising, setRising] = useState(null);
+  const runningId = activeTimer ? activeTimer.taskId : null;
+  const prevRunning = useRef(runningId);
+  useEffect(() => {
+    const prev = prevRunning.current;
+    prevRunning.current = runningId;
+    if (!prev || prev === runningId) return undefined;
+    setRising(prev);
+    const id = setTimeout(() => setRising(null), 900);
+    return () => clearTimeout(id);
+  }, [runningId]);
 
   const own = tasksOf(tasks, project.id);
   const done = own.filter((task) => task.done).length;
   const active = own.filter((task) => !task.done && task.statusId && statuses.some((st) => st.id === task.statusId && st.kind === 'progress')).length;
-  const list = cardTasks(own, activeTimer);
+  const list = cardTasks(own, pinTop ? { taskId: pinTop } : null);
   const nextDue = own.filter((task) => !task.done && task.dueAt).sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))[0];
   const pct = own.length ? Math.round((done / own.length) * 100) : 0;
   const sub = [
@@ -224,12 +272,13 @@ function ProjectCard({ project, styles, onOpen, onOpenTask }) {
     project.rate ? t(lang, 'deck.own_rate', { rate: `${fmtMoney(project.rate, lang, currencyOf(project, settings))}${t(lang, 'rate.per_hour')}` }) : null,
   ].filter(Boolean).join(' · ');
 
-  function submit(start) {
+  /** Завести задачу и сразу открыть её страницу. */
+  function submit() {
     const title = draft.trim();
     if (!title) return;
     const task = createTaskInStatus(project.id, defaultStatusId(statuses, project.id, false), null, title);
     setDraft('');
-    if (start) startTimer(task.id);
+    onOpenTask(task.id);
   }
 
   return (
@@ -259,16 +308,21 @@ function ProjectCard({ project, styles, onOpen, onOpenTask }) {
           placeholder={t(lang, 'tasks.new_ph')}
           placeholderTextColor={colors.textFaint}
           returnKeyType="done"
-          onSubmitEditing={() => submit(false)}
+          onSubmitEditing={submit}
           accessibilityLabel={t(lang, 'tasks.new_ph')}
         />
-        <Tap hitSlop={6} onPress={() => submit(true)} style={styles.qaGo} accessibilityRole="button" accessibilityLabel={t(lang, 'agenda.create_btn')}>
-          <Icon name="play" size={11} color={colors.text} />
+        <Tap scale={0.92} hitSlop={6} onPress={submit} style={[styles.qaGo, draft.trim() && styles.qaGoOn]} accessibilityRole="button" accessibilityLabel={t(lang, 'agenda.create_btn')}>
+          <Text style={[styles.qaGoText, draft.trim() && styles.qaGoTextOn]}>{t(lang, 'agenda.create_btn')}</Text>
         </Tap>
       </View>
 
-      <FlatList
+      <Animated.FlatList
         style={styles.rows}
+        // Остановленная задача уезжает на своё место пружиной.
+        itemLayoutAnimation={LinearTransition.springify().damping(18).stiffness(170)}
+        CellRendererComponentStyle={({ item }) => ({ backgroundColor: colors.panel, zIndex: item.id === rising ? 2 : 1 })}
+        // Прокрутка от gesture-handler: договаривается с жестом колоды.
+        renderScrollComponent={(props) => <GHScrollView {...props} />}
         data={list}
         keyExtractor={(task) => task.id}
         renderItem={({ item, index }) => <TaskRow task={item} first={index === 0} compact onPress={() => onOpenTask(item.id)} />}
@@ -294,12 +348,12 @@ const makeStyles = (colors, cardW) => StyleSheet.create({
   slot: { width: cardW, marginRight: GAP },
   card: { width: cardW, marginRight: GAP, backgroundColor: colors.panel, borderRadius: 18, overflow: 'hidden' },
   plusCard: {
-    position: 'absolute', top: 0, bottom: 0, left: spacing.lg - GAP - PLUS_W, width: PLUS_W,
-    borderRadius: 18, backgroundColor: colors.panel2, overflow: 'hidden',
-    alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: 6,
+    position: 'absolute', top: 0, bottom: 0, left: spacing.lg - GAP - PLUS_W - PLUS_TAIL, width: PLUS_W + PLUS_TAIL,
+    borderTopRightRadius: 18, borderBottomRightRadius: 18, backgroundColor: colors.panel2, overflow: 'hidden',
   },
   plusOn: { backgroundColor: colors.accent },
-  plusCircle: { width: 44, height: 44, borderRadius: 999, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
+  plusBody: { position: 'absolute', top: 0, bottom: 0, right: 0, width: PLUS_W, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: 6 },
+  plusOver: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' },
   plusText: { color: colors.textDim, fontSize: 11, fontWeight: '700', textAlign: 'center' },
   emptyWrap: { flex: 1, paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   emptyCard: { flex: 1, width: '100%', marginRight: 0, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
@@ -317,7 +371,10 @@ const makeStyles = (colors, cardW) => StyleSheet.create({
   fill: { height: '100%', borderRadius: 2 },
   qa: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: 10, marginBottom: 4, height: 42, paddingHorizontal: 10, borderRadius: radius.md, backgroundColor: colors.panel2 },
   qaInput: { flex: 1, color: colors.text, fontSize: 13.5, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
-  qaGo: { width: 28, height: 28, borderRadius: 8, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
+  qaGo: { height: 30, paddingHorizontal: 11, borderRadius: 8, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
+  qaGoOn: { backgroundColor: colors.accent },
+  qaGoText: { color: colors.textDim, fontSize: 12.5, fontWeight: '700' },
+  qaGoTextOn: { color: colors.accentText },
   rows: { flex: 1 },
   empty: { color: colors.textFaint, fontSize: fontSize.xs, textAlign: 'center', paddingVertical: spacing.lg },
   more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 46, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingHorizontal: spacing.md },
