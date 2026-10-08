@@ -30,6 +30,7 @@ import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
 import TaskListItem from '../components/TaskListItem';
 import Icon from '../components/Icon';
+import { GlassBg } from '../components/Glass';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
 import Versions from '../core/versions.js';
 import Views from '../core/views.js';
@@ -204,6 +205,7 @@ export default function ProjectScreen({ route, navigation }) {
       title: '',
       headerRight: () => (
         <Tap hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn} accessibilityLabel={t(LANG, 'project.opts')}>
+          <GlassBg radius={18} />
           <Icon name="kebab" size={18} color={colors.text} />
         </Tap>
       ),
@@ -442,7 +444,7 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: insets.bottom + spacing.xl, gap },
   boardHead: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, gap: spacing.sm },
-  menuBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  menuBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 
   head: { gap: spacing.sm },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

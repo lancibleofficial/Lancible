@@ -9,6 +9,7 @@ import Tap from './Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
+import { GlassBg } from './Glass';
 import { useAppStore } from '../store/useAppStore';
 import { notificationFeed } from '../lib/due';
 import { useColors, spacing, radius, fontSize, displayFamily } from '../theme';
@@ -22,11 +23,12 @@ export function HeaderButton({ icon, label, onPress, badge, accent, testID }) {
     <Tap
       onPress={onPress}
       hitSlop={6}
-      style={[styles.btn, accent && styles.btnAccent]}
+      style={styles.btn}
       accessibilityRole="button"
       accessibilityLabel={label}
       testID={testID}
     >
+      <GlassBg radius={radius.md} backgroundColor={accent ? colors.accent : colors.panel} tint={accent ? colors.accent : undefined} />
       <Icon name={icon} size={18} color={accent ? colors.accentText : colors.textDim} />
       {badge ? <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View> : null}
     </Tap>
@@ -71,8 +73,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   title: { flex: 1, minWidth: 0, color: colors.text, fontSize: 22, fontFamily: displayFamily.bold },
   count: { color: colors.textFaint, fontSize: 15, fontFamily: displayFamily.regular },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  btn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  btnAccent: { backgroundColor: colors.accent },
+  // Подложку даёт GlassBg: стекло на iOS 26+, заливка panel/accent ниже.
+  btn: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute', top: -3, right: -3, minWidth: 16, height: 16, paddingHorizontal: 4, borderRadius: 999,
     backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center',

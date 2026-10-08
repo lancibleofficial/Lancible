@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
+import { GlassBg } from '../components/Glass';
 import { useAppStore, recentTasks, getProject, tasksOf } from '../store/useAppStore';
 import { getStatus } from '../lib/statuses';
 import { useColors, spacing, radius, fontSize } from '../theme';
@@ -48,9 +49,11 @@ export default function SearchScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.head}>
         <Pressable hitSlop={8} onPress={() => navigation.goBack()} style={styles.back} accessibilityLabel={t(lang, 'common.back')}>
+          <GlassBg radius={radius.md} backgroundColor={colors.panel} />
           <Icon name="chevron-left" size={20} color={colors.text} />
         </Pressable>
         <View style={styles.field}>
+          <GlassBg radius={radius.md} backgroundColor={colors.panel} />
           <Icon name="search" size={16} color={colors.textFaint} />
           <TextInput
             style={styles.input}
@@ -114,8 +117,8 @@ export default function SearchScreen({ navigation }) {
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
-  back: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  field: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 40, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.panel },
+  back: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  field: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 40, paddingHorizontal: spacing.md, borderRadius: radius.md },
   input: { flex: 1, color: colors.text, fontSize: fontSize.sm, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
   content: { paddingHorizontal: spacing.md, paddingBottom: insets.bottom + spacing.xl },
   sectionTitle: { color: colors.textFaint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs },

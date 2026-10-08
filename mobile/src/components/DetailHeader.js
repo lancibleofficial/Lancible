@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
 import Tap from './Tap';
+import { GlassBg } from './Glass';
 import { fmtClock } from '../lib/format';
 import { useColors, spacing, radius, displayFamily } from '../theme';
 
@@ -17,7 +18,8 @@ export function DetailButton({ icon, on, onPress, label }) {
   const colors = useColors();
   const styles = makeStyles(colors, { top: 0 });
   return (
-    <Tap scale={0.9} hitSlop={6} onPress={onPress} style={[styles.btn, on && styles.btnOn]} accessibilityRole="button" accessibilityLabel={label}>
+    <Tap scale={0.9} hitSlop={6} onPress={onPress} style={styles.btn} accessibilityRole="button" accessibilityLabel={label}>
+      <GlassBg radius={radius.md} backgroundColor={on ? colors.accent : colors.panel} tint={on ? colors.accent : undefined} />
       <Icon name={icon} size={17} color={on ? colors.accentText : colors.textDim} />
     </Tap>
   );
@@ -46,6 +48,7 @@ export default function DetailHeader({ onBack, backLabel, color, title, sub, onT
   return (
     <View style={styles.head}>
       <Tap scale={0.9} hitSlop={8} onPress={onBack} style={styles.btn} accessibilityRole="button" accessibilityLabel={backLabel}>
+        <GlassBg radius={radius.md} backgroundColor={colors.panel} />
         <Icon name="chevron-left" size={18} color={colors.text} />
       </Tap>
       <Tap style={styles.crumb} onPress={onTitle} disabled={!onTitle} hitSlop={6} accessibilityRole={onTitle ? 'button' : undefined}>
@@ -66,8 +69,8 @@ export default function DetailHeader({ onBack, backLabel, color, title, sub, onT
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: 6 },
-  btn: { width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  btnOn: { backgroundColor: colors.accent },
+  // Подложку даёт GlassBg: стекло на iOS 26+, заливка panel/accent ниже.
+  btn: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   crumb: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
   crumbText: { color: colors.textDim, fontSize: 13, flexShrink: 1 },
   crumbFaint: { color: colors.textFaint, fontSize: 13, flexShrink: 1 },

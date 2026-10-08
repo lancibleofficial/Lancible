@@ -8,7 +8,7 @@ import TasksStack from './TasksStack';
 import StatsStack from './StatsStack';
 import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
-import TimerMiniPlayer from '../components/TimerMiniPlayer';
+import TimerMiniPlayer, { useRunningTask } from '../components/TimerMiniPlayer';
 import { DETAIL_ROUTES } from './detailScreens';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
@@ -34,6 +34,10 @@ import { useColors, spacing } from '../theme';
 // панелью), а ниже — своя полоса поверх через проп `layout` навигатора:
 // react-native-screens отдаёт аксессуар в UIKit только под флагом
 // isIOS26OrHigher.
+//
+// Аксессуар задаётся только пока таймер идёт. UIKit рисует под него
+// стеклянный слот всегда, когда он задан, — даже если плашке нечего
+// показать, и над панелью висела пустая капсула.
 const Tab = createNativeBottomTabNavigator();
 
 const IOS_MAJOR = parseInt(String(Platform.Version), 10) || 0;
@@ -81,6 +85,7 @@ function LegacyMiniPlayerLayout({ state, navigation, descriptors, children }) {
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
+  const running = !!useRunningTask();
   // Per-screen tabBarStyle replaces the navigator-level one wholesale (an
   // explicit undefined wipes it too), so every tab's show/hide branch below
   // hands back this same object instead of undefined.
@@ -94,7 +99,7 @@ export default function MainTabs() {
       tabBarIcon: tabIcon(icon),
       tabBarStyle: barHidden ? { display: 'none' } : legacyTabBarStyle,
       // На странице задачи у таймера свой шит — вторая плашка не нужна.
-      bottomAccessory: barHidden || !HAS_LIQUID_GLASS
+      bottomAccessory: barHidden || !HAS_LIQUID_GLASS || !running
         ? undefined
         : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
     };
@@ -110,7 +115,7 @@ export default function MainTabs() {
         tabBarLabelStyle: { fontFamily: 'Onest-Regular', fontSize: 11 },
         tabBarStyle: legacyTabBarStyle,
         tabBarBlurEffect: HAS_LIQUID_GLASS ? undefined : 'none',
-        bottomAccessory: HAS_LIQUID_GLASS
+        bottomAccessory: HAS_LIQUID_GLASS && running
           ? () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />
           : undefined,
       })}

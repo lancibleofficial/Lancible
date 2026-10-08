@@ -2,6 +2,7 @@ import { View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
+import { GlassBg, hasLiquidGlass } from './Glass';
 import { useColors, spacing, fontSize, displayFamily } from '../theme';
 
 // Единый JS-хедер для всех навигаторов (native-stack, табы на обеих
@@ -32,7 +33,8 @@ export default function AppHeader({ navigation, route, options, back }) {
     <View style={styles.wrap}>
       <View style={styles.row}>
         {back ? (
-          <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={styles.back}>
+          <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={hasLiquidGlass() ? styles.backGlass : styles.back}>
+            <GlassBg radius={18} />
             <Icon name="chevron-left" size={22} color={colors.text} />
           </Pressable>
         ) : null}
@@ -54,6 +56,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   back: { paddingRight: spacing.sm, marginLeft: -4 },
+  // iOS 26+: «назад» — стеклянный круг, как кнопки системной шапки.
+  backGlass: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
   titleSlot: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   // Заголовок экрана — фирменная семья, как заголовки страниц на десктопе.
   title: { color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.regular },

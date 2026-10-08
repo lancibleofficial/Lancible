@@ -293,13 +293,13 @@
       "id": "mobile_src_navigation_maintabs_ios_legacyminiplayerlayout",
       "label": "LegacyMiniPlayerLayout()",
       "file": "mobile/src/navigation/MainTabs.ios.js",
-      "at": "L62"
+      "at": "L66"
     },
     {
       "id": "mobile_src_navigation_maintabs_ios_maintabs",
       "label": "MainTabs()",
       "file": "mobile/src/navigation/MainTabs.ios.js",
-      "at": "L81"
+      "at": "L85"
     },
     {
       "id": "mobile_src_screens_auth_onboardingscreen_onboardingscreen_submit",
@@ -365,19 +365,19 @@
       "id": "mobile_src_screens_projectscreen_projectscreen_onopenmenu",
       "label": "onOpenMenu()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L142"
+      "at": "L143"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_onpickversion",
       "label": "onPickVersion()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L162"
+      "at": "L163"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_submitdraft",
       "label": "submitDraft()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L193"
+      "at": "L194"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectcard_submit",
@@ -425,13 +425,13 @@
       "id": "mobile_src_screens_searchscreen_searchscreen_onproject",
       "label": "onProject()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L44"
+      "at": "L45"
     },
     {
       "id": "mobile_src_screens_searchscreen_searchscreen_ontask",
       "label": "onTask()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L45"
+      "at": "L46"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onexcel",
@@ -473,13 +473,13 @@
       "id": "mobile_src_screens_statsscreen_statsscreen_onexcel",
       "label": "onExcel()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L148"
+      "at": "L149"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_pickproject",
       "label": "pickProject()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L138"
+      "at": "L139"
     },
     {
       "id": "mobile_src_screens_tagsscreen_tagsscreen_usagelabel",

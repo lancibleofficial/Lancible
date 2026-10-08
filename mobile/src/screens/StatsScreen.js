@@ -9,6 +9,7 @@ import { View, ScrollView, StyleSheet } from 'react-native';
 import Tap from '../components/Tap';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
+import { GlassBg } from '../components/Glass';
 import Island, { IslandHead, IslandEmpty } from '../components/Island';
 import TabHeader, { HeaderButton } from '../components/TabHeader';
 import PickerSheet from '../components/PickerSheet';
@@ -209,7 +210,8 @@ export default function StatsScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <TabHeader title={t(lang, 'nav.stats')}>
-        <Tap onPress={pickProject} style={[styles.chip, project && styles.chipOn]} accessibilityRole="button" accessibilityLabel={t(lang, 'filter.project')}>
+        <Tap onPress={pickProject} style={styles.chip} accessibilityRole="button" accessibilityLabel={t(lang, 'filter.project')}>
+          <GlassBg radius={999} backgroundColor={project ? colors.raise : colors.panel} />
           <View style={[styles.dot, { backgroundColor: project ? project.color : colors.textDim }]} />
           <Text style={styles.chipText} numberOfLines={1}>{project ? project.name : t(lang, 'filter.all_projects')}</Text>
           <Icon name="chevron-down" size={10} color={colors.textFaint} />
@@ -318,8 +320,7 @@ export default function StatsScreen({ navigation }) {
 
 const makeStyles = (colors, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 11, borderRadius: 999, backgroundColor: colors.panel, maxWidth: 170 },
-  chipOn: { backgroundColor: colors.raise },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 11, borderRadius: 999, maxWidth: 170 },
   chipText: { color: colors.text, fontSize: 13, fontWeight: '600', flexShrink: 1 },
   dot: { width: 8, height: 8, borderRadius: 3 },
   segWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
