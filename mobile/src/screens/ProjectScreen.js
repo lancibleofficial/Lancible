@@ -448,7 +448,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 12, height: 12, borderRadius: 4 },
   name: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.bold },
-  qa: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 42, paddingHorizontal: 10, borderRadius: radius.md, backgroundColor: colors.panel2 },
+  // Отступ кнопки «Создать» справа — тот же, что сверху и снизу: (42 − 30) / 2.
+  qa: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 42, paddingLeft: 10, paddingRight: 6, borderRadius: radius.md, backgroundColor: colors.panel2 },
   qaInput: { flex: 1, color: colors.text, fontSize: 13.5, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
   qaGo: { height: 30, paddingHorizontal: 11, borderRadius: 8, backgroundColor: colors.raise, alignItems: 'center', justifyContent: 'center' },
   qaGoOn: { backgroundColor: colors.accent },

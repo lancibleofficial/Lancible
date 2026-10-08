@@ -17,24 +17,12 @@ import { prepareAndroidChannel, rescheduleAll } from './src/lib/notifications';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function App() {
-  // Keys equal each file's PostScript name. The .ttf files were rebuilt with
-  // unique PostScript names and real weight classes -- originally all four
-  // declared the same PostScript name ("Basique") and weight 400, so iOS
-  // (which registers fonts by PostScript name) treated them as one font and
-  // every weight rendered identically. The keys were also deliberately
-  // changed from the previous "Basique Pro ..." aliases: expo-font skips
-  // loadAsync for any alias the native side already reports as loaded, and
-  // that list survives JS reloads in Expo Go -- so keeping the old names
-  // would have kept serving the broken registration until the app process
-  // was killed. See AppText.js.
+  // Телефон набран одной гарнитурой — Onest. Ключи — PostScript-имена
+  // файлов (см. AppText.js): iOS регистрирует шрифт под этим именем, и у
+  // каждого начертания оно своё. expo-font не перезагружает ключ, который
+  // нативная сторона уже считает загруженным, и этот список переживает
+  // перезапуск JS в Expo Go — поэтому имена ключей не переиспользуем.
   const [fontsLoaded] = useFonts({
-    'BasiquePro-Light': require('./assets/fonts/BasiquePro-Light.ttf'),
-    'BasiquePro-Regular': require('./assets/fonts/BasiquePro-Regular.ttf'),
-    'BasiquePro-Bold': require('./assets/fonts/BasiquePro-Bold.ttf'),
-    'BasiquePro-Black': require('./assets/fonts/BasiquePro-Black.ttf'),
-    // Текст набирает Onest, Basique Pro остаётся на лого, заголовках и
-    // крупных числах — тот же расклад, что на десктопе и в вебе. Ключи —
-    // PostScript-имена файлов (см. AppText.js), у каждого начертания своё.
     'Onest-Light': require('./assets/fonts/Onest-Light.ttf'),
     'Onest-Regular': require('./assets/fonts/Onest-Regular.ttf'),
     'Onest-Medium': require('./assets/fonts/Onest-Medium.ttf'),

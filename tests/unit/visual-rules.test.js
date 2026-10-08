@@ -301,7 +301,8 @@ test('телефон: каждое начертание, которое назы
   // таббар, есть среди ключей useFonts в App.js, и за каждым ключом — файл.
   const app = read('mobile/App.js');
   const loaded = new Map([...app.matchAll(/'([\w-]+)': require\('\.\/(assets\/fonts\/[^']+)'\)/g)].map((m) => [m[1], m[2]]));
-  assert.ok(loaded.size >= 9, `в App.js нашлось ${loaded.size} начертаний — разбор сломался?`);
+  // С 9 октября 2026 телефон набран только Onest — пять начертаний.
+  assert.ok(loaded.size >= 5, `в App.js нашлось ${loaded.size} начертаний — разбор сломался?`);
   for (const [name, file] of loaded) {
     assert.ok(fs.existsSync(path.join(ROOT, 'mobile', file)), `нет файла ${file} для ${name}`);
   }

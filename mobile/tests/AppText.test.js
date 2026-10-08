@@ -8,10 +8,9 @@
 //      начертание сам, не находит и откатывается на системный шрифт. Поэтому
 //      вес из итогового стиля убирается целиком, а начертание выбирается
 //      семейством.
-//   2. Знаки валют ₽ ₸ ₴ ₺, которых нет в Basique Pro, а ею набираются
-//      крупные суммы. Без явной подмены iOS подставляет случайный шрифт с
-//      засечками. В Onest они есть — там подменять нечего, и текст
-//      резаться не должен.
+//   2. Знаки валют ₽ ₸ ₴ ₺. Пока заголовки и суммы набирала Basique Pro,
+//      в которой их нет, знак приходилось подменять отдельным узлом. Теперь
+//      весь телефон — Onest, знаки в нём свои, и текст резаться не должен.
 // render в этой версии библиотеки асинхронный — отсюда await в каждом тесте.
 import { render } from '@testing-library/react-native';
 import Text from '../src/components/AppText';
@@ -41,10 +40,10 @@ test('без веса берётся обычное начертание', async
 
 test('явный fontFamily сильнее веса', async () => {
   const { getByText } = await render(
-    <Text style={{ fontFamily: 'BasiquePro-Black', fontWeight: '400' }}>лого</Text>,
+    <Text style={{ fontFamily: 'Onest-Bold', fontWeight: '400' }}>заголовок</Text>,
   );
-  const style = styleOf(getByText('лого'));
-  expect(style.fontFamily).toBe('BasiquePro-Black');
+  const style = styleOf(getByText('заголовок'));
+  expect(style.fontFamily).toBe('Onest-Bold');
   expect(style.fontWeight).toBeUndefined();
 });
 
@@ -53,12 +52,10 @@ test('курсив переживает подмену веса', async () => {
   expect(styleOf(getByText('наклонный')).fontStyle).toBe('italic');
 });
 
-test('знак валюты в Basique Pro уходит в Onest того же веса', async () => {
-  // Текст разрезается на куски, и отсутствующий глиф оборачивается во
-  // вложенный Text с Onest. Значит, у суммы, набранной Basique Pro, знак
-  // окажется отдельным узлом.
-  const { getByText } = await render(<Text style={{ fontFamily: 'BasiquePro-Bold' }}>6 250 ₽</Text>);
-  expect(styleOf(getByText('₽')).fontFamily).toBe('Onest-Bold');
+test('крупная сумма заголовочным начертанием не режется на куски', async () => {
+  const { queryByText } = await render(<Text style={{ fontFamily: 'Onest-Bold' }}>6 250 ₽</Text>);
+  expect(queryByText('₽')).toBeNull();
+  expect(queryByText('6 250 ₽')).not.toBeNull();
 });
 
 test('в Onest знаки валют свои, и текст не режется', async () => {

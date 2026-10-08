@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, StyleSheet, Keyboard } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring } from 'react-native-reanimated';
 import Tap from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,9 +36,18 @@ export default function MainTabBar({ state, navigation, descriptors }) {
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
 
+  // Пока открыта клавиатура, панели нет: Android ужимает окно, и поле новой
+  // задачи внизу карточки иначе оказывалось зажатым между панелью и
+  // клавиатурой.
+  const [keyboard, setKeyboard] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setKeyboard(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboard(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const focusedRoute = state.routes[state.index];
   const focusedOptions = descriptors[focusedRoute.key].options;
-  if (focusedOptions.tabBarStyle && focusedOptions.tabBarStyle.display === 'none') {
+  if (keyboard || (focusedOptions.tabBarStyle && focusedOptions.tabBarStyle.display === 'none')) {
     return null;
   }
 

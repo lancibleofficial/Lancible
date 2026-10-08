@@ -365,31 +365,31 @@
       "id": "mobile_src_screens_projectscreen_projectscreen_onopenmenu",
       "label": "onOpenMenu()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L143"
+      "at": "L142"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_onpickversion",
       "label": "onPickVersion()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L163"
+      "at": "L162"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_submitdraft",
       "label": "submitDraft()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L194"
+      "at": "L193"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectcard_submit",
       "label": "submit()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L227"
+      "at": "L383"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectsscreen_openprojectscreen",
       "label": "openProjectScreen()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L104"
+      "at": "L170"
     },
     {
       "id": "mobile_src_screens_projectstatusesscreen_projectstatusesscreen_onadd",
@@ -539,13 +539,13 @@
       "id": "mobile_src_screens_tasksscreen_tasksscreen_picktargetproject",
       "label": "pickTargetProject()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L67"
+      "at": "L78"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_submit",
       "label": "submit()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L59"
+      "at": "L70"
     },
     {
       "id": "mobile_src_store_useappstore_sortedprojecttasks",
@@ -563,7 +563,7 @@
       "id": "mobile_tests_apptext_test_styleof",
       "label": "styleOf()",
       "file": "mobile/tests/AppText.test.js",
-      "at": "L20"
+      "at": "L19"
     },
     {
       "id": "mobile_tests_documentsscreen_test_doc",

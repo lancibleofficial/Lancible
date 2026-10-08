@@ -27,7 +27,7 @@ beforeEach(() => {
   });
 });
 
-test('cardTasks: идущая первой, выполненные не попадают, затем закреплённые и свежие', () => {
+test('cardTasks: идущая первой, выполненные не попадают, дальше — по последнему изменению', () => {
   const tasks = [
     task('a', 'p1', 'Старая', { updatedAt: '2026-01-01T00:00:00.000Z' }),
     task('b', 'p1', 'Выполнена', { done: true }),
@@ -35,16 +35,19 @@ test('cardTasks: идущая первой, выполненные не попа
     task('d', 'p1', 'Свежая', { updatedAt: '2026-09-01T00:00:00.000Z' }),
   ];
   const list = cardTasks(tasks, { taskId: 'a', startedAt: '2026-10-01T00:00:00.000Z' });
-  expect(list.map((x) => x.id)).toEqual(['a', 'c', 'd']);
+  // Закреплённая выше свежей не поднимается: сверху всегда последняя изменённая.
+  expect(list.map((x) => x.id)).toEqual(['a', 'd', 'c']);
+  expect(cardTasks(tasks, null).map((x) => x.id)).toEqual(['d', 'c', 'a']);
 });
 
 test('карточки проектов: имя, сводка и задачи', async () => {
-  const { getByText } = await render(<ProjectsScreen navigation={nav()} />);
+  const { getByText, getAllByText } = await render(<ProjectsScreen navigation={nav()} />);
   getByText('Сайт');
   getByText('Бот');
   getByText('Вёрстка');
   getByText('Команды');
-  getByText(t('ru', 'deck.done_of', { done: 1, total: 2 }));
+  getByText('1/2');
+  expect(getAllByText(t('ru', 'deck.open'))).toHaveLength(2);
 });
 
 test('строка быстрого добавления на карточке заводит задачу в её проект и открывает её', async () => {

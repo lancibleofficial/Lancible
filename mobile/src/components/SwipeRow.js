@@ -80,11 +80,13 @@ export default function SwipeRow({ children, label, icon = 'pin', onAction, enab
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   const fillStyle = useAnimatedStyle(() => ({ opacity: withTiming(armed.value, { duration: 120 }) }));
   const onStyle = useAnimatedStyle(() => ({ opacity: withTiming(armed.value, { duration: 120 }) }));
+  // Значок и подпись стоят посередине открывшейся полосы и едут вместе с ней.
   const iconStyle = useAnimatedStyle(() => ({
     opacity: interpolate(-x.value, [0, SWIPE_TRIGGER * 0.5], [0, 1], Extrapolation.CLAMP),
-    transform: [{
-      scale: withSpring(armed.value ? 1.12 : interpolate(-x.value, [0, SWIPE_TRIGGER], [0.6, 1], Extrapolation.CLAMP), { damping: 12, stiffness: 300 }),
-    }],
+    transform: [
+      { translateX: Math.max(0, (-x.value - SWIPE_TRIGGER) / 2) },
+      { scale: withSpring(armed.value ? 1.12 : interpolate(-x.value, [0, SWIPE_TRIGGER], [0.6, 1], Extrapolation.CLAMP), { damping: 12, stiffness: 300 }) },
+    ],
   }));
 
   return (

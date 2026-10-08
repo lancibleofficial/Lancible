@@ -171,26 +171,25 @@ export const radius = { sm: 8, md: 10, lg: 14, xl: 20, pill: 999 };
 
 export const fontSize = { xs: 12, sm: 14, md: 16, lg: 20, xl: 28 };
 
-// Basique Pro хранится 4 отдельными файлами по начертанию (Light/Regular/
-// Bold/Black), а не одним variable-font, поэтому "жирность" — это всегда
-// выбор СЕМЕЙСТВА, а не числовой fontWeight (см. AppText.js: fontWeight
-// рядом с кастомным fontFamily на Android приводит к тихому откату на
-// системный шрифт). fontFamily ниже — для мест, где семейство нужно
-// прописать явно, минуя автоподбор AppText/AppTextInput по fontWeight.
-// Две семьи. Onest набирает интерфейс — тот же шрифт, что на десктопе и в
-// вебе; в нём есть казахские буквы и знаки ₽ ₸ ₴ ₺. Basique Pro остаётся
-// там, где нужна фирменная нота: лого, заголовки экранов, крупные числа.
+// Телефон набран одной гарнитурой — Onest (решение 9 октября 2026: Basique
+// Pro ушла с телефона совсем). В Onest есть казахские буквы и знаки
+// ₽ ₸ ₴ ₺. Начертания — отдельные файлы, поэтому "жирность" — это выбор
+// СЕМЕЙСТВА, а не числовой fontWeight (см. AppText.js: fontWeight рядом с
+// кастомным fontFamily на Android тихо откатывает на системный шрифт).
+// fontFamily ниже — для мест, где семейство нужно прописать явно, минуя
+// автоподбор AppText/AppTextInput по fontWeight.
 //
-// Четыре ступени — те же, что у Basique: light/regular/bold/black.
+// Четыре ступени: light/regular/bold/black.
 export const fontFamily = {
   light: 'Onest-Light', regular: 'Onest-Regular',
   bold: 'Onest-Medium', black: 'Onest-Bold',
 };
 
-/** Фирменная семья — для лого, заголовков экранов и крупных чисел. */
+/** Заголовки экранов и крупные числа — тот же Onest, на ступень плотнее
+ *  текста: bold здесь — Bold, а не Medium. */
 export const displayFamily = {
-  light: 'BasiquePro-Light', regular: 'BasiquePro-Regular',
-  bold: 'BasiquePro-Bold', black: 'BasiquePro-Black',
+  light: 'Onest-Light', regular: 'Onest-Medium',
+  bold: 'Onest-Bold', black: 'Onest-Bold',
 };
 
 // Именованные текстовые пресеты — то же назначение, что h1/h2/body/caption в
