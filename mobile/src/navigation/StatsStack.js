@@ -1,7 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import StatsScreen from '../screens/StatsScreen';
 import { useAppStore } from '../store/useAppStore';
-import AppHeader from '../components/AppHeader';
+import { IOS_NATIVE_HEADER, stackHeaderOptions } from './nativeHeader';
 import { useColors } from '../theme';
 import { detailScreens } from './detailScreens';
 
@@ -14,12 +14,12 @@ export default function StatsStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        header: (props) => <AppHeader {...props} />,
+        ...stackHeaderOptions(colors),
         animation: 'ios_from_right',
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="StatsMain" component={StatsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="StatsMain" component={StatsScreen} options={{ headerShown: IOS_NATIVE_HEADER }} />
       {detailScreens(Stack, lang)}
     </Stack.Navigator>
   );

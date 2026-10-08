@@ -19,6 +19,7 @@ import DocEditor from '../components/DocEditor';
 import DocCore from '../core/doc.js';
 import Icon from '../components/Icon';
 import DetailHeader, { DetailButton } from '../components/DetailHeader';
+import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import PrimaryButton from '../components/PrimaryButton';
 import MenuSheet from '../components/MenuSheet';
 import DueSheet from '../components/DueSheet';
@@ -96,8 +97,11 @@ export default function TaskDetailScreen({ route, navigation }) {
   useEffect(() => () => clearTimeout(titleTimer.current), []);
 
   // --- шит: два положения, тянется за верхнюю часть ---
-  const sheetTop = insets.top + 48;
-  const sheetH = Math.max(SHEET_COLLAPSED + 200, screenH - sheetTop);
+  // С нативной шапкой (iOS 26+) экран начинается под ней: шит меряется от
+  // высоты своей области, а не окна.
+  const [areaH, setAreaH] = useState(screenH);
+  const sheetTop = IOS_NATIVE_HEADER ? spacing.sm : insets.top + 48;
+  const sheetH = Math.max(SHEET_COLLAPSED + 200, (IOS_NATIVE_HEADER ? areaH : screenH) - sheetTop);
   // Свёрнутый шит — ровно его верхняя часть (ручка, таймер, вкладки). Высота
   // меряется, а не прибита: с прибитой из-под вкладок выглядывало тело.
   const [headH, setHeadH] = useState(SHEET_COLLAPSED);
@@ -264,7 +268,7 @@ export default function TaskDetailScreen({ route, navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={IOS_NATIVE_HEADER ? (e) => setAreaH(Math.round(e.nativeEvent.layout.height)) : undefined}>
       <DetailHeader
         onBack={() => navigation.goBack()}
         backLabel={t(LANG, 'common.back')}

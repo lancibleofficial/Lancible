@@ -14,7 +14,7 @@
 // на резинке, за порогом заливается акцентом и щёлкает хаптика. Отпустил за
 // порогом — лист нового проекта, колода пружиной встаёт на место.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Pressable, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, interpolateColor, Extrapolation, runOnJS,
@@ -38,6 +38,7 @@ import { tagsOf } from '../lib/tags';
 import { defaultStatusId } from '../lib/statuses';
 import { useTicker } from '../hooks/useTicker';
 import { openSheet, closeSheet } from '../store/useSheetStore';
+import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { useColors, spacing, radius, fontSize, displayFamily } from '../theme';
 import { t } from '../lib/i18n';
 
@@ -123,6 +124,11 @@ export default function ProjectsScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const cardW = width - spacing.lg - PEEK;
   const step = cardW + GAP;
+  // На iOS панель вкладок нативная и лежит поверх экрана (на iOS 26 ещё и
+  // плавает): без отступа низ карточки и точки уходили под неё. На Android
+  // панель занимает место в раскладке сама.
+  const clearance = useBottomClearance();
+  const bottomPad = Platform.OS === 'ios' ? clearance : 0;
   const styles = useMemo(() => makeStyles(colors, cardW), [colors, cardW]);
   const projects = useAppStore((s) => s.projects);
   const activeTimer = useAppStore((s) => s.activeTimer);
@@ -214,7 +220,7 @@ export default function ProjectsScreen({ navigation }) {
   const stripStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: bottomPad }]}>
       <TabHeader title={t(lang, 'nav.projects')} count={count || null}>
         <HeaderButton icon="search" label={t(lang, 'search.placeholder')} onPress={() => navigation.navigate('Search')} />
         <NotificationsButton navigation={navigation} />

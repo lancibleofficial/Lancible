@@ -9,6 +9,7 @@ import { useAppStore } from '../store/useAppStore';
 import DocCore from '../core/doc.js';
 import { useColors, spacing, radius, typography } from '../theme';
 import { t } from '../lib/i18n';
+import { leftTitleOptions } from '../navigation/nativeHeader';
 
 // Раздел «Документы» на телефоне: тексты отдельно от задач — те же, что на
 // десктопе и в вебе (state.documents, ездят в синхронизации). Список с
@@ -31,7 +32,7 @@ export default function DocumentsScreen({ navigation, route }) {
   const list = DocCore.searchDocuments(DocCore.sortDocuments(own), query);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: project ? `${t(lang, 'docs.title')} · ${project.name}` : t(lang, 'docs.title') });
+    navigation.setOptions(leftTitleOptions(project ? `${t(lang, 'docs.title')} · ${project.name}` : t(lang, 'docs.title')));
   }, [navigation, project, lang]);
 
   function open(id) { navigation.navigate('Editor', { kind: 'doc', id }); }

@@ -14,6 +14,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import SearchScreen from '../screens/SearchScreen';
 import TagsScreen from '../screens/TagsScreen';
 import { t } from '../lib/i18n';
+import { IOS_NATIVE_HEADER, leftTitleOptions } from './nativeHeader';
 
 export const DETAIL_ROUTES = ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents', 'Notifications', 'Search', 'Tags'];
 
@@ -22,12 +23,12 @@ export const DETAIL_ROUTES = ['Project', 'TaskDetail', 'ProjectStatuses', 'Edito
 export function detailScreens(Stack, lang) {
   return [
     <Stack.Screen key="Project" name="Project" component={ProjectScreen} />,
-    <Stack.Screen key="TaskDetail" name="TaskDetail" component={TaskDetailScreen} options={{ headerShown: false }} />,
-    <Stack.Screen key="Documents" name="Documents" component={DocumentsScreen} options={{ title: t(lang, 'docs.title') }} />,
-    <Stack.Screen key="Editor" name="Editor" component={EditorScreen} options={{ headerShown: false }} />,
-    <Stack.Screen key="ProjectStatuses" name="ProjectStatuses" component={ProjectStatusesScreen} options={{ title: t(lang, 'board.project_statuses') }} />,
-    <Stack.Screen key="Notifications" name="Notifications" component={NotificationsScreen} options={{ title: t(lang, 'notif.title') }} />,
-    <Stack.Screen key="Search" name="Search" component={SearchScreen} options={{ headerShown: false }} />,
-    <Stack.Screen key="Tags" name="Tags" component={TagsScreen} options={{ title: t(lang, 'settings.section_tags') }} />,
+    <Stack.Screen key="TaskDetail" name="TaskDetail" component={TaskDetailScreen} options={{ headerShown: IOS_NATIVE_HEADER, title: '' }} />,
+    <Stack.Screen key="Documents" name="Documents" component={DocumentsScreen} options={leftTitleOptions(t(lang, 'docs.title'))} />,
+    <Stack.Screen key="Editor" name="Editor" component={EditorScreen} options={{ headerShown: IOS_NATIVE_HEADER, title: '' }} />,
+    <Stack.Screen key="ProjectStatuses" name="ProjectStatuses" component={ProjectStatusesScreen} options={leftTitleOptions(t(lang, 'board.project_statuses'))} />,
+    <Stack.Screen key="Notifications" name="Notifications" component={NotificationsScreen} options={leftTitleOptions(t(lang, 'notif.title'))} />,
+    <Stack.Screen key="Search" name="Search" component={SearchScreen} options={{ headerShown: IOS_NATIVE_HEADER, title: '' }} />,
+    <Stack.Screen key="Tags" name="Tags" component={TagsScreen} options={leftTitleOptions(t(lang, 'settings.section_tags'))} />,
   ];
 }

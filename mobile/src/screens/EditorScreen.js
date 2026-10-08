@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
 import TextInput from '../components/AppTextInput';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
 import DocEditor from '../components/DocEditor';
 import DetailHeader from '../components/DetailHeader';
+import { HeaderHeightContext } from '@react-navigation/elements';
+import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import { useTicker } from '../hooks/useTicker';
 import { openSheet } from '../store/useSheetStore';
 import PickerSheet from '../components/PickerSheet';
@@ -36,6 +38,7 @@ export default function EditorScreen({ route, navigation }) {
   const doc = useAppStore((s) => (kind === 'doc' ? (s.documents || []).find((d) => d.id === id) : null));
   const profile = useAuthStore((s) => s.user);
   const activeTimer = useAppStore((s) => s.activeTimer);
+  const headerH = useContext(HeaderHeightContext) || 0;
   const isRunning = kind === 'task' && !!activeTimer && activeTimer.taskId === id;
   useTicker(isRunning);
   const auth = useEditorAuth();
@@ -88,7 +91,7 @@ export default function EditorScreen({ route, navigation }) {
   const runMs = isRunning ? Date.now() - new Date(activeTimer.startedAt).getTime() : 0;
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={IOS_NATIVE_HEADER ? headerH : 0}>
       <DetailHeader
         onBack={() => navigation.goBack()}
         backLabel={t(lang, 'common.back')}

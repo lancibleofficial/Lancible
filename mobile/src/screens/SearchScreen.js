@@ -1,13 +1,14 @@
 // Поиск по задачам и проектам — свой экран с полем в шапке и клавиатурой
 // сразу. Пустой запрос показывает недавние задачи: подсказка, что искать,
 // и заодно самый частый переход.
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import { View, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
 import { GlassBg } from '../components/Glass';
+import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import { useAppStore, recentTasks, getProject, tasksOf } from '../store/useAppStore';
 import { getStatus } from '../lib/statuses';
 import { useColors, spacing, radius, fontSize } from '../theme';
@@ -42,12 +43,30 @@ export default function SearchScreen({ navigation }) {
   }
   const empty = q && !rows.length;
 
+  // iOS 26+: строка поиска — нативная, в шапке; система рисует её стеклом.
+  useLayoutEffect(() => {
+    if (!IOS_NATIVE_HEADER) return;
+    navigation.setOptions({
+      headerTitle: '',
+      headerSearchBarOptions: {
+        placeholder: t(lang, 'search.placeholder'),
+        autoFocus: true,
+        hideWhenScrolling: false,
+        placement: 'stacked',
+        textColor: colors.text,
+        tintColor: colors.accentInk,
+        onChangeText: (e) => setQuery(e.nativeEvent.text || ''),
+        onCancelButtonPress: () => setQuery(''),
+      },
+    });
+  }, [navigation, lang, colors]);
+
   function onProject(id) { openProject(id); navigation.navigate('Project', { projectId: id }); }
   function onTask(task) { navigation.navigate('TaskDetail', { taskId: task.id }); }
 
   return (
     <View style={styles.container}>
-      <View style={styles.head}>
+      {IOS_NATIVE_HEADER ? null : <View style={styles.head}>
         <Pressable hitSlop={8} onPress={() => navigation.goBack()} style={styles.back} accessibilityLabel={t(lang, 'common.back')}>
           <GlassBg radius={radius.md} backgroundColor={colors.panel} />
           <Icon name="chevron-left" size={20} color={colors.text} />
@@ -71,7 +90,7 @@ export default function SearchScreen({ navigation }) {
             </Pressable>
           ) : null}
         </View>
-      </View>
+      </View>}
 
       {empty ? (
         <Text style={styles.empty}>{t(lang, 'search.nothing_found')}</Text>

@@ -1,7 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TasksScreen from '../screens/TasksScreen';
 import { useAppStore } from '../store/useAppStore';
-import AppHeader from '../components/AppHeader';
+import { IOS_NATIVE_HEADER, stackHeaderOptions } from './nativeHeader';
 import { useColors } from '../theme';
 import { detailScreens } from './detailScreens';
 
@@ -15,12 +15,12 @@ export default function TasksStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        header: (props) => <AppHeader {...props} />,
+        ...stackHeaderOptions(colors),
         animation: 'ios_from_right',
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="TasksMain" component={TasksScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="TasksMain" component={TasksScreen} options={{ headerShown: IOS_NATIVE_HEADER }} />
       {detailScreens(Stack, lang)}
     </Stack.Navigator>
   );

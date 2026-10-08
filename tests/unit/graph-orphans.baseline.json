@@ -311,31 +311,31 @@
       "id": "mobile_src_screens_documentsscreen_documentsscreen_onnew",
       "label": "onNew()",
       "file": "mobile/src/screens/DocumentsScreen.js",
-      "at": "L38"
+      "at": "L39"
     },
     {
       "id": "mobile_src_screens_documentsscreen_documentsscreen_open",
       "label": "open()",
       "file": "mobile/src/screens/DocumentsScreen.js",
-      "at": "L37"
+      "at": "L38"
     },
     {
       "id": "mobile_src_screens_editorscreen_editorscreen_onchange",
       "label": "onChange()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L60"
+      "at": "L63"
     },
     {
       "id": "mobile_src_screens_editorscreen_editorscreen_ontitle",
       "label": "onTitle()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L68"
+      "at": "L71"
     },
     {
       "id": "mobile_src_screens_editorscreen_editorscreen_pickproject",
       "label": "pickProject()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L73"
+      "at": "L76"
     },
     {
       "id": "mobile_src_screens_homescreen_homescreen_addentry",
@@ -362,34 +362,28 @@
       "at": "L38"
     },
     {
-      "id": "mobile_src_screens_projectscreen_projectscreen_onopenmenu",
-      "label": "onOpenMenu()",
-      "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L143"
-    },
-    {
       "id": "mobile_src_screens_projectscreen_projectscreen_onpickversion",
       "label": "onPickVersion()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L163"
+      "at": "L164"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_submitdraft",
       "label": "submitDraft()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L194"
+      "at": "L195"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectcard_submit",
       "label": "submit()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L383"
+      "at": "L389"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectsscreen_openprojectscreen",
       "label": "openProjectScreen()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L170"
+      "at": "L176"
     },
     {
       "id": "mobile_src_screens_projectstatusesscreen_projectstatusesscreen_onadd",
@@ -425,13 +419,13 @@
       "id": "mobile_src_screens_searchscreen_searchscreen_onproject",
       "label": "onProject()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L45"
+      "at": "L64"
     },
     {
       "id": "mobile_src_screens_searchscreen_searchscreen_ontask",
       "label": "onTask()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L46"
+      "at": "L65"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onexcel",
@@ -491,49 +485,49 @@
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ondeletesession",
       "label": "onDeleteSession()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L199"
+      "at": "L203"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopendue",
       "label": "onOpenDue()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L176"
+      "at": "L180"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenmenu",
       "label": "onOpenMenu()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L155"
+      "at": "L159"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopentags",
       "label": "onOpenTags()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L186"
+      "at": "L190"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onpreset",
       "label": "onPreset()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L195"
+      "at": "L199"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onratechange",
       "label": "onRateChange()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L172"
+      "at": "L176"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ontitlechange",
       "label": "onTitleChange()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L167"
+      "at": "L171"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_openeditor",
       "label": "openEditor()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L126"
+      "at": "L130"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_picktargetproject",

@@ -1,7 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
 import { useAppStore } from '../store/useAppStore';
-import AppHeader from '../components/AppHeader';
+import { IOS_NATIVE_HEADER, stackHeaderOptions } from './nativeHeader';
 import { useColors } from '../theme';
 import { detailScreens } from './detailScreens';
 
@@ -20,7 +20,7 @@ export default function HomeStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        header: (props) => <AppHeader {...props} />,
+        ...stackHeaderOptions(colors),
         animation: 'ios_from_right',
         contentStyle: { backgroundColor: colors.bg },
       }}
@@ -28,7 +28,7 @@ export default function HomeStack() {
       {/* Своя шапка внутри экрана: поле поиска занимает всю ширину и
           раскрывается в отдельный режим, а общая шапка под такое не
           гнётся. Остальные экраны стека — с обычной. */}
-      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: IOS_NATIVE_HEADER }} />
       {detailScreens(Stack, lang)}
     </Stack.Navigator>
   );

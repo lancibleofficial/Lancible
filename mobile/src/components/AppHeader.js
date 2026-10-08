@@ -18,6 +18,13 @@ import { useColors, spacing, fontSize, displayFamily } from '../theme';
 // листа: он раскрывается ровно до нижней границы шапки.
 export const HEADER_CONTENT_HEIGHT = 48;
 
+/** Заголовок экрана стека — наш шрифт и размер. На iOS 26+ он стоит в
+ *  нативной шапке слева, своим элементом без стеклянной подложки. */
+export function StackTitle({ text }) {
+  const colors = useColors();
+  return <Text style={{ color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.regular, maxWidth: 260 }} numberOfLines={1}>{text}</Text>;
+}
+
 export default function AppHeader({ navigation, route, options, back }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
