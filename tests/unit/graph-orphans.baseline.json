@@ -419,13 +419,13 @@
       "id": "mobile_src_screens_searchscreen_searchscreen_onproject",
       "label": "onProject()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L64"
+      "at": "L102"
     },
     {
       "id": "mobile_src_screens_searchscreen_searchscreen_ontask",
       "label": "onTask()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L65"
+      "at": "L103"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onexcel",
@@ -636,6 +636,30 @@
       "label": "task()",
       "file": "mobile/tests/ProjectsScreen.test.js",
       "at": "L11"
+    },
+    {
+      "id": "mobile_tests_searchscreen_ios26_test_nav",
+      "label": "nav()",
+      "file": "mobile/tests/SearchScreen.ios26.test.js",
+      "at": "L17"
+    },
+    {
+      "id": "mobile_tests_searchscreen_ios26_test_task",
+      "label": "task()",
+      "file": "mobile/tests/SearchScreen.ios26.test.js",
+      "at": "L23"
+    },
+    {
+      "id": "mobile_tests_searchscreen_test_nav",
+      "label": "nav()",
+      "file": "mobile/tests/SearchScreen.test.js",
+      "at": "L20"
+    },
+    {
+      "id": "mobile_tests_searchscreen_test_task",
+      "label": "task()",
+      "file": "mobile/tests/SearchScreen.test.js",
+      "at": "L30"
     },
     {
       "id": "mobile_tests_sessions_test_task",

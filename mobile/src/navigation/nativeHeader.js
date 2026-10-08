@@ -32,6 +32,7 @@ export const SF_SYMBOL = {
   kebab: 'ellipsis',
   check: 'checkmark',
   menu: 'line.3.horizontal',
+  x: 'xmark',
 };
 
 /** Общие настройки шапки стека: на iOS 26+ — нативная, иначе — AppHeader. */
