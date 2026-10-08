@@ -10,6 +10,7 @@ import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
 import TimerMiniPlayer, { useRunningTask } from '../components/TimerMiniPlayer';
 import { DETAIL_ROUTES } from './detailScreens';
+import { tabFocused, tabBlurred } from './tabSlide';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
 import { useColors, spacing } from '../theme';
@@ -108,6 +109,12 @@ export default function MainTabs() {
   return (
     <Tab.Navigator
       layout={HAS_LIQUID_GLASS ? undefined : LegacyMiniPlayerLayout}
+      // Система переключает вкладки мгновенно — пролистывание делают сами
+      // экраны вкладок (components/TabSlide.js), здесь о смене только сообщаем.
+      screenListeners={({ route }) => ({
+        focus: () => tabFocused(route.name),
+        blur: () => tabBlurred(route.name),
+      })}
       screenOptions={({ navigation }) => ({
         header: (props) => <AppHeader {...props} />,
         tabBarActiveTintColor: colors.accentInk,

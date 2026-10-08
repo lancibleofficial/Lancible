@@ -1,3 +1,4 @@
+import { Easing, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import HomeStack from './HomeStack';
@@ -8,6 +9,7 @@ import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
 import MainTabBar from './MainTabBar';
 import { DETAIL_ROUTES } from './detailScreens';
+import { forSlide } from './tabSlide';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
 
@@ -18,10 +20,14 @@ const Tab = createBottomTabNavigator();
 // на них одинаково: вложенный стек сам по себе на родительский таббар не
 // влияет, единственный документированный способ — пересчитать tabBarStyle
 // родительского Tab.Screen по имени сфокусированного маршрута.
+// Смена вкладки — пролистывание: страницы едут во всю ширину, ease out.
+const SLIDE = { animation: 'timing', config: { duration: 300, easing: Easing.out(Easing.cubic) } };
+
 const hideOnDetails = (route) => (DETAIL_ROUTES.includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined);
 
 export default function MainTabs() {
   const lang = useAppStore((s) => s.settings.lang);
+  const { width } = useWindowDimensions();
   const tab = (labelKey) => ({ route }) => ({ headerShown: false, tabBarLabel: t(lang, labelKey), tabBarStyle: hideOnDetails(route) });
 
   return (
@@ -32,7 +38,8 @@ export default function MainTabs() {
       screenOptions={{
         header: (props) => <AppHeader {...props} />,
         animation: 'shift',
-        transitionSpec: { animation: 'spring', config: { stiffness: 230, damping: 24, mass: 0.9 } },
+        sceneStyleInterpolator: forSlide(width),
+        transitionSpec: SLIDE,
       }}
     >
       <Tab.Screen name="Projects" component={ProjectsStack} options={tab('nav.projects')} />

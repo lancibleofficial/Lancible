@@ -1,9 +1,13 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ProjectsScreen from '../screens/ProjectsScreen';
+import { withTabPage } from '../components/TabSlide';
 import { useAppStore } from '../store/useAppStore';
 import { IOS_NATIVE_HEADER, stackHeaderOptions } from './nativeHeader';
 import { useColors } from '../theme';
 import { detailScreens } from './detailScreens';
+
+// Корень вкладки въезжает при смене вкладок (iOS; на Android листает навигатор).
+const ProjectsPage = withTabPage(ProjectsScreen, 'Projects');
 
 const Stack = createNativeStackNavigator();
 
@@ -20,7 +24,7 @@ export default function ProjectsStack() {
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="ProjectsMain" component={ProjectsScreen} options={{ headerShown: IOS_NATIVE_HEADER }} />
+      <Stack.Screen name="ProjectsMain" component={ProjectsPage} options={{ headerShown: IOS_NATIVE_HEADER }} />
       {detailScreens(Stack, lang)}
     </Stack.Navigator>
   );

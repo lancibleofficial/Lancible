@@ -4,7 +4,7 @@
 //
 // Навигационная шапка на вкладках выключена, поэтому отступ под статус-бар
 // берётся здесь.
-import { Children, isValidElement, useRef } from 'react';
+import { Children, isValidElement, useContext, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Tap from './Tap';
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
 import { GlassBg, headerButtonRadius, NativeHeaderScope } from './Glass';
+import { TabNameContext, TabTitleSlide } from './TabSlide';
 import { IOS_NATIVE_HEADER, useNativeOptions, nativeItems, elementSignature, leftElementItems } from '../navigation/nativeHeader';
 import { useAppStore } from '../store/useAppStore';
 import { notificationFeed } from '../lib/due';
@@ -68,6 +69,7 @@ function NativeTabHeader({ title, count, children }) {
   const styles = makeStyles(colors, { top: 0 });
   const lang = useAppStore((s) => s.settings.lang);
   const badge = useUnreadBadge();
+  const tab = useContext(TabNameContext);
   const list = Children.toArray(children).filter(isValidElement);
   const latest = useRef(list);
   latest.current = list;
@@ -81,15 +83,19 @@ function NativeTabHeader({ title, count, children }) {
     }
     return null;
   };
-  useNativeOptions(navigation, `${title}|${count}|${lang}|${badge}|${colors.accentInk}|${colors.text}|${elementSignature(list)}`, () => ({
+  useNativeOptions(navigation, `${tab}|${title}|${count}|${lang}|${badge}|${colors.accentInk}|${colors.text}|${elementSignature(list)}`, () => ({
     title,
-    // Заголовок слева нашим шрифтом и размером, как на других платформах.
+    // Заголовок слева нашим шрифтом и размером, как на других платформах;
+    // при смене вкладки въезжает вместе со страницей (TabSlide).
     headerTitle: '',
-    unstable_headerLeftItems: () => leftElementItems(
-      <Text style={[styles.title, styles.titleNative]} numberOfLines={1}>
-        {title}{count != null ? <Text style={styles.count}> {count}</Text> : null}
-      </Text>,
-    ),
+    unstable_headerLeftItems: () => {
+      const text = (
+        <Text style={[styles.title, styles.titleNative]} numberOfLines={1}>
+          {title}{count != null ? <Text style={styles.count}> {count}</Text> : null}
+        </Text>
+      );
+      return leftElementItems(tab ? <TabTitleSlide tab={tab}>{text}</TabTitleSlide> : text);
+    },
     unstable_headerRightItems: () => nativeItems(latest, toItem, (el) => <NativeHeaderScope>{el}</NativeHeaderScope>),
   }));
   return null;

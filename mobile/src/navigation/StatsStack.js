@@ -1,9 +1,13 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import StatsScreen from '../screens/StatsScreen';
+import { withTabPage } from '../components/TabSlide';
 import { useAppStore } from '../store/useAppStore';
 import { IOS_NATIVE_HEADER, stackHeaderOptions } from './nativeHeader';
 import { useColors } from '../theme';
 import { detailScreens } from './detailScreens';
+
+// Корень вкладки въезжает при смене вкладок (iOS; на Android листает навигатор).
+const StatsPage = withTabPage(StatsScreen, 'Stats');
 
 const Stack = createNativeStackNavigator();
 
@@ -19,7 +23,7 @@ export default function StatsStack() {
         contentStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Stack.Screen name="StatsMain" component={StatsScreen} options={{ headerShown: IOS_NATIVE_HEADER }} />
+      <Stack.Screen name="StatsMain" component={StatsPage} options={{ headerShown: IOS_NATIVE_HEADER }} />
       {detailScreens(Stack, lang)}
     </Stack.Navigator>
   );

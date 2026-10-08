@@ -1,9 +1,13 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from '../screens/HomeScreen';
+import { withTabPage } from '../components/TabSlide';
 import { useAppStore } from '../store/useAppStore';
 import { IOS_NATIVE_HEADER, stackHeaderOptions } from './nativeHeader';
 import { useColors } from '../theme';
 import { detailScreens } from './detailScreens';
+
+// Корень вкладки въезжает при смене вкладок (iOS; на Android листает навигатор).
+const HomePage = withTabPage(HomeScreen, 'Home');
 
 const Stack = createNativeStackNavigator();
 
@@ -28,7 +32,7 @@ export default function HomeStack() {
       {/* Своя шапка внутри экрана: поле поиска занимает всю ширину и
           раскрывается в отдельный режим, а общая шапка под такое не
           гнётся. Остальные экраны стека — с обычной. */}
-      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: IOS_NATIVE_HEADER }} />
+      <Stack.Screen name="HomeMain" component={HomePage} options={{ headerShown: IOS_NATIVE_HEADER }} />
       {detailScreens(Stack, lang)}
     </Stack.Navigator>
   );

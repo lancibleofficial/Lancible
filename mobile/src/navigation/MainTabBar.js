@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Keyboard } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring, withTiming, runOnJS, Easing } from 'react-native-reanimated';
 import Tap from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
@@ -26,11 +26,18 @@ function TabIcon({ focused, name, color, styles }) {
   );
 }
 
+// Уезд и возврат панели: ease out, в такт переходу вглубь.
+const SLIDE = { duration: 260, easing: Easing.out(Easing.cubic) };
+
 // Плоский таббар у нижнего края, над ним — плашка идущей задачи.
 //
 // Скрывается на экранах деталей (там tabBarStyle:{display:'none'}) — этот
 // флаг React Navigation сама прокидывает наверх из вложенного стека в
 // descriptors фокусной вкладки. Вместе с баром прячется и плашка.
+//
+// На экран деталей панель не пропадает разом, а уезжает вниз, пока экран
+// въезжает: место под ней сразу отдаётся экрану, а сама она на время ухода
+// лежит поверх него. Обратно выезжает снизу уже на своём месте.
 export default function MainTabBar({ state, navigation, descriptors }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -47,12 +54,38 @@ export default function MainTabBar({ state, navigation, descriptors }) {
   }, []);
   const focusedRoute = state.routes[state.index];
   const focusedOptions = descriptors[focusedRoute.key].options;
-  if (keyboard || (focusedOptions.tabBarStyle && focusedOptions.tabBarStyle.display === 'none')) {
-    return null;
-  }
+  const onDetails = !!(focusedOptions.tabBarStyle && focusedOptions.tabBarStyle.display === 'none');
+  const hidden = keyboard || onDetails;
+
+  // Сдвиг вниз; пока панель спрятана, он равен её высоте — так при
+  // возврате она выезжает снизу без мигания на месте.
+  const ty = useSharedValue(0);
+  const height = useRef(0);
+  const [leaving, setLeaving] = useState(false);
+  const wasHidden = useRef(hidden);
+  useEffect(() => {
+    if (wasHidden.current === hidden) return;
+    wasHidden.current = hidden;
+    if (!hidden) {
+      ty.value = withTiming(0, SLIDE);
+    } else if (keyboard) {
+      // Под клавиатуру — сразу: Android уже ужал окно.
+      ty.value = height.current;
+    } else {
+      setLeaving(true);
+      ty.value = withTiming(height.current, SLIDE, (done) => { if (done) runOnJS(setLeaving)(false); });
+    }
+  }, [hidden]);
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateY: ty.value }] }));
+
+  if (hidden && !leaving) return null;
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <Animated.View
+      style={[styles.wrap, hidden ? styles.leaving : null, slide]}
+      pointerEvents={hidden ? 'none' : 'box-none'}
+      onLayout={(e) => { if (!hidden) height.current = e.nativeEvent.layout.height; }}
+    >
       <TimerMiniPlayer
         onOpen={(taskId) => navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } })}
       />
@@ -77,13 +110,15 @@ export default function MainTabBar({ state, navigation, descriptors }) {
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   // Обёртка ничем не залита: под плашкой должен просвечивать контент.
   wrap: { gap: spacing.sm },
+  // Уходя, панель лежит поверх экрана деталей: место под ней уже его.
+  leaving: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   bar: {
     flexDirection: 'row', alignItems: 'flex-start',
     backgroundColor: colors.panel,
