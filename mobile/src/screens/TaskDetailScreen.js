@@ -277,7 +277,7 @@ export default function TaskDetailScreen({ route, navigation }) {
         sub={own.length && task.statusId ? (own.find((s) => s.id === task.statusId) || {}).name || '' : ''}
         onTitle={onOpenProject}
         running={isRunning}
-        runMs={runMs}
+        runSince={isRunning ? new Date(activeTimer.startedAt).getTime() : null}
         right={(
           <>
             <DetailButton icon="check" on={task.done} onPress={() => setTaskDone(taskId, !task.done)} label={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')} />

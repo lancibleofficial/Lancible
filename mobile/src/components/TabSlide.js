@@ -1,8 +1,9 @@
-// Пролистывание вкладок на iOS: содержимое и заголовок шапки въезжают со
-// стороны открытой вкладки (события — navigation/tabSlide.js). Старую
-// вкладку система уже убрала, поэтому новая въезжает не на всю ширину, а
-// на треть, с проявлением, ease out. Кнопки шапки нативные — их сменяет
-// система вместе с вкладкой.
+// Пролистывание вкладок на iOS: содержимое и заголовок шапки доезжают на
+// место со стороны открытой вкладки (события — navigation/tabSlide.js).
+// Старую вкладку система уже убрала, поэтому новая въезжает не на всю
+// ширину, а на пятую часть, ease out. Без прозрачности: страница всегда
+// видна, она только сдвинута, — иначе при смене вкладки мелькал пустой
+// экран. Кнопки шапки нативные — их сменяет система вместе с вкладкой.
 //
 // На Android вкладки пролистывает навигатор целиком, здесь ничего не
 // делается.
@@ -12,9 +13,8 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from '
 import { subscribeTab, freshSide } from '../navigation/tabSlide';
 
 const MOVE = { duration: 320, easing: Easing.out(Easing.cubic) };
-const SHOW = { duration: 220, easing: Easing.out(Easing.quad) };
 /** Доля ширины экрана, с которой въезжает страница. */
-export const PAGE_SHIFT = 0.3;
+export const PAGE_SHIFT = 0.2;
 /** Сдвиг заголовка шапки, pt. */
 export const TITLE_SHIFT = 24;
 
@@ -24,22 +24,17 @@ export const TabNameContext = createContext(null);
 function useSlideIn(tab, shift) {
   const [side] = useState(() => freshSide(tab));
   const x = useSharedValue(side * shift);
-  const op = useSharedValue(side ? 0 : 1);
 
   useEffect(() => {
-    if (side) {
-      x.value = withTiming(0, MOVE);
-      op.value = withTiming(1, SHOW);
-    }
+    if (side) x.value = withTiming(0, MOVE);
     return subscribeTab(tab, (e) => {
-      if (e.type === 'out') { op.value = 0; return; }
-      x.value = e.side * shift;
+      // Спрятанную вкладку ставим туда, откуда она въедет.
+      if (e.type === 'park') { x.value = e.side * shift; return; }
       x.value = withTiming(0, MOVE);
-      op.value = withTiming(1, SHOW);
     });
   }, [tab, shift]);
 
-  return useAnimatedStyle(() => ({ opacity: op.value, transform: [{ translateX: x.value }] }));
+  return useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
 }
 
 function IosTabPage({ tab, children }) {

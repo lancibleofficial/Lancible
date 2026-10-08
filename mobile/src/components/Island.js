@@ -6,13 +6,12 @@
 // справа» (.island-head / .island-title / .island-note). IslandRow — строка
 // внутри острова с линией сверху (списки записей, дедлайнов, свойств).
 import { View, StyleSheet } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import Tap from './Tap';
 import Text from './AppText';
 import { useColors, spacing, radius, typography } from '../theme';
 
-// Появление: лёгкий подъём с проявлением, ease out. Одно на все острова.
-const appear = FadeInDown.duration(280);
+// Без анимации появления: страница въезжает уже собранной. Проявление
+// островов с нуля при каждом открытии страницы выглядело морганием.
 
 export default function Island({ children, style, padded = true, onPress, onLongPress, ...rest }) {
   const colors = useColors();
@@ -24,7 +23,6 @@ export default function Island({ children, style, padded = true, onPress, onLong
   if (onPress || onLongPress) {
     return (
       <Tap
-        entering={appear}
         onPress={onPress}
         onLongPress={onLongPress}
         style={base}
@@ -34,7 +32,7 @@ export default function Island({ children, style, padded = true, onPress, onLong
       </Tap>
     );
   }
-  return <Animated.View entering={appear} style={base} {...rest}>{children}</Animated.View>;
+  return <View style={base} {...rest}>{children}</View>;
 }
 
 /** Шапка острова: подзаголовок и, справа, подпись или элемент. */

@@ -287,19 +287,19 @@
       "id": "mobile_src_navigation_maintabs_android_maintabs",
       "label": "MainTabs()",
       "file": "mobile/src/navigation/MainTabs.android.js",
-      "at": "L23"
+      "at": "L28"
     },
     {
       "id": "mobile_src_navigation_maintabs_ios_legacyminiplayerlayout",
       "label": "LegacyMiniPlayerLayout()",
       "file": "mobile/src/navigation/MainTabs.ios.js",
-      "at": "L66"
+      "at": "L67"
     },
     {
       "id": "mobile_src_navigation_maintabs_ios_maintabs",
       "label": "MainTabs()",
       "file": "mobile/src/navigation/MainTabs.ios.js",
-      "at": "L85"
+      "at": "L86"
     },
     {
       "id": "mobile_src_screens_auth_onboardingscreen_onboardingscreen_submit",
@@ -419,13 +419,13 @@
       "id": "mobile_src_screens_searchscreen_searchscreen_onproject",
       "label": "onProject()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L102"
+      "at": "L79"
     },
     {
       "id": "mobile_src_screens_searchscreen_searchscreen_ontask",
       "label": "onTask()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L103"
+      "at": "L80"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onexcel",
@@ -560,6 +560,12 @@
       "at": "L19"
     },
     {
+      "id": "mobile_tests_detailheader_ios26_test_header",
+      "label": "header()",
+      "file": "mobile/tests/DetailHeader.ios26.test.js",
+      "at": "L22"
+    },
+    {
       "id": "mobile_tests_documentsscreen_test_doc",
       "label": "doc()",
       "file": "mobile/tests/DocumentsScreen.test.js",
@@ -647,7 +653,7 @@
       "id": "mobile_tests_searchscreen_ios26_test_task",
       "label": "task()",
       "file": "mobile/tests/SearchScreen.ios26.test.js",
-      "at": "L23"
+      "at": "L27"
     },
     {
       "id": "mobile_tests_searchscreen_test_nav",

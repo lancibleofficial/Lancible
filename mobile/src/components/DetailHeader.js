@@ -13,6 +13,7 @@ import Tap from './Tap';
 import { GlassBg, headerButtonRadius } from './Glass';
 import { IOS_NATIVE_HEADER, useNativeOptions, nativeItems, elementSignature, leftElementItems } from '../navigation/nativeHeader';
 import { fmtClock } from '../lib/format';
+import { useTicker } from '../hooks/useTicker';
 import { useColors, spacing, radius, displayFamily } from '../theme';
 
 /** Квадратная кнопка шапки 36×36; on — залита акцентом. */
@@ -40,7 +41,7 @@ function Pulse({ color }) {
  * @param color   цвет проекта (точка в крошке)
  * @param title   проект; sub — что открыто (статус задачи, название задачи)
  * @param onTitle тап по крошке
- * @param running идёт ли таймер этой задачи; runMs — сколько уже
+ * @param running идёт ли таймер этой задачи; runSince — с какого момента (мс)
  * @param right   кнопки справа (DetailButton)
  */
 export default function DetailHeader(props) {
@@ -48,15 +49,23 @@ export default function DetailHeader(props) {
   return <JsDetailHeader {...props} />;
 }
 
+/** Часы идущего таймера тикают сами: шапке не нужно перерисовываться
+ *  каждую секунду. На iOS 26 это важно — каждое обновление опций нативная
+ *  шапка встречает пересозданием всех кнопок, и стекло моргало. */
+function RunClock({ since, style }) {
+  useTicker(true);
+  return <Text style={style}>{fmtClock(Math.max(0, Date.now() - (since || Date.now())))}</Text>;
+}
+
 /** Крошка «● проект › что открыто» и плашка идущего таймера. */
-function Crumb({ color, title, sub, onTitle, running, runMs, styles, flex }) {
+function Crumb({ color, title, sub, onTitle, running, runSince, styles, flex }) {
   const colors = useColors();
   return (
     <Tap style={[styles.crumb, !flex && styles.crumbNative]} onPress={onTitle} disabled={!onTitle} hitSlop={6} accessibilityRole={onTitle ? 'button' : undefined}>
       {running ? (
         <View style={styles.pill} accessibilityLiveRegion="polite">
           <Pulse color={colors.accentInk} />
-          <Text style={styles.pillClock}>{fmtClock(runMs || 0)}</Text>
+          <RunClock since={runSince} style={styles.pillClock} />
         </View>
       ) : null}
       {color ? <View style={[styles.dot, { backgroundColor: color }]} /> : null}
@@ -68,7 +77,7 @@ function Crumb({ color, title, sub, onTitle, running, runMs, styles, flex }) {
 
 /** iOS 26+: «назад» — системная, кнопки справа — нативные на жидком
  *  стекле, крошка — заголовком шапки. Сам компонент ничего не рисует. */
-function NativeDetailHeader({ color, title, sub, onTitle, running, runMs, right }) {
+function NativeDetailHeader({ color, title, sub, onTitle, running, runSince, right }) {
   const navigation = useNavigation();
   const colors = useColors();
   const styles = makeStyles(colors, { top: 0 });
@@ -81,13 +90,13 @@ function NativeDetailHeader({ color, title, sub, onTitle, running, runMs, right 
   const toItem = (el) => (el.type === DetailButton
     ? { icon: el.props.icon, label: el.props.label, onPress: el.props.onPress, prominent: !!el.props.on, tint: el.props.on ? colors.accentInk : undefined }
     : null);
-  const sig = [title, sub, color, running, Math.floor((runMs || 0) / 1000), colors.accentInk, elementSignature(list)].join('|');
+  const sig = [title, sub, color, running, runSince, colors.accentInk, elementSignature(list)].join('|');
   useNativeOptions(navigation, sig, () => ({
     // Крошка слева рядом с системной «назад», нашим шрифтом.
     headerTitle: '',
     headerBackVisible: true,
     unstable_headerLeftItems: () => leftElementItems(
-      <Crumb color={color} title={title} sub={sub} running={running} runMs={runMs} styles={styles}
+      <Crumb color={color} title={title} sub={sub} running={running} runSince={runSince} styles={styles}
         onTitle={onTitle ? () => onTitleRef.current && onTitleRef.current() : undefined} />,
     ),
     unstable_headerRightItems: () => nativeItems(latest, toItem),
@@ -95,7 +104,7 @@ function NativeDetailHeader({ color, title, sub, onTitle, running, runMs, right 
   return null;
 }
 
-function JsDetailHeader({ onBack, backLabel, color, title, sub, onTitle, running, runMs, right }) {
+function JsDetailHeader({ onBack, backLabel, color, title, sub, onTitle, running, runSince, right }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
@@ -105,7 +114,7 @@ function JsDetailHeader({ onBack, backLabel, color, title, sub, onTitle, running
         <GlassBg radius={headerButtonRadius(36, radius.md)} backgroundColor={colors.panel} />
         <Icon name="chevron-left" size={18} color={colors.text} />
       </Tap>
-      <Crumb flex color={color} title={title} sub={sub} onTitle={onTitle} running={running} runMs={runMs} styles={styles} />
+      <Crumb flex color={color} title={title} sub={sub} onTitle={onTitle} running={running} runSince={runSince} styles={styles} />
       {right}
     </View>
   );

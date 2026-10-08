@@ -88,7 +88,6 @@ export default function EditorScreen({ route, navigation }) {
   if (kind === 'task' ? !task : !doc) return null;
   const projectId = kind === 'task' ? task.projectId : doc.projectId;
   const project = projectId ? projects.find((p) => p.id === projectId) : null;
-  const runMs = isRunning ? Date.now() - new Date(activeTimer.startedAt).getTime() : 0;
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={IOS_NATIVE_HEADER ? headerH : 0}>
@@ -99,7 +98,7 @@ export default function EditorScreen({ route, navigation }) {
         title={kind === 'task' ? (project ? project.name : '') : t(lang, 'docs.title')}
         sub={kind === 'task' ? (task.title || t(lang, 'task.no_name')) : ''}
         running={isRunning}
-        runMs={runMs}
+        runSince={isRunning ? new Date(activeTimer.startedAt).getTime() : null}
       />
       {kind === 'doc' ? (
         <View style={styles.docHead}>

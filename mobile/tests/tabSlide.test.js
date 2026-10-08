@@ -6,7 +6,7 @@
 // содержимое и заголовок шапки въезжают со стороны открытой вкладки.
 import { Animated, Text } from 'react-native';
 import { render } from '@testing-library/react-native';
-import { TAB_ORDER, slideSide, forSlide, tabFocused, tabBlurred, freshSide, subscribeTab, resetTabSlide } from '../src/navigation/tabSlide';
+import { TAB_ORDER, slideSide, forSlide, tabFocused, freshSide, subscribeTab, resetTabSlide } from '../src/navigation/tabSlide';
 import { withTabPage, TabTitleSlide } from '../src/components/TabSlide';
 import TabHeader from '../src/components/TabHeader';
 
@@ -42,20 +42,28 @@ test('Android: страницы едут во всю ширину экрана',
   expect(at(0.5)).toBe(200);
 });
 
-test('iOS: открытой вкладке — въезд с её стороны, закрытой — спрятаться', () => {
+test('iOS: открытая вкладка доезжает на место, остальные встают туда, откуда въедут', () => {
   const tasks = [];
   const projects = [];
+  const menu = [];
   subscribeTab('Tasks', (e) => tasks.push(e));
   subscribeTab('Projects', (e) => projects.push(e));
+  subscribeTab('Menu', (e) => menu.push(e));
 
   tabFocused('Projects');
   expect(projects).toEqual([{ type: 'in', side: 0 }]);
-  tabBlurred('Projects');
+  // Задачи и Меню правее — встают справа.
+  expect(tasks).toEqual([{ type: 'park', side: 1 }]);
+  expect(menu).toEqual([{ type: 'park', side: 1 }]);
+
   tabFocused('Tasks');
-  expect(projects.at(-1)).toEqual({ type: 'out' });
-  expect(tasks).toEqual([{ type: 'in', side: 1 }]);
+  expect(tasks.at(-1)).toEqual({ type: 'in', side: 1 });
+  // Проекты теперь левее — встают слева; это та же сторона, с которой въедут.
+  expect(projects.at(-1)).toEqual({ type: 'park', side: -1 });
   tabFocused('Projects');
   expect(projects.at(-1)).toEqual({ type: 'in', side: -1 });
+  // Никаких «спрятаться»: страница всегда видна, только сдвинута.
+  expect([...tasks, ...projects, ...menu].every((e) => e.type === 'in' || e.type === 'park')).toBe(true);
 });
 
 test('iOS: вкладка, открытая впервые, узнаёт сторону уже после события', () => {
