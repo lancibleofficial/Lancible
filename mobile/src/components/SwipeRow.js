@@ -1,107 +1,125 @@
-// Строка списка с одной кнопкой, открывающейся свайпом влево.
+// Строка, которую тянут влево ради одного действия (закрепить / открепить).
 //
-// Ничего не знает ни про проекты, ни про задачи: ей передают подпись, иконку
-// и что делать по нажатию. В задаче 4 этот же компонент идёт в список задач.
+// Кнопки нет: строка едет за пальцем, а за её правым краем едет хвост с
+// иконкой и подписью. За порогом хвост заливается акцентом и щёлкает
+// хаптика — «отпустишь, и сработает». Отпустил за порогом — действие
+// выполняется, строка пружиной возвращается на место. Не дотянул — просто
+// возвращается.
 //
-// Конфликт с вертикальной прокруткой. ReanimatedSwipeable строит свой
-// Gesture.Pan сам и наружу отдаёт ровно один рычаг — dragOffsetFromRightEdge,
-// то есть мёртвую зону по горизонтали (по умолчанию 10). Порога по вертикали
-// (failOffsetY) у него нет вовсе, поэтому единственное, чем тут можно
-// управлять, — насколько далеко палец должен уйти вбок. Зона поднята до 24:
-// за это расстояние вертикальная прокрутка успевает перехватить жест, и
-// наклонная протяжка по списку кнопку не приоткрывает.
+// Хвост лежит внутри самой строки (left: 100%), а не отдельной подложкой
+// под ней: подложка-соседка на Android получала нулевую высоту и из-под
+// строки торчал только край иконки. Внутри строки высота у хвоста её же.
 //
-// «Открыта всегда одна» держится снаружи: строки кладут свои методы в общий
-// реестр, и открывающаяся закрывает предыдущую. Внутри одного Swipeable
-// такого знания нет — он не видит соседей.
-import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+// Конфликт с вертикальной прокруткой решён порогами жеста: он включается,
+// только когда палец ушёл влево на SLOP, и сдаётся, если раньше ушёл по
+// вертикали — тогда список прокручивается как обычно.
+import { useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, Extrapolation, runOnJS,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import Text from './AppText';
 import Icon from './Icon';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, fontSize } from '../theme';
 
-export const SWIPE_ACTION_WIDTH = 88;
-// Насколько далеко палец должен уйти вбок, прежде чем это считается свайпом.
-const X_SLOP = 24;
+/** Сколько протянуть, чтобы отпускание сработало. */
+export const SWIPE_TRIGGER = 84;
+const SLOP = 18;
+// Пружина возврата: быстрая, с лёгким перелётом.
+const BACK = { damping: 14, stiffness: 240, mass: 0.8 };
 
-/** Реестр открытых строк. Один на всё приложение: одновременно открытая
- *  строка всё равно может быть только одна, на каком бы списке она ни была. */
-const openRows = new Set();
-
-export function closeOpenSwipeRows() {
-  for (const row of openRows) row.close();
-  openRows.clear();
+/** Резинка за порогом: после max строка едет всё медленнее. */
+export function rubberBand(d, max) {
+  'worklet';
+  if (d <= max) return d;
+  const over = d - max;
+  return max + over * (1 - Math.min(0.85, over / (over + 160)));
 }
 
-const SwipeRow = forwardRef(function SwipeRow(
-  { children, label, icon = 'pin', onAction, renderAction, enabled = true, style },
-  ref,
-) {
+/** Сработает ли отпускание при таком сдвиге влево (dx < 0). */
+export function swipeFires(dx) {
+  'worklet';
+  return -dx >= SWIPE_TRIGGER;
+}
+
+export default function SwipeRow({ children, label, icon = 'pin', onAction, enabled = true, style }) {
   const colors = useColors();
   const styles = makeStyles(colors);
-  const inner = useRef(null);
+  const x = useSharedValue(0);
+  const armed = useSharedValue(0);
 
-  useImperativeHandle(ref, () => ({
-    open: () => inner.current && inner.current.openRight(),
-    close: () => inner.current && inner.current.close(),
-  }), []);
+  const buzz = useCallback(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }, []);
+  // Действие — когда строка почти вернулась: видно, что она встала на место,
+  // и только потом задача переезжает (закреплённая уходит в «Сегодня»).
+  const fire = useCallback(() => { setTimeout(() => onAction && onAction(), 180); }, [onAction]);
 
-  const onWillOpen = useCallback(() => {
-    for (const row of openRows) if (row !== inner.current) row.close();
-    openRows.clear();
-    if (inner.current) openRows.add(inner.current);
-  }, []);
+  const pan = Gesture.Pan()
+    .enabled(enabled)
+    .activeOffsetX(-SLOP)
+    .failOffsetY([-12, 12])
+    .onUpdate((e) => {
+      const dx = Math.min(0, e.translationX);
+      x.value = -rubberBand(-dx, SWIPE_TRIGGER * 1.4);
+      const on = swipeFires(dx) ? 1 : 0;
+      if (on !== armed.value) {
+        armed.value = on;
+        runOnJS(buzz)();
+      }
+    })
+    .onEnd(() => {
+      if (armed.value) runOnJS(fire)();
+      armed.value = 0;
+      x.value = withSpring(0, BACK);
+    })
+    .onFinalize(() => {
+      if (x.value !== 0 && armed.value === 0) x.value = withSpring(0, BACK);
+    });
 
-  const onClose = useCallback(() => {
-    if (inner.current) openRows.delete(inner.current);
-  }, []);
-
-  const right = useCallback(() => {
-    if (renderAction) return renderAction(inner.current);
-    return (
-      <Pressable
-        style={styles.action}
-        onPress={() => {
-          if (inner.current) { inner.current.close(); openRows.delete(inner.current); }
-          onAction();
-        }}
-      >
-        <Icon name={icon} size={16} color={colors.accentText} />
-        <Text style={styles.actionText} numberOfLines={1}>{label}</Text>
-      </Pressable>
-    );
-  }, [renderAction, onAction, label, icon, colors, styles]);
+  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  const fillStyle = useAnimatedStyle(() => ({ opacity: withTiming(armed.value, { duration: 120 }) }));
+  const onStyle = useAnimatedStyle(() => ({ opacity: withTiming(armed.value, { duration: 120 }) }));
+  const iconStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(-x.value, [0, SWIPE_TRIGGER * 0.5], [0, 1], Extrapolation.CLAMP),
+    transform: [{
+      scale: withSpring(armed.value ? 1.12 : interpolate(-x.value, [0, SWIPE_TRIGGER], [0.6, 1], Extrapolation.CLAMP), { damping: 12, stiffness: 300 }),
+    }],
+  }));
 
   return (
-    <ReanimatedSwipeable
-      ref={inner}
-      enabled={enabled}
-      friction={1.6}
-      rightThreshold={SWIPE_ACTION_WIDTH / 2}
-      overshootRight={false}
-      dragOffsetFromRightEdge={X_SLOP}
-      onSwipeableWillOpen={onWillOpen}
-      onSwipeableClose={onClose}
-      renderRightActions={right}
-      containerStyle={[styles.container, style]}
-    >
-      {children}
-    </ReanimatedSwipeable>
+    <View style={[styles.container, style]}>
+      <GestureDetector gesture={pan}>
+        <Animated.View style={rowStyle}>
+          {children}
+          <View style={styles.trail} pointerEvents="none">
+            <Animated.View style={[styles.fill, fillStyle]} />
+            <Animated.View style={[styles.action, iconStyle]}>
+              <View>
+                <Icon name={icon} size={16} color={colors.text} />
+                <Animated.View style={[styles.on, onStyle]}><Icon name={icon} size={16} color={colors.accentText} /></Animated.View>
+              </View>
+              <View>
+                <Text style={styles.actionText} numberOfLines={1}>{label}</Text>
+                <Animated.View style={[styles.on, onStyle]}>
+                  <Text style={[styles.actionText, { color: colors.accentText }]} numberOfLines={1}>{label}</Text>
+                </Animated.View>
+              </View>
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </GestureDetector>
+    </View>
   );
-});
-
-export default SwipeRow;
+}
 
 const makeStyles = (colors) => StyleSheet.create({
-  // Скругление и нижний отступ держит контейнер, а не содержимое: он
-  // обрезает и карточку, и кнопку одной формой, поэтому у открытой
-  // строки они сходятся встык, а внешние углы остаются скруглёнными.
-  container: { borderRadius: radius.lg, overflow: 'hidden', marginBottom: spacing.md },
-  action: {
-    width: SWIPE_ACTION_WIDTH,
-    alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    backgroundColor: colors.accent,
-  },
-  actionText: { color: colors.accentText, fontSize: fontSize.xs, fontWeight: '700' },
+  container: { overflow: 'hidden' },
+  // Хвост шире любого сдвига: за резинкой строка уходит максимум на ~1.7
+  // порога, и хвост закрывает всё открывшееся место.
+  trail: { position: 'absolute', top: 0, bottom: 0, left: '100%', width: SWIPE_TRIGGER * 3, backgroundColor: colors.raise },
+  fill: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: colors.accent },
+  action: { position: 'absolute', top: 0, bottom: 0, left: 0, width: SWIPE_TRIGGER, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
+  on: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' },
+  actionText: { color: colors.text, fontSize: fontSize.xs, fontWeight: '700' },
 });

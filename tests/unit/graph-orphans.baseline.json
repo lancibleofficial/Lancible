@@ -254,12 +254,6 @@
       "at": "L131"
     },
     {
-      "id": "mobile_src_lib_calendarmath_sessionsofday",
-      "label": "sessionsOfDay()",
-      "file": "mobile/src/lib/calendarMath.js",
-      "at": "L56"
-    },
-    {
       "id": "mobile_src_lib_format_fmttimeshort",
       "label": "fmtTimeShort()",
       "file": "mobile/src/lib/format.js",
@@ -386,16 +380,16 @@
       "at": "L194"
     },
     {
-      "id": "mobile_src_screens_projectsscreen_projectsscreen_opennewproject",
-      "label": "openNewProject()",
+      "id": "mobile_src_screens_projectsscreen_projectcard_submit",
+      "label": "submit()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L76"
+      "at": "L227"
     },
     {
-      "id": "mobile_src_screens_projectsscreen_projectsscreen_submitdraft",
-      "label": "submitDraft()",
+      "id": "mobile_src_screens_projectsscreen_projectsscreen_openprojectscreen",
+      "label": "openProjectScreen()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L100"
+      "at": "L104"
     },
     {
       "id": "mobile_src_screens_projectstatusesscreen_projectstatusesscreen_onadd",
@@ -476,22 +470,16 @@
       "at": "L65"
     },
     {
-      "id": "mobile_src_screens_statsscreen_statsscreen_oncell",
-      "label": "onCell()",
-      "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L113"
-    },
-    {
       "id": "mobile_src_screens_statsscreen_statsscreen_onexcel",
       "label": "onExcel()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L132"
+      "at": "L148"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_pickproject",
       "label": "pickProject()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L122"
+      "at": "L138"
     },
     {
       "id": "mobile_src_screens_tagsscreen_tagsscreen_usagelabel",
@@ -660,6 +648,12 @@
       "label": "task()",
       "file": "mobile/tests/sessions.test.js",
       "at": "L19"
+    },
+    {
+      "id": "mobile_tests_statsscreen_test_nav",
+      "label": "nav()",
+      "file": "mobile/tests/StatsScreen.test.js",
+      "at": "L11"
     },
     {
       "id": "mobile_tests_store_tasks_test_task",

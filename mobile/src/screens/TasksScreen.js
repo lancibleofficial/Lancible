@@ -3,14 +3,14 @@
 // отбирают, поле под ними заводит задачу в выбранный проект, свайп строки
 // справа налево закрепляет. Группы считает lib/inbox.js.
 import { useMemo, useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, FlatList, StyleSheet } from 'react-native';
 import Tap from '../components/Tap';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
 import Island, { IslandEmpty } from '../components/Island';
 import TaskRow from '../components/TaskRow';
-import SwipeRow, { closeOpenSwipeRows } from '../components/SwipeRow';
+import SwipeRow from '../components/SwipeRow';
 import TabHeader, { HeaderButton, NotificationsButton } from '../components/TabHeader';
 import PickerSheet from '../components/PickerSheet';
 import { useAppStore, tasksOf } from '../store/useAppStore';
@@ -19,7 +19,7 @@ import { defaultStatusId } from '../lib/statuses';
 import { useTicker } from '../hooks/useTicker';
 import { openSheet } from '../store/useSheetStore';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
-import { useColors, spacing, radius, fontSize, gap } from '../theme';
+import { useColors, spacing, radius } from '../theme';
 import { t } from '../lib/i18n';
 
 const GROUP_KEY = { now: 'tasks.now', today: 'tasks.today', tomorrow: 'tasks.tomorrow', week: 'tasks.week', later: 'tasks.later', nodue: 'tasks.nodue', done: 'tasks.done_group' };
@@ -49,6 +49,17 @@ export default function TasksScreen({ navigation }) {
     [shown, activeTimer, showDone],
   );
   const openCount = shown.filter((task) => !task.done).length;
+  // Лента — один виртуальный список: заголовки групп и строки подряд. Сто
+  // семьдесят строк разом, каждая со своим жестом, монтировались секундами
+  // и тормозили переход на вкладку; список рисует только видимое.
+  const items = useMemo(() => {
+    const out = [];
+    for (const g of groups) {
+      out.push({ type: 'head', key: `h-${g.key}`, group: g.key });
+      g.tasks.forEach((task, i) => out.push({ type: 'task', key: task.id, task, first: i === 0 }));
+    }
+    return out;
+  }, [groups]);
 
   // Проект новой задачи: отобранный, иначе тот, куда заводили прошлую,
   // иначе первый.
@@ -84,7 +95,7 @@ export default function TasksScreen({ navigation }) {
         <NotificationsButton navigation={navigation} />
       </TabHeader>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsBar} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
         <Tap onPress={() => setFilter('all')} style={[styles.chip, filter === 'all' && styles.chipOn]}>
           <Text style={[styles.chipText, filter === 'all' && styles.chipTextOn]}>{t(lang, 'filter.all')}</Text>
         </Tap>
@@ -125,35 +136,46 @@ export default function TasksScreen({ navigation }) {
         ) : null}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} onScrollBeginDrag={closeOpenSwipeRows} keyboardShouldPersistTaps="handled">
-        <Island padded={false} style={styles.list}>
-          {groups.length === 0 ? <View style={{ padding: spacing.lg }}><IslandEmpty>{t(lang, 'tasks.empty')}</IslandEmpty></View> : null}
-          {groups.map((g) => (
-            <View key={g.key}>
-              <Text style={[styles.group, g.key === 'now' && styles.groupNow]}>{t(lang, GROUP_KEY[g.key])}</Text>
-              {g.tasks.map((task, i) => (
-                <SwipeRow
-                  key={task.id}
-                  label={t(lang, task.pinnedAt ? 'pin.unpin' : 'pin.pin')}
-                  onAction={() => togglePinTask(task.id)}
-                  style={styles.swipe}
-                >
-                  <View style={styles.rowBg}>
-                    <TaskRow task={task} first={i === 0} showProject={filter === 'all'} onPress={() => openTask(task.id)} />
-                  </View>
-                </SwipeRow>
-              ))}
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.key}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={12}
+        windowSize={7}
+        ListEmptyComponent={<Island><IslandEmpty>{t(lang, 'tasks.empty')}</IslandEmpty></Island>}
+        renderItem={({ item, index }) => {
+          const last = index === items.length - 1;
+          if (item.type === 'head') {
+            return (
+              <View style={[styles.item, index === 0 && styles.itemTop, last && styles.itemBottom]}>
+                <Text style={[styles.group, item.group === 'now' && styles.groupNow]}>{t(lang, GROUP_KEY[item.group])}</Text>
+              </View>
+            );
+          }
+          const { task } = item;
+          return (
+            <View style={[styles.item, last && styles.itemBottom]}>
+              <SwipeRow label={t(lang, task.pinnedAt ? 'pin.unpin' : 'pin.pin')} onAction={() => togglePinTask(task.id)}>
+                <View style={styles.rowBg}>
+                  <TaskRow task={task} first={item.first} showProject={filter === 'all'} onPress={() => openTask(task.id)} />
+                </View>
+              </SwipeRow>
             </View>
-          ))}
-        </Island>
-      </ScrollView>
+          );
+        }}
+      />
     </View>
   );
 }
 
 const makeStyles = (colors, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  chips: { flexDirection: 'row', gap: 6, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  // Горизонтальная прокрутка на Android не растит высоту под нижний отступ
+  // содержимого — воздух до поля задачи держит сама полоса.
+  chipsBar: { flexGrow: 0, flexShrink: 0, marginBottom: spacing.md },
+  chips: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.lg },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 11, borderRadius: 999, backgroundColor: colors.panel },
   chipOn: { backgroundColor: colors.raise },
   chipText: { color: colors.textDim, fontSize: 13, fontWeight: '500', maxWidth: 120 },
@@ -164,10 +186,13 @@ const makeStyles = (colors, clearance) => StyleSheet.create({
   qaInput: { flex: 1, color: colors.text, fontSize: 13.5, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
   qaProject: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.panel2, maxWidth: 130 },
   qaProjectText: { color: colors.text, fontSize: 12.5, fontWeight: '600', flexShrink: 1 },
-  content: { paddingHorizontal: spacing.md, paddingBottom: clearance, gap },
-  list: { overflow: 'hidden' },
+  content: { paddingHorizontal: spacing.md, paddingBottom: clearance },
+  // Остров ленты собран из элементов списка: фон у каждого, скругления —
+  // у первого и последнего.
+  item: { backgroundColor: colors.panel, overflow: 'hidden' },
+  itemTop: { borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg },
+  itemBottom: { borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg },
   group: { color: colors.textFaint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 3 },
   groupNow: { color: colors.accentInk },
-  swipe: { borderRadius: 0, marginBottom: 0 },
   rowBg: { backgroundColor: colors.panel },
 });

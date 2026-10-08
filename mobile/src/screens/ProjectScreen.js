@@ -333,7 +333,6 @@ export default function ProjectScreen({ route, navigation }) {
                       key={task.id}
                       label={t(LANG, task.pinnedAt ? 'pin.unpin' : 'pin.pin')}
                       onAction={() => togglePinTask(task.id)}
-                      style={styles.swipe}
                     >
                       <View style={styles.rowBg}>
                         <TaskListItem task={task} showStatus={false} onPress={() => openTask(task.id)} />
@@ -477,7 +476,6 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   groupName: { color: colors.text, fontSize: fontSize.xs, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 1 },
   groupCount: { color: colors.textFaint, fontSize: fontSize.xs },
   groupTime: { color: colors.textFaint, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },
-  swipe: { borderRadius: 0, marginBottom: 0 },
   rowBg: { backgroundColor: colors.panel, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
 
   ppLine: { marginTop: spacing.xs },

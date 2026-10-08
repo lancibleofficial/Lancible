@@ -24,8 +24,10 @@ beforeEach(() => {
       { id: 's2', projectId: 'p2', name: 'В работе', color: '#5ec8f2', kind: 'progress', order: 0 },
     ],
     tasks: [
-      task('t1', 'Вёрстка', { dueAt: new Date(Date.now() + 3_600_000).toISOString() }),
-      task('t2', 'Правки', { dueAt: new Date(Date.now() + DAY).toISOString() }),
+      // Сроки привязаны к дню, а не к «сейчас + час»: после 23:00 час спустя
+      // уже завтра, и тест падал бы по вечерам.
+      task('t1', 'Вёрстка', { dueAt: new Date(new Date().setHours(23, 59, 0, 0)).toISOString() }),
+      task('t2', 'Правки', { dueAt: new Date(new Date().setHours(12, 0, 0, 0) + DAY).toISOString() }),
       task('t3', 'Макет', { done: true }),
       task('t4', 'Логи'),
     ],

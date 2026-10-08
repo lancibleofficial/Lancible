@@ -9,6 +9,7 @@ import { useAppStore, getProject } from '../store/useAppStore';
 import { useTicker } from '../hooks/useTicker';
 import { fmtShort, fmtClock, taskElapsedMs } from '../lib/format';
 import { dueShort, dueState } from '../lib/due';
+import { getStatus } from '../lib/statuses';
 import { badgeBg } from '../lib/tags';
 import { useColors, spacing, fontSize } from '../theme';
 import { t } from '../lib/i18n';
@@ -19,6 +20,7 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
   const lang = useAppStore((s) => s.settings.lang);
   const projects = useAppStore((s) => s.projects);
   const versions = useAppStore((s) => s.versions);
+  const statuses = useAppStore((s) => s.statuses);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const startTimer = useAppStore((s) => s.startTimer);
   const stopTimer = useAppStore((s) => s.stopTimer);
@@ -31,7 +33,9 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
   const elapsed = taskElapsedMs(task, activeTimer);
   const due = task.done ? null : dueState(task);
 
+  const status = task.statusId ? getStatus(statuses, task.statusId) : null;
   const meta = [];
+  if (status && !running) meta.push({ text: status.name, color: colors.textDim, dot: status.color });
   if (running) meta.push({ text: `${t(lang, 'task.running_now')} ${fmtClock(elapsed)}`, color: colors.accentInk, bold: true });
   if (task.pinnedAt && !running) meta.push({ text: t(lang, 'tasks.pinned_mark'), color: colors.textFaint });
   if (due) meta.push({ text: dueShort(task, lang), color: due === 'overdue' ? colors.danger : due === 'soon' ? colors.warn : colors.textFaint, bold: due !== 'later' });
@@ -55,7 +59,7 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
         {task.done ? <Icon name="check" size={11} color={colors.accentText} /> : null}
       </Tap>
       <View style={styles.mid}>
-        <Text style={[styles.title, task.done && styles.titleDone]} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
+        <Text style={[styles.title, task.done && styles.titleDone]} numberOfLines={2}>{task.title || t(lang, 'task.no_name')}</Text>
         {(showProject && project) || meta.length ? (
           <View style={styles.meta}>
             {showProject && project ? (
@@ -64,9 +68,11 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
               </View>
             ) : null}
             {meta.map((m, i) => (
-              <Text key={i} style={[styles.metaText, { color: m.color }, m.bold && styles.metaBold]} numberOfLines={1}>
-                {i > 0 || (showProject && project) ? '· ' : ''}{m.text}
-              </Text>
+              <View key={i} style={styles.metaItem}>
+                {i > 0 || (showProject && project) ? <Text style={styles.metaSep}>·</Text> : null}
+                {m.dot ? <View style={[styles.metaDot, { backgroundColor: m.dot }]} /> : null}
+                <Text style={[styles.metaText, { color: m.color }, m.bold && styles.metaBold]} numberOfLines={1}>{m.text}</Text>
+              </View>
             ))}
           </View>
         ) : null}
@@ -85,21 +91,24 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2, minHeight: 52, paddingVertical: 6, paddingHorizontal: spacing.md },
-  rowCompact: { minHeight: 50, paddingHorizontal: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 64, paddingVertical: 10, paddingHorizontal: spacing.md },
+  rowCompact: { minHeight: 60 },
   rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   rowRunning: { backgroundColor: colors.accentMuted },
   pressed: { opacity: 0.75 },
-  circ: { width: 22, height: 22, borderRadius: 999, borderWidth: 2, borderColor: colors.textFaint, alignItems: 'center', justifyContent: 'center' },
+  circ: { width: 24, height: 24, borderRadius: 999, borderWidth: 2, borderColor: colors.textFaint, alignItems: 'center', justifyContent: 'center' },
   circOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   mid: { flex: 1, minWidth: 0 },
-  title: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
+  title: { color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '600' },
   titleDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
-  meta: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2, flexWrap: 'nowrap' },
-  metaText: { fontSize: 11.5, flexShrink: 1 },
+  meta: { flexDirection: 'row', alignItems: 'center', columnGap: 5, rowGap: 3, marginTop: 4, flexWrap: 'wrap' },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '100%' },
+  metaSep: { color: colors.textFaint, fontSize: 12 },
+  metaDot: { width: 7, height: 7, borderRadius: 3 },
+  metaText: { fontSize: 12, flexShrink: 1 },
   metaBold: { fontWeight: '600' },
-  tag: { paddingHorizontal: 7, paddingVertical: 1, borderRadius: 999, maxWidth: 110 },
-  tagText: { fontSize: 10.5, fontWeight: '700' },
-  play: { width: 34, height: 34, borderRadius: 999, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
+  tag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, maxWidth: 140 },
+  tagText: { fontSize: 11, fontWeight: '700' },
+  play: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   playOn: { backgroundColor: colors.accent },
 });
