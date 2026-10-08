@@ -38,8 +38,7 @@ import { tagsOf } from '../lib/tags';
 import { defaultStatusId } from '../lib/statuses';
 import { useTicker } from '../hooks/useTicker';
 import { openSheet, closeSheet } from '../store/useSheetStore';
-import { useBottomClearance } from '../components/TimerMiniPlayer';
-import { useColors, spacing, radius, fontSize, displayFamily } from '../theme';
+import { useColors, spacing, radius, fontSize, displayFamily, tabBarClearance } from '../theme';
 import { t } from '../lib/i18n';
 
 // Край следующей карточки виден: по нему понятно, что колода продолжается.
@@ -127,8 +126,9 @@ export default function ProjectsScreen({ navigation }) {
   // На iOS панель вкладок нативная и лежит поверх экрана (на iOS 26 ещё и
   // плавает): без отступа низ карточки и точки уходили под неё. На Android
   // панель занимает место в раскладке сама.
-  const clearance = useBottomClearance();
-  const bottomPad = Platform.OS === 'ios' ? clearance : 0;
+  // На iOS панель вкладок плавает поверх экрана — снизу запас под неё. Только
+  // под неё: плашка идущей задачи лежит поверх колоды и не сжимает её.
+  const bottomPad = Platform.OS === 'ios' ? tabBarClearance : 0;
   const styles = useMemo(() => makeStyles(colors, cardW), [colors, cardW]);
   const projects = useAppStore((s) => s.projects);
   const activeTimer = useAppStore((s) => s.activeTimer);

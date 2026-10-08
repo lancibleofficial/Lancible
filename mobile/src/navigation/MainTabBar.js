@@ -5,7 +5,7 @@ import Tap from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
-import TimerMiniPlayer from '../components/TimerMiniPlayer';
+import TimerMiniPlayer, { useRunningTask, MINI_PLAYER_HEIGHT } from '../components/TimerMiniPlayer';
 import { useColors, spacing } from '../theme';
 
 // Пять вкладок макета B2: Проекты · Задачи · Сегодня · Цифры · Меню.
@@ -29,7 +29,11 @@ function TabIcon({ focused, name, color, styles }) {
 // Уезд и возврат панели: ease out, в такт переходу вглубь.
 const SLIDE = { duration: 260, easing: Easing.out(Easing.cubic) };
 
-// Плоский таббар у нижнего края, над ним — плашка идущей задачи.
+// Плоский таббар у нижнего края, над ним — плашка идущей задачи. Плашка
+// лежит поверх страницы, а не над ней в раскладке: страница не сжимается,
+// когда таймер запускают и останавливают. Для этого блок плашки уходит вверх
+// отрицательным отступом — в раскладке остаётся только высота самой панели.
+// Плашка при этом внутри обёртки, и нажатия до неё доходят.
 //
 // Скрывается на экранах деталей (там tabBarStyle:{display:'none'}) — этот
 // флаг React Navigation сама прокидывает наверх из вложенного стека в
@@ -55,6 +59,7 @@ export default function MainTabBar({ state, navigation, descriptors }) {
   const focusedRoute = state.routes[state.index];
   const focusedOptions = descriptors[focusedRoute.key].options;
   const onDetails = !!(focusedOptions.tabBarStyle && focusedOptions.tabBarStyle.display === 'none');
+  const running = !!useRunningTask();
   const hidden = keyboard || onDetails;
 
   // Сдвиг вниз; пока панель спрятана, он равен её высоте — так при
@@ -82,7 +87,7 @@ export default function MainTabBar({ state, navigation, descriptors }) {
 
   return (
     <Animated.View
-      style={[styles.wrap, hidden ? styles.leaving : null, slide]}
+      style={[styles.wrap, running ? styles.overPage : null, hidden ? styles.leaving : null, slide]}
       pointerEvents={hidden ? 'none' : 'box-none'}
       onLayout={(e) => { if (!hidden) height.current = e.nativeEvent.layout.height; }}
     >
@@ -117,6 +122,8 @@ export default function MainTabBar({ state, navigation, descriptors }) {
 const makeStyles = (colors, insets) => StyleSheet.create({
   // Обёртка ничем не залита: под плашкой должен просвечивать контент.
   wrap: { gap: spacing.sm },
+  // Плашка с зазором до панели — поверх страницы, а не в её раскладке.
+  overPage: { marginTop: -(MINI_PLAYER_HEIGHT + spacing.sm) },
   // Уходя, панель лежит поверх экрана деталей: место под ней уже его.
   leaving: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   bar: {

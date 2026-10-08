@@ -620,6 +620,12 @@
       "at": "L9"
     },
     {
+      "id": "mobile_tests_miniplayeroverlay_test_barprops",
+      "label": "barProps()",
+      "file": "mobile/tests/miniPlayerOverlay.test.js",
+      "at": "L18"
+    },
+    {
       "id": "mobile_tests_projectscreen_test_nav",
       "label": "nav()",
       "file": "mobile/tests/ProjectScreen.test.js",
