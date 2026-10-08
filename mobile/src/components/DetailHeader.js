@@ -2,14 +2,14 @@
 // «● проект › что открыто», справа квадратные кнопки. Пока по задаче идёт
 // таймер, крошка уступает место плашке с пульсирующей точкой и часами:
 // с любого из этих экранов видно, что время считается.
-import { Children, Fragment, isValidElement, useEffect, useRef } from 'react';
+import { Children, Fragment, isValidElement, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
 import Tap from './Tap';
+import Pulse from './Pulse';
 import { GlassBg, headerButtonRadius } from './Glass';
 import { IOS_NATIVE_HEADER, useNativeOptions, nativeItems, elementSignature, leftElementItems } from '../navigation/nativeHeader';
 import { fmtClock } from '../lib/format';
@@ -26,15 +26,6 @@ export function DetailButton({ icon, on, onPress, label }) {
       <Icon name={icon} size={17} color={on ? colors.accentText : colors.textDim} />
     </Tap>
   );
-}
-
-function Pulse({ color }) {
-  const o = useSharedValue(1);
-  useEffect(() => {
-    o.value = withRepeat(withTiming(0.25, { duration: 650, easing: Easing.inOut(Easing.quad) }), -1, true);
-  }, []);
-  const st = useAnimatedStyle(() => ({ opacity: o.value }));
-  return <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }, st]} />;
 }
 
 /**

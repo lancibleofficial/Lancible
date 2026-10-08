@@ -8,7 +8,7 @@ import TasksStack from './TasksStack';
 import StatsStack from './StatsStack';
 import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
-import TimerMiniPlayer, { useRunningTask } from '../components/TimerMiniPlayer';
+import TimerMiniPlayer, { TimerAccessory, useRunningTask } from '../components/TimerMiniPlayer';
 import { DETAIL_ROUTES } from './detailScreens';
 import { tabFocused } from './tabSlide';
 import { useAppStore } from '../store/useAppStore';
@@ -102,7 +102,7 @@ export default function MainTabs() {
       // На странице задачи у таймера свой шит — вторая плашка не нужна.
       bottomAccessory: barHidden || !HAS_LIQUID_GLASS || !running
         ? undefined
-        : () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />,
+        : ({ placement }) => <TimerAccessory placement={placement} onOpen={(taskId) => openTask(navigation, taskId)} />,
     };
   };
 
@@ -122,7 +122,7 @@ export default function MainTabs() {
         tabBarStyle: legacyTabBarStyle,
         tabBarBlurEffect: HAS_LIQUID_GLASS ? undefined : 'none',
         bottomAccessory: HAS_LIQUID_GLASS && running
-          ? () => <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />
+          ? ({ placement }) => <TimerAccessory placement={placement} onOpen={(taskId) => openTask(navigation, taskId)} />
           : undefined,
       })}
     >
