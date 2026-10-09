@@ -23,9 +23,10 @@ import { useColors, spacing } from '../theme';
 // approximation. Android keeps MainTabBar.js (see MainTabs.android.js).
 //
 // What is and isn't controllable through the native bar:
-// - Icons are the app's own Icon.js glyphs rasterised to PNG template
-//   images (assets/tabs/, 24pt @1x/2x/3x) so the bar matches the rest of
-//   the app instead of stock SF Symbols. iOS tints them itself.
+// - Icons are the app's own Solar Bold icons (core/icons.js) rasterised
+//   to PNG template images by scripts/make-ios-icons.js (assets/tabs/,
+//   26pt @1x/2x/3x) so the bar matches the rest of the app instead of
+//   stock SF Symbols. iOS tints them itself.
 // - Below iOS 26 the bar is made opaque in the app's panel colour with no
 //   blur material, matching the Android bar.
 // - The selected tab's label and icon share one tint on iOS.
@@ -47,9 +48,9 @@ const HAS_LIQUID_GLASS = IOS_MAJOR >= 26;
 const UIKIT_TAB_BAR_H = 49;
 
 const TAB_ICONS = {
-  cards: require('../../assets/tabs/cards.png'),
-  inbox: require('../../assets/tabs/inbox.png'),
-  time: require('../../assets/tabs/time.png'),
+  folder: require('../../assets/tabs/folder.png'),
+  tasks: require('../../assets/tabs/tasks.png'),
+  today: require('../../assets/tabs/today.png'),
   chart: require('../../assets/tabs/chart.png'),
   menu: require('../../assets/tabs/menu.png'),
 };
@@ -126,9 +127,9 @@ export default function MainTabs() {
           : undefined,
       })}
     >
-      <Tab.Screen name="Projects" component={ProjectsStack} options={tabOptions('nav.projects', 'cards')} />
-      <Tab.Screen name="Tasks" component={TasksStack} options={tabOptions('nav.tasks', 'inbox')} />
-      <Tab.Screen name="Home" component={HomeStack} options={tabOptions('nav.home', 'time')} />
+      <Tab.Screen name="Projects" component={ProjectsStack} options={tabOptions('nav.projects', 'folder')} />
+      <Tab.Screen name="Tasks" component={TasksStack} options={tabOptions('nav.tasks', 'tasks')} />
+      <Tab.Screen name="Home" component={HomeStack} options={tabOptions('nav.home', 'today')} />
       <Tab.Screen name="Stats" component={StatsStack} options={tabOptions('nav.stats', 'chart')} />
       <Tab.Screen name="Menu" component={MenuStack} options={tabOptions('nav.menu', 'menu')} />
     </Tab.Navigator>

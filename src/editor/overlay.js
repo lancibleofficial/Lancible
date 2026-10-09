@@ -44,7 +44,7 @@ export class InkOverlay {
       commit: (next, opts) => this.commit(next, opts),
       toLocal: (p) => this.toPage(p),
       transform: () => [1, this.pageLeft(), -this.ctx.scroller.scrollTop + this.pageTopInScroller()],
-      canDraw: () => this.on && this.ctx.view.editable,
+      canDraw: () => this.on && (this.ctx.canEdit ? this.ctx.canEdit() : this.ctx.view.editable),
       // Отмена — общая с текстом: штрих лежит шагом в истории документа.
       history: { undo: () => this.ctx.undo(), redo: () => this.ctx.redo() },
       onSelection: () => this.toolbar.render(),

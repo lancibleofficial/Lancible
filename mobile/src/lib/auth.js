@@ -51,8 +51,13 @@ export async function signUp(email, password) {
   try {
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) return { ok: false, errorKey: 'auth.error_generic' };
-    if (data.session) return afterSignedIn(); // подтверждение email отключено в проекте
-    return { ok: true, needsConfirmation: true, email };
+    if (data.session) return afterSignedIn();
+    // Подтверждения почты нет: логин и пароль — и сразу внутри. Сервер без
+    // сессии — входим тем же паролем; не вышло — ошибка в форме, а не экран
+    // «проверьте почту», из которого было не выйти в другой аккаунт.
+    const { error: signInError } = await sb.auth.signInWithPassword({ email, password });
+    if (signInError) return { ok: false, errorKey: 'auth.error_generic' };
+    return afterSignedIn();
   } catch {
     return { ok: false, errorKey: 'auth.error_generic' };
   }

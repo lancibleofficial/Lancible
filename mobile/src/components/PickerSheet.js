@@ -6,18 +6,19 @@ import { useColors, spacing, radius, fontSize, typography } from '../theme';
 
 // Простой список выбора одного варианта — язык, валюта и т.п. Выбор сразу
 // закрывает лист, отдельная кнопка "Готово" не нужна.
-export default function PickerSheet({ title, options, value, onSelect }) {
+/** @param embedded внутри другого листа: без своего заголовка и не закрывает лист */
+export default function PickerSheet({ title, options, value, onSelect, embedded }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   return (
     <View style={{ gap: spacing.sm, paddingBottom: spacing.lg }}>
-      <Text style={styles.title}>{title}</Text>
+      {embedded ? null : <Text style={styles.title}>{title}</Text>}
       {options.map((opt) => {
         const active = opt.value === value;
         return (
           <Pressable
             key={opt.value}
-            onPress={() => { onSelect(opt.value); closeSheet(); }}
+            onPress={() => { onSelect(opt.value); if (!embedded) closeSheet(); }}
             style={[styles.option, active && styles.optionActive]}
           >
             <Text style={[styles.optionText, active && styles.optionTextActive]}>{opt.label}</Text>

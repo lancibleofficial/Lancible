@@ -1,13 +1,14 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import SettingsScreen from '../screens/SettingsScreen';
 import { withTabPage } from '../components/TabSlide';
+import { MenuSkeleton } from '../components/Skeleton';
 import { useAppStore } from '../store/useAppStore';
 import { IOS_NATIVE_HEADER, stackHeaderOptions } from './nativeHeader';
 import { useColors } from '../theme';
 import { detailScreens } from './detailScreens';
 
 // Корень вкладки въезжает при смене вкладок (iOS; на Android листает навигатор).
-const MenuPage = withTabPage(SettingsScreen, 'Menu');
+const MenuPage = withTabPage(SettingsScreen, 'Menu', MenuSkeleton);
 
 const Stack = createNativeStackNavigator();
 

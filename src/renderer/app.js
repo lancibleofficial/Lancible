@@ -101,19 +101,11 @@ function applyStaticTranslations() {
 }
 
 // ---------------------------------------------------------------------------
-// Иконки (монохром, заливка)
+// Иконки — Solar Bold, общий словарь в core/icons.js (его же читают телефон,
+// редактор и HTML). cls — класс <svg>, по умолчанию icon.
 // ---------------------------------------------------------------------------
 
-const ICONS = {
-  clock: 'M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z',
-  wallet: 'M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z',
-  check: 'M13.6 3.3a1.05 1.05 0 010 1.5l-6.7 6.7a1.05 1.05 0 01-1.5 0L2 8.1a1.05 1.05 0 011.5-1.5l2.65 2.65 5.95-5.95a1.05 1.05 0 011.5 0z',
-  pin: 'M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z',
-  x: 'M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z',
-  chev: 'M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z',
-};
-const icon = (name) =>
-  `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
+const icon = (name, cls) => Core.iconSvg(name, cls);
 
 // ---------------------------------------------------------------------------
 // Элементы
@@ -136,7 +128,7 @@ const el = {
   mobileBackToList: $('mobile-back-to-list'),
   authBackdrop: $('auth-backdrop'),
   authStepCredentials: $('auth-step-credentials'), authStepOnboarding: $('auth-step-onboarding'),
-  authStepConfirm: $('auth-step-confirm'), authConfirmText: $('auth-confirm-text'), authConfirmOk: $('auth-confirm-ok'),
+
   authGoogleBtn: $('auth-google-btn'),
   authEmail: $('auth-email'), authPassword: $('auth-password'), authError: $('auth-error'),
   authSignupOffer: $('auth-signup-offer'), authSignupBtn: $('auth-signup-btn'),
@@ -879,7 +871,6 @@ function buildUsecaseButtons() {
 
 function showAuthStep(step) {
   el.authStepCredentials.hidden = step !== 'credentials';
-  el.authStepConfirm.hidden = step !== 'confirm';
   el.authStepOnboarding.hidden = step !== 'onboarding';
 }
 function openAuthModal() {
@@ -1006,13 +997,13 @@ async function handleSignup() {
   try {
     const { data, error } = await sb.auth.signUp({ email, password });
     if (error) { showAuthError('auth.error_generic'); return; }
-    if (data.session) {
-      // подтверждение email отключено в проекте — сессия уже есть сразу.
-      await afterSignedIn();
-    } else {
-      el.authConfirmText.textContent = t('auth.confirm_text', { email });
-      showAuthStep('confirm');
+    // Подтверждения почты нет: логин и пароль — и сразу внутри. Сервер без
+    // сессии — входим тем же паролем; не вышло — ошибка в форме.
+    if (!data.session) {
+      const { error: signInError } = await sb.auth.signInWithPassword({ email, password });
+      if (signInError) { showAuthError('auth.error_generic'); return; }
     }
+    await afterSignedIn();
   } catch {
     showAuthError('auth.error_generic');
   } finally {
@@ -1195,7 +1186,6 @@ el.authOnboardingSave.addEventListener('click', () => saveOnboarding(true));
 // «Пропустить» пропускает имя и назначение, но не согласие: строка профиля
 // с отметкой о нём всё равно нужна — иначе шаг всплывал бы при каждом входе.
 el.authOnboardingSkip.addEventListener('click', () => saveOnboarding(false));
-el.authConfirmOk.addEventListener('click', closeAuthModal);
 [el.authEmail, el.authPassword].forEach((input) => {
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); });
 });
@@ -1560,8 +1550,8 @@ function renderTbTimer() {
 // Сегодня
 // ---------------------------------------------------------------------------
 
-const SVG_PLAY = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.6l8 5.4-8 5.4z"/></svg>';
-const SVG_STOP = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="2"/></svg>';
+const SVG_PLAY = icon('play');
+const SVG_STOP = icon('stop');
 const hm = (d) => new Date(d).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 
 function renderHome() {
@@ -1792,7 +1782,7 @@ function projectTile(p) {
     <div class="ptile-head">
       <i class="ptile-dot"></i>
       <span class="ptile-name">${escapeHtml(p.name)}</span>
-      <button class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}" tabindex="-1"><svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg></button>
+      <button class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}" tabindex="-1">${icon('kebab')}</button>
     </div>
     <div class="ptile-desc">${escapeHtml(p.description || '')}</div>
     <div class="ptile-figs"><span class="ptile-time">${escapeHtml(fmtDur(projectMs(p.id)))}</span><span class="ptile-money">· ${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span><span class="ptile-note">${escapeHtml(t('home.total_label'))}</span></div>
@@ -2534,7 +2524,7 @@ function boardLane(pid, lane) {
   head.title = t('version.lane_toggle');
   head.setAttribute('aria-expanded', String(!collapsed));
   head.innerHTML = `
-    <svg class="icon lane-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>
+    ${icon('chevron-down', 'icon lane-chev')}
     <span class="lane-name">${escapeHtml(v ? (v.name || t('task.no_name')) : t('version.none'))}</span>
     ${v && v.releasedAt ? `<span class="lane-released">${escapeHtml(t('version.released_on', { date: fmtDateShort(v.releasedAt) }))}</span>` : ''}
     <span class="board-count">${lane.tasks.length}</span>
@@ -2965,13 +2955,13 @@ function renderStatusDialog() {
       <input class="st-name" type="text" value="${escapeHtml(st.name)}" data-i18n-ph="status.name_ph" placeholder="Название" />
       <button type="button" class="dp-btn st-kind" data-act="kind">${escapeHtml(t(`status.kind_${st.kind}`))}</button>
       <button type="button" class="icon-btn" data-act="up" ${i === 0 ? 'disabled' : ''} data-i18n-title="common.back" title="Выше">
-        <svg class="icon" viewBox="0 0 16 16"><path d="M8 3.6l5.2 5.2-1.4 1.4L8 6.4l-3.8 3.8-1.4-1.4z"/></svg>
+        ${icon('chevron-up')}
       </button>
       <button type="button" class="icon-btn" data-act="down" ${i === list.length - 1 ? 'disabled' : ''} data-i18n-title="common.forward" title="Ниже">
-        <svg class="icon" viewBox="0 0 16 16"><path d="M8 12.4L2.8 7.2l1.4-1.4L8 9.6l3.8-3.8 1.4 1.4z"/></svg>
+        ${icon('chevron-down')}
       </button>
       <button type="button" class="icon-btn st-del" data-act="del" data-i18n-title="common.delete" title="Удалить">
-        <svg class="icon" viewBox="0 0 16 16"><path d="M6.2 1.6h3.6l.5 1.2h3.1v1.6H2.6V2.8h3.1zM3.6 5.6h8.8l-.6 8.2a1 1 0 01-1 .93H5.2a1 1 0 01-1-.93z"/></svg>
+        ${icon('trash')}
       </button>`;
 
     row.querySelector('.st-name').addEventListener('input', (e) => {
@@ -3293,7 +3283,7 @@ function navProjectItems(p) {
     b.type = 'button';
     b.title = docTitle(d);
     b.classList.toggle('active', state.ui.view === 'docs' && state.ui.docId === d.id);
-    b.innerHTML = `<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.6 1.2h6l3.8 3.8v9.2a.6.6 0 01-.6.6H3.6a.6.6 0 01-.6-.6V1.8a.6.6 0 01.6-.6zm5.4 1.6v3h3zM5 8h6v1.3H5zm0 2.6h6v1.3H5z"/></svg>`;
+    b.innerHTML = icon('doc');
     b.append(elt('span', 'nav-label', docTitle(d)));
     b.addEventListener('click', () => openProjectDoc(d));
     items.push(b);
@@ -3395,7 +3385,7 @@ function taskGroupHead(g) {
   li.dataset.group = g.key;
   const chev = elt('span', 'tg-chev');
   // Пустая колонка «срок» между именем и суммами — её занимает сетка.
-  chev.innerHTML = '<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>';
+  chev.innerHTML = icon('chevron-down');
   const dot = elt('span', 'tg-dot');
   if (g.status) dot.style.background = g.status.color;
   else dot.hidden = true;
@@ -3918,7 +3908,7 @@ function openMenu(anchor, items) {
     b.className = 'ctx-item' + (it.danger ? ' danger' : '') + (it.selected ? ' sel' : '');
     const dot = it.dot ? `<span class="ctx-dot" style="--sc:${escapeHtml(it.dot)}"></span>` : '';
     b.innerHTML = `<span class="ctx-main">${dot}<span>${escapeHtml(it.label)}</span></span>` +
-      (it.selected ? `<svg class="icon ctx-check" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS.check}"/></svg>` : '');
+      (it.selected ? icon('check', 'icon ctx-check') : '');
     b.addEventListener('click', () => { closeMenu(); it.onClick(); });
     m.appendChild(b);
   }
@@ -4629,7 +4619,7 @@ function renderDocList() {
     b.type = 'button';
     b.className = 'doc-item' + (d.id === state.ui.docId ? ' active' : '');
     b.dataset.id = d.id;
-    b.innerHTML = `<span class="doc-item-title">${d.pinnedAt ? `<svg class="icon doc-pin" viewBox="0 0 16 16" aria-hidden="true"><path d="${ICONS.pin || ''}"/></svg>` : ''}${escapeHtml(docTitle(d))}</span>`
+    b.innerHTML = `<span class="doc-item-title">${d.pinnedAt ? icon('pin', 'icon doc-pin') : ''}${escapeHtml(docTitle(d))}</span>`
       + `<span class="doc-item-meta">${p ? `<span class="ctx-dot" style="--sc:${escapeHtml(p.color || '')}"></span>${escapeHtml(p.name)} · ` : ''}${escapeHtml(t('docs.words_n', { n: st.words }))} · ${escapeHtml(fmtWhenShort(d.updatedAt))}</span>`;
     b.addEventListener('click', () => { if (d.id !== state.ui.docId) { flushEditor(); state.ui.docId = d.id; renderDocsPage(); scheduleSave(); } });
     b.addEventListener('contextmenu', (e) => { e.preventDefault(); openDocMenu(d, b); });
@@ -5299,13 +5289,13 @@ function renderVersionDialog() {
       <button type="button" class="dp-btn ver-rel${v.releasedAt ? ' released' : ''}" data-act="rel">${escapeHtml(v.releasedAt ? t('version.released_on', { date: fmtDateShort(v.releasedAt) }) : t('version.in_progress'))}</button>
       <span class="ver-use muted">${escapeHtml(t('version.tasks_n', { n: used }))}</span>
       <button type="button" class="icon-btn" data-act="up" ${i === 0 ? 'disabled' : ''} data-i18n-title="common.back" title="Выше">
-        <svg class="icon" viewBox="0 0 16 16"><path d="M8 3.6l5.2 5.2-1.4 1.4L8 6.4l-3.8 3.8-1.4-1.4z"/></svg>
+        ${icon('chevron-up')}
       </button>
       <button type="button" class="icon-btn" data-act="down" ${i === list.length - 1 ? 'disabled' : ''} data-i18n-title="common.forward" title="Ниже">
-        <svg class="icon" viewBox="0 0 16 16"><path d="M8 12.4L2.8 7.2l1.4-1.4L8 9.6l3.8-3.8 1.4 1.4z"/></svg>
+        ${icon('chevron-down')}
       </button>
       <button type="button" class="icon-btn st-del" data-act="del" data-i18n-title="common.delete" title="Удалить">
-        <svg class="icon" viewBox="0 0 16 16"><path d="M6.2 1.6h3.6l.5 1.2h3.1v1.6H2.6V2.8h3.1zM3.6 5.6h8.8l-.6 8.2a1 1 0 01-1 .93H5.2a1 1 0 01-1-.93z"/></svg>
+        ${icon('trash')}
       </button>`;
 
     const nameInput = row.querySelector('.st-name');
@@ -5467,7 +5457,7 @@ function renderTaskVersionFilter() {
   const has = !!pid && versionsOf(pid).length > 0;
   el.tfVersionRow.hidden = !has;
   if (!has) return;
-  el.tfVersion.innerHTML = `<span class="ph-version-name">${escapeHtml(versionFilterLabel(pid, taskFilter.versionId))}</span>${icon('chev')}`;
+  el.tfVersion.innerHTML = `<span class="ph-version-name">${escapeHtml(versionFilterLabel(pid, taskFilter.versionId))}</span>${icon('chevron-down')}`;
   el.tfVersion.classList.toggle('on', taskFilter.versionId !== 'all');
 }
 
@@ -5502,7 +5492,7 @@ function renderFilterBar(nodes, filter, onChange) {
 
   const chip = (label, dotColor, value) => `<span class="fchip-k">${escapeHtml(label)}</span>`
     + (dotColor ? `<span class="tag-dot" style="--sc:${escapeHtml(dotColor)}"></span>` : '')
-    + `<span class="fchip-v">${escapeHtml(value)}</span>${icon('chev')}`;
+    + `<span class="fchip-v">${escapeHtml(value)}</span>${icon('chevron-down')}`;
   nodes.project.innerHTML = chip(t('filter.project'), p ? (p.color || PALETTE[0]) : null, p ? p.name : t('filter.all_projects'));
   nodes.project.classList.toggle('on', !!p);
 
@@ -5587,7 +5577,7 @@ function calGroupHead(g) {
   b.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
   b.setAttribute('aria-expanded', String(!calGroupsClosed.has(g.id)));
   b.innerHTML = `
-    <svg class="icon cdl-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg>
+    ${icon('chevron-down', 'icon cdl-chev')}
     <span class="cdl-group-dot"></span>
     <span class="cdl-group-name">${escapeHtml(g.project ? g.project.name : t('xlsx.no_project'))}</span>
     <span class="cdl-group-tot">${fmtDur(g.ms)} · ${fmtMoney(g.money, currencyOf(g.project ? g.project.id : null))}</span>`;

@@ -18,7 +18,10 @@ import { useColors, spacing, radius, fontSize, typography } from '../theme';
  *  @param {string} [projectId] — новый тег будет тегом этого проекта;
  *    без него — общий. Имя занято только в своей области видимости.
  *  @param {function} [onSaved] — что сделать с созданным тегом */
-export default function TagEditSheet({ tag, presetName, projectId, onSaved }) {
+/** @param embedded внутри другого листа (настройки проекта): без своего
+ *  заголовка и низа листа, кнопки — в содержимом; по готовности — onDone,
+ *  а удаление подтверждается вторым нажатием, а не листом поверх. */
+export default function TagEditSheet({ tag, presetName, projectId, onSaved, embedded, onDone }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
@@ -32,6 +35,8 @@ export default function TagEditSheet({ tag, presetName, projectId, onSaved }) {
   const [name, setName] = useState(tag ? tag.name : (presetName || ''));
   const [color, setColor] = useState(tag ? tag.color : PALETTE[tags.length % PALETTE.length]);
   const [error, setError] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const finish = () => (embedded ? onDone && onDone() : closeSheet());
 
   function onSave() {
     const trimmed = name.trim();
@@ -45,25 +50,34 @@ export default function TagEditSheet({ tag, presetName, projectId, onSaved }) {
     }
     if (tag) {
       updateTag(tag.id, { name: trimmed, color });
-      closeSheet();
+      finish();
     } else {
       const made = createTag({ name: trimmed, color, projectId: projectId || null });
-      closeSheet();
+      finish();
       if (onSaved) onSaved(made);
     }
   }
 
-  function onDelete() {
+  function deleteMessage() {
     const u = tagUsage(projects, tasks, tag.id);
     const parts = [];
     if (u.projects) parts.push(t(lang, 'tag.used_projects', { n: u.projects }));
     if (u.tasks) parts.push(t(lang, 'tag.used_tasks', { n: u.tasks }));
-    const message = parts.length
+    return parts.length
       ? t(lang, 'tag.delete_used', { name: tag.name, n: parts.join(' · ') })
       : t(lang, 'tag.delete_confirm', { name: tag.name });
+  }
+
+  function onDelete() {
+    if (embedded) {
+      if (!confirmDelete) { setConfirmDelete(true); return; }
+      deleteTag(tag.id);
+      finish();
+      return;
+    }
     confirmSheet({
       title: t(lang, 'common.delete'),
-      message,
+      message: deleteMessage(),
       actions: [
         { label: t(lang, 'common.delete'), destructive: true, onPress: () => { deleteTag(tag.id); closeSheet(); } },
         { label: t(lang, 'common.cancel'), cancel: true },
@@ -72,6 +86,7 @@ export default function TagEditSheet({ tag, presetName, projectId, onSaved }) {
   }
 
   useEffect(() => {
+    if (embedded) return undefined;
     setSheetFooter(
       <>
         <PrimaryButton title={t(lang, 'common.save')} onPress={onSave} disabled={!name.trim()} />
@@ -84,7 +99,7 @@ export default function TagEditSheet({ tag, presetName, projectId, onSaved }) {
 
   return (
     <View style={styles.content}>
-      <Text style={styles.title}>{t(lang, tag ? 'tag.dialog_edit' : projectId ? 'tag.project_add' : 'tag.dialog_new')}</Text>
+      {embedded ? null : <Text style={styles.title}>{t(lang, tag ? 'tag.dialog_edit' : projectId ? 'tag.project_add' : 'tag.dialog_new')}</Text>}
 
       <TextInput
         style={styles.input}
@@ -104,12 +119,21 @@ export default function TagEditSheet({ tag, presetName, projectId, onSaved }) {
           </Pressable>
         ))}
       </ScrollView>
+
+      {embedded ? (
+        <View style={styles.inlineActions}>
+          {confirmDelete ? <Text style={styles.error}>{deleteMessage()}</Text> : null}
+          <PrimaryButton title={t(lang, 'common.save')} onPress={onSave} disabled={!name.trim()} />
+          {tag ? <PrimaryButton title={t(lang, 'common.delete')} variant="danger" onPress={onDelete} /> : null}
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
+  inlineActions: { gap: spacing.sm, marginTop: spacing.sm },
   title: { color: colors.text, ...typography.title, marginBottom: spacing.sm },
   label: { color: colors.textDim, fontSize: fontSize.sm, marginTop: spacing.xs },
   input: {

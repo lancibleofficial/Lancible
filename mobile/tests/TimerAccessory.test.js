@@ -68,9 +68,20 @@ test('без идущей задачи — ничего', async () => {
   expect(screen.toJSON()).toBeNull();
 });
 
-test('на Android и iOS ниже 26 плашка прежняя, со своей подложкой', async () => {
-  const screen = await render(<TimerMiniPlayer onOpen={() => {}} />);
-  screen.getByText('1');
-  screen.getByText('00:00:16');
-  expect(styles(screen.toJSON()).some((s) => s.height === 56 && s.backgroundColor)).toBe(true);
+test('на Android и iOS ниже 26 — своя плашка: белая на светлой, с мягкой тенью, без рамки', async () => {
+  const pillOf = async (theme) => {
+    useAppStore.setState({ settings: { ...useAppStore.getState().settings, theme } });
+    const screen = await render(<TimerMiniPlayer onOpen={() => {}} />);
+    screen.getByText('00:00:16');
+    return styles(screen.toJSON()).find((s) => s.height === 56);
+  };
+  const light = await pillOf('light');
+  expect(light.backgroundColor).toBe('#ffffff');
+  expect(light.borderWidth || 0).toBe(0);
+  // Тень — равномерная boxShadow, без системной elevation (она грязнила середину).
+  expect(light.boxShadow).toEqual([expect.objectContaining({ blurRadius: expect.any(Number) })]);
+  expect(light.elevation || 0).toBe(0);
+  // На тёмной — ступень над карточками, иначе плашка слилась бы с колодой.
+  const dark = await pillOf('dark');
+  expect(dark.backgroundColor).toBe('#232428');
 });

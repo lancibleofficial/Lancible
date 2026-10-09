@@ -26,7 +26,6 @@ export const useAuthStore = create((set, get) => ({
   status: 'loading', // loading | signedOut | needsOnboarding | needsConsent | signedIn
   user: null,
   authError: null,
-  pendingConfirmEmail: null,
 
   init() {
     sb.auth.onAuthStateChange(async (_event, session) => {
@@ -63,10 +62,6 @@ export const useAuthStore = create((set, get) => ({
       set({ authError: result.errorKey });
       return result;
     }
-    if (result.needsConfirmation) {
-      set({ pendingConfirmEmail: result.email });
-      return result;
-    }
     applyAuthResult(set, result);
     return result;
   },
@@ -94,7 +89,7 @@ export const useAuthStore = create((set, get) => ({
     const result = await auth.deleteAccount();
     if (result.ok) {
       setSyncUser(null);
-      set({ status: 'signedOut', user: null, pendingConfirmEmail: null });
+      set({ status: 'signedOut', user: null });
     }
     return result;
   },
@@ -112,7 +107,7 @@ export const useAuthStore = create((set, get) => ({
   async signOut() {
     await auth.signOut();
     setSyncUser(null);
-    set({ status: 'signedOut', user: null, pendingConfirmEmail: null });
+    set({ status: 'signedOut', user: null });
   },
 
   clearAuthError() {

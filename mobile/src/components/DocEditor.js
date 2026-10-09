@@ -11,7 +11,9 @@ import { editorCssVars, useColors, useThemeMode } from '../theme';
 //
 // Два режима:
 //  - полный (EditorScreen) — WebView на весь экран со своей прокруткой,
-//    панелью, рисованием пером;
+//    панелью, рисованием пером; масштаб — щипком, как у картинки (до 4×):
+//    увеличивается вся страница вместе с пометками, они не съезжают с
+//    текста;
 //  - предпросмотр (preview) — только чтение, высота по содержимому, касание
 //    открывает полный. В заметках задачи WebView живёт внутри ScrollView
 //    экрана, и рисовать или выделять текст в таком месте неудобно: жест
@@ -30,7 +32,7 @@ function buildHtml(init, mode) {
   const preview = init.preview;
   return `<!DOCTYPE html><html><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="${preview ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' : 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=4, user-scalable=yes'}, viewport-fit=cover">
 <style>${editorCssVars(mode)}
 ${EDITOR_CSS}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);-webkit-text-size-adjust:100%;}
@@ -53,6 +55,7 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
   var ed = LancibleEditor.create(document.getElementById('host'), {
     content: S.content,
     mobile: true,
+    inApp: true,
     placeholder: S.placeholder || undefined,
     lang: function(){ return S.lang; },
     user: function(){ return S.user; },

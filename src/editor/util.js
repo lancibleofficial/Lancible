@@ -1,22 +1,14 @@
 // Мелочи, которыми пользуются все части редактора.
 import {
-  X,
-  AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine,
-  ArrowUp, ArrowUpToLine, Baseline, Bold, ChartArea, ChartColumn, ChartLine, ChartPie,
-  Check, ChevronDown, ChevronUp, Circle, CircleCheck, Code, Columns3, Copy,
-  Download, Ellipsis, Eraser, Expand, Focus, GripVertical, Hand, Heading1,
-  Heading2, Heading3, Heading4, Highlighter, Image, IndentDecrease, IndentIncrease, Info,
-  Italic, Lasso, Lightbulb, Link, List, ListChecks, ListOrdered, ListTree,
-  Maximize2, MessageSquarePlus, MessageSquareWarning, MessagesSquare, Minimize2, Minus, MousePointer2, MoveHorizontal,
-  MoveUpRight, PaintBucket, Palette, PanelTop, Pen, PenTool, Pencil, Pilcrow,
-  Plus, Printer, Quote, Redo2, RemoveFormatting, Replace, Reply, RotateCcw,
-  Rows3, Search, Settings2, Shapes, Signature, Slash, Square, SquareCode,
-  SquarePen, Strikethrough, Subscript, Superscript, Table, TableCellsMerge, TableCellsSplit, Trash2,
-  TriangleAlert, Type, Underline, Undo2, Unlink, ZoomIn, ZoomOut,
-  ArrowLeft, ArrowRight, PanelLeft, PanelRight, ImagePlus, SquareSplitHorizontal,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDownToLine, ArrowLeftToLine, ArrowRightToLine, ArrowUpToLine,
+  Baseline, Circle, Columns3, GripVertical, Hand, Heading1, Heading2, Heading3, Heading4, Highlighter,
+  IndentDecrease, IndentIncrease, Lasso, List, ListOrdered, ListTree, MoveHorizontal, PanelTop, Pencil, Pilcrow,
+  Quote, Replace, Rows3, Shapes, Slash, Square, Table, TableCellsMerge, TableCellsSplit, Type,
+  PanelLeft, PanelRight, SquareSplitHorizontal,
   BetweenVerticalStart, BetweenVerticalEnd, BetweenHorizontalStart, BetweenHorizontalEnd,
-  Pointer, Eye, EyeOff, ALargeSmall, CaseSensitive,
+  Pointer, ALargeSmall, CaseSensitive, Subscript, Superscript,
 } from 'lucide';
+import Icons from '../renderer/core/icons.js';
 
 export const uid = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
@@ -55,37 +47,49 @@ export function svg(tag, attrs, ...children) {
   return el;
 }
 
-// Иконки — lucide (ISC). В сборку попадают только названные здесь.
-const ICONS = {
-  bold: Bold, italic: Italic, underline: Underline, strike: Strikethrough, code: Code,
-  sub: Subscript, sup: Superscript, link: Link, unlink: Unlink, highlight: Highlighter,
-  color: Baseline, clear: RemoveFormatting, undo: Undo2, redo: Redo2,
+// Иконки — Solar Bold из общего словаря core/icons.js, как во всём
+// приложении. У Solar нет типографских знаков: заголовков, нумерованных
+// списков, выравнивания, цитаты, операций с таблицей, фигур рисования, — для
+// них остаются линейные lucide (ISC); в сборку попадают только названные.
+const SOLAR = {
+  bold: 'text-bold', italic: 'text-italic', underline: 'text-underline', strike: 'text-strike', code: 'code',
+  link: 'link', unlink: 'unlink', clear: 'eraser-square', undo: 'undo', redo: 'redo',
+  tasks: 'checklist', codeblock: 'code-block', callout: 'callout', hr: 'minus',
+  image: 'image', imagePlus: 'image-add', chart: 'chart-bars', chartLine: 'chart-line', chartPie: 'chart-pie', chartArea: 'chart-area',
+  draw: 'pen-line', pen: 'pen', annotate: 'pen-round', edit: 'pen-square', eraser: 'eraser', arrow: 'arrow-up-right',
+  comment: 'comment', comments: 'comments', check: 'check', x: 'x', trash: 'trash', search: 'search',
+  more: 'kebab', plus: 'plus', copy: 'copy', download: 'download', printer: 'printer',
+  maximize: 'maximize', minimize: 'minimize', focus: 'target', settings: 'tuning',
+  up: 'arrow-up', down: 'arrow-down', chevronDown: 'chevron-down', chevronUp: 'chevron-up', reply: 'reply',
+  resolve: 'check-circle', reopen: 'restart', fill: 'paint-roller', palette: 'palette',
+  info: 'info', warn: 'danger', ok: 'check-circle', idea: 'lightbulb', select: 'cursor', fullscreen: 'fullscreen',
+  zoomIn: 'zoom-in', zoomOut: 'zoom-out', arrowLeft: 'arrow-left', arrowRight: 'arrow-right', eye: 'eye', eyeOff: 'eye-closed',
+};
+const LUCIDE = {
+  highlight: Highlighter, color: Baseline, sub: Subscript, sup: Superscript,
   h1: Heading1, h2: Heading2, h3: Heading3, h4: Heading4, text: Pilcrow,
-  bullet: List, ordered: ListOrdered, tasks: ListChecks, indent: IndentIncrease, outdent: IndentDecrease,
-  quote: Quote, codeblock: SquareCode, callout: MessageSquareWarning, hr: Minus,
+  bullet: List, ordered: ListOrdered, indent: IndentIncrease, outdent: IndentDecrease, quote: Quote,
   alignLeft: AlignLeft, alignCenter: AlignCenter, alignRight: AlignRight, alignJustify: AlignJustify,
-  table: Table, image: Image, chart: ChartColumn, chartLine: ChartLine, chartPie: ChartPie, chartArea: ChartArea,
-  draw: PenTool, pen: Pen, pencil: Pencil, marker: Highlighter, eraser: Eraser, lasso: Lasso,
-  shapes: Shapes, line: Slash, arrow: MoveUpRight, rect: Square, ellipse: Circle,
-  comment: MessageSquarePlus, comments: MessagesSquare, check: Check, x: X, trash: Trash2,
-  search: Search, replace: Replace, outline: ListTree, more: Ellipsis, plus: Plus,
-  grip: GripVertical, copy: Copy, download: Download, printer: Printer, maximize: Maximize2,
-  minimize: Minimize2, focus: Focus, settings: Settings2, annotate: Signature, hand: Hand,
-  up: ArrowUp, down: ArrowDown, chevronDown: ChevronDown, chevronUp: ChevronUp, reply: Reply,
-  resolve: CircleCheck, reopen: RotateCcw, rowAbove: ArrowUpToLine, rowBelow: ArrowDownToLine,
-  colLeft: ArrowLeftToLine, colRight: ArrowRightToLine, merge: TableCellsMerge, split: TableCellsSplit,
-  header: PanelTop, fill: PaintBucket, rows: Rows3, columns: Columns3, palette: Palette,
-  info: Info, warn: TriangleAlert, ok: CircleCheck, idea: Lightbulb, type: Type,
-  wide: MoveHorizontal, edit: SquarePen, select: MousePointer2, fullscreen: Expand, zoomIn: ZoomIn, zoomOut: ZoomOut,
-  arrowLeft: ArrowLeft, arrowRight: ArrowRight, wrapLeft: PanelLeft, wrapRight: PanelRight, imagePlus: ImagePlus,
+  table: Table, pencil: Pencil, marker: Highlighter, lasso: Lasso,
+  shapes: Shapes, line: Slash, rect: Square, ellipse: Circle,
+  replace: Replace, outline: ListTree, grip: GripVertical, hand: Hand,
+  rowAbove: ArrowUpToLine, rowBelow: ArrowDownToLine, colLeft: ArrowLeftToLine, colRight: ArrowRightToLine,
+  merge: TableCellsMerge, split: TableCellsSplit, header: PanelTop, rows: Rows3, columns: Columns3, type: Type,
+  wide: MoveHorizontal, wrapLeft: PanelLeft, wrapRight: PanelRight,
   unrow: SquareSplitHorizontal, colBefore: BetweenVerticalStart, colAfter: BetweenVerticalEnd,
   rowBefore: BetweenHorizontalStart, rowAfter: BetweenHorizontalEnd,
-  finger: Pointer, eye: Eye, eyeOff: EyeOff, fontSize: ALargeSmall, fontFamily: CaseSensitive,
+  finger: Pointer, fontSize: ALargeSmall, fontFamily: CaseSensitive,
 };
 
 export function icon(name, size) {
-  const node = ICONS[name];
   const s = size || 18;
+  const solar = Icons.ICONS[SOLAR[name]];
+  if (solar) {
+    const el = svg('svg', { class: 'led-icon', width: s, height: s, viewBox: solar.vb, fill: 'currentColor', 'aria-hidden': 'true' });
+    for (const [d, evenodd] of solar.p) el.append(svg('path', evenodd ? { d, 'fill-rule': 'evenodd', 'clip-rule': 'evenodd' } : { d }));
+    return el;
+  }
+  const node = LUCIDE[name];
   const el = svg('svg', {
     class: 'led-icon', width: s, height: s, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
     'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true',

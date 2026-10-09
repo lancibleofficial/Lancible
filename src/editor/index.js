@@ -198,7 +198,10 @@ class Editor {
       nodeViews: this.nodeViews(),
       dispatchTransaction: (tr) => this.dispatch(tr),
       attributes: () => this.pmAttributes(),
-      editable: () => this.editable !== false,
+      // На телефоне в режиме пометок текст не правится: касание рисует, а
+      // не ставит курсор и не зовёт клавиатуру. На десктопе из пометок
+      // выходят с клавиатуры (Ctrl+Shift+D) — там текст остаётся в фокусе.
+      editable: () => this.textEditable(),
       handlePaste: (view, e) => this.onPaste(view, e),
       handleDrop: (view, e) => this.onDrop(view, e),
       handleDOMEvents: {
@@ -226,6 +229,9 @@ class Editor {
       scroller: this.scroller,
       page: this.page,
       view: this.view,
+      // Можно ли править документ вообще — перу нужен именно этот признак:
+      // view.editable в режиме пометок выключен (текст не правится).
+      canEdit: () => this.editable !== false,
       mobile: this.isMobile,
       hidden: () => !!this.settings().inkHidden,
       hide: () => this.hideInk(),
@@ -497,7 +503,7 @@ class Editor {
 
   setEditable(on) {
     this.editable = !!on;
-    this.view.setProps({ editable: () => this.editable });
+    this.view.setProps({ editable: () => this.textEditable() });
     this.root.classList.toggle('led-readonly', !this.editable);
     if (!this.editable && this.annotating) this.setAnnotate(false);
   }
@@ -594,12 +600,22 @@ class Editor {
     this.commentsPanel.add();
   }
 
+  /** Можно ли сейчас править текст: документ не только для чтения и, на
+   *  телефоне, не включены пометки пером. */
+  textEditable() {
+    return this.editable !== false && !(this.isMobile && this.annotating);
+  }
+
   setAnnotate(on) {
-    if (on && !this.view.editable) return;
+    if (on && this.editable === false) return;
     // Открыли пометки — спрятанные показываются: рисовать вслепую нельзя.
     if (on && this.settings().inkHidden) this.setSettings({ inkHidden: false });
     this.annotating = !!on;
     this.root.classList.toggle('led-annotating', this.annotating);
+    // Перечитать editable: в режиме пометок текст не правится, курсор и
+    // клавиатура уходят.
+    this.view.setProps({});
+    if (this.annotating && this.isMobile) this.view.dom.blur();
     this.overlay.setOn(this.annotating);
     if (this.annotating && !this.settings().ink) this.setInkSettings({});
     this.updateUi();

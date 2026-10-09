@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import PrimaryButton from './PrimaryButton';
 import MiniDatePicker from './MiniDatePicker';
 import Icon from './Icon';
+import WheelPicker from './WheelPicker';
 import { dayKey, keyToDate } from '../lib/calendarMath';
 import { REMIND_PRESETS, REMIND_LABEL, remindKey } from '../lib/due';
 import { setSheetFooter } from '../store/useSheetStore';
@@ -12,16 +13,15 @@ import { t, LOCALE_MAP } from '../lib/i18n';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 // Дедлайн и напоминание одним листом: дата, время и выбор напоминания. На
 // десктопе это три отдельных поповера в строке задачи, но на телефоне
 // открывать лист трижды подряд было бы утомительно, поэтому всё здесь, а
 // применяется одной кнопкой.
 //
-// Своего time-picker'а в проекте не было (на десктопе он есть, здесь не
-// пригождался), поэтому часы и минуты — два скроллящихся столбца, как в
-// tp-pop десктопа. Минуты с шагом 5: точнее для дедлайна не нужно.
+// Время — два барабана (components/WheelPicker.js), как у таймера iOS и
+// Samsung: часы и все минуты подряд, по кругу.
 export default function DueSheet({ task, lang, onApply, onClear }) {
   const colors = useColors();
   const styles = makeStyles(colors);
@@ -33,7 +33,7 @@ export default function DueSheet({ task, lang, onApply, onClear }) {
   })();
   const [dateKey, setDateKey] = useState(dayKey(initial));
   const [hour, setHour] = useState(initial.getHours());
-  const [minute, setMinute] = useState(Math.round(initial.getMinutes() / 5) * 5 % 60);
+  const [minute, setMinute] = useState(initial.getMinutes());
   const [remind, setRemind] = useState(remindKey(task));
   const [tab, setTab] = useState('date');
 
@@ -92,20 +92,9 @@ export default function DueSheet({ task, lang, onApply, onClear }) {
 
       {tab === 'time' ? (
         <View style={styles.timeRow}>
-          <ScrollView style={styles.timeCol} contentContainerStyle={styles.timeColInner} showsVerticalScrollIndicator={false}>
-            {HOURS.map((h) => (
-              <Pressable key={h} onPress={() => setHour(h)} style={[styles.timeCell, h === hour && styles.timeCellOn]}>
-                <Text style={[styles.timeText, h === hour && styles.timeTextOn]}>{pad2(h)}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <ScrollView style={styles.timeCol} contentContainerStyle={styles.timeColInner} showsVerticalScrollIndicator={false}>
-            {MINUTES.map((m) => (
-              <Pressable key={m} onPress={() => setMinute(m)} style={[styles.timeCell, m === minute && styles.timeCellOn]}>
-                <Text style={[styles.timeText, m === minute && styles.timeTextOn]}>{pad2(m)}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <WheelPicker values={HOURS} value={hour} onChange={setHour} format={pad2} accessibilityLabel={t(lang, 'due.time')} />
+          <Text style={styles.timeColon}>:</Text>
+          <WheelPicker values={MINUTES} value={minute} onChange={setMinute} format={pad2} accessibilityLabel={t(lang, 'due.time')} />
         </View>
       ) : null}
 
@@ -140,13 +129,8 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   summaryText: { color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
   summaryRemind: { flex: 1, textAlign: 'right', color: colors.textDim, fontSize: fontSize.xs },
-  timeRow: { flexDirection: 'row', gap: spacing.sm, height: 190 },
-  timeCol: { flex: 1, backgroundColor: colors.panel2, borderRadius: radius.md },
-  timeColInner: { padding: 4, gap: 2 },
-  timeCell: { paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
-  timeCellOn: { backgroundColor: colors.accent },
-  timeText: { color: colors.text, fontSize: fontSize.md, fontVariant: ['tabular-nums'] },
-  timeTextOn: { color: colors.accentText, fontWeight: '700' },
+  timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  timeColon: { color: colors.text, fontSize: 24, fontWeight: '700' },
   option: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.panel2, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md,

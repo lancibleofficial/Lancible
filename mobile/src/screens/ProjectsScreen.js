@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withSpring, withTiming, interpolate, interpolateColor, Extrapolation, runOnJS,
+  useSharedValue, useAnimatedStyle, useAnimatedReaction, withSpring, withTiming, interpolate, interpolateColor, Extrapolation, runOnJS,
   LinearTransition, Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -52,11 +52,20 @@ const PLUS_TAIL = 600;
 export const PULL_TRIGGER = 70;
 // Пружина колоды: быстрая, с небольшим перелётом.
 const SNAP = { damping: 19, stiffness: 190, mass: 0.9 };
-// Точки пагинации: не больше шести, крайние меньше, если за ними есть ещё.
+// Точки пагинации — круглые, с ровным зазором; текущая вытягивается в
+// пилюлю, соседи расступаются (ширина, ease, 300 мс). Не больше шести,
+// крайние меньше, если за ними есть ещё.
 export const MAX_DOTS = 6;
-const DOT_SLOT = 14;
+const DOT = 7;
+const DOT_ON = 22;
+const DOT_GAP = 6;
+const DOT_EASE = { duration: 300, easing: Easing.bezier(0.25, 0.1, 0.25, 1) };
 // Переезд задачи наверх — спокойный ease out, без пружины.
 const REORDER = LinearTransition.duration(220).easing(Easing.out(Easing.cubic));
+// Отмеченная задача уменьшается и тает, потом соседи подъезжают (REORDER).
+const LEAVE = { duration: 240, easing: Easing.in(Easing.cubic) };
+// Шкала прогресса доползает до нового значения.
+const FILL = { duration: 420, easing: Easing.out(Easing.cubic) };
 
 /** Порядок задач в карточке: идущая (если её закрепили первой на входе),
  *  дальше — по последнему изменению, свежая сверху; выполненные не
@@ -87,12 +96,18 @@ export function deckTarget(x, vx, step, fromPage, count) {
   return Math.max(0, Math.min(count - 1, near));
 }
 
-/** Окно точек пагинации: с какой точки (дробно) начинается видимая шестёрка
- *  при положении колоды p. Текущая держится посередине окна. */
-export function dotsWindow(p, count) {
+/** Окно точек: с какой точки начинается видимая шестёрка, когда текущая —
+ *  active. Текущая стоит третьей, пока окну есть куда ехать. */
+export function dotsStart(active, count) {
   'worklet';
   if (count <= MAX_DOTS) return 0;
-  return Math.min(count - MAX_DOTS, Math.max(0, p - (MAX_DOTS / 2 - 0.5)));
+  return Math.max(0, Math.min(count - MAX_DOTS, active - 2));
+}
+
+/** Ширина окна точек: все круглые, одна вытянутая. */
+export function dotsWidth(count) {
+  const n = Math.min(count, MAX_DOTS);
+  return n ? (n - 1) * (DOT + DOT_GAP) + DOT_ON : 0;
 }
 
 /** Кусочно-линейная по трём точкам, с обрезкой по краям. Своя, а не
@@ -106,12 +121,13 @@ function piecewise(v, x0, x1, x2, y0, y1, y2) {
   return y1 + ((v - x1) / (x2 - x1)) * (y2 - y1);
 }
 
-/** Размер точки i у края окна: у края, за которым есть ещё точки, точка
- *  меньше; уходя за край — исчезает. 1 — полный размер. */
-export function dotScale(i, p, count) {
+/** Размер точки i у края окна, начало окна — start (дробное, пока окно
+ *  едет): у края, за которым есть ещё точки, точка меньше; уходя за край —
+ *  исчезает. 1 — полный размер. */
+export function dotScale(i, start, count) {
   'worklet';
   if (count <= MAX_DOTS) return 1;
-  const rel = i - dotsWindow(p, count);
+  const rel = i - start;
   let s = 1;
   if (i > 0) s = Math.min(s, piecewise(rel, -1, 0, 1, 0, 0.55, 1));
   if (i < count - 1) s = Math.min(s, piecewise(rel, MAX_DOTS - 2, MAX_DOTS - 1, MAX_DOTS, 1, 0.55, 0));
@@ -254,7 +270,7 @@ export default function ProjectsScreen({ navigation }) {
         </GestureDetector>
       )}
 
-      {count > 0 ? <Dots x={x} step={step} count={count} onGo={goTo} styles={styles} lang={lang} /> : null}
+      {count > 0 ? <Dots page={pageSV} initial={page} count={count} onGo={goTo} styles={styles} lang={lang} /> : null}
     </View>
   );
 }
@@ -308,22 +324,25 @@ function PlusCard({ side, x, armed, count, step, width, styles, lang }) {
   );
 }
 
-/** Точки пагинации. Текущая — вытянутая и акцентная, перетекает за колодой
- *  непрерывно, пока её тянут. Больше шести проектов — видно шесть точек,
- *  крайняя у невидимых меньше и растёт, когда к ней подъезжают; появляется
- *  следующая. Тап по точке — к этому проекту. */
-function Dots({ x, step, count, onGo, styles, lang }) {
-  const visible = Math.min(count, MAX_DOTS);
-  const row = useAnimatedStyle(() => {
-    const p = Math.min(count - 1, Math.max(0, -x.value / step));
-    return { transform: [{ translateX: -dotsWindow(p, count) * DOT_SLOT }] };
-  });
+/** Точки пагинации. Текущая плавно вытягивается в пилюлю, прежняя
+ *  сжимается в точку, соседи расступаются — когда колоду отпустили или
+ *  нажали на точку (page — страница, на которую колода встаёт). Больше
+ *  шести проектов — окно из шести едет вместе с текущей: крайняя у скрытых
+ *  меньше и вырастает, следующая появляется. Тап по точке — к проекту. */
+function Dots({ page, initial, count, onGo, styles, lang }) {
+  const start = useSharedValue(dotsStart(initial, count));
+  // Следим за самим началом окна, а не за страницей: удалили проект —
+  // страница та же, а окно сдвигается.
+  useAnimatedReaction(() => dotsStart(page.value, count), (s, prev) => {
+    if (s !== prev) start.value = withTiming(s, DOT_EASE);
+  }, [count]);
+  const row = useAnimatedStyle(() => ({ transform: [{ translateX: -start.value * (DOT + DOT_GAP) }] }));
   return (
     <View style={styles.dots}>
-      <View style={[styles.dotsWindow, { width: visible * DOT_SLOT }]}>
+      <View style={[styles.dotsWindow, { width: dotsWidth(count) }]}>
         <Animated.View style={[styles.dotsRow, row]}>
           {Array.from({ length: count }, (_, i) => (
-            <Dot key={i} i={i} x={x} step={step} count={count} onGo={onGo} styles={styles} lang={lang} />
+            <Dot key={i} i={i} page={page} initial={initial} start={start} count={count} onGo={onGo} styles={styles} lang={lang} />
           ))}
         </Animated.View>
       </View>
@@ -331,21 +350,54 @@ function Dots({ x, step, count, onGo, styles, lang }) {
   );
 }
 
-function Dot({ i, x, step, count, onGo, styles, lang }) {
+function Dot({ i, page, initial, start, count, onGo, styles, lang }) {
   const colors = useColors();
-  const dot = useAnimatedStyle(() => {
-    const p = Math.min(count - 1, Math.max(0, -x.value / step));
-    const d = Math.min(1, Math.abs(p - i));
-    return {
-      width: interpolate(d, [0, 1], [18, 6], Extrapolation.CLAMP),
-      backgroundColor: interpolateColor(d, [0, 1], [colors.accent, colors.raise]),
-      transform: [{ scale: dotScale(i, p, count) }],
-    };
-  });
+  const on = useSharedValue(initial === i ? 1 : 0);
+  useAnimatedReaction(() => page.value, (p, prev) => {
+    if (p !== prev) on.value = withTiming(p === i ? 1 : 0, DOT_EASE);
+  }, [i]);
+  const dot = useAnimatedStyle(() => ({
+    width: DOT + (DOT_ON - DOT) * on.value,
+    backgroundColor: interpolateColor(on.value, [0, 1], [colors.borderStrong, colors.accent]),
+    transform: [{ scale: dotScale(i, start.value, count) }],
+  }));
   return (
-    <Pressable onPress={() => onGo(i)} style={styles.dotSlot} accessibilityRole="button" accessibilityLabel={`${t(lang, 'nav.projects')} ${i + 1}`}>
-      <Animated.View style={[styles.dot6, dot]} />
+    <Pressable onPress={() => onGo(i)} hitSlop={{ top: 10, bottom: 10, left: 3, right: 3 }} accessibilityRole="button" accessibilityLabel={`${t(lang, 'nav.projects')} ${i + 1}`}>
+      <Animated.View style={[styles.dotPill, dot]} />
     </Pressable>
+  );
+}
+
+/** Строка задачи в карточке. Галочка не убирает её сразу: строка
+ *  уменьшается и тает (LEAVE), и только потом задача отмечается — список
+ *  её больше не показывает, соседи подъезжают (REORDER). */
+function CardRow({ task, first, onOpenTask }) {
+  const toggleTaskDone = useAppStore((s) => s.toggleTaskDone);
+  const [leaving, setLeaving] = useState(false);
+  const v = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({ opacity: v.value, transform: [{ scale: 0.86 + 0.14 * v.value }] }));
+  function onDone() {
+    if (leaving) return;
+    setLeaving(true);
+    Haptics.selectionAsync().catch(() => {});
+    v.value = withTiming(0, LEAVE, (finished) => { if (finished) runOnJS(toggleTaskDone)(task.id); });
+  }
+  return (
+    <Animated.View style={style}>
+      <TaskRow task={task} first={first} compact checked={leaving} onToggleDone={onDone} onPress={() => onOpenTask(task.id)} />
+    </Animated.View>
+  );
+}
+
+/** Шкала прогресса проекта: новое значение не прыгает, а доползает. */
+function ProgressBar({ pct, color, styles }) {
+  const w = useSharedValue(pct);
+  useEffect(() => { w.value = withTiming(pct, FILL); }, [pct]);
+  const fill = useAnimatedStyle(() => ({ width: `${w.value}%` }));
+  return (
+    <View style={styles.bar}>
+      <Animated.View style={[styles.fill, { backgroundColor: color }, fill]} />
+    </View>
   );
 }
 
@@ -419,26 +471,10 @@ function ProjectCard({ project, pinTop, styles, onOpen, onOpenTask }) {
         <Text style={styles.kpiTime}>{fmtDur(projectMs(tasks, project.id, activeTimer), lang)}</Text>
         <Text style={styles.kpiMoney}>{fmtMoney(projectMoney(tasks, project.id, rates, activeTimer), lang, currencyOf(project, settings))}</Text>
       </View>
-      <View style={styles.bar}><View style={[styles.fill, { width: `${pct}%`, backgroundColor: project.color || colors.accent }]} /></View>
+      <ProgressBar pct={pct} color={project.color || colors.accent} styles={styles} />
 
-      <Animated.FlatList
-        style={styles.rows}
-        // Остановленная задача уезжает наверх спокойным ease out.
-        itemLayoutAnimation={REORDER}
-        CellRendererComponentStyle={({ item }) => ({ backgroundColor: colors.panel, zIndex: item.id === rising ? 2 : 1 })}
-        // Прокрутка от gesture-handler: договаривается с жестом колоды.
-        renderScrollComponent={(props) => <GHScrollView {...props} />}
-        data={list}
-        keyExtractor={(task) => task.id}
-        renderItem={({ item, index }) => <TaskRow task={item} first={index === 0} compact onPress={() => onOpenTask(item.id)} />}
-        ListEmptyComponent={<Text style={styles.empty}>{t(lang, 'deck.no_tasks')}</Text>}
-        showsVerticalScrollIndicator={false}
-        nestedScrollEnabled
-        keyboardShouldPersistTaps="handled"
-        initialNumToRender={10}
-        windowSize={5}
-      />
-
+      {/* Поле новой задачи — сразу под шкалой, а не внизу карточки: при
+          открытой клавиатуре видно, что вводится. */}
       <View style={styles.qa}>
         <Icon name="plus" size={14} color={colors.textFaint} />
         <TextInput
@@ -455,6 +491,25 @@ function ProjectCard({ project, pinTop, styles, onOpen, onOpenTask }) {
           <Text style={[styles.qaGoText, draft.trim() && styles.qaGoTextOn]}>{t(lang, 'agenda.create_btn')}</Text>
         </Tap>
       </View>
+
+      <Animated.FlatList
+        style={styles.rows}
+        // Остановленная задача уезжает наверх спокойным ease out.
+        itemLayoutAnimation={REORDER}
+        CellRendererComponentStyle={({ item }) => ({ backgroundColor: colors.panel, zIndex: item.id === rising ? 2 : 1 })}
+        // Прокрутка от gesture-handler: договаривается с жестом колоды.
+        renderScrollComponent={(props) => <GHScrollView {...props} />}
+        data={list}
+        keyExtractor={(task) => task.id}
+        renderItem={({ item, index }) => <CardRow task={item} first={index === 0} onOpenTask={onOpenTask} />}
+        ListEmptyComponent={<Text style={styles.empty}>{t(lang, 'deck.no_tasks')}</Text>}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={10}
+        windowSize={5}
+      />
+
       <Tap style={styles.more} onPress={onOpen} accessibilityRole="button">
         <Text style={styles.moreText} numberOfLines={1}>{t(lang, 'deck.open')}</Text>
         <Icon name="chevron-right" size={12} color={colors.textFaint} />
@@ -510,8 +565,7 @@ const makeStyles = (colors, cardW) => StyleSheet.create({
   more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 46, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingHorizontal: spacing.md },
   moreText: { color: colors.textDim, fontSize: 13, fontWeight: '600', flexShrink: 1 },
   dots: { height: 26, alignItems: 'center', justifyContent: 'center' },
-  dotsWindow: { height: 26, overflow: 'hidden' },
-  dotsRow: { flexDirection: 'row', height: 26 },
-  dotSlot: { width: DOT_SLOT, height: 26, alignItems: 'center', justifyContent: 'center' },
-  dot6: { height: 6, borderRadius: 3 },
+  dotsWindow: { height: 26, overflow: 'hidden', justifyContent: 'center' },
+  dotsRow: { flexDirection: 'row', alignItems: 'center', gap: DOT_GAP },
+  dotPill: { height: DOT, borderRadius: DOT / 2 },
 });

@@ -47,8 +47,9 @@ import { useColors, spacing, radius, fontSize, displayFamily, buttonHeight } fro
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 const WEEKDAY_KEY = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat'];
-// Свёрнутый шит: ручка, таймер 58, переключатель вкладок.
-const SHEET_COLLAPSED = 158;
+// Свёрнутый шит: ручка и таймер 58 с полями. Вкладки ниже — их видно,
+// когда шит тянут вверх.
+const SHEET_COLLAPSED = 130;
 const SPRING = { damping: 19, stiffness: 230, mass: 0.9 };
 
 export default function TaskDetailScreen({ route, navigation }) {
@@ -125,6 +126,8 @@ export default function TaskDetailScreen({ route, navigation }) {
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   const scrimStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.value, [0, collapsedY], [0.5, 0]) }));
   const bodyStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.value, [0, collapsedY * 0.5, collapsedY], [1, 1, 0]) }));
+  // Вкладки проявляются, как только шит начали тянуть вверх.
+  const tabsStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.value, [collapsedY * 0.7, collapsedY], [1, 0], 'clamp') }));
   const openTab = (key) => { setTab(key); if (!expanded) snapTo(true); };
 
   function openEditor() { navigation.navigate('Editor', { kind: 'task', id: taskId }); }
@@ -161,7 +164,7 @@ export default function TaskDetailScreen({ route, navigation }) {
       <MenuSheet
         title={(task && task.title) || t(LANG, 'task.no_name')}
         items={[
-          { key: 'project', icon: 'cards', label: t(LANG, 'task.open_project'), onPress: onOpenProject },
+          { key: 'project', icon: 'folder', label: t(LANG, 'task.open_project'), onPress: onOpenProject },
           { key: 'export', icon: 'download', label: t(LANG, 'menu.export_excel'), onPress: onExport },
           { key: 'delete', icon: 'trash', label: t(LANG, 'task.delete_title'), danger: true, separated: true, onPress: onDelete },
         ]}
@@ -319,15 +322,16 @@ export default function TaskDetailScreen({ route, navigation }) {
           <View collapsable={false} style={styles.sheetHead} onLayout={(e) => setHeadH(Math.round(e.nativeEvent.layout.height))}>
             <View style={styles.handle} />
             {timerBlock}
-            <View style={styles.seg}>
-              {[['details', t(LANG, 'task.details')], ['history', t(LANG, 'task.history_n', { n: sessions.length })]].map(([key, label]) => (
-                <Tap key={key} onPress={() => openTab(key)} style={[styles.segBtn, expanded && tab === key && styles.segOn]} accessibilityRole="tab" accessibilityState={{ selected: expanded && tab === key }}>
-                  <Text style={[styles.segText, expanded && tab === key && styles.segTextOn]}>{label}</Text>
-                </Tap>
-              ))}
-            </View>
           </View>
         </GestureDetector>
+        {/* Вкладки — ниже свёрнутой части: пока шит свёрнут, их не видно. */}
+        <Animated.View style={[styles.seg, tabsStyle]}>
+          {[['details', t(LANG, 'task.details')], ['history', t(LANG, 'task.history_n', { n: sessions.length })]].map(([key, label]) => (
+            <Tap key={key} onPress={() => openTab(key)} style={[styles.segBtn, expanded && tab === key && styles.segOn]} accessibilityRole="tab" accessibilityState={{ selected: expanded && tab === key }}>
+              <Text style={[styles.segText, expanded && tab === key && styles.segTextOn]}>{label}</Text>
+            </Tap>
+          ))}
+        </Animated.View>
 
         <Animated.ScrollView style={[{ flex: 1 }, bodyStyle]} contentContainerStyle={styles.sheetBody} scrollEnabled={expanded} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {tab === 'details' ? (
@@ -381,7 +385,7 @@ export default function TaskDetailScreen({ route, navigation }) {
 
               <View style={styles.rows}>
                 <Tap style={[styles.row, styles.rowFirst]} onPress={onOpenProject} accessibilityRole="button">
-                  <Icon name="cards" size={17} color={colors.textDim} />
+                  <Icon name="folder" size={17} color={colors.textDim} />
                   <Text style={styles.rowK}>{t(LANG, 'board.pick_project')}</Text>
                   {project ? <View style={[styles.dot, { backgroundColor: project.color }]} /> : null}
                   <Text style={styles.rowV} numberOfLines={1}>{project ? project.name : ''}</Text>
@@ -413,12 +417,6 @@ export default function TaskDetailScreen({ route, navigation }) {
                 </View>
               </View>
 
-              <View style={styles.actions}>
-                <PrimaryButton variant={task.done ? 'ghost' : 'primary'} icon="check" title={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')} onPress={() => setTaskDone(taskId, !task.done)} style={{ flex: 1 }} shrinkText />
-                <Tap scale={0.9} style={styles.deleteBtn} onPress={onDelete} accessibilityRole="button" accessibilityLabel={t(LANG, 'task.delete_title')}>
-                  <Icon name="trash" size={18} color={colors.danger} />
-                </Tap>
-              </View>
             </>
           ) : (
             <>
@@ -455,6 +453,15 @@ export default function TaskDetailScreen({ route, navigation }) {
           )}
         </Animated.ScrollView>
 
+        {/* Низ закреплён: прокручивается только содержимое вкладки. */}
+        {expanded && tab === 'details' ? (
+          <View style={[styles.sheetFoot, styles.actions]}>
+            <PrimaryButton variant={task.done ? 'ghost' : 'primary'} icon="check" title={t(LANG, task.done ? 'task.reopen' : 'task.mark_done')} onPress={() => setTaskDone(taskId, !task.done)} style={{ flex: 1 }} shrinkText />
+            <Tap scale={0.9} style={styles.deleteBtn} onPress={onDelete} accessibilityRole="button" accessibilityLabel={t(LANG, 'task.delete_title')}>
+              <Icon name="trash" size={18} color={colors.danger} />
+            </Tap>
+          </View>
+        ) : null}
         {expanded && tab === 'history' ? (
           <View style={styles.sheetFoot}>
             <PrimaryButton title={t(LANG, 'task.export_history')} variant="ghost" icon="download" onPress={onExport} />
@@ -479,8 +486,9 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   tapHint: { color: colors.textFaint, fontSize: 12.5, marginTop: spacing.sm },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.panel, borderTopLeftRadius: 22, borderTopRightRadius: 22 },
-  sheetHead: { paddingHorizontal: spacing.md, paddingTop: 8 },
-  handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.raise, alignSelf: 'center', marginBottom: 10 },
+  // Воздух: от ручки до таймера и от таймера до низа свёрнутого шита.
+  sheetHead: { paddingHorizontal: spacing.md, paddingTop: 8, paddingBottom: spacing.lg },
+  handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.raise, alignSelf: 'center', marginBottom: spacing.lg },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   timerBtn: { width: 58, height: 58, borderRadius: 18, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   timerBtnOn: { backgroundColor: colors.accent },
@@ -488,12 +496,12 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   earnRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 },
   earned: { color: colors.text, fontSize: fontSize.sm, fontFamily: displayFamily.bold },
   earnSub: { color: colors.textFaint, fontSize: 12, flexShrink: 1 },
-  seg: { flexDirection: 'row', gap: 2, padding: 3, borderRadius: radius.md, backgroundColor: colors.panel2, marginTop: 12 },
+  seg: { flexDirection: 'row', gap: 2, padding: 3, borderRadius: radius.md, backgroundColor: colors.panel2, marginHorizontal: spacing.md },
   segBtn: { flex: 1, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
   segOn: { backgroundColor: colors.raise },
   segText: { color: colors.textFaint, fontSize: 12.5, fontWeight: '500' },
   segTextOn: { color: colors.text, fontWeight: '600' },
-  sheetBody: { paddingHorizontal: spacing.md, paddingTop: 6, paddingBottom: insets.bottom + spacing.xxl },
+  sheetBody: { paddingHorizontal: spacing.md, paddingTop: 6, paddingBottom: spacing.lg },
   label: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, paddingTop: 12, paddingBottom: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 11, borderRadius: 999, backgroundColor: colors.panel2 },
@@ -507,7 +515,7 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   rowV: { color: colors.textDim, fontSize: 13, flexShrink: 1 },
   rowVWarn: { color: colors.warn, fontWeight: '700' },
   rateInput: { width: 84, textAlign: 'right', color: colors.text, fontSize: fontSize.sm, backgroundColor: colors.panel2, borderWidth: 0, borderRadius: radius.sm, paddingVertical: 6, paddingHorizontal: 8 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   deleteBtn: { width: buttonHeight, height: buttonHeight, borderRadius: radius.md, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   histHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, paddingTop: 10 },
   histCount: { color: colors.textDim, fontSize: 13 },

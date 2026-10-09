@@ -48,4 +48,4 @@ jest.mock('react-native-safe-area-context', () => {
     initialWindowMetrics: { insets, frame },
   };
 });
-jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(async () => undefined), ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' } }));
+jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(async () => undefined), selectionAsync: jest.fn(async () => undefined), ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' } }));

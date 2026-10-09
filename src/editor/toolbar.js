@@ -55,20 +55,27 @@ export class Toolbar {
     // «Во весь экран» — всегда у правого края, вне прокрутки и переносов.
     b.fullscreen = btn('fullscreen', tip(t('view.fullscreen'), 'Mod-Shift-Enter'), () => ed.toggleFullscreen());
 
+    // На телефоне стиль текста — значком: подпись («Заголовок 2») в узкой
+    // панели обрезалась.
+    b.blockIcon = btn('type', t('block.style'), () => this.blockMenu(b.blockIcon));
+
     const g = (...xs) => h('div', { class: 'led-group' }, ...xs);
     // На телефоне панель — одна строка с прокруткой, и до конца её
-    // долистывают редко. Поэтому там вперёд то, ради чего телефон берут в
-    // руки: картинка с камеры, рисунок пальцем или пером, пометки поверх.
+    // долистывают редко. Поэтому на виду частое: стиль текста, жирный и
+    // курсив, чек-лист и список, перо поверх текста и «+», под которым все
+    // вставки (картинка, таблица, диаграмма, рисунок). Дальше — реже нужное.
+    // В приложении на телефоне «Во весь экран» нет: редактор там и так на
+    // весь экран. В вебе на телефоне она нужна — прячет оболочку сайта.
     const groups = ed.isMobile ? [
       g(b.undo, b.redo),
-      g(b.image, b.drawing, b.annotate, b.table, b.chart, b.insert),
-      g(b.block),
-      g(b.strong, b.em, b.underline, b.strike, b.inline),
-      g(b.fontSize, b.fontFamily),
-      g(b.bullet, b.ordered, b.tasks, b.outdent, b.indent),
+      g(b.blockIcon, b.strong, b.em),
+      g(b.tasks, b.bullet),
+      g(b.annotate, b.insert),
+      g(b.underline, b.strike, b.ordered, b.inline),
       g(b.color, b.highlight, b.link),
-      g(b.quote, b.callout, b.align),
-      g(b.comment, b.comments, b.find, b.outline, b.view, b.more),
+      g(b.indent, b.outdent, b.align, b.quote, b.callout),
+      g(b.fontSize, b.fontFamily),
+      g(b.find, b.comment, b.comments, b.outline, b.view, b.more),
     ] : [
       g(b.undo, b.redo),
       g(b.block),
@@ -83,7 +90,7 @@ export class Toolbar {
     ];
     this.dom = h('div', { class: 'led-toolbar', role: 'toolbar', 'aria-label': t('toolbar') },
       h('div', { class: 'led-toolbar-main' }, ...groups),
-      h('div', { class: 'led-toolbar-end' }, b.fullscreen));
+      ed.opts.inApp ? null : h('div', { class: 'led-toolbar-end' }, b.fullscreen));
 
     this.tableBar = this.buildTableBar();
   }

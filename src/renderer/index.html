@@ -53,7 +53,7 @@
         <span class="tb-logo-text">Lancible</span>
       </div>
       <div class="tb-search">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.8 1.2a5.6 5.6 0 104.02 9.5l3.2 3.2 1.4-1.4-3.2-3.2A5.6 5.6 0 006.8 1.2zm0 2a3.6 3.6 0 110 7.2 3.6 3.6 0 010-7.2z"/></svg>
+        <svg class="icon" aria-hidden="true" data-icon="search" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.79 21.79C22.07 21.51 22.07 21.05 21.79 20.77L18.12 17.1C19.49 15.5 20.31 13.43 20.31 11.16C20.31 6.1 16.21 2 11.16 2C6.1 2 2 6.1 2 11.16C2 16.21 6.1 20.31 11.16 20.31C13.42 20.31 15.5 19.49 17.1 18.12L20.77 21.79C21.05 22.07 21.51 22.07 21.79 21.79Z"/></svg>
         <input id="search-input" type="text" data-i18n-ph="search.placeholder" placeholder="Поиск" autocomplete="off" />
       </div>
       <div class="tb-gap"></div>
@@ -63,14 +63,14 @@
         <span class="tb-timer-dot" aria-hidden="true"></span>
         <span class="tb-timer-time" id="tb-timer-time">00:00:00</span>
         <span class="tb-timer-name" id="tb-timer-name"></span>
-        <span class="tb-timer-stop" id="tb-timer-stop" role="button" tabindex="0" data-i18n-aria="timer.stop" aria-label="Стоп"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="2"/></svg></span>
+        <span class="tb-timer-stop" id="tb-timer-stop" role="button" tabindex="0" data-i18n-aria="timer.stop" aria-label="Стоп"><svg class="icon" aria-hidden="true" data-icon="stop" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12C2 7.29 2 4.93 3.46 3.46C4.93 2 7.29 2 12 2C16.71 2 19.07 2 20.54 3.46C22 4.93 22 7.29 22 12C22 16.71 22 19.07 20.54 20.54C19.07 22 16.71 22 12 22C7.29 22 4.93 22 3.46 20.54C2 19.07 2 16.71 2 12Z"/></svg></span>
       </button>
       <button type="button" id="notif-btn" class="tb-notif" data-i18n-title="notif.title" title="Уведомления">
-        <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+        <svg class="icon" data-icon="bell" viewBox="0 0 24 24" fill="currentColor"><path d="M8.35 20.24C9.19 21.31 10.51 22 12 22C13.49 22 14.81 21.31 15.65 20.24C13.23 20.57 10.77 20.57 8.35 20.24Z"/><path d="M18.75 9V9.7C18.75 10.55 18.99 11.38 19.44 12.08L20.55 13.8C21.56 15.37 20.79 17.51 19.03 18.01C14.43 19.31 9.57 19.31 4.97 18.01C3.21 17.51 2.44 15.37 3.45 13.8L4.56 12.08C5.01 11.38 5.25 10.55 5.25 9.7V9C5.25 5.13 8.27 2 12 2C15.73 2 18.75 5.13 18.75 9Z"/></svg>
         <span class="notif-badge" id="notif-badge" hidden></span>
       </button>
       <button type="button" id="account-btn" class="tb-account">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
+        <svg class="icon" aria-hidden="true" data-icon="account" viewBox="0 0 24 24" fill="currentColor"><path d="M8 6A4 4 0 1 0 16 6A4 4 0 1 0 8 6Z"/><path d="M5 17A7 4 0 1 0 19 17A7 4 0 1 0 5 17Z"/></svg>
         <span id="account-label">Войти</span>
       </button>
     </div>
@@ -80,23 +80,23 @@
     <nav id="navrail">
       <div class="nav-items">
         <button class="nav-item" data-view="home">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3l6.6 5.5-1.15 1.35-.75-.62V13.6a1.1 1.1 0 01-1.1 1.1H9.35V9.9h-2.7v4.8H4.4a1.1 1.1 0 01-1.1-1.1V7.5l-.75.63L1.4 6.8 8 1.3z"/></svg>
+          <svg class="icon" aria-hidden="true" data-icon="today" viewBox="0 0 24 24" fill="currentColor"><path d="M7.75 2.5C7.75 2.09 7.41 1.75 7 1.75C6.59 1.75 6.25 2.09 6.25 2.5V4.08C4.81 4.19 3.87 4.48 3.17 5.17C2.48 5.87 2.19 6.81 2.08 8.25H21.92C21.81 6.81 21.52 5.87 20.83 5.17C20.13 4.48 19.19 4.19 17.75 4.08V2.5C17.75 2.09 17.41 1.75 17 1.75C16.59 1.75 16.25 2.09 16.25 2.5V4.01C15.58 4 14.84 4 14 4H10C9.16 4 8.42 4 7.75 4.01V2.5Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12V14C22 17.77 22 19.66 20.83 20.83C19.66 22 17.77 22 14 22H10C6.23 22 4.34 22 3.17 20.83C2 19.66 2 17.77 2 14V12C2 11.16 2 10.42 2.01 9.75H21.99C22 10.42 22 11.16 22 12ZM16.5 18C17.33 18 18 17.33 18 16.5C18 15.67 17.33 15 16.5 15C15.67 15 15 15.67 15 16.5C15 17.33 15.67 18 16.5 18Z"/></svg>
           <span class="nav-label" data-i18n="nav.home">Сегодня</span>
         </button>
         <button class="nav-item" data-view="projects">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h5v5H2zm7 0h5v5H9zM2 9h5v5H2zm7 0h5v5H9zm-5.6-5.6v2.2h2.2V3.4zm7 0v2.2h2.2V3.4zm-7 7v2.2h2.2v-2.2zm7 0v2.2h2.2v-2.2z"/></svg>
+          <svg class="icon" aria-hidden="true" data-icon="folder" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.07 5.26C2 5.63 2 6.07 2 6.95V14C2 17.77 2 19.66 3.17 20.83C4.34 22 6.23 22 10 22H14C17.77 22 19.66 22 20.83 20.83C22 19.66 22 17.77 22 14V11.8C22 9.17 22 7.85 21.23 6.99C21.16 6.92 21.08 6.84 21.01 6.77C20.15 6 18.83 6 16.2 6H15.83C14.67 6 14.1 6 13.56 5.85C13.27 5.76 12.98 5.64 12.71 5.5C12.22 5.22 11.82 4.82 11 4L10.45 3.45C10.18 3.18 10.04 3.04 9.9 2.92C9.28 2.41 8.52 2.09 7.72 2.02C7.53 2 7.34 2 6.95 2C6.07 2 5.63 2 5.26 2.07C3.64 2.37 2.37 3.64 2.07 5.26ZM12.25 10C12.25 9.59 12.59 9.25 13 9.25H18C18.41 9.25 18.75 9.59 18.75 10C18.75 10.41 18.41 10.75 18 10.75H13C12.59 10.75 12.25 10.41 12.25 10Z"/></svg>
           <span class="nav-label" data-i18n="nav.projects">Проекты</span>
         </button>
         <button class="nav-item" data-view="docs">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.6 1.2h6l3.8 3.8v9.2a.6.6 0 01-.6.6H3.6a.6.6 0 01-.6-.6V1.8a.6.6 0 01.6-.6zm5.4 1.6v3h3zM5 8h6v1.3H5zm0 2.6h6v1.3H5z"/></svg>
+          <svg class="icon" aria-hidden="true" data-icon="docs" viewBox="0 0 24 24" fill="currentColor"><path d="M1.75 10V14C1.75 16.83 1.75 18.24 2.63 19.12C2.85 19.34 3.1 19.5 3.39 19.63C3.39 19.58 3.38 19.54 3.37 19.49C3.25 18.57 3.25 17.43 3.25 16.1L3.25 8L3.25 7.9V7.9C3.25 6.57 3.25 5.43 3.37 4.51C3.38 4.46 3.39 4.42 3.39 4.38C3.1 4.5 2.85 4.66 2.63 4.88C1.75 5.76 1.75 7.17 1.75 10Z"/><path d="M21.75 10V14C21.75 16.83 21.75 18.24 20.87 19.12C20.65 19.34 20.4 19.5 20.11 19.63C20.11 19.58 20.12 19.54 20.13 19.49C20.25 18.57 20.25 17.43 20.25 16.1V7.9C20.25 6.57 20.25 5.43 20.13 4.51C20.12 4.46 20.11 4.42 20.11 4.38C20.4 4.5 20.65 4.66 20.87 4.88C21.75 5.76 21.75 7.17 21.75 10Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M5.63 2.88C4.75 3.76 4.75 5.17 4.75 8V16C4.75 18.83 4.75 20.24 5.63 21.12C6.51 22 7.92 22 10.75 22H12.75C15.58 22 16.99 22 17.87 21.12C18.75 20.24 18.75 18.83 18.75 16V8C18.75 5.17 18.75 3.76 17.87 2.88C16.99 2 15.58 2 12.75 2H10.75C7.92 2 6.51 2 5.63 2.88ZM8 17C8 16.59 8.34 16.25 8.75 16.25H11.75C12.16 16.25 12.5 16.59 12.5 17C12.5 17.41 12.16 17.75 11.75 17.75H8.75C8.34 17.75 8 17.41 8 17ZM8.75 12.25C8.34 12.25 8 12.59 8 13C8 13.41 8.34 13.75 8.75 13.75H14.75C15.16 13.75 15.5 13.41 15.5 13C15.5 12.59 15.16 12.25 14.75 12.25H8.75ZM8 9C8 8.59 8.34 8.25 8.75 8.25H14.75C15.16 8.25 15.5 8.59 15.5 9C15.5 9.41 15.16 9.75 14.75 9.75H8.75C8.34 9.75 8 9.41 8 9Z"/></svg>
           <span class="nav-label" data-i18n="nav.docs">Документы</span>
         </button>
         <button class="nav-item" data-view="time">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+          <svg class="icon" aria-hidden="true" data-icon="clock" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.52 17.52 22 12 22C6.48 22 2 17.52 2 12C2 6.48 6.48 2 12 2C17.52 2 22 6.48 22 12Z M12 7.25C12.41 7.25 12.75 7.59 12.75 8V11.69L15.03 13.97C15.32 14.26 15.32 14.74 15.03 15.03C14.74 15.32 14.26 15.32 13.97 15.03L11.47 12.53C11.33 12.39 11.25 12.2 11.25 12V8C11.25 7.59 11.59 7.25 12 7.25Z"/></svg>
           <span class="nav-label" data-i18n="nav.time">Время</span>
         </button>
         <button class="nav-item" data-view="settings">
-          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5.2a2.8 2.8 0 100 5.6 2.8 2.8 0 000-5.6zM8 6.8a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4zM6.9 1h2.2l.3 1.7c.5.15.95.37 1.37.63l1.5-.9 1.55 1.55-.9 1.5c.26.42.48.87.63 1.37L15.3 6.9v2.2l-1.7.3c-.15.5-.37.95-.63 1.37l.9 1.5-1.55 1.55-1.5-.9c-.42.26-.87.48-1.37.63L9.1 15H6.9l-.3-1.7a5.2 5.2 0 01-1.37-.63l-1.5.9-1.55-1.55.9-1.5A5.2 5.2 0 012.4 9.1L.7 8.8V6.6l1.7-.3c.15-.5.37-.95.63-1.37l-.9-1.5L3.68 1.88l1.5.9c.42-.26.87-.48 1.37-.63L6.9 1z"/></svg>
+          <svg class="icon" aria-hidden="true" data-icon="settings" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M14.28 2.15C13.91 2 13.44 2 12.5 2C11.56 2 11.09 2 10.72 2.15C10.23 2.36 9.84 2.74 9.63 3.23C9.54 3.46 9.5 3.72 9.49 4.1C9.47 4.66 9.18 5.17 8.69 5.45C8.2 5.73 7.61 5.72 7.11 5.46C6.77 5.28 6.53 5.18 6.29 5.15C5.76 5.08 5.22 5.22 4.8 5.55C4.48 5.79 4.24 6.19 3.77 7C3.3 7.81 3.07 8.21 3.02 8.6C2.95 9.13 3.09 9.66 3.42 10.08C3.57 10.28 3.77 10.44 4.1 10.64C4.57 10.94 4.88 11.44 4.88 12C4.88 12.56 4.57 13.06 4.1 13.36C3.77 13.56 3.56 13.72 3.42 13.92C3.09 14.34 2.95 14.87 3.02 15.39C3.07 15.79 3.3 16.19 3.77 17C4.24 17.81 4.48 18.21 4.8 18.45C5.22 18.78 5.76 18.92 6.29 18.85C6.53 18.82 6.77 18.72 7.11 18.54C7.61 18.28 8.2 18.27 8.69 18.55C9.18 18.83 9.47 19.34 9.49 19.9C9.5 20.28 9.54 20.54 9.63 20.77C9.84 21.26 10.23 21.64 10.72 21.85C11.09 22 11.56 22 12.5 22C13.44 22 13.91 22 14.28 21.85C14.77 21.64 15.16 21.26 15.37 20.77C15.46 20.54 15.5 20.28 15.51 19.9C15.53 19.34 15.82 18.83 16.31 18.55C16.8 18.27 17.39 18.28 17.89 18.54C18.23 18.72 18.47 18.82 18.71 18.85C19.24 18.92 19.78 18.78 20.2 18.45C20.52 18.21 20.76 17.81 21.23 17C21.7 16.19 21.93 15.79 21.98 15.39C22.05 14.87 21.91 14.34 21.58 13.92C21.43 13.72 21.23 13.56 20.9 13.36C20.43 13.06 20.12 12.56 20.12 12C20.12 11.44 20.43 10.94 20.9 10.64C21.23 10.44 21.43 10.28 21.58 10.08C21.91 9.66 22.05 9.13 21.98 8.6C21.93 8.21 21.7 7.81 21.23 7C20.76 6.19 20.52 5.79 20.2 5.55C19.78 5.22 19.24 5.08 18.71 5.15C18.47 5.18 18.23 5.28 17.89 5.46C17.39 5.72 16.8 5.73 16.31 5.45C15.82 5.17 15.53 4.66 15.51 4.1C15.5 3.72 15.46 3.46 15.37 3.23C15.16 2.74 14.77 2.36 14.28 2.15ZM12.5 15C14.17 15 15.52 13.66 15.52 12C15.52 10.34 14.17 9 12.5 9C10.83 9 9.48 10.34 9.48 12C9.48 13.66 10.83 15 12.5 15Z"/></svg>
           <span class="nav-label" data-i18n="nav.settings">Настройки</span>
         </button>
       </div>
@@ -106,31 +106,31 @@
       <!-- Быстрый доступ — закреплённые проекты своей группой над остальными.
            Закрепляют из меню проекта; пусто — группы нет. -->
       <div class="nav-sec nav-sec-pinned" id="nav-pinned-head" hidden>
-        <span class="nav-label"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z"/></svg><span data-i18n="nav.pinned">Быстрый доступ</span></span>
+        <span class="nav-label"><svg class="icon" aria-hidden="true" data-icon="pin" viewBox="0 0 24 24" fill="currentColor"><path d="M19.18 7.81L16.22 4.84C14.19 2.81 13.18 1.79 12.09 2.03C11 2.27 10.51 3.62 9.52 6.32L8.85 8.14C8.59 8.86 8.46 9.22 8.22 9.49C8.12 9.62 8 9.73 7.86 9.82C7.57 10.04 7.2 10.14 6.46 10.34C4.8 10.8 3.97 11.03 3.66 11.57C3.52 11.81 3.45 12.07 3.45 12.34C3.46 12.97 4.07 13.58 5.28 14.8L6.7 16.22L2.22 20.7C1.93 20.99 1.93 21.48 2.22 21.78C2.52 22.07 3 22.07 3.3 21.78L7.78 17.3L9.24 18.76C10.47 19.99 11.08 20.6 11.71 20.6C11.98 20.6 12.24 20.54 12.47 20.4C13.02 20.09 13.25 19.26 13.71 17.58C13.91 16.85 14.01 16.48 14.23 16.18C14.32 16.05 14.43 15.94 14.55 15.83C14.82 15.59 15.18 15.46 15.89 15.19L17.74 14.5C20.4 13.5 21.73 13 21.97 11.91C22.2 10.83 21.2 9.82 19.18 7.81Z"/></svg><span data-i18n="nav.pinned">Быстрый доступ</span></span>
       </div>
       <div class="nav-projects nav-pinned" id="nav-pinned" hidden></div>
 
       <div class="nav-sec" id="nav-projects-head">
         <span class="nav-label" data-i18n="nav.projects">Проекты</span>
-        <button type="button" class="nav-sec-add" id="nav-new-project" data-i18n-title="project.new_title" title="Новый проект"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg></button>
+        <button type="button" class="nav-sec-add" id="nav-new-project" data-i18n-title="project.new_title" title="Новый проект"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg></button>
       </div>
       <div class="nav-projects" id="nav-projects"></div>
 
       <div class="nav-spacer"></div>
 
       <button type="button" id="lang-toggle" class="nav-item nav-lang" data-i18n-title="nav.language" title="Язык">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
+        <svg class="icon" aria-hidden="true" data-icon="globe" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.03 11.25C2.41 6.08 6.73 2 12 2C11.17 2 10.43 2.36 9.82 2.92C9.22 3.48 8.7 4.25 8.29 5.16C7.87 6.08 7.55 7.16 7.33 8.33C7.16 9.26 7.05 10.25 7.01 11.25H2.03ZM2.03 12.75H7.01C7.05 13.75 7.16 14.74 7.33 15.67C7.55 16.84 7.87 17.92 8.29 18.84C8.7 19.75 9.22 20.52 9.82 21.08C10.43 21.64 11.17 22 12 22C6.73 22 2.41 17.92 2.03 12.75Z"/><path d="M12 3.4C11.73 3.4 11.37 3.51 10.96 3.89C10.54 4.27 10.12 4.87 9.76 5.68C9.39 6.49 9.09 7.46 8.89 8.55C8.73 9.41 8.63 10.32 8.59 11.25H15.41C15.37 10.32 15.27 9.41 15.11 8.55C14.91 7.46 14.61 6.49 14.24 5.68C13.88 4.87 13.46 4.27 13.04 3.89C12.63 3.51 12.28 3.4 12 3.4Z"/><path d="M8.89 15.45C9.09 16.54 9.39 17.51 9.76 18.32C10.12 19.13 10.54 19.73 10.96 20.11C11.37 20.49 11.73 20.6 12 20.6C12.28 20.6 12.63 20.49 13.04 20.11C13.46 19.73 13.88 19.13 14.24 18.32C14.61 17.51 14.91 16.54 15.11 15.45C15.27 14.59 15.37 13.68 15.41 12.75H8.59C8.63 13.68 8.73 14.59 8.89 15.45Z"/><path d="M12 2C12.83 2 13.57 2.36 14.18 2.92C14.78 3.48 15.3 4.25 15.71 5.16C16.13 6.08 16.45 7.16 16.67 8.33C16.84 9.26 16.95 10.25 16.99 11.25H21.97C21.59 6.08 17.27 2 12 2Z"/><path d="M16.67 15.67C16.45 16.84 16.13 17.92 15.71 18.84C15.3 19.75 14.78 20.52 14.18 21.08C13.57 21.64 12.83 22 12 22C17.27 22 21.59 17.92 21.97 12.75H16.99C16.95 13.75 16.84 14.74 16.67 15.67Z"/></svg>
         <span class="nav-label" id="lang-label">Русский</span>
       </button>
 
       <button id="update-btn" class="nav-item nav-update" hidden>
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+        <svg class="icon" aria-hidden="true" data-icon="download" viewBox="0 0 24 24" fill="currentColor"><path d="M12.55 16.51C12.41 16.66 12.21 16.75 12 16.75C11.79 16.75 11.59 16.66 11.45 16.51L7.45 12.13C7.17 11.83 7.19 11.35 7.49 11.07C7.8 10.79 8.27 10.81 8.55 11.12L11.25 14.07V3C11.25 2.59 11.59 2.25 12 2.25C12.41 2.25 12.75 2.59 12.75 3V14.07L15.45 11.12C15.73 10.81 16.2 10.79 16.51 11.07C16.81 11.35 16.83 11.83 16.55 12.13L12.55 16.51Z"/><path d="M3.75 15C3.75 14.59 3.41 14.25 3 14.25C2.59 14.25 2.25 14.59 2.25 15V15.05C2.25 16.42 2.25 17.52 2.37 18.39C2.49 19.29 2.75 20.05 3.35 20.65C3.95 21.25 4.71 21.51 5.61 21.63C6.48 21.75 7.58 21.75 8.95 21.75H15.05C16.42 21.75 17.52 21.75 18.39 21.63C19.29 21.51 20.05 21.25 20.65 20.65C21.25 20.05 21.51 19.29 21.63 18.39C21.75 17.52 21.75 16.42 21.75 15.05V15C21.75 14.59 21.41 14.25 21 14.25C20.59 14.25 20.25 14.59 20.25 15C20.25 16.44 20.25 17.44 20.15 18.19C20.05 18.93 19.87 19.31 19.59 19.59C19.31 19.87 18.93 20.05 18.19 20.15C17.44 20.25 16.44 20.25 15 20.25H9C7.56 20.25 6.56 20.25 5.81 20.15C5.07 20.05 4.69 19.87 4.41 19.59C4.13 19.31 3.95 18.93 3.85 18.19C3.75 17.44 3.75 16.44 3.75 15Z"/></svg>
         <span class="nav-label" id="update-btn-label" data-i18n="update.available">Доступно обновление</span>
         <span class="nav-progress" id="update-progress" style="width:0%"></span>
       </button>
 
       <button id="nav-collapse" class="nav-item">
-        <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 2h11A1.5 1.5 0 0115 3.5v9A1.5 1.5 0 0113.5 14h-11A1.5 1.5 0 011 12.5v-9A1.5 1.5 0 012.5 2zm3.5 1.6H2.6v8.8H6V3.6z"/></svg>
+        <svg class="icon" aria-hidden="true" data-icon="panel" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.17 4.17C2 5.34 2 7.23 2 11V13C2 16.77 2 18.66 3.17 19.83C4.34 21 6.23 21 10 21H14C14.08 21 14.17 21 14.25 21L14.25 3C14.17 3 14.08 3 14 3H10C6.23 3 4.34 3 3.17 4.17ZM15.75 3.01L15.75 20.99C18.39 20.97 19.85 20.8 20.83 19.83C22 18.66 22 16.77 22 13V11C22 7.23 22 5.34 20.83 4.17C19.85 3.2 18.39 3.03 15.75 3.01Z"/></svg>
         <span class="nav-label" data-i18n="nav.collapse">Свернуть</span>
       </button>
     </nav>
@@ -148,7 +148,7 @@
                 <div class="day-sub" id="day-sub"></div>
               </div>
               <div class="day-actions">
-                <button type="button" id="day-add-entry" class="btn-soft"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
+                <button type="button" id="day-add-entry" class="btn-soft"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
                 <button type="button" id="day-open" class="ghost"><span data-i18n="home.open_day">Открыть день</span> →</button>
               </div>
             </div>
@@ -200,7 +200,7 @@
         <div class="page-head">
           <h1 class="page-title"><span data-i18n="nav.projects">Проекты</span> <span class="h-count" id="home-count"></span></h1>
           <span class="spacer"></span>
-          <button id="create-project-btn" class="btn-accent"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="home.create">Создать проект</span></button>
+          <button id="create-project-btn" class="btn-accent"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="home.create">Создать проект</span></button>
         </div>
         <div class="projects-grid" id="projects-track"></div>
         <p id="home-empty" class="muted" data-i18n="home.empty" hidden>Пока нет ни одного проекта. Создай первый.</p>
@@ -218,33 +218,33 @@
       <div id="project-view" class="view" hidden>
         <header class="proj-head island" id="project-header">
           <div class="ph-line">
-            <button type="button" id="proj-back" class="icon-btn" data-i18n-aria="nav.projects" aria-label="Проекты"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+            <button type="button" id="proj-back" class="icon-btn" data-i18n-aria="nav.projects" aria-label="Проекты"><svg class="icon" aria-hidden="true" data-icon="chevron-left" viewBox="7 7 10 10" fill="currentColor"><path d="M14.03 8.47C14.32 8.76 14.32 9.24 14.03 9.53L11.56 12L14.03 14.47C14.32 14.76 14.32 15.24 14.03 15.53C13.74 15.82 13.26 15.82 12.97 15.53L9.97 12.53C9.68 12.24 9.68 11.76 9.97 11.47L12.97 8.47C13.26 8.18 13.74 8.18 14.03 8.47Z"/></svg></button>
             <span class="ph-dot" id="ph-dot"></span>
             <h1 class="ph-name" id="ph-name"></h1>
             <span class="ph-desc" id="ph-desc"></span>
             <span class="spacer"></span>
             <button id="new-task-btn" class="btn-accent proj-new" data-i18n-title="project.new_task_title" title="Новая задача (Ctrl+N)">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="project.new_task_short">Задача</span>
+              <svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="project.new_task_short">Задача</span>
             </button>
           </div>
           <div class="ph-line ph-line-2">
             <div class="proj-tabs segmented" id="proj-tabs">
-              <button type="button" data-ptab="list" class="on"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.2 3h9.3v1.6H5.2zm0 4.2h9.3v1.6H5.2zm0 4.2h9.3V13H5.2zM1.5 2.7h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5zm0 4.2h2.1v2.2H1.5z"/></svg><span data-i18n="project.tab_list">Список</span></button>
-              <button type="button" data-ptab="board"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h3.4v12H2zm4.3 0h3.4v8H6.3zm4.3 0H14v10h-3.4z"/></svg><span data-i18n="nav.board">Доска</span></button>
-              <button type="button" data-ptab="versions"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.55 1.5a1 1 0 01.9 0l5.4 2.8a.8.8 0 010 1.42l-5.4 2.8a1 1 0 01-.9 0l-5.4-2.8a.8.8 0 010-1.42zM2.6 8.36l1.9.99L8 11.2l3.5-1.85 1.9-.99a.8.8 0 01.74 1.42l-5.69 2.99a1 1 0 01-.9 0L1.86 9.78a.8.8 0 01.74-1.42z"/></svg><span data-i18n="version.section">Версии</span><span class="ptab-count" id="ptab-ver-count"></span></button>
-              <button type="button" data-ptab="docs"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.6 1.2h6l3.8 3.8v9.2a.6.6 0 01-.6.6H3.6a.6.6 0 01-.6-.6V1.8a.6.6 0 01.6-.6zm5.4 1.6v3h3zM5 8h6v1.3H5zm0 2.6h6v1.3H5z"/></svg><span data-i18n="nav.docs">Документы</span><span class="ptab-count" id="ptab-doc-count"></span></button>
+              <button type="button" data-ptab="list" class="on"><svg class="icon" aria-hidden="true" data-icon="list" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.46 20.54C4.93 22 7.29 22 12 22C16.71 22 19.07 22 20.54 20.54C22 19.07 22 16.71 22 12C22 7.29 22 4.93 20.54 3.46C19.07 2 16.71 2 12 2C7.29 2 4.93 2 3.46 3.46C2 4.93 2 7.29 2 12C2 16.71 2 19.07 3.46 20.54ZM18.75 16C18.75 16.41 18.41 16.75 18 16.75H6C5.59 16.75 5.25 16.41 5.25 16C5.25 15.59 5.59 15.25 6 15.25H18C18.41 15.25 18.75 15.59 18.75 16ZM18 12.75C18.41 12.75 18.75 12.41 18.75 12C18.75 11.59 18.41 11.25 18 11.25H6C5.59 11.25 5.25 11.59 5.25 12C5.25 12.41 5.59 12.75 6 12.75H18ZM18.75 8C18.75 8.41 18.41 8.75 18 8.75H6C5.59 8.75 5.25 8.41 5.25 8C5.25 7.59 5.59 7.25 6 7.25H18C18.41 7.25 18.75 7.59 18.75 8Z"/></svg><span data-i18n="project.tab_list">Список</span></button>
+              <button type="button" data-ptab="board"><svg class="icon" aria-hidden="true" data-icon="board" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.25 3.75C1.25 4.16 1.59 4.5 2 4.5H22C22.41 4.5 22.75 4.16 22.75 3.75C22.75 3.34 22.41 3 22 3H2C1.59 3 1.25 3.34 1.25 3.75Z"/><path d="M7.5 7.75C6.57 7.75 6.1 7.75 5.75 7.95C5.52 8.08 5.33 8.27 5.2 8.5C5 8.85 5 9.32 5 10.25L5 19.25C5 20.18 5 20.65 5.2 21C5.33 21.23 5.52 21.42 5.75 21.55C6.1 21.75 6.57 21.75 7.5 21.75C8.43 21.75 8.9 21.75 9.25 21.55C9.48 21.42 9.67 21.23 9.8 21C10 20.65 10 20.18 10 19.25V10.25C10 9.32 10 8.85 9.8 8.5C9.67 8.27 9.48 8.08 9.25 7.95C8.9 7.75 8.43 7.75 7.5 7.75Z"/><path d="M16.5 7.75C15.57 7.75 15.1 7.75 14.75 7.95C14.52 8.08 14.33 8.27 14.2 8.5C14 8.85 14 9.32 14 10.25V16.25C14 17.18 14 17.65 14.2 18C14.33 18.23 14.52 18.42 14.75 18.55C15.1 18.75 15.57 18.75 16.5 18.75C17.43 18.75 17.9 18.75 18.25 18.55C18.48 18.42 18.67 18.23 18.8 18C19 17.65 19 17.18 19 16.25V10.25C19 9.32 19 8.85 18.8 8.5C18.67 8.27 18.48 8.08 18.25 7.95C17.9 7.75 17.43 7.75 16.5 7.75Z"/></svg><span data-i18n="nav.board">Доска</span></button>
+              <button type="button" data-ptab="versions"><svg class="icon" aria-hidden="true" data-icon="layers" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 9.69C2.99 8.89 2 8.49 2 8C2 7.51 2.99 7.11 4.98 6.31L7.79 5.19C9.77 4.4 10.77 4 12 4C13.23 4 14.23 4.4 16.21 5.19L19.02 6.31C21.01 7.11 22 7.51 22 8C22 8.49 21.01 8.89 19.02 9.69L16.21 10.81C14.23 11.6 13.23 12 12 12C10.77 12 9.77 11.6 7.79 10.81L4.98 9.69Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M2 8C2 8.49 2.99 8.89 4.98 9.69L7.79 10.81C9.77 11.6 10.77 12 12 12C13.23 12 14.23 11.6 16.21 10.81L19.02 9.69C21.01 8.89 22 8.49 22 8C22 7.51 21.01 7.11 19.02 6.31L16.21 5.19C14.23 4.4 13.23 4 12 4C10.77 4 9.77 4.4 7.79 5.19L4.98 6.31C2.99 7.11 2 7.51 2 8Z"/><path d="M19.02 13.69L16.21 14.81C14.23 15.6 13.23 16 12 16C10.77 16 9.77 15.6 7.79 14.81L4.98 13.69C2.99 12.89 2 12.49 2 12C2 11.56 2.81 11.19 4.42 10.54L7.56 11.8C9.41 12.54 10.57 13 12 13C13.43 13 14.59 12.54 16.44 11.8L19.58 10.54C21.19 11.19 22 11.56 22 12C22 12.49 21.01 12.89 19.02 13.69Z"/><path d="M19.02 17.68L16.21 18.81C14.23 19.6 13.23 20 12 20C10.77 20 9.77 19.6 7.79 18.81L4.98 17.68C2.99 16.89 2 16.49 2 16C2 15.55 2.81 15.19 4.42 14.54L7.56 15.79C9.41 16.53 10.57 17 12 17C13.43 17 14.59 16.53 16.44 15.79L19.58 14.54C21.19 15.19 22 15.55 22 16C22 16.49 21.01 16.89 19.02 17.68Z"/></svg><span data-i18n="version.section">Версии</span><span class="ptab-count" id="ptab-ver-count"></span></button>
+              <button type="button" data-ptab="docs"><svg class="icon" aria-hidden="true" data-icon="docs" viewBox="0 0 24 24" fill="currentColor"><path d="M1.75 10V14C1.75 16.83 1.75 18.24 2.63 19.12C2.85 19.34 3.1 19.5 3.39 19.63C3.39 19.58 3.38 19.54 3.37 19.49C3.25 18.57 3.25 17.43 3.25 16.1L3.25 8L3.25 7.9V7.9C3.25 6.57 3.25 5.43 3.37 4.51C3.38 4.46 3.39 4.42 3.39 4.38C3.1 4.5 2.85 4.66 2.63 4.88C1.75 5.76 1.75 7.17 1.75 10Z"/><path d="M21.75 10V14C21.75 16.83 21.75 18.24 20.87 19.12C20.65 19.34 20.4 19.5 20.11 19.63C20.11 19.58 20.12 19.54 20.13 19.49C20.25 18.57 20.25 17.43 20.25 16.1V7.9C20.25 6.57 20.25 5.43 20.13 4.51C20.12 4.46 20.11 4.42 20.11 4.38C20.4 4.5 20.65 4.66 20.87 4.88C21.75 5.76 21.75 7.17 21.75 10Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M5.63 2.88C4.75 3.76 4.75 5.17 4.75 8V16C4.75 18.83 4.75 20.24 5.63 21.12C6.51 22 7.92 22 10.75 22H12.75C15.58 22 16.99 22 17.87 21.12C18.75 20.24 18.75 18.83 18.75 16V8C18.75 5.17 18.75 3.76 17.87 2.88C16.99 2 15.58 2 12.75 2H10.75C7.92 2 6.51 2 5.63 2.88ZM8 17C8 16.59 8.34 16.25 8.75 16.25H11.75C12.16 16.25 12.5 16.59 12.5 17C12.5 17.41 12.16 17.75 11.75 17.75H8.75C8.34 17.75 8 17.41 8 17ZM8.75 12.25C8.34 12.25 8 12.59 8 13C8 13.41 8.34 13.75 8.75 13.75H14.75C15.16 13.75 15.5 13.41 15.5 13C15.5 12.59 15.16 12.25 14.75 12.25H8.75ZM8 9C8 8.59 8.34 8.25 8.75 8.25H14.75C15.16 8.25 15.5 8.59 15.5 9C15.5 9.41 15.16 9.75 14.75 9.75H8.75C8.34 9.75 8 9.41 8 9Z"/></svg><span data-i18n="nav.docs">Документы</span><span class="ptab-count" id="ptab-doc-count"></span></button>
             </div>
             <div class="tag-chips ph-tags" id="ph-tags" hidden></div>
             <span class="spacer"></span>
             <span class="proj-kpis" id="project-earned"></span>
             <button type="button" class="icon-btn" id="board-statuses" data-i18n-title="board.statuses" data-i18n-aria="board.statuses" title="Статусы и версии" aria-label="Статусы и версии">
-              <svg class="icon" viewBox="0 0 16 16" fill-rule="evenodd" aria-hidden="true"><path d="M6.82 1.4a.9.9 0 01.89-.75h.58a.9.9 0 01.89.75l.15.94c.4.13.77.29 1.12.5l.77-.55a.9.9 0 011.14.1l.41.41a.9.9 0 01.1 1.14l-.55.77c.21.35.37.72.5 1.12l.94.15a.9.9 0 01.75.89v.58a.9.9 0 01-.75.89l-.94.15c-.13.4-.29.77-.5 1.12l.55.77a.9.9 0 01-.1 1.14l-.41.41a.9.9 0 01-1.14.1l-.77-.55c-.35.21-.72.37-1.12.5l-.15.94a.9.9 0 01-.89.75h-.58a.9.9 0 01-.89-.75l-.15-.94c-.4-.13-.77-.29-1.12-.5l-.77.55a.9.9 0 01-1.14-.1l-.41-.41a.9.9 0 01-.1-1.14l.55-.77c-.21-.35-.37-.72-.5-1.12l-.94-.15a.9.9 0 01-.75-.89v-.58a.9.9 0 01.75-.89l.94-.15c.13-.4.29-.77.5-1.12l-.55-.77a.9.9 0 01.1-1.14l.41-.41a.9.9 0 011.14-.1l.77.55c.35-.21.72-.37 1.12-.5l.15-.94zM8 5.55a2.45 2.45 0 100 4.9 2.45 2.45 0 000-4.9z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="settings" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M14.28 2.15C13.91 2 13.44 2 12.5 2C11.56 2 11.09 2 10.72 2.15C10.23 2.36 9.84 2.74 9.63 3.23C9.54 3.46 9.5 3.72 9.49 4.1C9.47 4.66 9.18 5.17 8.69 5.45C8.2 5.73 7.61 5.72 7.11 5.46C6.77 5.28 6.53 5.18 6.29 5.15C5.76 5.08 5.22 5.22 4.8 5.55C4.48 5.79 4.24 6.19 3.77 7C3.3 7.81 3.07 8.21 3.02 8.6C2.95 9.13 3.09 9.66 3.42 10.08C3.57 10.28 3.77 10.44 4.1 10.64C4.57 10.94 4.88 11.44 4.88 12C4.88 12.56 4.57 13.06 4.1 13.36C3.77 13.56 3.56 13.72 3.42 13.92C3.09 14.34 2.95 14.87 3.02 15.39C3.07 15.79 3.3 16.19 3.77 17C4.24 17.81 4.48 18.21 4.8 18.45C5.22 18.78 5.76 18.92 6.29 18.85C6.53 18.82 6.77 18.72 7.11 18.54C7.61 18.28 8.2 18.27 8.69 18.55C9.18 18.83 9.47 19.34 9.49 19.9C9.5 20.28 9.54 20.54 9.63 20.77C9.84 21.26 10.23 21.64 10.72 21.85C11.09 22 11.56 22 12.5 22C13.44 22 13.91 22 14.28 21.85C14.77 21.64 15.16 21.26 15.37 20.77C15.46 20.54 15.5 20.28 15.51 19.9C15.53 19.34 15.82 18.83 16.31 18.55C16.8 18.27 17.39 18.28 17.89 18.54C18.23 18.72 18.47 18.82 18.71 18.85C19.24 18.92 19.78 18.78 20.2 18.45C20.52 18.21 20.76 17.81 21.23 17C21.7 16.19 21.93 15.79 21.98 15.39C22.05 14.87 21.91 14.34 21.58 13.92C21.43 13.72 21.23 13.56 20.9 13.36C20.43 13.06 20.12 12.56 20.12 12C20.12 11.44 20.43 10.94 20.9 10.64C21.23 10.44 21.43 10.28 21.58 10.08C21.91 9.66 22.05 9.13 21.98 8.6C21.93 8.21 21.7 7.81 21.23 7C20.76 6.19 20.52 5.79 20.2 5.55C19.78 5.22 19.24 5.08 18.71 5.15C18.47 5.18 18.23 5.28 17.89 5.46C17.39 5.72 16.8 5.73 16.31 5.45C15.82 5.17 15.53 4.66 15.51 4.1C15.5 3.72 15.46 3.46 15.37 3.23C15.16 2.74 14.77 2.36 14.28 2.15ZM12.5 15C14.17 15 15.52 13.66 15.52 12C15.52 10.34 14.17 9 12.5 9C10.83 9 9.48 10.34 9.48 12C9.48 13.66 10.83 15 12.5 15Z"/></svg>
             </button>
               <button id="export-project-btn" class="icon-btn" data-i18n-title="project.excel" title="Скачать Excel">
-              <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+              <svg class="icon" data-icon="download" viewBox="0 0 24 24" fill="currentColor"><path d="M12.55 16.51C12.41 16.66 12.21 16.75 12 16.75C11.79 16.75 11.59 16.66 11.45 16.51L7.45 12.13C7.17 11.83 7.19 11.35 7.49 11.07C7.8 10.79 8.27 10.81 8.55 11.12L11.25 14.07V3C11.25 2.59 11.59 2.25 12 2.25C12.41 2.25 12.75 2.59 12.75 3V14.07L15.45 11.12C15.73 10.81 16.2 10.79 16.51 11.07C16.81 11.35 16.83 11.83 16.55 12.13L12.55 16.51Z"/><path d="M3.75 15C3.75 14.59 3.41 14.25 3 14.25C2.59 14.25 2.25 14.59 2.25 15V15.05C2.25 16.42 2.25 17.52 2.37 18.39C2.49 19.29 2.75 20.05 3.35 20.65C3.95 21.25 4.71 21.51 5.61 21.63C6.48 21.75 7.58 21.75 8.95 21.75H15.05C16.42 21.75 17.52 21.75 18.39 21.63C19.29 21.51 20.05 21.25 20.65 20.65C21.25 20.05 21.51 19.29 21.63 18.39C21.75 17.52 21.75 16.42 21.75 15.05V15C21.75 14.59 21.41 14.25 21 14.25C20.59 14.25 20.25 14.59 20.25 15C20.25 16.44 20.25 17.44 20.15 18.19C20.05 18.93 19.87 19.31 19.59 19.59C19.31 19.87 18.93 20.05 18.19 20.15C17.44 20.25 16.44 20.25 15 20.25H9C7.56 20.25 6.56 20.25 5.81 20.15C5.07 20.05 4.69 19.87 4.41 19.59C4.13 19.31 3.95 18.93 3.85 18.19C3.75 17.44 3.75 16.44 3.75 15Z"/></svg>
             </button>
               <button id="project-menu-btn" class="icon-btn" aria-label="Опции проекта">
-              <svg class="icon" viewBox="0 0 16 16"><path d="M8 2.4a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 4.1a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
+              <svg class="icon" data-icon="kebab" viewBox="0 0 24 24" fill="currentColor"><path d="M7 12C7 13.1 6.1 14 5 14C3.9 14 3 13.1 3 12C3 10.9 3.9 10 5 10C6.1 10 7 10.9 7 12Z"/><path d="M14 12C14 13.1 13.1 14 12 14C10.9 14 10 13.1 10 12C10 10.9 10.9 10 12 10C13.1 10 14 10.9 14 12Z"/><path d="M21 12C21 13.1 20.1 14 19 14C17.9 14 17 13.1 17 12C17 10.9 17.9 10 19 10C20.1 10 21 10.9 21 12Z"/></svg>
             </button>
           </div>
         </header>
@@ -297,7 +297,7 @@
           <div class="pdoc-head">
             <span class="island-title" data-i18n="nav.docs">Документы</span>
             <span class="spacer"></span>
-            <button type="button" class="btn-soft" id="pdoc-new"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="docs.new_doc">Новый документ</span></button>
+            <button type="button" class="btn-soft" id="pdoc-new"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="docs.new_doc">Новый документ</span></button>
           </div>
           <div class="pdoc-list" id="pdoc-list"></div>
           <p class="muted pdoc-empty" id="pdoc-empty" hidden data-i18n="docs.project_empty">В проекте пока нет документов</p>
@@ -315,7 +315,7 @@
            удаление задачи). -->
       <div id="task-view" class="view" hidden>
         <div class="task-crumbs">
-          <button type="button" id="task-back" class="icon-btn" data-i18n-aria="task.back_to_project" aria-label="К проекту"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+          <button type="button" id="task-back" class="icon-btn" data-i18n-aria="task.back_to_project" aria-label="К проекту"><svg class="icon" aria-hidden="true" data-icon="chevron-left" viewBox="7 7 10 10" fill="currentColor"><path d="M14.03 8.47C14.32 8.76 14.32 9.24 14.03 9.53L11.56 12L14.03 14.47C14.32 14.76 14.32 15.24 14.03 15.53C13.74 15.82 13.26 15.82 12.97 15.53L9.97 12.53C9.68 12.24 9.68 11.76 9.97 11.47L12.97 8.47C13.26 8.18 13.74 8.18 14.03 8.47Z"/></svg></button>
           <button type="button" class="crumb" id="crumb-projects" data-i18n="nav.projects">Проекты</button><span class="crumb-sep">›</span>
           <button type="button" class="crumb" id="crumb-project"></button><span class="crumb-sep">›</span>
           <span class="crumb crumb-cur" id="crumb-task"></span>
@@ -353,7 +353,7 @@
               <div class="task-props" id="task-props">
                 <div class="task-params">
                   <div class="due-bar status-bar">
-                    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a6.6 6.6 0 100 13.2A6.6 6.6 0 008 1.4zm0 2a4.6 4.6 0 110 9.2 4.6 4.6 0 010-9.2zm0 1.9a2.7 2.7 0 100 5.4 2.7 2.7 0 000-5.4z"/></svg>
+                    <svg class="icon" aria-hidden="true" data-icon="status" viewBox="0 0 24 24" fill="currentColor"><path d="M8.75 12C8.75 10.21 10.21 8.75 12 8.75C13.79 8.75 15.25 10.21 15.25 12C15.25 13.79 13.79 15.25 12 15.25C10.21 15.25 8.75 13.79 8.75 12Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22ZM12 7.25C9.38 7.25 7.25 9.38 7.25 12C7.25 14.62 9.38 16.75 12 16.75C14.62 16.75 16.75 14.62 16.75 12C16.75 9.38 14.62 7.25 12 7.25Z"/></svg>
                     <span class="due-label" data-i18n="task.status_label">Статус</span>
                     <span class="st-swatch" id="task-status-dot"></span>
                     <button type="button" class="dp-btn" id="task-status"></button>
@@ -361,41 +361,41 @@
                   <!-- Теги — строкой свойств (круг 4, 7 октября 2026): над
                        редактором остаётся одно название. -->
                   <div class="due-bar tags-bar task-tags-row" id="task-tags-row">
-                    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 2.6a1 1 0 011-1h5a1 1 0 01.7.3l6.1 6.1a1 1 0 010 1.4l-5 5a1 1 0 01-1.4 0L1.9 8.3a1 1 0 01-.3-.7zm3.2 1.2a1 1 0 100 2 1 1 0 000-2z"/></svg>
+                    <svg class="icon" aria-hidden="true" data-icon="tag" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.12 12.82C2.41 13.82 3.18 14.59 4.73 16.14L6.56 17.97C9.25 20.66 10.59 22 12.26 22C13.93 22 15.28 20.66 17.97 17.97C20.66 15.28 22 13.93 22 12.26C22 10.59 20.66 9.25 17.97 6.56L16.14 4.73C14.59 3.18 13.82 2.41 12.82 2.12C11.81 1.84 10.75 2.08 8.62 2.57L7.39 2.86C5.6 3.27 4.7 3.48 4.09 4.09C3.48 4.7 3.27 5.6 2.86 7.39L2.57 8.62C2.08 10.75 1.84 11.81 2.12 12.82ZM10.12 7.27C10.91 8.06 10.91 9.34 10.12 10.12C9.34 10.91 8.06 10.91 7.27 10.12C6.48 9.34 6.48 8.06 7.27 7.27C8.06 6.48 9.34 6.48 10.12 7.27ZM19.05 12.05L12.07 19.03C11.78 19.32 11.3 19.32 11.01 19.03C10.72 18.74 10.72 18.26 11.01 17.97L17.99 10.99C18.28 10.7 18.76 10.7 19.05 10.99C19.34 11.28 19.34 11.76 19.05 12.05Z"/></svg>
                     <span class="due-label" data-i18n="tag.pick">Теги</span>
                     <div class="tag-chips" id="task-tags"></div>
                     <button type="button" class="tag-add-btn" id="task-tags-add" data-i18n-title="tag.pick" title="Теги">+</button>
                   </div>
                   <div class="due-bar version-bar" id="task-version-row" hidden>
-                    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7.55 1.5a1 1 0 01.9 0l5.4 2.8a.8.8 0 010 1.42l-5.4 2.8a1 1 0 01-.9 0l-5.4-2.8a.8.8 0 010-1.42zM2.6 8.36l1.9.99L8 11.2l3.5-1.85 1.9-.99a.8.8 0 01.74 1.42l-5.69 2.99a1 1 0 01-.9 0L1.86 9.78a.8.8 0 01.74-1.42z"/></svg>
+                    <svg class="icon" aria-hidden="true" data-icon="layers" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 9.69C2.99 8.89 2 8.49 2 8C2 7.51 2.99 7.11 4.98 6.31L7.79 5.19C9.77 4.4 10.77 4 12 4C13.23 4 14.23 4.4 16.21 5.19L19.02 6.31C21.01 7.11 22 7.51 22 8C22 8.49 21.01 8.89 19.02 9.69L16.21 10.81C14.23 11.6 13.23 12 12 12C10.77 12 9.77 11.6 7.79 10.81L4.98 9.69Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M2 8C2 8.49 2.99 8.89 4.98 9.69L7.79 10.81C9.77 11.6 10.77 12 12 12C13.23 12 14.23 11.6 16.21 10.81L19.02 9.69C21.01 8.89 22 8.49 22 8C22 7.51 21.01 7.11 19.02 6.31L16.21 5.19C14.23 4.4 13.23 4 12 4C10.77 4 9.77 4.4 7.79 5.19L4.98 6.31C2.99 7.11 2 7.51 2 8Z"/><path d="M19.02 13.69L16.21 14.81C14.23 15.6 13.23 16 12 16C10.77 16 9.77 15.6 7.79 14.81L4.98 13.69C2.99 12.89 2 12.49 2 12C2 11.56 2.81 11.19 4.42 10.54L7.56 11.8C9.41 12.54 10.57 13 12 13C13.43 13 14.59 12.54 16.44 11.8L19.58 10.54C21.19 11.19 22 11.56 22 12C22 12.49 21.01 12.89 19.02 13.69Z"/><path d="M19.02 17.68L16.21 18.81C14.23 19.6 13.23 20 12 20C10.77 20 9.77 19.6 7.79 18.81L4.98 17.68C2.99 16.89 2 16.49 2 16C2 15.55 2.81 15.19 4.42 14.54L7.56 15.79C9.41 16.53 10.57 17 12 17C13.43 17 14.59 16.53 16.44 15.79L19.58 14.54C21.19 15.19 22 15.55 22 16C22 16.49 21.01 16.89 19.02 17.68Z"/></svg>
                     <span class="due-label" data-i18n="version.label">Версия</span>
                     <button type="button" class="dp-btn" id="task-version"></button>
                   </div>
                   <div class="money-bar">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M2.2 4.4A2.2 2.2 0 014.4 2.2h7.2a2.2 2.2 0 012.2 2.2v.6H4.4a.6.6 0 100 1.2h9.4a2.2 2.2 0 012.2 2.2v3.2a2.2 2.2 0 01-2.2 2.2H4.4a2.2 2.2 0 01-2.2-2.2V4.4zm9.6 5.2a1 1 0 100 2 1 1 0 000-2z"/></svg>
+                  <svg class="icon" data-icon="wallet" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.1 8C21.04 8 20.98 8 20.92 8L20.9 8H18.39C16.33 8 14.56 9.63 14.56 11.75C14.56 13.87 16.33 15.5 18.39 15.5H20.9L20.92 15.5C20.98 15.5 21.04 15.5 21.1 15.5C21.94 15.44 22.68 14.79 22.75 13.87C22.75 13.81 22.75 13.74 22.75 13.68L22.75 13.67V9.83L22.75 9.82C22.75 9.76 22.75 9.69 22.75 9.63C22.68 8.71 21.94 8.06 21.1 8ZM18.17 12.75C18.7 12.75 19.14 12.3 19.14 11.75C19.14 11.2 18.7 10.75 18.17 10.75C17.64 10.75 17.21 11.2 17.21 11.75C17.21 12.3 17.64 12.75 18.17 12.75Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20.92 17C21.07 17 21.18 17.13 21.14 17.28C20.94 17.99 20.62 18.6 20.11 19.11C19.36 19.86 18.41 20.19 17.24 20.35C16.1 20.5 14.64 20.5 12.81 20.5H10.69C8.86 20.5 7.4 20.5 6.26 20.35C5.09 20.19 4.14 19.86 3.39 19.11C2.64 18.36 2.31 17.41 2.15 16.24C2 15.1 2 13.64 2 11.81V11.69C2 9.86 2 8.4 2.15 7.26C2.31 6.09 2.64 5.14 3.39 4.39C4.14 3.64 5.09 3.31 6.26 3.15C7.4 3 8.86 3 10.69 3L12.81 3C14.64 3 16.1 3 17.24 3.15C18.41 3.31 19.36 3.64 20.11 4.39C20.62 4.9 20.94 5.51 21.14 6.22C21.18 6.37 21.07 6.5 20.92 6.5L18.39 6.5C15.56 6.5 13.06 8.74 13.06 11.75C13.06 14.76 15.56 17 18.39 17L20.92 17ZM5.75 7C5.34 7 5 7.34 5 7.75C5 8.16 5.34 8.5 5.75 8.5H9.75C10.16 8.5 10.5 8.16 10.5 7.75C10.5 7.34 10.16 7 9.75 7H5.75Z"/></svg>
                   <label for="task-rate" data-i18n="money.rate_label">Ставка</label>
                   <input id="task-rate" type="text" inputmode="decimal" autocomplete="off" />
                   <span id="rate-unit" class="muted"></span>
                   <span id="money-calc" class="money-calc"></span>
                   </div>
                   <div class="due-bar">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+                  <svg class="icon" data-icon="clock" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.52 17.52 22 12 22C6.48 22 2 17.52 2 12C2 6.48 6.48 2 12 2C17.52 2 22 6.48 22 12Z M12 7.25C12.41 7.25 12.75 7.59 12.75 8V11.69L15.03 13.97C15.32 14.26 15.32 14.74 15.03 15.03C14.74 15.32 14.26 15.32 13.97 15.03L11.47 12.53C11.33 12.39 11.25 12.2 11.25 12V8C11.25 7.59 11.59 7.25 12 7.25Z"/></svg>
                   <span class="due-label" data-i18n="due.label">Срок</span>
                   <button type="button" class="dp-btn" id="due-date-btn"></button>
                   <span class="due-state" id="due-state" hidden></span>
                   <button type="button" class="dp-btn" id="due-remind" hidden></button>
                   <button type="button" class="icon-btn" id="due-clear-btn" hidden data-i18n-title="due.clear" title="Убрать срок">
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M3.9 2.5L8 6.6l4.1-4.1 1.4 1.4L9.4 8l4.1 4.1-1.4 1.4L8 9.4l-4.1 4.1-1.4-1.4L6.6 8 2.5 3.9z"/></svg>
+                  <svg class="icon" data-icon="x" viewBox="7 7 10 10" fill="currentColor"><path d="M8.97 8.97C9.26 8.68 9.74 8.68 10.03 8.97L12 10.94L13.97 8.97C14.26 8.68 14.74 8.68 15.03 8.97C15.32 9.26 15.32 9.74 15.03 10.03L13.06 12L15.03 13.97C15.32 14.26 15.32 14.74 15.03 15.03C14.74 15.32 14.26 15.32 13.97 15.03L12 13.06L10.03 15.03C9.74 15.32 9.26 15.32 8.97 15.03C8.68 14.74 8.68 14.26 8.97 13.97L10.94 12L8.97 10.03C8.68 9.74 8.68 9.26 8.97 8.97Z"/></svg>
                   </button>
                   </div>
                   <div class="due-bar repeat-bar" id="repeat-row">
-                    <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.2a5.8 5.8 0 014.9 2.7l1.3-1.3v4.1h-4.1l1.5-1.5A4 4 0 004 8H2.2A5.8 5.8 0 018 2.2zm5.8 5.8A5.8 5.8 0 013.1 11.1L1.8 12.4V8.3h4.1L4.4 9.8A4 4 0 0012 8h1.8z"/></svg>
+                    <svg class="icon" aria-hidden="true" data-icon="refresh" viewBox="0 0 24 24" fill="currentColor"><path d="M12.08 2.25C7.29 2.25 3.34 5.91 2.96 10.58H2C1.7 10.58 1.42 10.77 1.31 11.05C1.19 11.33 1.26 11.65 1.47 11.87L3.15 13.53C3.44 13.82 3.92 13.82 4.21 13.53L5.89 11.87C6.1 11.65 6.17 11.33 6.05 11.05C5.94 10.77 5.66 10.58 5.36 10.58H4.47C4.85 6.75 8.1 3.75 12.08 3.75C14.85 3.75 17.27 5.21 18.62 7.39C18.83 7.75 19.29 7.86 19.65 7.64C20 7.42 20.11 6.96 19.89 6.61C18.29 3.99 15.39 2.25 12.08 2.25Z"/><path d="M20.84 10.47C20.55 10.18 20.08 10.18 19.79 10.47L18.1 12.13C17.88 12.35 17.82 12.67 17.93 12.95C18.05 13.23 18.32 13.42 18.63 13.42H19.53C19.15 17.25 15.88 20.25 11.88 20.25C9.1 20.25 6.67 18.79 5.32 16.61C5.1 16.25 4.64 16.14 4.29 16.36C3.93 16.58 3.82 17.04 4.04 17.39C5.65 20.01 8.56 21.75 11.88 21.75C16.69 21.75 20.65 18.09 21.03 13.42H22C22.3 13.42 22.58 13.23 22.69 12.95C22.81 12.67 22.74 12.35 22.53 12.13L20.84 10.47Z"/></svg>
                     <span class="due-label" data-i18n="repeat.label">Повторение</span>
                     <button type="button" class="dp-btn" id="task-repeat"></button>
                     <span class="repeat-next muted" id="repeat-next" hidden></span>
                   </div>
                   <div class="due-bar due-custom" id="due-custom-row" hidden>
-                  <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+                  <svg class="icon" data-icon="bell" viewBox="0 0 24 24" fill="currentColor"><path d="M8.35 20.24C9.19 21.31 10.51 22 12 22C13.49 22 14.81 21.31 15.65 20.24C13.23 20.57 10.77 20.57 8.35 20.24Z"/><path d="M18.75 9V9.7C18.75 10.55 18.99 11.38 19.44 12.08L20.55 13.8C21.56 15.37 20.79 17.51 19.03 18.01C14.43 19.31 9.57 19.31 4.97 18.01C3.21 17.51 2.44 15.37 3.45 13.8L4.56 12.08C5.01 11.38 5.25 10.55 5.25 9.7V9C5.25 5.13 8.27 2 12 2C15.73 2 18.75 5.13 18.75 9Z"/></svg>
                   <span class="due-label" data-i18n="due.remind_at">Напомнить</span>
                   <button type="button" class="dp-btn" id="remind-date-btn"></button>
                   </div>
@@ -409,7 +409,7 @@
                 <div class="history-head">
                   <h2><span data-i18n="history.title">Записи времени</span> <span class="h-count" id="session-count">0</span></h2>
                   <div class="history-actions">
-                    <button id="add-session-btn" class="btn-soft"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="history.add_short">Запись</span></button>
+                    <button id="add-session-btn" class="btn-soft"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="history.add_short">Запись</span></button>
                     <button id="export-task-btn" class="ghost" data-i18n="history.excel" data-i18n-title="history.excel_title" title="Выгрузить логи времени этой задачи в Excel">⬇ Excel</button>
                   </div>
                 </div>
@@ -428,7 +428,7 @@
       <div id="time-view" class="view" hidden>
         <div class="island time-head period-head">
           <!-- «Свернуть» — первой слева: прячет числа и панель дня. -->
-          <button type="button" id="time-stats-toggle" class="icon-btn" aria-pressed="false" data-i18n-title="time.hide_stats" title="Скрыть статистику" data-i18n-aria="time.hide_stats" aria-label="Скрыть статистику"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 2h10.8A1.6 1.6 0 0115 3.6v8.8a1.6 1.6 0 01-1.6 1.6H2.6A1.6 1.6 0 011 12.4V3.6A1.6 1.6 0 012.6 2zm.1 1.6v8.8h6.6V3.6H2.7zm8.2 0v8.8h2.5V3.6h-2.5z"/></svg></button>
+          <button type="button" id="time-stats-toggle" class="icon-btn" aria-pressed="false" data-i18n-title="time.hide_stats" title="Скрыть статистику" data-i18n-aria="time.hide_stats" aria-label="Скрыть статистику"><svg class="icon" aria-hidden="true" data-icon="panel-right" viewBox="0 0 24 24" fill="currentColor"><path d="M22 11V13C22 16.77 22 18.66 20.83 19.83C19.85 20.8 18.39 20.97 15.75 20.99V3.01C18.39 3.03 19.85 3.2 20.83 4.17C22 5.34 22 7.23 22 11Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M10 3H14H14.25L14.25 21H14H10C6.23 21 4.34 21 3.17 19.83C2 18.66 2 16.77 2 13V11C2 7.23 2 5.34 3.17 4.17C4.34 3 6.23 3 10 3ZM4.75 10C4.75 9.59 5.09 9.25 5.5 9.25H11.5C11.91 9.25 12.25 9.59 12.25 10C12.25 10.41 11.91 10.75 11.5 10.75H5.5C5.09 10.75 4.75 10.41 4.75 10ZM5.75 14C5.75 13.59 6.09 13.25 6.5 13.25H10.5C10.91 13.25 11.25 13.59 11.25 14C11.25 14.41 10.91 14.75 10.5 14.75H6.5C6.09 14.75 5.75 14.41 5.75 14Z"/></svg></button>
           <div class="segmented time-modes" id="time-modes">
             <button type="button" data-mode="day" data-i18n="calendar.day">День</button>
             <button type="button" data-mode="days4" data-i18n="agenda.days4">4 дня</button>
@@ -438,8 +438,8 @@
           </div>
           <button type="button" id="time-today" class="btn-soft" data-i18n="calendar.today">Сегодня</button>
           <div class="period-nav">
-            <button type="button" id="time-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
-            <button type="button" id="time-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+            <button type="button" id="time-prev" class="icon-btn" data-i18n-aria="common.back" aria-label="Назад"><svg class="icon" data-icon="chevron-left" viewBox="7 7 10 10" fill="currentColor"><path d="M14.03 8.47C14.32 8.76 14.32 9.24 14.03 9.53L11.56 12L14.03 14.47C14.32 14.76 14.32 15.24 14.03 15.53C13.74 15.82 13.26 15.82 12.97 15.53L9.97 12.53C9.68 12.24 9.68 11.76 9.97 11.47L12.97 8.47C13.26 8.18 13.74 8.18 14.03 8.47Z"/></svg></button>
+            <button type="button" id="time-next" class="icon-btn" data-i18n-aria="common.forward" aria-label="Вперёд"><svg class="icon" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg></button>
           </div>
           <span class="period-title" id="time-title"></span>
           <span class="spacer"></span>
@@ -450,8 +450,8 @@
           </div>
           <!-- Действия у правого края: выгрузка — вторичная, «+ Запись» — главная
                кнопка экрана и стоит последней. -->
-          <button type="button" id="export-period-btn" class="btn-soft time-export" data-i18n-title="export.pick_period" title="Excel за период"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg><span data-i18n="export.excel">Экспорт</span></button>
-          <button type="button" id="ag-create" class="btn-accent ag-create"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
+          <button type="button" id="export-period-btn" class="btn-soft time-export" data-i18n-title="export.pick_period" title="Excel за период"><svg class="icon" aria-hidden="true" data-icon="download" viewBox="0 0 24 24" fill="currentColor"><path d="M12.55 16.51C12.41 16.66 12.21 16.75 12 16.75C11.79 16.75 11.59 16.66 11.45 16.51L7.45 12.13C7.17 11.83 7.19 11.35 7.49 11.07C7.8 10.79 8.27 10.81 8.55 11.12L11.25 14.07V3C11.25 2.59 11.59 2.25 12 2.25C12.41 2.25 12.75 2.59 12.75 3V14.07L15.45 11.12C15.73 10.81 16.2 10.79 16.51 11.07C16.81 11.35 16.83 11.83 16.55 12.13L12.55 16.51Z"/><path d="M3.75 15C3.75 14.59 3.41 14.25 3 14.25C2.59 14.25 2.25 14.59 2.25 15V15.05C2.25 16.42 2.25 17.52 2.37 18.39C2.49 19.29 2.75 20.05 3.35 20.65C3.95 21.25 4.71 21.51 5.61 21.63C6.48 21.75 7.58 21.75 8.95 21.75H15.05C16.42 21.75 17.52 21.75 18.39 21.63C19.29 21.51 20.05 21.25 20.65 20.65C21.25 20.05 21.51 19.29 21.63 18.39C21.75 17.52 21.75 16.42 21.75 15.05V15C21.75 14.59 21.41 14.25 21 14.25C20.59 14.25 20.25 14.59 20.25 15C20.25 16.44 20.25 17.44 20.15 18.19C20.05 18.93 19.87 19.31 19.59 19.59C19.31 19.87 18.93 20.05 18.19 20.15C17.44 20.25 16.44 20.25 15 20.25H9C7.56 20.25 6.56 20.25 5.81 20.15C5.07 20.05 4.69 19.87 4.41 19.59C4.13 19.31 3.95 18.93 3.85 18.19C3.75 17.44 3.75 16.44 3.75 15Z"/></svg><span data-i18n="export.excel">Экспорт</span></button>
+          <button type="button" id="ag-create" class="btn-accent ag-create"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="agenda.entry">Запись</span></button>
         </div>
 
         <div class="time-body" id="time-body">
@@ -459,19 +459,19 @@
             <div class="island time-kpis" id="time-kpis">
             <div class="stat-cards">
               <div class="stat-card">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM7.1 4.6a.9.9 0 011.8 0v2.9l2.1 1.2a.9.9 0 11-.9 1.56L7.55 8.77A.9.9 0 017.1 8V4.6z"/></svg>
+                <svg class="icon" data-icon="clock" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.52 17.52 22 12 22C6.48 22 2 17.52 2 12C2 6.48 6.48 2 12 2C17.52 2 22 6.48 22 12Z M12 7.25C12.41 7.25 12.75 7.59 12.75 8V11.69L15.03 13.97C15.32 14.26 15.32 14.74 15.03 15.03C14.74 15.32 14.26 15.32 13.97 15.03L11.47 12.53C11.33 12.39 11.25 12.2 11.25 12V8C11.25 7.59 11.59 7.25 12 7.25Z"/></svg>
                 <div><b id="sp-time">—</b><span data-i18n="stats.worked">всего проработано</span></div>
               </div>
               <div class="stat-card">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+                <svg class="icon" data-icon="wallet" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.1 8C21.04 8 20.98 8 20.92 8L20.9 8H18.39C16.33 8 14.56 9.63 14.56 11.75C14.56 13.87 16.33 15.5 18.39 15.5H20.9L20.92 15.5C20.98 15.5 21.04 15.5 21.1 15.5C21.94 15.44 22.68 14.79 22.75 13.87C22.75 13.81 22.75 13.74 22.75 13.68L22.75 13.67V9.83L22.75 9.82C22.75 9.76 22.75 9.69 22.75 9.63C22.68 8.71 21.94 8.06 21.1 8ZM18.17 12.75C18.7 12.75 19.14 12.3 19.14 11.75C19.14 11.2 18.7 10.75 18.17 10.75C17.64 10.75 17.21 11.2 17.21 11.75C17.21 12.3 17.64 12.75 18.17 12.75Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20.92 17C21.07 17 21.18 17.13 21.14 17.28C20.94 17.99 20.62 18.6 20.11 19.11C19.36 19.86 18.41 20.19 17.24 20.35C16.1 20.5 14.64 20.5 12.81 20.5H10.69C8.86 20.5 7.4 20.5 6.26 20.35C5.09 20.19 4.14 19.86 3.39 19.11C2.64 18.36 2.31 17.41 2.15 16.24C2 15.1 2 13.64 2 11.81V11.69C2 9.86 2 8.4 2.15 7.26C2.31 6.09 2.64 5.14 3.39 4.39C4.14 3.64 5.09 3.31 6.26 3.15C7.4 3 8.86 3 10.69 3L12.81 3C14.64 3 16.1 3 17.24 3.15C18.41 3.31 19.36 3.64 20.11 4.39C20.62 4.9 20.94 5.51 21.14 6.22C21.18 6.37 21.07 6.5 20.92 6.5L18.39 6.5C15.56 6.5 13.06 8.74 13.06 11.75C13.06 14.76 15.56 17 18.39 17L20.92 17ZM5.75 7C5.34 7 5 7.34 5 7.75C5 8.16 5.34 8.5 5.75 8.5H9.75C10.16 8.5 10.5 8.16 10.5 7.75C10.5 7.34 10.16 7 9.75 7H5.75Z"/></svg>
                 <div><b id="sp-money">—</b><span data-i18n="stats.earned">всего заработано</span></div>
               </div>
               <div class="stat-card">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M4.6 1a1 1 0 011 1v.4h4.8V2a1 1 0 112 0v.4h.6A2 2 0 0115 4.4v8.2A2 2 0 0113 14.6H3A2 2 0 011 12.6V4.4A2 2 0 013 2.4h.6V2a1 1 0 011-1zM3 6.2v6.4h10V6.2H3z"/></svg>
+                <svg class="icon" data-icon="calendar" viewBox="0 0 24 24" fill="currentColor"><path d="M7.75 2.5C7.75 2.09 7.41 1.75 7 1.75C6.59 1.75 6.25 2.09 6.25 2.5V4.08C4.81 4.19 3.87 4.48 3.17 5.17C2.48 5.87 2.19 6.81 2.08 8.25H21.92C21.81 6.81 21.52 5.87 20.83 5.17C20.13 4.48 19.19 4.19 17.75 4.08V2.5C17.75 2.09 17.41 1.75 17 1.75C16.59 1.75 16.25 2.09 16.25 2.5V4.01C15.58 4 14.84 4 14 4H10C9.16 4 8.42 4 7.75 4.01V2.5Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M2 12C2 11.16 2 10.42 2.01 9.75H21.99C22 10.42 22 11.16 22 12V14C22 17.77 22 19.66 20.83 20.83C19.66 22 17.77 22 14 22H10C6.23 22 4.34 22 3.17 20.83C2 19.66 2 17.77 2 14V12ZM17 14C17.55 14 18 13.55 18 13C18 12.45 17.55 12 17 12C16.45 12 16 12.45 16 13C16 13.55 16.45 14 17 14ZM17 18C17.55 18 18 17.55 18 17C18 16.45 17.55 16 17 16C16.45 16 16 16.45 16 17C16 17.55 16.45 18 17 18ZM13 13C13 13.55 12.55 14 12 14C11.45 14 11 13.55 11 13C11 12.45 11.45 12 12 12C12.55 12 13 12.45 13 13ZM13 17C13 17.55 12.55 18 12 18C11.45 18 11 17.55 11 17C11 16.45 11.45 16 12 16C12.55 16 13 16.45 13 17ZM7 14C7.55 14 8 13.55 8 13C8 12.45 7.55 12 7 12C6.45 12 6 12.45 6 13C6 13.55 6.45 14 7 14ZM7 18C7.55 18 8 17.55 8 17C8 16.45 7.55 16 7 16C6.45 16 6 16.45 6 17C6 17.55 6.45 18 7 18Z"/></svg>
                 <div><b id="sp-month">—</b><span data-i18n="stats.month">заработано в этом месяце</span></div>
               </div>
               <div class="stat-card">
-                <svg class="icon" viewBox="0 0 16 16"><path d="M13.6 3.3a1.05 1.05 0 010 1.5l-6.7 6.7a1.05 1.05 0 01-1.5 0L2 8.1a1.05 1.05 0 011.5-1.5l2.65 2.65 5.95-5.95a1.05 1.05 0 011.5 0z"/></svg>
+                <svg class="icon" data-icon="check-circle" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.52 17.52 22 12 22C6.48 22 2 17.52 2 12C2 6.48 6.48 2 12 2C17.52 2 22 6.48 22 12ZM16.03 8.97C16.32 9.26 16.32 9.74 16.03 10.03L11.03 15.03C10.74 15.32 10.26 15.32 9.97 15.03L7.97 13.03C7.68 12.74 7.68 12.26 7.97 11.97C8.26 11.68 8.74 11.68 9.03 11.97L10.5 13.44L12.73 11.2L14.97 8.97C15.26 8.68 15.74 8.68 16.03 8.97Z"/></svg>
                 <div><b id="sp-done">0</b><span data-i18n="stats.done">задач выполнено</span></div>
               </div>
             </div>
@@ -515,7 +515,7 @@
             <ul class="cal-day-list" id="cal-day-list"></ul>
             <p class="muted" id="cal-day-empty" data-i18n="calendar.day_empty" hidden>В этот день записей не было.</p>
             <button id="export-calendar-btn" class="btn-soft cal-export">
-              <svg class="icon" viewBox="0 0 16 16"><path d="M8 1.3a1 1 0 011 1v6.2l1.9-1.9 1.4 1.4L8 12.3l-4.3-4.3 1.4-1.4L7 8.5V2.3a1 1 0 011-1zM2.5 13.4h11v1.3h-11z"/></svg>
+              <svg class="icon" data-icon="download" viewBox="0 0 24 24" fill="currentColor"><path d="M12.55 16.51C12.41 16.66 12.21 16.75 12 16.75C11.79 16.75 11.59 16.66 11.45 16.51L7.45 12.13C7.17 11.83 7.19 11.35 7.49 11.07C7.8 10.79 8.27 10.81 8.55 11.12L11.25 14.07V3C11.25 2.59 11.59 2.25 12 2.25C12.41 2.25 12.75 2.59 12.75 3V14.07L15.45 11.12C15.73 10.81 16.2 10.79 16.51 11.07C16.81 11.35 16.83 11.83 16.55 12.13L12.55 16.51Z"/><path d="M3.75 15C3.75 14.59 3.41 14.25 3 14.25C2.59 14.25 2.25 14.59 2.25 15V15.05C2.25 16.42 2.25 17.52 2.37 18.39C2.49 19.29 2.75 20.05 3.35 20.65C3.95 21.25 4.71 21.51 5.61 21.63C6.48 21.75 7.58 21.75 8.95 21.75H15.05C16.42 21.75 17.52 21.75 18.39 21.63C19.29 21.51 20.05 21.25 20.65 20.65C21.25 20.05 21.51 19.29 21.63 18.39C21.75 17.52 21.75 16.42 21.75 15.05V15C21.75 14.59 21.41 14.25 21 14.25C20.59 14.25 20.25 14.59 20.25 15C20.25 16.44 20.25 17.44 20.15 18.19C20.05 18.93 19.87 19.31 19.59 19.59C19.31 19.87 18.93 20.05 18.19 20.15C17.44 20.25 16.44 20.25 15 20.25H9C7.56 20.25 6.56 20.25 5.81 20.15C5.07 20.05 4.69 19.87 4.41 19.59C4.13 19.31 3.95 18.93 3.85 18.19C3.75 17.44 3.75 16.44 3.75 15Z"/></svg>
               <span data-i18n="export.excel">Экспорт</span>
             </button>
           </aside>
@@ -545,8 +545,8 @@
               <div class="doc-head">
                 <input id="doc-title" class="doc-title" type="text" autocomplete="off" data-i18n-ph="docs.untitled" placeholder="Без названия" />
                 <button type="button" id="doc-project" class="dp-btn"></button>
-                <button type="button" id="doc-pin" class="icon-btn" data-i18n-title="docs.pin" title="Закрепить"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M9.3 1.2l5.5 5.5-1.1 1.1-1.2-.35-2.55 2.55.25 2.15-1.05 1.05L5.4 10.4 1.6 14.2l-.8-.8 3.8-3.8-2.7-2.7L3 5.85l2.15.25L7.7 3.55 7.35 2.3 8.4.25l.9.95z"/></svg></button>
-                <button type="button" id="doc-more" class="icon-btn" data-i18n-title="docs.more" title="Ещё"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6.6a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm5 0a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8zm5 0a1.4 1.4 0 110 2.8 1.4 1.4 0 010-2.8z"/></svg></button>
+                <button type="button" id="doc-pin" class="icon-btn" data-i18n-title="docs.pin" title="Закрепить"><svg class="icon" aria-hidden="true" data-icon="pin" viewBox="0 0 24 24" fill="currentColor"><path d="M19.18 7.81L16.22 4.84C14.19 2.81 13.18 1.79 12.09 2.03C11 2.27 10.51 3.62 9.52 6.32L8.85 8.14C8.59 8.86 8.46 9.22 8.22 9.49C8.12 9.62 8 9.73 7.86 9.82C7.57 10.04 7.2 10.14 6.46 10.34C4.8 10.8 3.97 11.03 3.66 11.57C3.52 11.81 3.45 12.07 3.45 12.34C3.46 12.97 4.07 13.58 5.28 14.8L6.7 16.22L2.22 20.7C1.93 20.99 1.93 21.48 2.22 21.78C2.52 22.07 3 22.07 3.3 21.78L7.78 17.3L9.24 18.76C10.47 19.99 11.08 20.6 11.71 20.6C11.98 20.6 12.24 20.54 12.47 20.4C13.02 20.09 13.25 19.26 13.71 17.58C13.91 16.85 14.01 16.48 14.23 16.18C14.32 16.05 14.43 15.94 14.55 15.83C14.82 15.59 15.18 15.46 15.89 15.19L17.74 14.5C20.4 13.5 21.73 13 21.97 11.91C22.2 10.83 21.2 9.82 19.18 7.81Z"/></svg></button>
+                <button type="button" id="doc-more" class="icon-btn" data-i18n-title="docs.more" title="Ещё"><svg class="icon" aria-hidden="true" data-icon="kebab" viewBox="0 0 24 24" fill="currentColor"><path d="M7 12C7 13.1 6.1 14 5 14C3.9 14 3 13.1 3 12C3 10.9 3.9 10 5 10C6.1 10 7 10.9 7 12Z"/><path d="M14 12C14 13.1 13.1 14 12 14C10.9 14 10 13.1 10 12C10 10.9 10.9 10 12 10C13.1 10 14 10.9 14 12Z"/><path d="M21 12C21 13.1 20.1 14 19 14C17.9 14 17 13.1 17 12C17 10.9 17.9 10 19 10C20.1 10 21 10.9 21 12Z"/></svg></button>
               </div>
               <div id="doc-editor-wrap"></div>
             </div>
@@ -564,20 +564,20 @@
           <section class="island settings-card" id="settings-account-card" hidden>
             <div class="settings-section-label" id="settings-account-label" data-i18n="settings.section_account" hidden>Аккаунт</div>
             <button type="button" class="settings-row settings-row-btn" id="settings-name-row">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a3.1 3.1 0 110 6.2 3.1 3.1 0 010-6.2zM8 9c-3.6 0-6.6 2.1-6.6 4.9V15h13.2v-1.1C14.6 11.1 11.6 9 8 9z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="account" viewBox="0 0 24 24" fill="currentColor"><path d="M8 6A4 4 0 1 0 16 6A4 4 0 1 0 8 6Z"/><path d="M5 17A7 4 0 1 0 19 17A7 4 0 1 0 5 17Z"/></svg>
               <span class="settings-row-label" data-i18n="profile.name_label">Имя</span>
               <span class="settings-row-value" id="settings-name-value"></span>
             </button>
             <button type="button" class="settings-row settings-row-btn" id="settings-password-row">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.8 7V5.2a3.2 3.2 0 116.4 0V7h-1.6V5.2a1.6 1.6 0 10-3.2 0V7zM3.6 7.6h8.8a1 1 0 011 1v5a1 1 0 01-1 1H3.6a1 1 0 01-1-1v-5a1 1 0 011-1z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="lock" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M5.25 10.05V8C5.25 4.27 8.27 1.25 12 1.25C15.73 1.25 18.75 4.27 18.75 8V10.05C19.86 10.14 20.59 10.35 21.12 10.88C22 11.76 22 13.17 22 16C22 18.83 22 20.24 21.12 21.12C20.24 22 18.83 22 16 22H8C5.17 22 3.76 22 2.88 21.12C2 20.24 2 18.83 2 16C2 13.17 2 11.76 2.88 10.88C3.41 10.35 4.14 10.14 5.25 10.05ZM6.75 8C6.75 5.1 9.1 2.75 12 2.75C14.9 2.75 17.25 5.1 17.25 8V10C16.87 10 16.45 10 16 10H8C7.55 10 7.13 10 6.75 10V8ZM12 13.25C12.41 13.25 12.75 13.59 12.75 14V18C12.75 18.41 12.41 18.75 12 18.75C11.59 18.75 11.25 18.41 11.25 18V14C11.25 13.59 11.59 13.25 12 13.25Z"/></svg>
               <span class="settings-row-label" data-i18n="profile.change_password">Изменить пароль</span>
             </button>
             <button type="button" class="settings-row settings-row-btn settings-row-danger" id="settings-signout-row">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 2.2h3.4v1.6H5v8.4h1.8v1.6H3.4a1 1 0 01-1-1V3.2a1 1 0 011-1zM6.6 7.4h4.1v1.2H6.6zM10.4 5.6l3.6 2.4-3.6 2.4z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="logout" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M16.13 12C16.13 11.59 15.79 11.25 15.38 11.25L4.4 11.25L6.36 9.57C6.68 9.3 6.71 8.83 6.44 8.51C6.17 8.2 5.7 8.16 5.39 8.43L1.89 11.43C1.72 11.57 1.63 11.78 1.63 12C1.63 12.22 1.72 12.43 1.89 12.57L5.39 15.57C5.7 15.84 6.17 15.8 6.44 15.49C6.71 15.17 6.68 14.7 6.36 14.43L4.4 12.75L15.38 12.75C15.79 12.75 16.13 12.41 16.13 12Z"/><path d="M9.38 8C9.38 8.7 9.38 9.05 9.54 9.31C9.62 9.41 9.71 9.51 9.82 9.58C10.07 9.75 10.42 9.75 11.13 9.75L15.38 9.75C16.62 9.75 17.63 10.76 17.63 12C17.63 13.24 16.62 14.25 15.38 14.25L11.13 14.25C10.42 14.25 10.07 14.25 9.82 14.42C9.71 14.49 9.62 14.59 9.54 14.69C9.38 14.95 9.38 15.3 9.38 16C9.38 18.83 9.38 20.24 10.25 21.12C11.13 22 12.55 22 15.37 22L16.37 22C19.2 22 20.62 22 21.5 21.12C22.37 20.24 22.37 18.83 22.37 16L22.37 8C22.37 5.17 22.37 3.76 21.5 2.88C20.62 2 19.2 2 16.37 2L15.37 2C12.55 2 11.13 2 10.25 2.88C9.38 3.76 9.38 5.17 9.38 8Z"/></svg>
               <span class="settings-row-label" data-i18n="auth.sign_out">Выйти</span>
             </button>
             <button type="button" class="settings-row settings-row-btn settings-row-last settings-row-danger" id="settings-delete-row">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="trash" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6.39C3 5.9 3.35 5.51 3.77 5.51L6.44 5.51C6.97 5.49 7.43 5.11 7.61 4.54C7.62 4.53 7.62 4.51 7.64 4.44L7.76 4.05C7.83 3.81 7.89 3.6 7.97 3.42C8.31 2.68 8.94 2.16 9.66 2.03C9.84 2 10.04 2 10.26 2H13.74C13.96 2 14.16 2 14.34 2.03C15.06 2.16 15.69 2.68 16.03 3.42C16.11 3.6 16.17 3.81 16.24 4.05L16.36 4.44C16.38 4.51 16.38 4.53 16.39 4.54C16.57 5.11 17.13 5.49 17.66 5.51H20.23C20.65 5.51 21 5.9 21 6.39C21 6.87 20.65 7.26 20.23 7.26H3.77C3.35 7.26 3 6.87 3 6.39Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11.6 22H12.4C15.19 22 16.58 22 17.48 21.11C18.39 20.23 18.48 18.78 18.67 15.87L18.93 11.68C19.03 10.1 19.08 9.32 18.63 8.82C18.18 8.32 17.41 8.32 15.88 8.32H8.12C6.59 8.32 5.82 8.32 5.37 8.82C4.92 9.32 4.97 10.1 5.07 11.68L5.33 15.87C5.52 18.78 5.61 20.23 6.52 21.11C7.42 22 8.81 22 11.6 22ZM10.25 12.19C10.21 11.75 9.84 11.44 9.43 11.48C9.01 11.53 8.71 11.91 8.75 12.35L9.25 17.61C9.29 18.04 9.66 18.36 10.07 18.32C10.49 18.27 10.79 17.89 10.75 17.45L10.25 12.19ZM14.57 11.48C14.99 11.53 15.29 11.91 15.25 12.35L14.75 17.61C14.71 18.04 14.34 18.36 13.93 18.32C13.51 18.27 13.21 17.89 13.25 17.45L13.75 12.19C13.79 11.75 14.16 11.44 14.57 11.48Z"/></svg>
               <span class="settings-row-label" data-i18n="account.delete">Удалить аккаунт</span>
             </button>
           </section>
@@ -585,22 +585,22 @@
           <section class="island settings-card">
             <div class="settings-section-label" data-i18n="settings.section_main">Основное</div>
             <button type="button" class="settings-row settings-row-btn" id="settings-lang-row">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.3a6.7 6.7 0 100 13.4A6.7 6.7 0 008 1.3zm0 1.6a5.1 5.1 0 110 10.2A5.1 5.1 0 018 2.9zM1.5 7.4h13v1.2h-13zM7.4 1.5h1.2v13H7.4z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="globe" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M2.03 11.25C2.41 6.08 6.73 2 12 2C11.17 2 10.43 2.36 9.82 2.92C9.22 3.48 8.7 4.25 8.29 5.16C7.87 6.08 7.55 7.16 7.33 8.33C7.16 9.26 7.05 10.25 7.01 11.25H2.03ZM2.03 12.75H7.01C7.05 13.75 7.16 14.74 7.33 15.67C7.55 16.84 7.87 17.92 8.29 18.84C8.7 19.75 9.22 20.52 9.82 21.08C10.43 21.64 11.17 22 12 22C6.73 22 2.41 17.92 2.03 12.75Z"/><path d="M12 3.4C11.73 3.4 11.37 3.51 10.96 3.89C10.54 4.27 10.12 4.87 9.76 5.68C9.39 6.49 9.09 7.46 8.89 8.55C8.73 9.41 8.63 10.32 8.59 11.25H15.41C15.37 10.32 15.27 9.41 15.11 8.55C14.91 7.46 14.61 6.49 14.24 5.68C13.88 4.87 13.46 4.27 13.04 3.89C12.63 3.51 12.28 3.4 12 3.4Z"/><path d="M8.89 15.45C9.09 16.54 9.39 17.51 9.76 18.32C10.12 19.13 10.54 19.73 10.96 20.11C11.37 20.49 11.73 20.6 12 20.6C12.28 20.6 12.63 20.49 13.04 20.11C13.46 19.73 13.88 19.13 14.24 18.32C14.61 17.51 14.91 16.54 15.11 15.45C15.27 14.59 15.37 13.68 15.41 12.75H8.59C8.63 13.68 8.73 14.59 8.89 15.45Z"/><path d="M12 2C12.83 2 13.57 2.36 14.18 2.92C14.78 3.48 15.3 4.25 15.71 5.16C16.13 6.08 16.45 7.16 16.67 8.33C16.84 9.26 16.95 10.25 16.99 11.25H21.97C21.59 6.08 17.27 2 12 2Z"/><path d="M16.67 15.67C16.45 16.84 16.13 17.92 15.71 18.84C15.3 19.75 14.78 20.52 14.18 21.08C13.57 21.64 12.83 22 12 22C17.27 22 21.59 17.92 21.97 12.75H16.99C16.95 13.75 16.84 14.74 16.67 15.67Z"/></svg>
               <span class="settings-row-label" data-i18n="nav.language">Язык</span>
               <span class="settings-row-value" id="settings-lang-value">Русский</span>
             </button>
             <div class="settings-row settings-row-last">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="sun" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12C17 14.76 14.76 17 12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C12.41 1.25 12.75 1.59 12.75 2V4C12.75 4.41 12.41 4.75 12 4.75C11.59 4.75 11.25 4.41 11.25 4V2C11.25 1.59 11.59 1.25 12 1.25ZM3.67 3.72C3.95 3.41 4.42 3.39 4.73 3.67L6.95 5.7C7.26 5.98 7.28 6.45 7 6.76C6.72 7.07 6.24 7.09 5.94 6.81L3.72 4.78C3.41 4.5 3.39 4.02 3.67 3.72ZM20.33 3.72C20.61 4.02 20.59 4.5 20.28 4.78L18.06 6.81C17.76 7.09 17.28 7.07 17 6.76C16.72 6.45 16.74 5.98 17.05 5.7L19.27 3.67C19.58 3.39 20.05 3.41 20.33 3.72ZM1.25 12C1.25 11.59 1.59 11.25 2 11.25H4C4.41 11.25 4.75 11.59 4.75 12C4.75 12.41 4.41 12.75 4 12.75H2C1.59 12.75 1.25 12.41 1.25 12ZM19.25 12C19.25 11.59 19.59 11.25 20 11.25H22C22.41 11.25 22.75 11.59 22.75 12C22.75 12.41 22.41 12.75 22 12.75H20C19.59 12.75 19.25 12.41 19.25 12ZM17.03 17.03C17.32 16.73 17.79 16.73 18.09 17.03L20.31 19.25C20.6 19.54 20.6 20.02 20.31 20.31C20.02 20.6 19.54 20.6 19.25 20.31L17.03 18.09C16.73 17.79 16.73 17.32 17.03 17.03ZM6.97 17.03C7.27 17.32 7.27 17.79 6.97 18.09L4.75 20.31C4.46 20.6 3.98 20.6 3.69 20.31C3.4 20.02 3.4 19.54 3.69 19.25L5.91 17.03C6.21 16.73 6.68 16.73 6.97 17.03ZM12 19.25C12.41 19.25 12.75 19.59 12.75 20V22C12.75 22.41 12.41 22.75 12 22.75C11.59 22.75 11.25 22.41 11.25 22V20C11.25 19.59 11.59 19.25 12 19.25Z"/></svg>
               <span class="settings-row-label" data-i18n="settings.theme_label">Тема</span>
               <div class="theme-tabs segmented">
                 <button type="button" class="theme-tab" data-theme="system" data-i18n-title="nav.theme_system" title="Системная">
-                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2.6h12a1 1 0 011 1v7.4a1 1 0 01-1 1H9.4v1.4h2.35v1.2h-7.5v-1.2H6.6v-1.4H2a1 1 0 01-1-1V3.6a1 1 0 011-1zm.4 1.4v6.6h11.2V4z"/></svg>
+                  <svg class="icon" aria-hidden="true" data-icon="monitor" viewBox="0 0 24 24" fill="currentColor"><path d="M8 17C5.17 17 3.76 17 2.88 16.12C2.31 15.55 2.11 14.76 2.04 13.5H21.96C21.89 14.76 21.69 15.55 21.12 16.12C20.24 17 18.83 17 16 17H12.75V21H16C16.41 21 16.75 21.34 16.75 21.75C16.75 22.16 16.41 22.5 16 22.5H8C7.59 22.5 7.25 22.16 7.25 21.75C7.25 21.34 7.59 21 8 21H11.25V17H8Z"/><path d="M10 2H14C17.77 2 19.66 2 20.83 3.17C22 4.34 22 6.23 22 10V11C22 11.55 22 12.05 21.99 12.5H2.01C2 12.05 2 11.55 2 11V10C2 6.23 2 4.34 3.17 3.17C4.34 2 6.23 2 10 2Z"/></svg>
                 </button>
                 <button type="button" class="theme-tab" data-theme="light" data-i18n-title="nav.theme_light" title="Светлая">
-                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM7.3.6h1.4v2.2H7.3zM7.3 13.2h1.4v2.2H7.3zM.6 7.3h2.2v1.4H.6zM13.2 7.3h2.2v1.4H13.2z"/></svg>
+                  <svg class="icon" aria-hidden="true" data-icon="sun" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12C17 14.76 14.76 17 12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C12.41 1.25 12.75 1.59 12.75 2V4C12.75 4.41 12.41 4.75 12 4.75C11.59 4.75 11.25 4.41 11.25 4V2C11.25 1.59 11.59 1.25 12 1.25ZM3.67 3.72C3.95 3.41 4.42 3.39 4.73 3.67L6.95 5.7C7.26 5.98 7.28 6.45 7 6.76C6.72 7.07 6.24 7.09 5.94 6.81L3.72 4.78C3.41 4.5 3.39 4.02 3.67 3.72ZM20.33 3.72C20.61 4.02 20.59 4.5 20.28 4.78L18.06 6.81C17.76 7.09 17.28 7.07 17 6.76C16.72 6.45 16.74 5.98 17.05 5.7L19.27 3.67C19.58 3.39 20.05 3.41 20.33 3.72ZM1.25 12C1.25 11.59 1.59 11.25 2 11.25H4C4.41 11.25 4.75 11.59 4.75 12C4.75 12.41 4.41 12.75 4 12.75H2C1.59 12.75 1.25 12.41 1.25 12ZM19.25 12C19.25 11.59 19.59 11.25 20 11.25H22C22.41 11.25 22.75 11.59 22.75 12C22.75 12.41 22.41 12.75 22 12.75H20C19.59 12.75 19.25 12.41 19.25 12ZM17.03 17.03C17.32 16.73 17.79 16.73 18.09 17.03L20.31 19.25C20.6 19.54 20.6 20.02 20.31 20.31C20.02 20.6 19.54 20.6 19.25 20.31L17.03 18.09C16.73 17.79 16.73 17.32 17.03 17.03ZM6.97 17.03C7.27 17.32 7.27 17.79 6.97 18.09L4.75 20.31C4.46 20.6 3.98 20.6 3.69 20.31C3.4 20.02 3.4 19.54 3.69 19.25L5.91 17.03C6.21 16.73 6.68 16.73 6.97 17.03ZM12 19.25C12.41 19.25 12.75 19.59 12.75 20V22C12.75 22.41 12.41 22.75 12 22.75C11.59 22.75 11.25 22.41 11.25 22V20C11.25 19.59 11.59 19.25 12 19.25Z"/></svg>
                 </button>
                 <button type="button" class="theme-tab" data-theme="dark" data-i18n-title="nav.theme_dark" title="Тёмная">
-                  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4.6a3.4 3.4 0 100 6.8 3.4 3.4 0 000-6.8zM2 2.6h1.2v1.2H2zM12.8 2.2h1v1h-1zM12.5 11.5h1.3v1.3h-1.3z"/></svg>
+                  <svg class="icon" aria-hidden="true" data-icon="moon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C17.52 22 22 17.52 22 12C22 11.54 21.31 11.46 21.07 11.86C19.93 13.74 17.86 15 15.5 15C11.91 15 9 12.09 9 8.5C9 6.14 10.26 4.07 12.14 2.93C12.54 2.69 12.46 2 12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22Z"/></svg>
                 </button>
               </div>
             </div>
@@ -609,7 +609,7 @@
           <section class="island settings-card" id="settings-data-card" hidden>
             <div class="settings-section-label" id="settings-data-label" data-i18n="settings.section_data" hidden>Данные</div>
             <button type="button" class="settings-row settings-row-last switch" id="settings-sync-toggle" aria-pressed="false">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.6 6.4a3.6 3.6 0 016.9-1.3A3 3 0 0114.8 8a3 3 0 01-3 3H4.9A2.9 2.9 0 012 8.1a2.9 2.9 0 012.6-2.88z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="cloud" viewBox="0 0 24 24" fill="currentColor"><path d="M16.29 20C19.44 20 22 17.47 22 14.35C22 11.88 20.39 9.78 18.16 9.01C17.84 6.19 15.42 4 12.48 4C9.32 4 6.76 6.53 6.76 9.65C6.76 10.34 6.89 11 7.12 11.61C6.85 11.56 6.57 11.53 6.29 11.53C3.92 11.53 2 13.43 2 15.76C2 18.1 3.92 20 6.29 20H16.29Z"/></svg>
               <span class="settings-row-label" data-i18n="sync.toggle_label">Синхронизировать с аккаунтом</span>
               <span class="switch-track"><span class="switch-thumb"></span></span>
             </button>
@@ -618,12 +618,12 @@
           <section class="island settings-card">
             <div class="settings-section-label" data-i18n="settings.section_notifications">Уведомления</div>
             <button type="button" class="settings-row switch" id="settings-notif-toggle" aria-pressed="true">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.4a1 1 0 011 1v.35a4.3 4.3 0 013.3 4.18v2.4l1.1 1.9a.8.8 0 01-.7 1.2H3.3a.8.8 0 01-.7-1.2l1.1-1.9v-2.4A4.3 4.3 0 017 2.75V2.4a1 1 0 011-1zM6.3 13.2h3.4a1.7 1.7 0 01-3.4 0z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="bell" viewBox="0 0 24 24" fill="currentColor"><path d="M8.35 20.24C9.19 21.31 10.51 22 12 22C13.49 22 14.81 21.31 15.65 20.24C13.23 20.57 10.77 20.57 8.35 20.24Z"/><path d="M18.75 9V9.7C18.75 10.55 18.99 11.38 19.44 12.08L20.55 13.8C21.56 15.37 20.79 17.51 19.03 18.01C14.43 19.31 9.57 19.31 4.97 18.01C3.21 17.51 2.44 15.37 3.45 13.8L4.56 12.08C5.01 11.38 5.25 10.55 5.25 9.7V9C5.25 5.13 8.27 2 12 2C15.73 2 18.75 5.13 18.75 9Z"/></svg>
               <span class="settings-row-label" data-i18n="notif.enable">Напоминания о дедлайнах</span>
               <span class="switch-track"><span class="switch-thumb"></span></span>
             </button>
             <button type="button" class="settings-row settings-row-btn settings-row-last" id="settings-notif-system">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.55 1.4h2.9l.4 1.85a5.1 5.1 0 011.05.6l1.8-.6 1.45 2.5-1.4 1.25a5.1 5.1 0 010 1.2l1.4 1.25-1.45 2.5-1.8-.6a5.1 5.1 0 01-1.05.6l-.4 1.85h-2.9l-.4-1.85a5.1 5.1 0 01-1.05-.6l-1.8.6-1.45-2.5 1.4-1.25a5.1 5.1 0 010-1.2L1.5 5.95 2.95 3.45l1.8.6a5.1 5.1 0 011.05-.6zM8 5.6a2.4 2.4 0 100 4.8 2.4 2.4 0 000-4.8z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="settings" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M14.28 2.15C13.91 2 13.44 2 12.5 2C11.56 2 11.09 2 10.72 2.15C10.23 2.36 9.84 2.74 9.63 3.23C9.54 3.46 9.5 3.72 9.49 4.1C9.47 4.66 9.18 5.17 8.69 5.45C8.2 5.73 7.61 5.72 7.11 5.46C6.77 5.28 6.53 5.18 6.29 5.15C5.76 5.08 5.22 5.22 4.8 5.55C4.48 5.79 4.24 6.19 3.77 7C3.3 7.81 3.07 8.21 3.02 8.6C2.95 9.13 3.09 9.66 3.42 10.08C3.57 10.28 3.77 10.44 4.1 10.64C4.57 10.94 4.88 11.44 4.88 12C4.88 12.56 4.57 13.06 4.1 13.36C3.77 13.56 3.56 13.72 3.42 13.92C3.09 14.34 2.95 14.87 3.02 15.39C3.07 15.79 3.3 16.19 3.77 17C4.24 17.81 4.48 18.21 4.8 18.45C5.22 18.78 5.76 18.92 6.29 18.85C6.53 18.82 6.77 18.72 7.11 18.54C7.61 18.28 8.2 18.27 8.69 18.55C9.18 18.83 9.47 19.34 9.49 19.9C9.5 20.28 9.54 20.54 9.63 20.77C9.84 21.26 10.23 21.64 10.72 21.85C11.09 22 11.56 22 12.5 22C13.44 22 13.91 22 14.28 21.85C14.77 21.64 15.16 21.26 15.37 20.77C15.46 20.54 15.5 20.28 15.51 19.9C15.53 19.34 15.82 18.83 16.31 18.55C16.8 18.27 17.39 18.28 17.89 18.54C18.23 18.72 18.47 18.82 18.71 18.85C19.24 18.92 19.78 18.78 20.2 18.45C20.52 18.21 20.76 17.81 21.23 17C21.7 16.19 21.93 15.79 21.98 15.39C22.05 14.87 21.91 14.34 21.58 13.92C21.43 13.72 21.23 13.56 20.9 13.36C20.43 13.06 20.12 12.56 20.12 12C20.12 11.44 20.43 10.94 20.9 10.64C21.23 10.44 21.43 10.28 21.58 10.08C21.91 9.66 22.05 9.13 21.98 8.6C21.93 8.21 21.7 7.81 21.23 7C20.76 6.19 20.52 5.79 20.2 5.55C19.78 5.22 19.24 5.08 18.71 5.15C18.47 5.18 18.23 5.28 17.89 5.46C17.39 5.72 16.8 5.73 16.31 5.45C15.82 5.17 15.53 4.66 15.51 4.1C15.5 3.72 15.46 3.46 15.37 3.23C15.16 2.74 14.77 2.36 14.28 2.15ZM12.5 15C14.17 15 15.52 13.66 15.52 12C15.52 10.34 14.17 9 12.5 9C10.83 9 9.48 10.34 9.48 12C9.48 13.66 10.83 15 12.5 15Z"/></svg>
               <span class="settings-row-label" data-i18n="notif.system">Уведомления в системе</span>
               <span class="settings-row-value" id="settings-notif-state"></span>
             </button>
@@ -632,7 +632,7 @@
           <section class="island settings-card">
             <div class="settings-section-label" data-i18n="settings.section_work">Работа</div>
             <div class="settings-row">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="wallet" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.1 8C21.04 8 20.98 8 20.92 8L20.9 8H18.39C16.33 8 14.56 9.63 14.56 11.75C14.56 13.87 16.33 15.5 18.39 15.5H20.9L20.92 15.5C20.98 15.5 21.04 15.5 21.1 15.5C21.94 15.44 22.68 14.79 22.75 13.87C22.75 13.81 22.75 13.74 22.75 13.68L22.75 13.67V9.83L22.75 9.82C22.75 9.76 22.75 9.69 22.75 9.63C22.68 8.71 21.94 8.06 21.1 8ZM18.17 12.75C18.7 12.75 19.14 12.3 19.14 11.75C19.14 11.2 18.7 10.75 18.17 10.75C17.64 10.75 17.21 11.2 17.21 11.75C17.21 12.3 17.64 12.75 18.17 12.75Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M20.92 17C21.07 17 21.18 17.13 21.14 17.28C20.94 17.99 20.62 18.6 20.11 19.11C19.36 19.86 18.41 20.19 17.24 20.35C16.1 20.5 14.64 20.5 12.81 20.5H10.69C8.86 20.5 7.4 20.5 6.26 20.35C5.09 20.19 4.14 19.86 3.39 19.11C2.64 18.36 2.31 17.41 2.15 16.24C2 15.1 2 13.64 2 11.81V11.69C2 9.86 2 8.4 2.15 7.26C2.31 6.09 2.64 5.14 3.39 4.39C4.14 3.64 5.09 3.31 6.26 3.15C7.4 3 8.86 3 10.69 3L12.81 3C14.64 3 16.1 3 17.24 3.15C18.41 3.31 19.36 3.64 20.11 4.39C20.62 4.9 20.94 5.51 21.14 6.22C21.18 6.37 21.07 6.5 20.92 6.5L18.39 6.5C15.56 6.5 13.06 8.74 13.06 11.75C13.06 14.76 15.56 17 18.39 17L20.92 17ZM5.75 7C5.34 7 5 7.34 5 7.75C5 8.16 5.34 8.5 5.75 8.5H9.75C10.16 8.5 10.5 8.16 10.5 7.75C10.5 7.34 10.16 7 9.75 7H5.75Z"/></svg>
               <span class="settings-row-label" data-i18n="rate.default_label">Ставка по умолчанию</span>
               <div class="settings-row-input">
                 <input id="settings-rate" type="text" inputmode="decimal" autocomplete="off" placeholder="0" />
@@ -640,7 +640,7 @@
               </div>
             </div>
             <div class="settings-row settings-row-last">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.6 4.8A2.8 2.8 0 014.4 2H12a1 1 0 011 1v1H4.6a.6.6 0 100 1.2H14a1 1 0 011 1v5.5A2.3 2.3 0 0112.7 14H3.9A2.3 2.3 0 011.6 11.7V4.8zm10 3.2a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="currency" viewBox="0 0 24 24" fill="currentColor"><path d="M20.94 8.19C21.52 8.76 21.77 9.48 21.89 10.34C22 11.17 22 12.22 22 13.52V13.62C22 14.93 22 15.98 21.89 16.8C21.77 17.66 21.52 18.38 20.94 18.95C20.36 19.53 19.63 19.77 18.76 19.89C17.93 20 16.87 20 15.55 20H10.62C9.3 20 8.24 20 7.41 19.89C6.54 19.77 5.81 19.53 5.23 18.95C4.88 18.61 4.65 18.2 4.49 17.75C5.36 17.86 6.44 17.86 7.69 17.86H12.7C13.98 17.86 15.08 17.86 15.97 17.74C16.92 17.61 17.82 17.33 18.56 16.6C19.3 15.87 19.58 14.98 19.71 14.04C19.83 13.17 19.83 12.07 19.83 10.81V10.62C19.83 9.39 19.83 8.32 19.72 7.46C20.18 7.61 20.59 7.84 20.94 8.19Z"/><path d="M10.19 9.05C9.26 9.05 8.51 9.79 8.51 10.71C8.51 11.63 9.26 12.38 10.19 12.38C11.12 12.38 11.88 11.63 11.88 10.71C11.88 9.79 11.12 9.05 10.19 9.05Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M2.85 5.84C2 6.67 2 8.02 2 10.71C2 13.41 2 14.76 2.85 15.59C3.69 16.43 5.06 16.43 7.78 16.43H12.6C15.33 16.43 16.69 16.43 17.54 15.59C18.39 14.76 18.39 13.41 18.39 10.71C18.39 8.02 18.39 6.67 17.54 5.84C16.69 5 15.33 5 12.6 5H7.78C5.06 5 3.69 5 2.85 5.84ZM7.06 10.71C7.06 9 8.46 7.62 10.19 7.62C11.92 7.62 13.33 9 13.33 10.71C13.33 12.42 11.92 13.81 10.19 13.81C8.46 13.81 7.06 12.42 7.06 10.71ZM15.49 13.33C15.09 13.33 14.77 13.01 14.77 12.62V8.81C14.77 8.42 15.09 8.1 15.49 8.1C15.89 8.1 16.22 8.42 16.22 8.81V12.62C16.22 13.01 15.89 13.33 15.49 13.33ZM4.17 12.62C4.17 13.01 4.49 13.33 4.89 13.33C5.29 13.33 5.61 13.01 5.61 12.62L5.61 8.81C5.61 8.42 5.29 8.1 4.89 8.1C4.49 8.1 4.17 8.42 4.17 8.81L4.17 12.62Z"/></svg>
               <span class="settings-row-label" data-i18n="settings.currency_label">Валюта</span>
               <button type="button" class="dp-btn" id="settings-currency" data-i18n-title="currency.title" title="Валюта"></button>
             </div>
@@ -650,7 +650,7 @@
             <div class="settings-section-label" data-i18n="settings.section_tags">Теги</div>
             <div id="tags-list"></div>
             <button type="button" class="settings-row settings-row-btn settings-row-last" id="tags-add">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg>
               <span class="settings-row-label" data-i18n="tag.add">Новый тег</span>
             </button>
           </section>
@@ -659,29 +659,29 @@
             <div class="settings-section-label" data-i18n="settings.section_about">О приложении</div>
             <div class="settings-rows-2col">
             <button type="button" class="settings-row settings-row-btn" id="settings-about-us">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2a6.8 6.8 0 100 13.6A6.8 6.8 0 008 1.2zm0 2a4.8 4.8 0 110 9.6 4.8 4.8 0 010-9.6zM8 4.3a1 1 0 110 2 1 1 0 010-2zm-.9 3.3h1.8v4.4H7.1z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="info" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.52 17.52 22 12 22C6.48 22 2 17.52 2 12C2 6.48 6.48 2 12 2C17.52 2 22 6.48 22 12ZM12 17.75C12.41 17.75 12.75 17.41 12.75 17V11C12.75 10.59 12.41 10.25 12 10.25C11.59 10.25 11.25 10.59 11.25 11V17C11.25 17.41 11.59 17.75 12 17.75ZM12 7C12.55 7 13 7.45 13 8C13 8.55 12.55 9 12 9C11.45 9 11 8.55 11 8C11 7.45 11.45 7 12 7Z"/></svg>
               <span class="settings-row-label" data-i18n="about.us">О нас</span>
-              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+              <svg class="icon settings-row-arrow" aria-hidden="true" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg>
             </button>
             <button type="button" class="settings-row settings-row-btn" id="settings-about-blog">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="blog" viewBox="0 0 24 24" fill="currentColor"><path d="M2 16.14V5C2 3.9 2.89 3.01 3.98 3.07C4.96 3.13 6.11 3.25 7 3.49C8.05 3.76 9.3 4.35 10.28 4.88C10.59 5.04 10.92 5.15 11.25 5.21L11.25 20.39C10.95 20.33 10.65 20.22 10.37 20.07C9.37 19.54 8.08 18.92 7 18.63C6.12 18.4 4.98 18.28 4.01 18.22C2.91 18.15 2 17.25 2 16.14Z"/><path d="M12.75 20.39C13.05 20.33 13.35 20.22 13.63 20.07C14.63 19.54 15.92 18.92 17 18.63C17.88 18.4 19.02 18.28 19.99 18.22C21.09 18.15 22 17.25 22 16.14V4.93C22 3.86 21.15 2.98 20.08 3.02C18.95 3.06 17.55 3.17 16.5 3.49C15.59 3.76 14.54 4.3 13.67 4.8C13.38 4.97 13.07 5.1 12.75 5.17L12.75 20.39Z"/></svg>
               <span class="settings-row-label" data-i18n="about.blog">Блог</span>
-              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+              <svg class="icon settings-row-arrow" aria-hidden="true" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg>
             </button>
             <button type="button" class="settings-row settings-row-btn" id="settings-legal-privacy">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="doc" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.17 3.17C3 4.34 3 6.23 3 10V14C3 17.77 3 19.66 4.17 20.83C5.34 22 7.23 22 11 22H13C16.77 22 18.66 22 19.83 20.83C21 19.66 21 17.77 21 14V10C21 6.23 21 4.34 19.83 3.17C18.66 2 16.77 2 13 2H11C7.23 2 5.34 2 4.17 3.17ZM8 9.25C7.59 9.25 7.25 9.59 7.25 10C7.25 10.41 7.59 10.75 8 10.75H16C16.41 10.75 16.75 10.41 16.75 10C16.75 9.59 16.41 9.25 16 9.25H8ZM8 13.25C7.59 13.25 7.25 13.59 7.25 14C7.25 14.41 7.59 14.75 8 14.75H13C13.41 14.75 13.75 14.41 13.75 14C13.75 13.59 13.41 13.25 13 13.25H8Z"/></svg>
               <span class="settings-row-label" data-i18n="about.privacy">Конфиденциальность</span>
-              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+              <svg class="icon settings-row-arrow" aria-hidden="true" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg>
             </button>
             <button type="button" class="settings-row settings-row-btn" id="settings-legal-terms">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="doc" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.17 3.17C3 4.34 3 6.23 3 10V14C3 17.77 3 19.66 4.17 20.83C5.34 22 7.23 22 11 22H13C16.77 22 18.66 22 19.83 20.83C21 19.66 21 17.77 21 14V10C21 6.23 21 4.34 19.83 3.17C18.66 2 16.77 2 13 2H11C7.23 2 5.34 2 4.17 3.17ZM8 9.25C7.59 9.25 7.25 9.59 7.25 10C7.25 10.41 7.59 10.75 8 10.75H16C16.41 10.75 16.75 10.41 16.75 10C16.75 9.59 16.41 9.25 16 9.25H8ZM8 13.25C7.59 13.25 7.25 13.59 7.25 14C7.25 14.41 7.59 14.75 8 14.75H13C13.41 14.75 13.75 14.41 13.75 14C13.75 13.59 13.41 13.25 13 13.25H8Z"/></svg>
               <span class="settings-row-label" data-i18n="about.terms">Условия использования</span>
-              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+              <svg class="icon settings-row-arrow" aria-hidden="true" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg>
             </button>
             <button type="button" class="settings-row settings-row-btn settings-row-last" id="settings-legal-docs">
-              <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8h7.2L14 5.6v8.6a.6.6 0 01-.6.6H3a.6.6 0 01-.6-.6V2.4A.6.6 0 013 1.8zm6.4 1.6v2.4h2.4zM4.6 7.6h6.8v1.2H4.6zm0 2.6h6.8v1.2H4.6z"/></svg>
+              <svg class="icon" aria-hidden="true" data-icon="doc" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.17 3.17C3 4.34 3 6.23 3 10V14C3 17.77 3 19.66 4.17 20.83C5.34 22 7.23 22 11 22H13C16.77 22 18.66 22 19.83 20.83C21 19.66 21 17.77 21 14V10C21 6.23 21 4.34 19.83 3.17C18.66 2 16.77 2 13 2H11C7.23 2 5.34 2 4.17 3.17ZM8 9.25C7.59 9.25 7.25 9.59 7.25 10C7.25 10.41 7.59 10.75 8 10.75H16C16.41 10.75 16.75 10.41 16.75 10C16.75 9.59 16.41 9.25 16 9.25H8ZM8 13.25C7.59 13.25 7.25 13.59 7.25 14C7.25 14.41 7.59 14.75 8 14.75H13C13.41 14.75 13.75 14.41 13.75 14C13.75 13.59 13.41 13.25 13 13.25H8Z"/></svg>
               <span class="settings-row-label" data-i18n="about.legal">Документы и реквизиты</span>
-              <svg class="icon settings-row-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.6l1.4-1.4L14.4 8l-6.8 6.8-1.4-1.4L11.6 8z"/></svg>
+              <svg class="icon settings-row-arrow" aria-hidden="true" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg>
             </button>
             </div>
           </section>
@@ -712,9 +712,9 @@
   <!-- Кастомный выбор даты (переиспользуется везде: период в календаре, диалог записи времени) -->
   <div class="dp-pop" id="dp-pop" hidden>
     <div class="dp-head">
-      <button type="button" class="icon-btn" id="dp-prev" data-i18n-aria="common.back" aria-label="Прошлый месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+      <button type="button" class="icon-btn" id="dp-prev" data-i18n-aria="common.back" aria-label="Прошлый месяц"><svg class="icon" data-icon="chevron-left" viewBox="7 7 10 10" fill="currentColor"><path d="M14.03 8.47C14.32 8.76 14.32 9.24 14.03 9.53L11.56 12L14.03 14.47C14.32 14.76 14.32 15.24 14.03 15.53C13.74 15.82 13.26 15.82 12.97 15.53L9.97 12.53C9.68 12.24 9.68 11.76 9.97 11.47L12.97 8.47C13.26 8.18 13.74 8.18 14.03 8.47Z"/></svg></button>
       <span id="dp-title"></span>
-      <button type="button" class="icon-btn" id="dp-next" data-i18n-aria="common.forward" aria-label="Следующий месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+      <button type="button" class="icon-btn" id="dp-next" data-i18n-aria="common.forward" aria-label="Следующий месяц"><svg class="icon" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg></button>
     </div>
     <div class="dp-weekdays">
       <span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span>
@@ -725,9 +725,9 @@
          стрелке выбрать из списка. -->
     <div class="dp-time" id="dp-time" hidden>
       <span class="dp-time-label" data-i18n="due.time">Время</span>
-      <span class="dp-combo"><input id="dp-hours" class="field-sm dp-tf" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Часы" /><button type="button" id="dp-hours-pick" class="dp-combo-btn" aria-label="Выбрать часы"><svg class="icon" viewBox="0 0 16 16"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg></button></span>
+      <span class="dp-combo"><input id="dp-hours" class="field-sm dp-tf" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Часы" /><button type="button" id="dp-hours-pick" class="dp-combo-btn" aria-label="Выбрать часы"><svg class="icon" data-icon="chevron-down" viewBox="7 6.963 10 10" fill="currentColor"><path d="M15.53 9.97C15.82 10.26 15.82 10.74 15.53 11.03L12.53 14.03C12.39 14.17 12.2 14.25 12 14.25C11.8 14.25 11.61 14.17 11.47 14.03L8.47 11.03C8.18 10.74 8.18 10.26 8.47 9.97C8.76 9.68 9.24 9.68 9.53 9.97L12 12.44L14.47 9.97C14.76 9.68 15.24 9.68 15.53 9.97Z"/></svg></button></span>
       <span class="dp-time-colon">:</span>
-      <span class="dp-combo"><input id="dp-minutes" class="field-sm dp-tf" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Минуты" /><button type="button" id="dp-minutes-pick" class="dp-combo-btn" aria-label="Выбрать минуты"><svg class="icon" viewBox="0 0 16 16"><path d="M4.3 6.2a.95.95 0 011.34 0L8 8.56l2.36-2.36a.95.95 0 111.34 1.34l-3.03 3.03a.95.95 0 01-1.34 0L4.3 7.54a.95.95 0 010-1.34z"/></svg></button></span>
+      <span class="dp-combo"><input id="dp-minutes" class="field-sm dp-tf" type="text" inputmode="numeric" maxlength="2" autocomplete="off" aria-label="Минуты" /><button type="button" id="dp-minutes-pick" class="dp-combo-btn" aria-label="Выбрать минуты"><svg class="icon" data-icon="chevron-down" viewBox="7 6.963 10 10" fill="currentColor"><path d="M15.53 9.97C15.82 10.26 15.82 10.74 15.53 11.03L12.53 14.03C12.39 14.17 12.2 14.25 12 14.25C11.8 14.25 11.61 14.17 11.47 14.03L8.47 11.03C8.18 10.74 8.18 10.26 8.47 9.97C8.76 9.68 9.24 9.68 9.53 9.97L12 12.44L14.47 9.97C14.76 9.68 15.24 9.68 15.53 9.97Z"/></svg></button></span>
       <button type="button" class="dp-done" id="dp-done" data-i18n="common.done">Готово</button>
     </div>
   </div>
@@ -798,7 +798,7 @@
         <button type="button" class="dp-btn" id="tmdlg-end"></button>
         <span class="tmdlg-dur" id="tmdlg-dur"></span>
         <button type="button" class="icon-btn icon-btn-danger" id="tmdlg-del" data-i18n-title="agenda.delete_entry" title="Удалить запись">
-          <svg class="icon" viewBox="0 0 16 16"><path d="M6 1h4v1.4H6zM2.4 2.8h11.2v1.3H2.4zM3.3 4.1h9.4L12 14H4z"/></svg>
+          <svg class="icon" data-icon="trash" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6.39C3 5.9 3.35 5.51 3.77 5.51L6.44 5.51C6.97 5.49 7.43 5.11 7.61 4.54C7.62 4.53 7.62 4.51 7.64 4.44L7.76 4.05C7.83 3.81 7.89 3.6 7.97 3.42C8.31 2.68 8.94 2.16 9.66 2.03C9.84 2 10.04 2 10.26 2H13.74C13.96 2 14.16 2 14.34 2.03C15.06 2.16 15.69 2.68 16.03 3.42C16.11 3.6 16.17 3.81 16.24 4.05L16.36 4.44C16.38 4.51 16.38 4.53 16.39 4.54C16.57 5.11 17.13 5.49 17.66 5.51H20.23C20.65 5.51 21 5.9 21 6.39C21 6.87 20.65 7.26 20.23 7.26H3.77C3.35 7.26 3 6.87 3 6.39Z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11.6 22H12.4C15.19 22 16.58 22 17.48 21.11C18.39 20.23 18.48 18.78 18.67 15.87L18.93 11.68C19.03 10.1 19.08 9.32 18.63 8.82C18.18 8.32 17.41 8.32 15.88 8.32H8.12C6.59 8.32 5.82 8.32 5.37 8.82C4.92 9.32 4.97 10.1 5.07 11.68L5.33 15.87C5.52 18.78 5.61 20.23 6.52 21.11C7.42 22 8.81 22 11.6 22ZM10.25 12.19C10.21 11.75 9.84 11.44 9.43 11.48C9.01 11.53 8.71 11.91 8.75 12.35L9.25 17.61C9.29 18.04 9.66 18.36 10.07 18.32C10.49 18.27 10.79 17.89 10.75 17.45L10.25 12.19ZM14.57 11.48C14.99 11.53 15.29 11.91 15.25 12.35L14.75 17.61C14.71 18.04 14.34 18.36 13.93 18.32C13.51 18.27 13.21 17.89 13.25 17.45L13.75 12.19C13.79 11.75 14.16 11.44 14.57 11.48Z"/></svg>
         </button>
       </div>
 
@@ -890,9 +890,9 @@
         </div>
         <div class="exp-cal">
           <div class="dp-head">
-            <button type="button" class="icon-btn" id="exp-cal-prev" data-i18n-aria="common.back" aria-label="Прошлый месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M10.3 2.5L11.7 4 7.6 8l4.1 4-1.4 1.5L4.8 8z"/></svg></button>
+            <button type="button" class="icon-btn" id="exp-cal-prev" data-i18n-aria="common.back" aria-label="Прошлый месяц"><svg class="icon" data-icon="chevron-left" viewBox="7 7 10 10" fill="currentColor"><path d="M14.03 8.47C14.32 8.76 14.32 9.24 14.03 9.53L11.56 12L14.03 14.47C14.32 14.76 14.32 15.24 14.03 15.53C13.74 15.82 13.26 15.82 12.97 15.53L9.97 12.53C9.68 12.24 9.68 11.76 9.97 11.47L12.97 8.47C13.26 8.18 13.74 8.18 14.03 8.47Z"/></svg></button>
             <span id="exp-cal-title"></span>
-            <button type="button" class="icon-btn" id="exp-cal-next" data-i18n-aria="common.forward" aria-label="Следующий месяц"><svg class="icon" viewBox="0 0 16 16"><path d="M5.7 2.5L4.3 4l4.1 4-4.1 4 1.4 1.5L11.2 8z"/></svg></button>
+            <button type="button" class="icon-btn" id="exp-cal-next" data-i18n-aria="common.forward" aria-label="Следующий месяц"><svg class="icon" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg></button>
           </div>
           <div class="dp-weekdays"><span data-i18n="weekday.mon">Пн</span><span data-i18n="weekday.tue">Вт</span><span data-i18n="weekday.wed">Ср</span><span data-i18n="weekday.thu">Чт</span><span data-i18n="weekday.fri">Пт</span><span data-i18n="weekday.sat">Сб</span><span data-i18n="weekday.sun">Вс</span></div>
           <div class="dp-days" id="exp-cal-days"></div>
@@ -963,7 +963,7 @@
         <div class="island">
           <div id="pdlg-tag-list"></div>
           <button type="button" class="settings-row settings-row-btn settings-row-last" id="pdlg-tag-add">
-            <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M7 1.4h2v5.6h5.6v2H9v5.6H7V9H1.4V7H7z"/></svg>
+            <svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg>
             <span class="settings-row-label" data-i18n="tag.project_add">Новый тег проекта</span>
           </button>
         </div>
@@ -1035,13 +1035,6 @@
           <button id="auth-submit" class="primary" data-i18n="auth.sign_in">Войти</button>
         </div>
       </div>
-      <div id="auth-step-confirm" hidden>
-        <div class="modal-title" data-i18n="auth.confirm_title">Проверьте почту</div>
-        <p class="muted" id="auth-confirm-text"></p>
-        <div class="modal-buttons">
-          <button id="auth-confirm-ok" class="primary" data-i18n="common.ok">ОК</button>
-        </div>
-      </div>
       <div id="auth-step-onboarding" hidden>
         <div class="modal-title" id="auth-onboarding-title" data-i18n="auth.onboarding_title">Расскажите о себе</div>
         <p class="muted auth-sub" id="auth-consent-sub" data-i18n="auth.consent_sub" hidden>Мы обновили Условия использования и Политику конфиденциальности. Чтобы пользоваться аккаунтом дальше, примите новую редакцию.</p>
@@ -1069,6 +1062,7 @@
   <div id="toast" hidden></div>
 
   <script src="vendor/supabase.js"></script>
+  <script src="core/icons.js"></script>
   <script src="core/catalog.js"></script>
   <script src="core/lang.js"></script>
   <script src="core/i18n.js"></script>

@@ -53,10 +53,21 @@ export function TabPage({ tab, children }) {
   return <IosTabPage tab={tab}>{children}</IosTabPage>;
 }
 
-/** Корневой экран вкладки, завёрнутый в TabPage. */
-export function withTabPage(Screen, tab) {
+/** Корневой экран вкладки, завёрнутый в TabPage. Skeleton — заглушка
+ *  вкладки: при первом показе она стоит первые кадры, пока строится
+ *  настоящая страница (на тяжёлой вкладке это заметное время, и переход
+ *  иначе подтормаживал на пустом месте). */
+export function withTabPage(Screen, tab, Skeleton) {
   function Page(props) {
-    return <TabPage tab={tab}><Screen {...props} /></TabPage>;
+    const [ready, setReady] = useState(!Skeleton);
+    useEffect(() => {
+      if (ready) return undefined;
+      // Два кадра: заглушка успевает показаться до тяжёлой отрисовки.
+      let second;
+      const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setReady(true)); });
+      return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
+    }, []);
+    return <TabPage tab={tab}>{ready ? <Screen {...props} /> : <Skeleton />}</TabPage>;
   }
   Page.displayName = `TabPage(${tab})`;
   return Page;

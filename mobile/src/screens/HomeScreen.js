@@ -154,7 +154,7 @@ export default function HomeScreen({ navigation }) {
       <TabHeader title={t(lang, 'nav.home')}>
         <HeaderButton icon="plus" label={t(lang, 'agenda.new_entry')} onPress={addEntry} />
         <HeaderButton icon="calendar" label={t(lang, 'today.pick_day')} onPress={pickDay} />
-        <HeaderButton icon={view === 'list' ? 'panel' : 'list-bullet'} label={t(lang, view === 'list' ? 'today.grid' : 'today.list')} onPress={() => setView((v) => (v === 'list' ? 'grid' : 'list'))} />
+        <HeaderButton icon={view === 'list' ? 'panel' : 'list'} label={t(lang, view === 'list' ? 'today.grid' : 'today.list')} onPress={() => setView((v) => (v === 'list' ? 'grid' : 'list'))} />
       </TabHeader>
 
       {view === 'grid' ? (

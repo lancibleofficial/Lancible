@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import MainTabs from './MainTabs';
-import { HomeSkeleton } from '../components/Skeleton';
+import { AppSkeleton } from '../components/Skeleton';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 
@@ -20,6 +20,6 @@ export default function RootNavigator() {
   // Пока читается локальное хранилище и разрешается сессия, показываем не
   // спиннер по центру пустого экрана, а заглушку будущей главной: так видно,
   // что именно грузится, и переход к готовому экрану не выглядит рывком.
-  if (authStatus === 'loading' || !hasHydrated) return <HomeSkeleton />;
+  if (authStatus === 'loading' || !hasHydrated) return <AppSkeleton />;
   return <MainTabs />;
 }

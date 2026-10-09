@@ -943,6 +943,9 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   content: attr(data-ph); float: left; height: 0; pointer-events: none; color: var(--text-faint);
 }
 .led-pm .led-empty-line::before { opacity: 0.8; }
+/* Рисуют — не пишут: подсказка ввода не нужна. */
+.led-annotating .led-pm .led-empty::before, .led-annotating .led-pm .led-empty-line::before,
+.led-drawing-active .led-pm .led-empty::before, .led-drawing-active .led-pm .led-empty-line::before { display: none; }
 .led-pm ::selection { background: var(--sel); }
 .led-readonly .led-toolbar, .led-readonly .led-tablebar, .led-readonly .led-handle { display: none; }
 .led-readonly .led-pm { caret-color: transparent; }
@@ -1352,6 +1355,10 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
 .led-mobile .led-toolbar { padding: 4px 6px; }
 .led-mobile .led-handle { display: none !important; }
 .led-mobile .led-page-wrap { padding: 16px 16px 50vh; }
+/* Поле текста на телефоне — не ниже экрана: ткнуть, чтобы писать, и
+   рисовать пером можно до самого низа; длинный текст растягивает его.
+   Вычитаются панель (46) и поле страницы сверху (16) с запасом. */
+.led-mobile .led-pm { min-height: calc(100vh - 78px); }
 .led-mobile .led-status { display: none; }
 
 /* ---------- Статус задачи в интерфейсе ---------- */

@@ -34,6 +34,7 @@ const read = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 function sourceFiles() {
   const files = fs.readdirSync(SRC).filter((f) => f.endsWith('.js')).sort().map((f) => path.join(SRC, f));
   files.push(path.join(ROOT, 'src', 'renderer', 'core', 'doc.js'));
+  files.push(path.join(ROOT, 'src', 'renderer', 'core', 'icons.js'));
   return files;
 }
 

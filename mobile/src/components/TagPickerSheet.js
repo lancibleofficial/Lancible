@@ -23,7 +23,9 @@ import { useColors, spacing, radius, fontSize, typography } from '../theme';
  *  @param {string[]} value — выбранные теги
  *  @param {string} [projectId] — проект задачи: его теги видны и создаются
  *  @param {function} onChange — новый набор */
-export default function TagPickerSheet({ value, projectId, onChange, onDone }) {
+/** @param embedded внутри другого листа: без своего заголовка и низа;
+ *  «создать тег» отдаётся наверх (onCreate) — открывать лист поверх нельзя. */
+export default function TagPickerSheet({ value, projectId, onChange, onDone, embedded, onCreate }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
@@ -37,7 +39,7 @@ export default function TagPickerSheet({ value, projectId, onChange, onDone }) {
   // закрылся и сам не вернётся. Вызывающий передаёт onDone и возвращает себя
   // обратно — иначе набранные там поля пропали бы.
   useEffect(() => {
-    if (!onDone) return undefined;
+    if (!onDone || embedded) return undefined;
     setSheetFooter(<PrimaryButton title={t(lang, 'common.ok')} onPress={() => onDone(ids)} />);
     return () => setSheetFooter(null);
   }, [ids, lang]);
@@ -50,7 +52,7 @@ export default function TagPickerSheet({ value, projectId, onChange, onDone }) {
 
   return (
     <View style={styles.content}>
-      <Text style={styles.title}>{t(lang, 'tag.pick')}</Text>
+      {embedded ? null : <Text style={styles.title}>{t(lang, 'tag.pick')}</Text>}
 
       {picked.length ? (
         <View style={styles.picked}>
@@ -85,9 +87,9 @@ export default function TagPickerSheet({ value, projectId, onChange, onDone }) {
         {offerCreate ? (
           <Pressable
             style={[styles.row, styles.createRow]}
-            onPress={() => openSheet(
-              <TagEditSheet presetName={typed} projectId={projectId} onSaved={(made) => apply([...ids, made.id])} />,
-            )}
+            onPress={() => (embedded && onCreate
+              ? onCreate(typed, (made) => apply([...ids, made.id]))
+              : openSheet(<TagEditSheet presetName={typed} projectId={projectId} onSaved={(made) => apply([...ids, made.id])} />))}
           >
             <Icon name="plus" size={14} color={colors.textDim} />
             <Text style={styles.createText} numberOfLines={1}>

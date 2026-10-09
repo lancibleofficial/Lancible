@@ -10,7 +10,7 @@ import { useColors, spacing } from '../theme';
 
 // Пять вкладок макета B2: Проекты · Задачи · Сегодня · Цифры · Меню.
 // Внутренние имена Home и Menu прежние — на них ссылаются переходы.
-const ICON_NAMES = { Projects: 'cards', Tasks: 'inbox', Home: 'clock', Stats: 'chart', Menu: 'menu' };
+const ICON_NAMES = { Projects: 'folder', Tasks: 'tasks', Home: 'today', Stats: 'chart', Menu: 'menu' };
 
 /** Иконка вкладки: став активной, подпрыгивает на пружине. */
 function TabIcon({ focused, name, color, styles }) {

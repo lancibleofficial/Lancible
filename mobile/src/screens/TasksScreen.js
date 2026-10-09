@@ -110,7 +110,7 @@ export default function TasksScreen({ navigation }) {
           );
         })}
         <Tap onPress={() => setShowDone((v) => !v)} style={[styles.chip, showDone && styles.chipOn]} accessibilityRole="switch" accessibilityState={{ checked: showDone }} accessibilityLabel={t(lang, 'tasks.show_done')}>
-          <Icon name="list-check" size={15} color={showDone ? colors.text : colors.textDim} />
+          <Icon name="done-list" size={15} color={showDone ? colors.text : colors.textDim} />
         </Tap>
       </ScrollView>
 

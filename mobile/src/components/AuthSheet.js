@@ -37,7 +37,7 @@ export default function AuthSheet({ initialTab = 'signin' }) {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [offerSignup, setOfferSignup] = useState(false);
-  const { authError, pendingConfirmEmail, signIn, signUp, signInWithGoogle, clearAuthError } = useAuthStore();
+  const { authError, signIn, signUp, signInWithGoogle, clearAuthError } = useAuthStore();
 
   function switchTab(next) {
     setTab(next);
@@ -55,7 +55,7 @@ export default function AuthSheet({ initialTab = 'signin' }) {
       else if (result.offerSignup) setOfferSignup(true);
     } else {
       const result = await signUp(email, password);
-      if (result.ok && !result.needsConfirmation) closeSheet();
+      if (result.ok) closeSheet();
     }
     setLoading(false);
   }
@@ -69,10 +69,6 @@ export default function AuthSheet({ initialTab = 'signin' }) {
   }
 
   useEffect(() => {
-    if (pendingConfirmEmail) {
-      setSheetFooter(<PrimaryButton title={t(lang, 'common.ok')} onPress={closeSheet} />);
-      return () => setSheetFooter(null);
-    }
     setSheetFooter(
       <PrimaryButton
         title={t(lang, tab === 'signin' ? 'auth.sign_in' : 'auth.create_account')}
@@ -82,16 +78,7 @@ export default function AuthSheet({ initialTab = 'signin' }) {
     );
     return () => setSheetFooter(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, email, password, loading, lang, pendingConfirmEmail]);
-
-  if (pendingConfirmEmail) {
-    return (
-      <View style={{ gap: spacing.sm }}>
-        <Text style={styles.title}>{t(lang, 'auth.confirm_title')}</Text>
-        <Text style={styles.subtitle}>{t(lang, 'auth.confirm_text', { email: pendingConfirmEmail })}</Text>
-      </View>
-    );
-  }
+  }, [tab, email, password, loading, lang]);
 
   return (
     <View style={{ gap: spacing.md }}>

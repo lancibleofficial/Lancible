@@ -32,7 +32,7 @@
 
 ```mermaid
 graph TD
-    CORE["src/renderer/core/<br/>семнадцать файлов<br/>чистой логики"]
+    CORE["src/renderer/core/<br/>восемнадцать файлов<br/>чистой логики"]
 
     APP["src/renderer/app.js<br/>около 5800 строк"]
     MAIN["src/main.js<br/>окно, автообновление, IPC"]
@@ -41,7 +41,7 @@ graph TD
     LAND["landing/<br/>статические страницы<br/>и граф кода"]
 
     CORE --> APP
-    CORE -->|"шестнадцать из семнадцати<br/>побайтно"| MOB
+    CORE -->|"семнадцать из восемнадцати<br/>побайтно"| MOB
     APP --> MAIN
     APP --> SHIM
     MAIN --> DESK["Десктоп<br/>Windows + macOS"]
@@ -111,9 +111,9 @@ graph TD
 
 ## Общее ядро и где оно кончается
 
-В `src/renderer/core/` семнадцать файлов чистой логики без единого
+В `src/renderer/core/` восемнадцать файлов чистой логики без единого
 обращения к DOM. На телефон `scripts/sync-mobile-core.js` копирует
-**шестнадцать** из них побайтно, а `tests/unit/mobile-core.test.js` следит,
+**семнадцать** из них побайтно, а `tests/unit/mobile-core.test.js` следит,
 чтобы копии не разошлись с оригиналом.
 
 Своим у телефона остался один — словарь. Вот что где:
@@ -135,6 +135,7 @@ graph TD
 | `views`    | `core/views.js`          | побайтная копия + сборка RN  | да               |
 | `legal`    | `core/legal.js`          | побайтная копия              | да               |
 | документ   | `core/doc.js`            | побайтная копия              | да               |
+| иконки     | `core/icons.js`          | побайтная копия              | да               |
 | `migrate`  | `core/migrate.js`        | побайтная копия + свои поля интерфейса | да     |
 | `i18n`     | `core/i18n.js`           | свой словарь, строки короче  | частично         |
 

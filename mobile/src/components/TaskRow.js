@@ -14,7 +14,12 @@ import { badgeBg } from '../lib/tags';
 import { useColors, spacing, fontSize } from '../theme';
 import { t } from '../lib/i18n';
 
-export default function TaskRow({ task, onPress, showProject = false, first = false, compact = false }) {
+/**
+ * @param onToggleDone своя обработка галочки (колода проектов сначала
+ *                     уводит строку анимацией, потом отмечает задачу)
+ * @param checked      показать галочку, пока задача ещё не отмечена в сторе
+ */
+export default function TaskRow({ task, onPress, showProject = false, first = false, compact = false, onToggleDone, checked }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
@@ -32,6 +37,7 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
   const version = task.versionId ? versions.find((v) => v.id === task.versionId) : null;
   const elapsed = taskElapsedMs(task, activeTimer);
   const due = task.done ? null : dueState(task);
+  const done = !!task.done || !!checked;
 
   const status = task.statusId ? getStatus(statuses, task.statusId) : null;
   const meta = [];
@@ -50,16 +56,16 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
     >
       <Tap
         hitSlop={10}
-        onPress={() => toggleTaskDone(task.id)}
-        style={[styles.circ, task.done && styles.circOn]}
+        onPress={() => (onToggleDone ? onToggleDone(task) : toggleTaskDone(task.id))}
+        style={[styles.circ, done && styles.circOn]}
         accessibilityRole="checkbox"
-        accessibilityState={{ checked: !!task.done }}
+        accessibilityState={{ checked: done }}
         accessibilityLabel={t(lang, 'task.mark_done')}
       >
-        {task.done ? <Icon name="check" size={11} color={colors.accentText} /> : null}
+        {done ? <Icon name="check" size={11} color={colors.accentText} /> : null}
       </Tap>
       <View style={styles.mid}>
-        <Text style={[styles.title, task.done && styles.titleDone]} numberOfLines={2}>{task.title || t(lang, 'task.no_name')}</Text>
+        <Text style={[styles.title, done && styles.titleDone]} numberOfLines={2}>{task.title || t(lang, 'task.no_name')}</Text>
         {(showProject && project) || meta.length ? (
           <View style={styles.meta}>
             {showProject && project ? (

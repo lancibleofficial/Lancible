@@ -141,8 +141,12 @@ const makeStyles = (colors) => StyleSheet.create({
   pill: {
     height: MINI_PLAYER_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2,
     paddingLeft: spacing.sm, paddingRight: spacing.md,
-    backgroundColor: colors.panel2, borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
+    // Лежит поверх страницы: своя поверхность (белая на светлой) и мягкая
+    // тень вместо серой заливки с рамкой. Тень — boxShadow, равномерно
+    // размытая со всех сторон: системная тень Android (elevation) темнела к
+    // середине нижнего края и выглядела грязно.
+    backgroundColor: colors.floating, borderRadius: 18,
+    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 18, spreadDistance: 0, color: colors.shadow }],
   },
   stop: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   main: { flex: 1, minWidth: 0 },

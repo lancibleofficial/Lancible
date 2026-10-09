@@ -1,9 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSheetStore, closeSheet } from '../store/useSheetStore';
+import { useAppStore } from '../store/useAppStore';
+import Tap from './Tap';
+import Icon from './Icon';
+import { t } from '../lib/i18n';
 import { HEADER_CONTENT_HEIGHT } from './AppHeader';
 import { useColors, radius, spacing } from '../theme';
+
+/** Прокрутка листа для содержимого: открыть лист сразу на нужном разделе. */
+export const SheetScrollContext = createContext({ scrollTo: () => {} });
 
 const OPEN_MS = 260;
 const CLOSE_MS = 220;
@@ -41,6 +48,7 @@ export default function BottomSheet() {
   const content = useSheetStore((s) => s.content);
   const footer = useSheetStore((s) => s.footer);
   const colors = useColors();
+  const lang = useAppStore((s) => s.settings.lang);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const styles = makeStyles(colors);
@@ -49,6 +57,8 @@ export default function BottomSheet() {
   const [renderedContent, setRenderedContent] = useState(null);
   const [renderedFooter, setRenderedFooter] = useState(null);
   const translateY = useRef(new Animated.Value(windowHeight)).current;
+  const scrollRef = useRef(null);
+  const scrollApi = useRef({ scrollTo: (y) => scrollRef.current?.scrollTo({ y, animated: false }) }).current;
   const backdrop = useRef(new Animated.Value(0)).current;
 
   // Уход вниз: лист ease in, подложка гаснет вместе с ним.
@@ -116,16 +126,22 @@ export default function BottomSheet() {
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: backdrop }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
         <Animated.View style={[styles.sheet, { maxHeight, paddingBottom: insets.bottom || spacing.md, transform: [{ translateY }] }]}>
+          {/* Шапка листа: ручка посередине (за неё тянут вниз), справа —
+              крестик. Крестик у всех листов один, в общем месте. */}
           <View {...panResponder.panHandlers} style={styles.grabberZone}>
             <View style={styles.grabber} />
           </View>
+          <Tap scale={0.9} hitSlop={8} onPress={closeSheet} style={styles.close} accessibilityRole="button" accessibilityLabel={t(lang, 'common.close')}>
+            <Icon name="x" size={13} color={colors.textDim} />
+          </Tap>
           <ScrollView
+            ref={scrollRef}
             style={styles.scroll}
             contentContainerStyle={[styles.content, renderedFooter && styles.contentWithFooter]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {renderedContent}
+            <SheetScrollContext.Provider value={scrollApi}>{renderedContent}</SheetScrollContext.Provider>
           </ScrollView>
           {renderedFooter ? <View style={styles.footer}>{renderedFooter}</View> : null}
         </Animated.View>
@@ -140,10 +156,12 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.panel, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
     overflow: 'hidden',
   },
-  grabberZone: { alignItems: 'center', paddingVertical: spacing.sm },
+  // Высота шапки — под крестик 30 с полями: заголовок листа ниже него.
+  grabberZone: { alignItems: 'center', height: 46, paddingTop: spacing.sm },
+  close: { position: 'absolute', top: spacing.sm + 2, right: spacing.md, width: 30, height: 30, borderRadius: 15, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.borderStrong },
   scroll: { flexShrink: 1 },
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  content: { paddingHorizontal: spacing.lg, paddingTop: 0, paddingBottom: spacing.xl },
   contentWithFooter: { paddingBottom: spacing.md },
   footer: {
     backgroundColor: colors.panel, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm,

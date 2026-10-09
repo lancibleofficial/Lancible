@@ -7,7 +7,7 @@
 // iOS: колода проектов брала нижний запас вместе с плашкой и сжималась,
 // когда таймер запускали; теперь запас — только под панель вкладок.
 import { StyleSheet } from 'react-native';
-import { render } from '@testing-library/react-native';
+import { render, act } from '@testing-library/react-native';
 import MainTabBar from '../src/navigation/MainTabBar';
 import ProjectsScreen from '../src/screens/ProjectsScreen';
 import { MINI_PLAYER_HEIGHT } from '../src/components/TimerMiniPlayer';
@@ -37,7 +37,7 @@ test('Android: с плашкой панель занимает в расклад
   const idle = await render(<MainTabBar {...barProps()} />);
   expect(StyleSheet.flatten(idle.toJSON().props.style).marginTop || 0).toBe(0);
 
-  useAppStore.setState({ activeTimer: running });
+  await act(() => useAppStore.setState({ activeTimer: running }));
   const busy = await render(<MainTabBar {...barProps()} />);
   busy.getByText('Вёрстка');
   // Блок плашки (она сама и зазор до панели) уходит вверх, поверх страницы.
@@ -51,7 +51,7 @@ test('iOS: колода не сжимается, когда таймер зап�
   const before = pad(idle.toJSON());
   expect(before).toBe(tabBarClearance);
 
-  useAppStore.setState({ activeTimer: running });
+  await act(() => useAppStore.setState({ activeTimer: running }));
   const busy = await render(<ProjectsScreen navigation={nav} />);
   expect(pad(busy.toJSON())).toBe(before);
 });

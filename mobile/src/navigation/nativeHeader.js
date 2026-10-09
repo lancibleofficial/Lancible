@@ -10,7 +10,9 @@
 // Экраны ничего не знают о том, какая шапка: TabHeader и DetailHeader на
 // iOS 26+ ничего не рисуют, а через navigation.setOptions отдают нативной
 // шапке заголовок и кнопки — те же, что нарисовали бы сами. Кнопки
-// переводятся в нативные (SF Symbols, бейдж), остальное — своим элементом.
+// переводятся в нативные (бейдж, стекло), остальное — своим элементом.
+// Иконки кнопок и «назад» — наши Solar Bold картинками (assets/header,
+// scripts/make-ios-icons.js), а не SF Symbols и системный шеврон.
 import { isValidElement, useLayoutEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import AppHeader, { StackTitle } from '../components/AppHeader';
@@ -20,19 +22,23 @@ const IOS_MAJOR = Platform.OS === 'ios' ? (parseInt(String(Platform.Version), 10
 /** Нативная шапка со стеклом: iOS 26 и выше. */
 export const IOS_NATIVE_HEADER = IOS_MAJOR >= 26;
 
-/** Наши иконки → SF Symbols для нативных кнопок шапки. */
-export const SF_SYMBOL = {
-  search: 'magnifyingglass',
-  bell: 'bell',
-  plus: 'plus',
-  calendar: 'calendar',
-  panel: 'rectangle.split.2x1',
-  'list-bullet': 'list.bullet',
-  download: 'square.and.arrow.down',
-  kebab: 'ellipsis',
-  check: 'checkmark',
-  menu: 'line.3.horizontal',
+/** Картинки иконок для нативных кнопок шапки — те же имена, что у Icon. */
+export const HEADER_ICONS = {
+  search: require('../../assets/header/search.png'),
+  bell: require('../../assets/header/bell.png'),
+  plus: require('../../assets/header/plus.png'),
+  calendar: require('../../assets/header/calendar.png'),
+  panel: require('../../assets/header/panel.png'),
+  list: require('../../assets/header/list.png'),
+  download: require('../../assets/header/download.png'),
+  kebab: require('../../assets/header/kebab.png'),
+  check: require('../../assets/header/check.png'),
 };
+
+/** Иконка нативной кнопки шапки. iOS красит картинку сам (tint). */
+export function headerIcon(name) {
+  return { type: 'image', source: HEADER_ICONS[name] || HEADER_ICONS.kebab, tinted: true };
+}
 
 /** Общие настройки шапки стека: на iOS 26+ — нативная, иначе — AppHeader. */
 export function stackHeaderOptions(colors) {
@@ -43,6 +49,7 @@ export function stackHeaderOptions(colors) {
     headerTintColor: colors.text,
     headerTitleStyle: { fontFamily: 'Onest-SemiBold', color: colors.text },
     headerBackButtonDisplayMode: 'minimal',
+    headerBackIcon: { type: 'image', source: require('../../assets/header/back.png') },
   };
 }
 
@@ -113,7 +120,7 @@ export function nativeItems(latest, toItem, wrapCustom) {
       type: 'button',
       label: b.label || '',
       accessibilityLabel: b.label,
-      icon: { type: 'sfSymbol', name: SF_SYMBOL[b.icon] || 'circle' },
+      icon: headerIcon(b.icon),
       onPress: () => {
         const now = latest.current[i] && toItem(latest.current[i]);
         if (now && now.onPress) now.onPress();

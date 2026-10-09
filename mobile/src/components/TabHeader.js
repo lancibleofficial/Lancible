@@ -90,9 +90,10 @@ function NativeTabHeader({ title, count, children }) {
     headerTitle: '',
     unstable_headerLeftItems: () => {
       const text = (
-        <Text style={[styles.title, styles.titleNative]} numberOfLines={1}>
-          {title}{count != null ? <Text style={styles.count}> {count}</Text> : null}
-        </Text>
+        <View style={[styles.titleRow, styles.titleNative]}>
+          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          {count != null ? <Text style={styles.count}>{count}</Text> : null}
+        </View>
       );
       return leftElementItems(tab ? <TabTitleSlide tab={tab}>{text}</TabTitleSlide> : text);
     },
@@ -112,9 +113,10 @@ function JsTabHeader({ title, count, children }) {
   const styles = makeStyles(colors, insets);
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title} numberOfLines={1}>
-        {title}{count != null ? <Text style={styles.count}> {count}</Text> : null}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        {count != null ? <Text style={styles.count}>{count}</Text> : null}
+      </View>
       <View style={styles.actions}>{children}</View>
     </View>
   );
@@ -125,7 +127,10 @@ const makeStyles = (colors, insets) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingTop: insets.top + spacing.sm, paddingBottom: spacing.sm, paddingHorizontal: spacing.lg,
   },
-  title: { flex: 1, minWidth: 0, color: colors.text, fontSize: 22, fontFamily: displayFamily.bold },
+  // Название и число — рядом, с зазором: пробел внутри одной строки
+  // жирным шрифтом почти не виден, и они слипались.
+  titleRow: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  title: { flexShrink: 1, color: colors.text, fontSize: 22, fontFamily: displayFamily.bold },
   // В нативной шапке у заголовка нет ширины родителя — тянуть нечего.
   titleNative: { flex: 0, maxWidth: 240 },
   count: { color: colors.textFaint, fontSize: 15, fontFamily: displayFamily.regular },

@@ -31,7 +31,7 @@ import { confirmSheet } from '../lib/dialogs';
 import TaskListItem from '../components/TaskListItem';
 import Icon from '../components/Icon';
 import { GlassBg } from '../components/Glass';
-import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
+import { IOS_NATIVE_HEADER, headerIcon } from '../navigation/nativeHeader';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
 import Versions from '../core/versions.js';
 import Views from '../core/views.js';
@@ -206,7 +206,7 @@ export default function ProjectScreen({ route, navigation }) {
       title: '',
       // iOS 26+: меню — нативная кнопка шапки на жидком стекле.
       unstable_headerRightItems: IOS_NATIVE_HEADER
-        ? () => [{ type: 'button', label: t(LANG, 'project.opts'), accessibilityLabel: t(LANG, 'project.opts'), icon: { type: 'sfSymbol', name: 'ellipsis' }, onPress: onOpenMenu }]
+        ? () => [{ type: 'button', label: t(LANG, 'project.opts'), accessibilityLabel: t(LANG, 'project.opts'), icon: headerIcon('kebab'), onPress: onOpenMenu }]
         : undefined,
       headerRight: () => (
         <Tap hitSlop={6} onPress={onOpenMenu} style={styles.menuBtn} accessibilityLabel={t(LANG, 'project.opts')}>

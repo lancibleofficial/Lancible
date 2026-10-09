@@ -154,7 +154,7 @@ test('доска — вкладка проекта: проект назван в
 
   const gear = page.locator('#board-statuses');
   await expect(gear).toBeVisible();
-  await expect(gear.locator('svg')).toHaveAttribute('fill-rule', 'evenodd');
+  await expect(gear.locator('svg')).toHaveAttribute('data-icon', 'settings');
   await expect(gear).not.toHaveText(/Статус/);
 });
 

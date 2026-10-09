@@ -116,7 +116,7 @@
         <div class="arch-stat"><b><!--m:app.lines-->6632<!--/m--></b><span>строк в app.js</span></div>
         <div class="arch-stat"><b><!--m:app.functions-->358<!--/m--></b><span>функций верхнего уровня</span></div>
         <div class="arch-stat"><b><!--m:app.noDom-->192<!--/m--></b><span>из них без DOM</span></div>
-        <div class="arch-stat"><b>16 / 17</b><span>файлов ядра делятся</span></div>
+        <div class="arch-stat"><b>17 / 18</b><span>файлов ядра делятся</span></div>
       </div>
     </div>
   </section>
@@ -131,7 +131,7 @@
           <svg viewBox="0 0 760 400" role="img" aria-label="Схема: ядро питает app.js и мобильное приложение; app.js через main.js даёт десктоп, через api-shim — веб; все три приложения ходят в Supabase; лендинг читает из неё журнал и открывает веб-версию по адресу /app.">
             <rect class="dg-core" x="8" y="150" width="150" height="62" rx="8"/>
             <text class="dg-t" x="24" y="176">core/</text>
-            <text class="dg-s" x="24" y="196">семнадцать</text>
+            <text class="dg-s" x="24" y="196">восемнадцать</text>
 
             <rect class="dg-box" x="238" y="78" width="168" height="62" rx="8"/>
             <text class="dg-t" x="254" y="104">app.js</text>
@@ -143,7 +143,7 @@
 
             <path class="dg-line" d="M158 170 C 200 170 200 109 238 109"/>
             <path class="dg-line-acc" d="M158 192 C 200 192 200 289 238 289"/>
-            <text class="dg-lbl" x="12" y="240">16 из 17 побайтно</text>
+            <text class="dg-lbl" x="12" y="240">17 из 18 побайтно</text>
 
             <rect class="dg-out" x="486" y="18" width="150" height="54" rx="8"/>
             <text class="dg-t" x="502" y="42">Десктоп</text>
@@ -177,7 +177,7 @@
             <path class="dg-line" d="M636 367 C 724 367 724 250 710 216"/>
             <text class="dg-lbl" x="646" y="326">журнал</text>
           </svg>
-          <figcaption>Зелёным — то, что действительно общее: шестнадцать файлов ядра из семнадцати, скопированных на телефон побайтно, и база, в которую ходят все три приложения. Лендинг читает из неё журнал работы и открывает веб-версию по адресу /app.</figcaption>
+          <figcaption>Зелёным — то, что действительно общее: семнадцать файлов ядра из восемнадцати, скопированных на телефон побайтно, и база, в которую ходят все три приложения. Лендинг читает из неё журнал работы и открывает веб-версию по адресу /app.</figcaption>
         </figure>
       </div>
 
@@ -209,7 +209,7 @@
 
       <div class="arch-sec">
         <h2>Шов между десктопом и телефоном</h2>
-        <p class="arch-sub">Из семнадцати файлов ядра на телефон копируются побайтно шестнадцать, и за ними следит тест. Своим у телефона остался один — словарь: экраны разные, и строки короче.</p>
+        <p class="arch-sub">Из восемнадцати файлов ядра на телефон копируются побайтно семнадцать, и за ними следит тест. Своим у телефона остался один — словарь: экраны разные, и строки короче.</p>
         <div class="arch-scroll">
           <table>
             <thead><tr><th>Область</th><th>Десктоп и веб</th><th>Телефон</th><th>Сверяется</th></tr></thead>
@@ -231,6 +231,7 @@
               <tr><td class="mono">due</td><td class="mono">core/due.js</td><td>побайтная копия + язык</td><td><span class="mark ok">да</span></td></tr>
               <tr><td class="mono">lang</td><td class="mono">core/lang.js</td><td>побайтная копия</td><td><span class="mark ok">да</span></td></tr>
               <tr><td class="mono">документ</td><td class="mono">core/doc.js</td><td>побайтная копия</td><td><span class="mark ok">да</span></td></tr>
+              <tr><td class="mono">иконки</td><td class="mono">core/icons.js</td><td>побайтная копия</td><td><span class="mark ok">да</span></td></tr>
 
             </tbody>
           </table>

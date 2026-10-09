@@ -206,16 +206,16 @@ export default function SettingsScreen({ navigation }) {
         )}
 
         <Island padded={false}>
-          <Row first icon="doc" label={t(lang, 'nav.docs')} value={documentsCount ? String(documentsCount) : ''} onPress={() => navigation.navigate('Documents')} />
+          <Row first icon="docs" label={t(lang, 'nav.docs')} value={documentsCount ? String(documentsCount) : ''} onPress={() => navigation.navigate('Documents')} />
           <Row icon="bell" label={t(lang, 'menu.deadlines_row')} onPress={() => navigation.navigate('Notifications')}
             right={<View style={styles.rowRight}>{unread ? <View style={styles.badge}><Text style={styles.badgeText}>{unread}</Text></View> : null}{chevron}</View>} />
-          <Row icon="pin" label={t(lang, 'settings.section_tags')} value={String(tags.filter(isGlobalTag).length)} onPress={() => navigation.navigate('Tags')} />
+          <Row icon="tag" label={t(lang, 'settings.section_tags')} value={String(tags.filter(isGlobalTag).length)} onPress={() => navigation.navigate('Tags')} />
         </Island>
 
         <Island padded={false}>
           <Text style={styles.sectionLabel}>{t(lang, 'settings.section_work')}</Text>
           <Row first icon="wallet" label={t(lang, 'settings.rate_label')} value={fmtMoney(settings.hourlyRate || 0, lang, settings.currency) + t(lang, 'rate.per_hour')} onPress={onOpenRate} />
-          <Row icon="globe" label={t(lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} />
+          <Row icon="currency" label={t(lang, 'settings.currency_label')} value={settings.currency} onPress={onOpenCurrency} />
           <Row icon="download" label={t(lang, 'menu.export_excel')} value={t(lang, 'export.all_projects')} onPress={onExcel} />
         </Island>
 
@@ -223,18 +223,18 @@ export default function SettingsScreen({ navigation }) {
           <Text style={styles.sectionLabel}>{t(lang, 'menu.section_app')}</Text>
           <Row first icon="globe" label={t(lang, 'nav.language')} value={LANG_NAMES[lang]} onPress={onOpenLanguage} />
           <Row icon="moon" label={t(lang, 'menu.theme_dark')} right={toggle(resolvedMode === 'dark', setTheme, t(lang, 'menu.theme_dark'))} />
-          <Row icon="bell" label={t(lang, 'menu.remind')} right={toggle(settings.notifyEnabled !== false, onToggleNotify, t(lang, 'menu.remind'))} />
+          <Row icon="bell-bing" label={t(lang, 'menu.remind')} right={toggle(settings.notifyEnabled !== false, onToggleNotify, t(lang, 'menu.remind'))} />
           <Row icon="settings" label={t(lang, 'notif.system')} value={t(lang, `notif.perm_${notifPerm === 'granted' ? 'granted' : notifPerm === 'denied' ? 'denied' : 'ask'}`)} onPress={onOpenSystemNotifications} />
           {authStatus === 'signedIn' ? <Row icon="cloud" label={t(lang, 'sync.toggle_label')} right={toggle(settings.syncEnabled !== false, setSyncEnabled, t(lang, 'sync.toggle_label'))} /> : null}
         </Island>
 
         <Island padded={false}>
           <Text style={styles.sectionLabel}>{t(lang, 'settings.section_about')}</Text>
-          <Row first icon="link" label={t(lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
-          <Row icon="list-bullet" label={t(lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} />
-          <Row icon="lock" label={t(lang, 'about.privacy')} onPress={() => openLegal('privacy', lang)} />
-          <Row icon="list-check" label={t(lang, 'about.terms')} onPress={() => openLegal('terms', lang)} />
-          <Row icon="link" label={t(lang, 'about.legal')} onPress={() => openLegal('legal', lang)} />
+          <Row first icon="info" label={t(lang, 'about.us')} onPress={() => Linking.openURL(LANDING_URL)} />
+          <Row icon="blog" label={t(lang, 'about.blog')} onPress={() => Linking.openURL(`${LANDING_URL}/blog.html`)} />
+          <Row icon="doc" label={t(lang, 'about.privacy')} onPress={() => openLegal('privacy', lang)} />
+          <Row icon="doc" label={t(lang, 'about.terms')} onPress={() => openLegal('terms', lang)} />
+          <Row icon="doc" label={t(lang, 'about.legal')} onPress={() => openLegal('legal', lang)} />
         </Island>
 
         <Text style={styles.footer}>Lancible · {appVersion}</Text>
