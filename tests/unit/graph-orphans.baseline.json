@@ -1130,12 +1130,6 @@
       "at": "L493"
     },
     {
-      "id": "src_editor_comments_commentspanel_add",
-      "label": ".add()",
-      "file": "src/editor/comments.js",
-      "at": "L105"
-    },
-    {
       "id": "src_editor_comments_commentspanel_constructor",
       "label": ".constructor()",
       "file": "src/editor/comments.js",
