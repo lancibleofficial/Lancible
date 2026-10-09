@@ -1130,12 +1130,6 @@
       "at": "L493"
     },
     {
-      "id": "src_editor_comments_commentspanel_add",
-      "label": ".add()",
-      "file": "src/editor/comments.js",
-      "at": "L105"
-    },
-    {
       "id": "src_editor_comments_commentspanel_constructor",
       "label": ".constructor()",
       "file": "src/editor/comments.js",
@@ -1890,6 +1884,36 @@
       "label": "zip()",
       "file": "src/xlsx.js",
       "at": "L49"
+    },
+    {
+      "id": "tests_backend_account_assets_test_count",
+      "label": "count()",
+      "file": "tests/backend/account-assets.test.js",
+      "at": "L74"
+    },
+    {
+      "id": "tests_backend_account_assets_test_list",
+      "label": "list()",
+      "file": "tests/backend/account-assets.test.js",
+      "at": "L56"
+    },
+    {
+      "id": "tests_backend_account_assets_test_purgeown",
+      "label": "purgeOwn()",
+      "file": "tests/backend/account-assets.test.js",
+      "at": "L65"
+    },
+    {
+      "id": "tests_backend_account_assets_test_signup",
+      "label": "signUp()",
+      "file": "tests/backend/account-assets.test.js",
+      "at": "L46"
+    },
+    {
+      "id": "tests_backend_account_assets_test_upload",
+      "label": "upload()",
+      "file": "tests/backend/account-assets.test.js",
+      "at": "L53"
     },
     {
       "id": "tests_backend_rls_test_get",
