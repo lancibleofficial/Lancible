@@ -17,6 +17,14 @@
  * Пока страж не выполнен в базе (нет функции my_asset_count), тест не создаёт
  * никого и помечается todo: без стража удаление аккаунта с файлом оставило бы
  * в боевом хранилище сироту.
+ *
+ * Живая часть — только по явному запросу: LANCIBLE_ACCOUNT_TEST=1. Иначе
+ * каждый push заводил бы двух настоящих пользователей в боевой базе и
+ * упирался в часовой лимит Supabase на регистрации. В GitHub её включает
+ * ручной запуск («Run workflow»), локально:
+ *   LANCIBLE_ACCOUNT_TEST=1 npm run test:backend
+ * SUPABASE_URL и SUPABASE_ANON_KEY направляют тест на другую базу
+ * (например, локальный Supabase).
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -97,10 +105,15 @@ test('удаление аккаунта стирает его картинки, 
   // PGRST202, если storage.sql с ней ещё не выполнен.
   const probe = await rpc('my_asset_count');
   if (probe.json && probe.json.code === 'PGRST202') {
-    t.todo('страж удаления не выполнен в базе: выполните supabase/storage.sql целиком в SQL Editor');
+    t.todo('страж удаления не выполнен в базе (supabase/storage.sql) — его выполняют после выхода веба, десктопа и APK со стиранием папки');
     return;
   }
   assert.equal(probe.json && probe.json.code, '42501', `аноним не должен звать my_asset_count: ${probe.status} ${probe.text.slice(0, 200)}`);
+
+  if (process.env.LANCIBLE_ACCOUNT_TEST !== '1') {
+    t.todo('живая часть заводит настоящих пользователей — запуск: LANCIBLE_ACCOUNT_TEST=1 npm run test:backend');
+    return;
+  }
 
   const a = await signUp('a');
   created.push(a);
