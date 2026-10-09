@@ -5,19 +5,25 @@
       "id": "landing_consent_onchange",
       "label": "onChange()",
       "file": "landing/consent.js",
-      "at": "L222"
+      "at": "L224"
     },
     {
-      "id": "landing_legal_apply",
-      "label": "apply()",
-      "file": "landing/legal.js",
-      "at": "L64"
+      "id": "landing_i18n_resolve",
+      "label": "resolve()",
+      "file": "landing/i18n.js",
+      "at": "L33"
     },
     {
-      "id": "landing_legal_initiallang",
-      "label": "initialLang()",
-      "file": "landing/legal.js",
-      "at": "L36"
+      "id": "landing_i18n_set",
+      "label": "set()",
+      "file": "landing/i18n.js",
+      "at": "L148"
+    },
+    {
+      "id": "landing_i18n_subscribe",
+      "label": "subscribe()",
+      "file": "landing/i18n.js",
+      "at": "L140"
     },
     {
       "id": "mobile_src_components_authsheet_authsheet_ongooglepress",
@@ -1092,6 +1098,12 @@
       "label": "turnInto()",
       "file": "src/editor/commands.js",
       "at": "L493"
+    },
+    {
+      "id": "src_editor_comments_commentspanel_add",
+      "label": ".add()",
+      "file": "src/editor/comments.js",
+      "at": "L105"
     },
     {
       "id": "src_editor_comments_commentspanel_constructor",
@@ -2180,6 +2192,12 @@
       "at": "L24"
     },
     {
+      "id": "tests_landing_i18n_spec_seen",
+      "label": "seen()",
+      "file": "tests/landing/i18n.spec.js",
+      "at": "L16"
+    },
+    {
       "id": "tests_landing_legal_spec_stored",
       "label": "stored()",
       "file": "tests/landing/legal.spec.js",
@@ -2270,6 +2288,12 @@
       "at": "L25"
     },
     {
+      "id": "tests_unit_landing_i18n_test_strings",
+      "label": "strings()",
+      "file": "tests/unit/landing-i18n.test.js",
+      "at": "L27"
+    },
+    {
       "id": "tests_unit_landing_test_chromecss",
       "label": "chromeCss()",
       "file": "tests/unit/landing.test.js",
@@ -2303,7 +2327,7 @@
       "id": "tests_unit_legal_pages_test_markup",
       "label": "markup()",
       "file": "tests/unit/legal-pages.test.js",
-      "at": "L141"
+      "at": "L149"
     },
     {
       "id": "tests_unit_legal_pages_test_skeleton",
