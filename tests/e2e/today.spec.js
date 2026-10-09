@@ -108,11 +108,13 @@ test('«Сейчас идёт»: без таймера — последняя з
   await expect(island).toBeVisible();
   await expect(island).toHaveClass(/idle/);
   await expect(page.locator('#now-title')).toHaveText('Экран входа');
+  await expect(page.locator('#now-since'), 'без таймера подписи «Продолжить» нет').toHaveText('');
   await expect(page.locator('#now-btn')).toHaveAttribute('aria-label', 'Старт');
   await page.locator('#now-btn').click();
   expect(await page.evaluate(() => state.activeTimer && state.activeTimer.taskId)).toBe('t2');
   await expect(island).not.toHaveClass(/idle/);
   await expect(page.locator('#now-label')).toHaveText('Сейчас идёт');
+  await expect(page.locator('#now-since'), 'идёт — время начала').toHaveText(/^\d\d:\d\d$/);
   await expect(page.locator('#now-btn')).toHaveClass(/run/);
   await expect(page.locator('#tb-timer'), 'капсула в шапке').toBeVisible();
   await page.locator('#now-btn').click();

@@ -1727,7 +1727,9 @@ function renderNowIsland() {
   const p = getProject(task.projectId);
   el.nowIsland.classList.toggle('idle', !running);
   el.nowLabel.textContent = running ? t('home.now_running') : t('home.now_idle');
-  el.nowSince.textContent = running ? hm(at.startedAt) : t('home.continue');
+  // Без таймера справа пусто: подпись «Продолжить» ничего не добавляла к
+  // кнопке плей под ней.
+  el.nowSince.textContent = running ? hm(at.startedAt) : '';
   el.nowTitle.textContent = task.title || t('task.no_name');
   el.nowProj.innerHTML = `<i class="rl-dot" style="--pc:${p ? p.color : PALETTE[0]}"></i>${escapeHtml(p ? p.name : '')}`;
   el.nowBtn.className = 'sq-btn' + (running ? ' run' : '');
