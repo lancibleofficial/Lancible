@@ -2281,7 +2281,7 @@ function dpPickFrom(btn, input, values) {
     label: pad2(v),
     selected: Number(input.value) === v,
     onClick: () => { input.value = pad2(v); dpCommitTime(); },
-  })));
+  })), { compact: true });
 }
 function renderDatePicker() {
   const y = dp.view.getFullYear();
@@ -4073,10 +4073,12 @@ async function copyProjectSummary(p) {
 // ---------------------------------------------------------------------------
 
 let menuCleanup = null;
-function openMenu(anchor, items) {
+/** opts.compact — узкий короткий список с прокруткой (часы, минуты). */
+function openMenu(anchor, items, opts = {}) {
   closeMenu();
   const m = el.ctxMenu;
   m.innerHTML = '';
+  m.classList.toggle('compact', !!opts.compact);
   for (const it of items) {
     if (it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); continue; }
     const b = document.createElement('button');
@@ -4088,6 +4090,9 @@ function openMenu(anchor, items) {
     m.appendChild(b);
   }
   m.hidden = false;
+  m.scrollTop = 0;
+  const sel = m.querySelector('.ctx-item.sel');
+  if (sel) m.scrollTop = sel.offsetTop - (m.clientHeight - sel.offsetHeight) / 2;
   const r = anchor.getBoundingClientRect();
   const x = Math.min(r.right - m.offsetWidth, window.innerWidth - m.offsetWidth - 8);
   let y = r.bottom + 4;
@@ -4097,16 +4102,19 @@ function openMenu(anchor, items) {
   anchor.classList.add('open');
   const onDown = (e) => { if (!m.contains(e.target)) closeMenu(); };
   const onKey = (e) => { if (e.key === 'Escape') closeMenu(); };
+  // Прокрутка страницы закрывает меню, а своя — нет: длинный список
+  // прокручивается внутри.
+  const onScroll = (e) => { if (e.target !== m) closeMenu(); };
   setTimeout(() => {
     document.addEventListener('pointerdown', onDown, true);
     document.addEventListener('keydown', onKey, true);
-    document.addEventListener('scroll', closeMenu, true);
+    document.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', closeMenu);
   }, 0);
   menuCleanup = () => {
     document.removeEventListener('pointerdown', onDown, true);
     document.removeEventListener('keydown', onKey, true);
-    document.removeEventListener('scroll', closeMenu, true);
+    document.removeEventListener('scroll', onScroll, true);
     window.removeEventListener('resize', closeMenu);
     anchor.classList.remove('open');
   };

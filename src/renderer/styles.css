@@ -552,8 +552,14 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   border-radius: 9px;
   box-shadow: var(--shadow-pop);
   padding: 5px;
+  /* Длинный список не вылезает за экран, а прокручивается внутри. */
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   animation: popIn 0.12s var(--ease);
 }
+/* Короткий выбор из чисел (часы и минуты): узко и на восемь строк, дальше
+   прокрутка, выбранное — в поле зрения. */
+.ctx-menu.compact { min-width: 76px; max-height: 268px; }
 .ctx-item {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   width: 100%; text-align: left; border: none; background: none;
@@ -2467,6 +2473,8 @@ body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
   background: var(--panel);
   border: 0;
   border-radius: 12px;
+  /* Окно лежит на правой колонке того же цвета — без тени его края не видно. */
+  box-shadow: var(--shadow-pop);
   padding: 10px;
   animation: popIn 0.14s var(--ease);
 }
@@ -2490,7 +2498,7 @@ body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
 .dp-day.today { outline: 1px solid var(--accent); }
 .dp-day.sel { background: var(--accent); color: var(--accent-text); font-weight: 500; }
 /* Время под календарём: часы и минуты — два поля с кнопкой-списком. */
-.dp-time { display: flex; align-items: center; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.dp-time { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
 .dp-time-label { font-size: 12px; color: var(--text-dim); margin-right: 4px; }
 .dp-time-colon { color: var(--text-dim); }
 .dp-combo { display: inline-flex; align-items: center; gap: 1px; }
@@ -2499,7 +2507,9 @@ body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
 .dp-combo-btn { width: 18px; height: 26px; border: none; background: none; color: var(--icon); cursor: pointer; display: grid; place-items: center; padding: 0; }
 .dp-combo-btn .icon { width: 11px; height: 11px; color: inherit; }
 .dp-combo-btn:hover { color: var(--text); }
-.dp-done { margin-left: auto; border: none; border-radius: 7px; padding: 5px 10px; background: var(--accent); color: var(--accent-text); font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+/* «Готово» — своей строкой во всю ширину: рядом со временем она не
+   помещалась и вылезала за край окна. */
+.dp-done { flex-basis: 100%; margin-top: 8px; border: none; border-radius: 8px; padding: 7px 10px; background: var(--accent); color: var(--accent-text); font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .dp-done:hover { background: var(--accent-hover); }
 .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 12px; color: var(--text-dim); padding: 0 2px 6px; }
 .cal-days {
