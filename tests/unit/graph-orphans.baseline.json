@@ -2252,6 +2252,12 @@
       "at": "L24"
     },
     {
+      "id": "tests_landing_footer_legal_spec_legallines",
+      "label": "legalLines()",
+      "file": "tests/landing/footer-legal.spec.js",
+      "at": "L23"
+    },
+    {
       "id": "tests_landing_i18n_spec_seen",
       "label": "seen()",
       "file": "tests/landing/i18n.spec.js",
