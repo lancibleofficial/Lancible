@@ -56,22 +56,24 @@
         <svg class="icon" aria-hidden="true" data-icon="search" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M21.79 21.79C22.07 21.51 22.07 21.05 21.79 20.77L18.12 17.1C19.49 15.5 20.31 13.43 20.31 11.16C20.31 6.1 16.21 2 11.16 2C6.1 2 2 6.1 2 11.16C2 16.21 6.1 20.31 11.16 20.31C13.42 20.31 15.5 19.49 17.1 18.12L20.77 21.79C21.05 22.07 21.51 22.07 21.79 21.79Z"/></svg>
         <input id="search-input" type="text" data-i18n-ph="search.placeholder" placeholder="Поиск" autocomplete="off" />
       </div>
-      <div class="tb-gap"></div>
-      <!-- Капсула идущей задачи: видна на каждом экране, ведёт на задачу,
-           стоп — отдельной кнопкой внутри. Пустой, пока таймер не идёт. -->
-      <button type="button" id="tb-timer" class="tb-timer" hidden data-i18n-title="timer.open_running" title="Открыть идущую задачу">
-        <span class="tb-timer-dot" aria-hidden="true"></span>
-        <span class="tb-timer-time" id="tb-timer-time">00:00:00</span>
-        <span class="tb-timer-name" id="tb-timer-name"></span>
-        <span class="tb-timer-stop" id="tb-timer-stop" role="button" tabindex="0" data-i18n-aria="timer.stop" aria-label="Стоп"><svg class="icon" aria-hidden="true" data-icon="stop" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12C2 7.29 2 4.93 3.46 3.46C4.93 2 7.29 2 12 2C16.71 2 19.07 2 20.54 3.46C22 4.93 22 7.29 22 12C22 16.71 22 19.07 20.54 20.54C19.07 22 16.71 22 12 22C7.29 22 4.93 22 3.46 20.54C2 19.07 2 16.71 2 12Z"/></svg></span>
-      </button>
       <button type="button" id="notif-btn" class="tb-notif" data-i18n-title="notif.title" title="Уведомления">
         <svg class="icon" data-icon="bell" viewBox="0 0 24 24" fill="currentColor"><path d="M8.35 20.24C9.19 21.31 10.51 22 12 22C13.49 22 14.81 21.31 15.65 20.24C13.23 20.57 10.77 20.57 8.35 20.24Z"/><path d="M18.75 9V9.7C18.75 10.55 18.99 11.38 19.44 12.08L20.55 13.8C21.56 15.37 20.79 17.51 19.03 18.01C14.43 19.31 9.57 19.31 4.97 18.01C3.21 17.51 2.44 15.37 3.45 13.8L4.56 12.08C5.01 11.38 5.25 10.55 5.25 9.7V9C5.25 5.13 8.27 2 12 2C15.73 2 18.75 5.13 18.75 9Z"/></svg>
         <span class="notif-badge" id="notif-badge" hidden></span>
       </button>
-      <button type="button" id="account-btn" class="tb-account">
-        <svg class="icon" aria-hidden="true" data-icon="account" viewBox="0 0 24 24" fill="currentColor"><path d="M8 6A4 4 0 1 0 16 6A4 4 0 1 0 8 6Z"/><path d="M5 17A7 4 0 1 0 19 17A7 4 0 1 0 5 17Z"/></svg>
-        <span id="account-label">Войти</span>
+      <div class="tb-gap"></div>
+      <!-- Таймер — в правом верхнем углу на каждом экране. Идёт: название
+           задачи, время и «Стоп»; щелчок по капсуле ведёт на задачу. Стоит:
+           на его месте компактная «▶ Старт» — запускает последнюю задачу,
+           по которой шло время. -->
+      <button type="button" id="tb-timer" class="tb-timer" hidden data-i18n-title="timer.open_running" title="Открыть идущую задачу">
+        <span class="tb-timer-dot" aria-hidden="true"></span>
+        <span class="tb-timer-name" id="tb-timer-name"></span>
+        <span class="tb-timer-time" id="tb-timer-time">00:00:00</span>
+        <span class="tb-timer-stop" id="tb-timer-stop" role="button" tabindex="0" data-i18n-aria="timer.stop" aria-label="Стоп"><svg class="icon" aria-hidden="true" data-icon="stop" viewBox="0 0 24 24" fill="currentColor"><path d="M2 12C2 7.29 2 4.93 3.46 3.46C4.93 2 7.29 2 12 2C16.71 2 19.07 2 20.54 3.46C22 4.93 22 7.29 22 12C22 16.71 22 19.07 20.54 20.54C19.07 22 16.71 22 12 22C7.29 22 4.93 22 3.46 20.54C2 19.07 2 16.71 2 12Z"/></svg><span data-i18n="timer.stop">Стоп</span></span>
+      </button>
+      <button type="button" id="tb-start" class="tb-start" hidden>
+        <svg class="icon" aria-hidden="true" data-icon="play" viewBox="0 0 24 24" fill="currentColor"><path d="M21.41 9.35C23.53 10.51 23.53 13.49 21.41 14.65L8.6 21.61C6.53 22.74 4 21.28 4 18.97L4 5.03C4 2.72 6.53 1.26 8.6 2.39L21.41 9.35Z"/></svg>
+        <span data-i18n="timer.start">Старт</span>
       </button>
     </div>
   </header>
@@ -132,6 +134,12 @@
       <button id="nav-collapse" class="nav-item">
         <svg class="icon" aria-hidden="true" data-icon="panel" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.17 4.17C2 5.34 2 7.23 2 11V13C2 16.77 2 18.66 3.17 19.83C4.34 21 6.23 21 10 21H14C14.08 21 14.17 21 14.25 21L14.25 3C14.17 3 14.08 3 14 3H10C6.23 3 4.34 3 3.17 4.17ZM15.75 3.01L15.75 20.99C18.39 20.97 19.85 20.8 20.83 19.83C22 18.66 22 16.77 22 13V11C22 7.23 22 5.34 20.83 4.17C19.85 3.2 18.39 3.03 15.75 3.01Z"/></svg>
         <span class="nav-label" data-i18n="nav.collapse">Свернуть</span>
+      </button>
+
+      <!-- Профиль — внизу левой панели: вход, имя, синхронизация, выход. -->
+      <button type="button" id="account-btn" class="nav-item nav-account">
+        <svg class="icon" aria-hidden="true" data-icon="account" viewBox="0 0 24 24" fill="currentColor"><path d="M8 6A4 4 0 1 0 16 6A4 4 0 1 0 8 6Z"/><path d="M5 17A7 4 0 1 0 19 17A7 4 0 1 0 5 17Z"/></svg>
+        <span class="nav-label" id="account-label">Войти</span>
       </button>
     </nav>
 

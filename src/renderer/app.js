@@ -123,7 +123,7 @@ const el = {
   updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
 
   accountBtn: $('account-btn'), accountLabel: $('account-label'),
-  tbTimer: $('tb-timer'), tbTimerTime: $('tb-timer-time'), tbTimerName: $('tb-timer-name'), tbTimerStop: $('tb-timer-stop'),
+  tbTimer: $('tb-timer'), tbTimerTime: $('tb-timer-time'), tbTimerName: $('tb-timer-name'), tbTimerStop: $('tb-timer-stop'), tbStart: $('tb-start'),
   mobileTabbar: $('mobile-tabbar'),
   mobileBackToList: $('mobile-back-to-list'),
   authBackdrop: $('auth-backdrop'),
@@ -716,15 +716,17 @@ function renderAccountBtn() {
   el.accountLabel.textContent = name;
   // Кружок с первой буквой — только у вошедшего: у гостя пилюля остаётся
   // кнопкой входа со значком.
-  const avatar = el.accountBtn.querySelector('.tb-avatar');
+  const avatar = el.accountBtn.querySelector('.nav-avatar');
   const icon0 = el.accountBtn.querySelector('.icon');
+  // В свёрнутой панели подписи не видно — имя всплывает подсказкой.
+  el.accountBtn.title = name;
   if (currentUser) {
     if (!avatar) {
       const a = document.createElement('span');
-      a.className = 'tb-avatar';
+      a.className = 'nav-avatar';
       el.accountBtn.insertBefore(a, el.accountLabel);
     }
-    el.accountBtn.querySelector('.tb-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase();
+    el.accountBtn.querySelector('.nav-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase();
     // У SVG нет свойства hidden — только атрибут. Через свойство значок не
     // прятался, и у вошедшего в пилюле стояли и человечек, и буква.
     if (icon0) icon0.setAttribute('hidden', '');
@@ -1560,12 +1562,24 @@ function renderStats() {
   renderTbTimer();
 }
 
+/** Что запускает «▶ Старт» в шапке: всегда последнюю задачу, по которой шло
+ *  время; если записей ещё не было — последнюю изменённую из невыполненных. */
+function startableTask() {
+  const last = recentTasks(1)[0];
+  if (last) return last;
+  const updMs = (x) => (x.updatedAt ? new Date(x.updatedAt).getTime() : 0);
+  return state.tasks.filter((x) => !x.done).sort((a, b) => updMs(b) - updMs(a))[0] || null;
+}
+
 /** Капсула идущей задачи в шапке: время с начала записи и название. Без
  *  идущего таймера капсулы нет — пустая пилюля в шапке только путала бы. */
 function renderTbTimer() {
   const at = state.activeTimer;
   const task = at && getTask(at.taskId);
   el.tbTimer.hidden = !task;
+  const next = task ? null : startableTask();
+  el.tbStart.hidden = !next;
+  if (next) el.tbStart.title = t('timer.start_last', { name: next.title || t('task.no_name') });
   if (!task) return;
   el.tbTimerTime.textContent = fmtClock(Date.now() - new Date(at.startedAt).getTime());
   el.tbTimerName.textContent = task.title || t('task.no_name');
@@ -4980,6 +4994,10 @@ el.navCollapse.addEventListener('click', toggleNav);
 // уводя с текущего экрана.
 el.tbTimerStop.addEventListener('click', (e) => { e.stopPropagation(); stopTimer(); });
 el.tbTimerStop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); stopTimer(); } });
+el.tbStart.addEventListener('click', () => {
+  const task = startableTask();
+  if (task) startTimer(task.id);
+});
 el.tbTimer.addEventListener('click', () => {
   const task = state.activeTimer && getTask(state.activeTimer.taskId);
   if (!task) return;

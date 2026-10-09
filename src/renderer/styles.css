@@ -1410,7 +1410,7 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
   background: var(--bg);
   -webkit-app-region: drag;
   /* На Windows кнопки окна рисует система поверх страницы
-     (titleBarOverlay), и без этого отступа кнопка аккаунта уезжала бы
+     (titleBarOverlay), и без этого отступа таймер уезжал бы
      прямо под «свернуть/закрыть». env(titlebar-area-width) — ширина
      шапки без них; в вебе переменной нет и фолбэк 100% даёт ноль. */
   padding-right: calc(100% - env(titlebar-area-width, 100%));
@@ -1444,11 +1444,10 @@ body.platform-mac .tb-nav-strip {
 }
 body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
 
-/* Распорка после колокольчика: она и отодвигает кнопку аккаунта к правому
-   краю, оставляя лого, поиск и колокольчик одной группой слева. */
+/* Распорка после колокольчика: она и отодвигает таймер к правому краю,
+   оставляя лого, поиск и колокольчик одной группой слева. Порядок
+   лого · поиск · колокольчик · распорка · таймер (или «Старт»). */
 .tb-gap { flex: 1; min-width: 12px; }
-/* Капсула и колокольчик стоят справа, перед аккаунтом: порядок
-   лого · поиск · распорка · капсула · колокольчик · аккаунт. */
 
 /* Поиск — пилюля того же цвета, что острова: на земле она предмет. */
 .tb-search {
@@ -1457,6 +1456,7 @@ body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
   align-items: center;
   gap: 8px;
   max-width: 400px;
+  min-width: 0;
   /* Справа отступ меньше: колокольчик относится к поиску и стоит вплотную к
      нему, а не висит сам по себе посреди шапки. */
   margin: auto 0 auto 16px;
@@ -1470,9 +1470,8 @@ body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
 .tb-search:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
 
 /* Лого открывает шапку. Порядок один на всех платформах:
-   [трафик-лайты только на маке] лого · поиск · колокольчик … аккаунт.
-   Аккаунт остаётся только в вебе — на десктопе вход живёт на странице
-   настроек, и в шапке кнопка лишь занимала место. */
+   [трафик-лайты только на маке] лого · поиск · колокольчик … таймер.
+   Профиль — внизу левой панели. */
 .tb-logo {
   display: flex;
   align-items: center;
@@ -1732,47 +1731,18 @@ body.nav-collapsed #main { margin-left: calc(var(--nav-w-collapsed) + var(--gap)
 .skel-tiles { display: flex; gap: 14px; flex-wrap: wrap; }
 .skel-tile { width: 250px; height: 150px; }
 
-/* ---------- Аккаунт в шапке (рядом с поиском) ----------
-   Тот же предмет, что поиск: заливка острова, скругление --radius-sm, без
-   рамки. Раньше у кнопки оставалась браузерная рамка, и профиль один во всей
-   шапке выглядел обведённым. */
+/* ---------- Профиль внизу левой панели ----------
+   С 9 октября 2026 профиль не в шапке, а последним пунктом рейла — под
+   языком и «Свернуть»: вход, имя, синхронизация, выход. Пункт рейла как
+   все, у вошедшего значок заменяет кружок с буквой. */
+.nav-account .nav-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.nav-avatar { width: 18px; height: 18px; margin: -1px; border-radius: 999px; background: var(--panel-2); color: var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none; }
+.nav-account:hover .nav-avatar { background: var(--raise); }
 
-/* Только веб: на десктопе вход и данные аккаунта живут на странице настроек,
-   и кнопка в шапке лишь занимала место рядом с кнопками окна. */
-.tb-account { display: none; }
-body.platform-web .tb-account {
-  -webkit-app-region: no-drag;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex: none;
-  height: 34px;
-  margin: auto 0 auto 0;
-  padding: 0 12px 0 10px;
-  background: var(--panel);
-  border: 0;
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  max-width: 200px;
-  transition: background 0.12s var(--ease);
-}
-.tb-account:hover { background: var(--panel-2); }
-.tb-account .icon { width: 15px; height: 15px; flex: none; color: var(--icon); }
-/* Аватар-кружок перед именем: пилюля читается как профиль, а не как кнопка. */
-.tb-avatar { width: 24px; height: 24px; border-radius: 999px; background: var(--panel-2); color: var(--text); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none; }
-body.platform-web .tb-account .tb-avatar { margin-right: 2px; }
-/* У вошедшего слева кружок с буквой — он сам держит отступ от края. */
-body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
-
-/* ---------- Капсула идущей задачи ----------
-   Таймер виден на каждом экране: точка, время, задача, стоп. Пилюля стоит
-   перед колокольчиком и ведёт на страницу задачи; стоп — отдельная кнопка
-   внутри. Нет идущего таймера — нет и капсулы. */
+/* ---------- Таймер в правом верхнем углу ----------
+   Виден на каждом экране. Идёт — капсула: точка, задача, время, «Стоп»;
+   капсула ведёт на страницу задачи, «Стоп» — отдельная кнопка внутри.
+   Стоит — на её месте компактная «▶ Старт» (последняя задача). */
 .tb-timer {
   -webkit-app-region: no-drag;
   display: flex;
@@ -1780,9 +1750,9 @@ body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
   gap: 9px;
   flex: none;
   height: 34px;
-  margin: auto 8px auto 0;
+  margin: auto 0;
   padding: 0 4px 0 12px;
-  max-width: 340px;
+  max-width: 380px;
   background: var(--pill);
   border: 0;
   border-radius: 999px;
@@ -1796,15 +1766,25 @@ body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
 .tb-timer:hover { background: var(--panel-2); }
 .tb-timer-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--accent); flex: none; }
 .tb-timer-time { font-family: var(--font-display); font-weight: var(--fw-display); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-size: 14px; }
-.tb-timer-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--text-dim); font-weight: 500; }
+.tb-timer-name { min-width: 0; max-width: 200px; overflow: hidden; text-overflow: ellipsis; color: var(--text-dim); font-weight: 500; }
 .tb-timer-stop {
-  width: 26px; height: 26px; border: 0; border-radius: 999px; padding: 0; flex: none;
+  height: 26px; border: 0; border-radius: 999px; padding: 0 10px 0 8px; flex: none; gap: 5px;
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-  background: var(--accent); color: var(--accent-text);
+  background: var(--accent); color: var(--accent-text); font-size: 12.5px; font-weight: 600;
 }
 .tb-timer-stop .icon { width: 11px; height: 11px; color: inherit; }
 .tb-timer-stop:hover { background: var(--accent-hover); }
-.tb-account span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tb-start {
+  -webkit-app-region: no-drag;
+  display: flex; align-items: center; gap: 6px; flex: none;
+  height: 34px; margin: auto 0; padding: 0 14px 0 12px;
+  background: var(--pill); border: 0; border-radius: 999px;
+  color: var(--text); font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.12s var(--ease);
+}
+.tb-start:hover { background: var(--panel-2); }
+.tb-start .icon { width: 13px; height: 13px; color: inherit; }
 
 /* ---------- Колокольчик и панель уведомлений ---------- */
 
@@ -1817,8 +1797,9 @@ body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
   justify-content: center;
   width: 30px;
   height: 30px;
-  /* Прижимает вправо только аккаунт — колокольчик остаётся у поиска. */
-  margin: auto 0 auto 2px;
+  /* Колокольчик — сразу справа от поиска; вправо распорка прижимает
+     только таймер. */
+  margin: auto 0 auto 6px;
   background: none;
   border: none;
   cursor: pointer;

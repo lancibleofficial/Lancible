@@ -67,6 +67,7 @@
   }
   .tb-search {
     max-width: none;
+    min-width: 0;
     height: 38px;
     margin: auto 10px;
     border-radius: 12px;
@@ -79,12 +80,21 @@
   #search-input {
     font-size: 14.5px;
   }
-  /* На телефонной ширине доступ к аккаунту уже даёт нижняя плашка
-     (#mobile-account-btn) — свой пункт в шапке рядом с поиском тут только
-     отнимал бы и без того тесное место. Селектор повторяет тот, что
-     показывает кнопку в вебе, иначе он проигрывает по специфичности. */
-  body.platform-web .tb-account {
+  /* Таймер в шапке — коротко: без названия задачи и без подписей, только
+     время и значок «Стоп»; «Старт» — одним значком. */
+  .tb-timer-name,
+  .tb-timer-stop span,
+  .tb-start span {
     display: none;
+  }
+  .tb-timer-stop {
+    width: 26px;
+    padding: 0;
+  }
+  .tb-start {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
   }
   .tb-gap {
     min-width: 0;
