@@ -60,7 +60,7 @@ test('тестировщики — каждый в своей зоне', () => {
 });
 
 test('пересобираемое Publish и регламент — только в main', () => {
-  assert.equal(checkCommit('core/x', ['tests/unit/graph-orphans.baseline.json']).ok, false);
+  assert.equal(checkCommit('core/x', ['landing/graph.html']).ok, false);
   assert.equal(checkCommit('web/x', ['landing/blog-posts.js']).ok, false);
   assert.equal(checkCommit('core/x', ['CLAUDE.md']).ok, false);
   assert.ok(checkCommit('main', ['CLAUDE.md', 'landing/blog-posts.js', 'src/renderer/app.js']).ok);
@@ -75,6 +75,16 @@ test('незнакомый префикс — отказ с подсказкой
   assert.match(text, /незнакомый префикс «claude\/»/);
   assert.match(text, /scripts\/zones\.js/);
   assert.equal(checkCommit('publish/x', ['README.md']).ok, false, 'у Publish нет веток с префиксом');
+});
+
+// Иначе крюк загонял бы в --no-verify: он гоняет graph-dead-code.test.js, и
+// новый узел без входящих рёбер требует переснять снимок в том же коммите.
+test('снимок сирот графа коммитится с любой ветки роли, хоть и принадлежит Publish', () => {
+  assert.equal(ownerOf('tests/unit/graph-orphans.baseline.json'), 'publish');
+  for (const branch of ['web/x', 'mobile/x', 'core/x', 'gfx/x', 'legal/x', 'qa-web/x', 'qa-mobile/x']) {
+    assert.ok(checkCommit(branch, ['tests/unit/graph-orphans.baseline.json']).ok, branch);
+  }
+  assert.equal(checkCommit('claude/x', ['tests/unit/graph-orphans.baseline.json']).ok, false);
 });
 
 test('ветка без «/» — отказ: без ограничений только main', () => {
