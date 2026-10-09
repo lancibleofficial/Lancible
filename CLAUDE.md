@@ -48,6 +48,112 @@
    если пользователю есть что заметить. Правила отбора описаны в шапке файла:
    мелкие правки туда не идут, для них есть журнал.
 
+Пункты 9 и 10 с 10 октября 2026 выполняет Publish Agent — см. «Команда
+агентов» ниже.
+
+## Команда агентов
+
+Принято 10 октября 2026. Над проектом работают параллельные сессии Claude,
+у каждой своя зона. Пользователь говорит только с Product Manager. Всё
+остальное общение идёт между сессиями: сообщения по имени сессии и задачи в
+журнале.
+
+### Роли и зоны
+
+Сессия пишет только в своей зоне. Нужна правка в чужой зоне — пишет её
+владельцу, сама её не делает.
+
+| Сессия | Своя зона (что правит) | Ветки | Задачи от |
+|---|---|---|---|
+| **Product Manager** | ничего в репозитории; ведёт задачи в журнале | — | пользователь |
+| **Web/Desktop** | `src/main.js`, `src/preload.js`, `src/xlsx.js`, `src/renderer/**` (кроме `core/`), `src/editor/**` и его сборки (`src/renderer/editor.js`, `mobile/src/editor/editorBundle.js`), `web/**`, `landing/**` (кроме юридических текстов и `blog-posts.js`) | `web/…` | PM |
+| **Mobile (Android/IOS)** | `mobile/**`, кроме `mobile/src/core/`, `mobile/src/editor/editorBundle.js`, `mobile/assets/`, `mobile/tests/` | `mobile/…` | PM |
+| **Core/Backend** | `src/renderer/core/**` (кроме `icons.js`) и копии в `mobile/src/core/`, `supabase/**`, служебные `scripts/` (журнал, синхронизация ядра, крюки), зависимости (`package*.json` в корне и в `mobile/`), `.github/workflows/test.yml` | `core/…` | любая сессия |
+| **Icons and Graphics** | иконки и графика: `scripts/make-solar-icons.js`, `make-ios-icons.js`, `make-icon.js`, `make-mobile-icons.js`, `src/renderer/core/icons.js`, `mobile/assets/**`, `build/`, `assets/`, шрифты | `gfx/…` | PM |
+| **Testing (Web/Desktop)** | веб, десктоп и лендинг: `tests/**` (кроме `tests/unit/mobile-*`), `playwright.config.js`, `scripts/watch.js`, `scripts/smoke.js`, `scripts/visual-update.js` | `qa-web/…` | PM; правки — прямо Web/Desktop |
+| **Testing Mobile (Android/IOS)** | `mobile/tests/**`, `mobile/jest.setup.js`, `tests/unit/mobile-*` | `qa-mobile/…` | PM; правки — прямо Mobile |
+| **Legal Manager** | тексты: `landing/{privacy,terms,legal,refund,cookies,delete-account}.html`, `landing/business.js`, `src/renderer/core/legal.js`, `COMPLIANCE.md`, `supabase/legal.sql` | `legal/…` | PM; Publish — перед каждым релизом |
+| **Publish Agent** | ветка `main` и теги, `landing/blog-posts.js`, всё пересобираемое после слияния (снимок графа, `/graph`, числа `/architecture`), `release.yml`, `mobile-release.yml`, `latest.json` в lancible-updates | `main` | PM, по команде «деплой» |
+
+Общие правила для всех ролей:
+
+- **Тесты к правке пишет автор правки, в своей ветке.** Это не залезание в зону
+  тестировщика. Тестировщик ведёт приёмку, регрессию и инфраструктуру тестов и
+  не меняет продуктовый код.
+- **Общие документы.** `DESIGN.md` и `ARCHITECTURE.md` каждый правит в своём
+  разделе. Сам этот регламент меняется только по слову пользователя.
+- **Иконки и графика** — только через Icons and Graphics.
+- **Цвета (токены)** остаются за своей поверхностью: см. `DESIGN.md`.
+
+### Где кто работает
+
+У каждой пишущей сессии своя копия репозитория — git worktree — в
+`E:\lancible\<папка>`: `web`, `mobile`, `core`, `gfx`, `qa-web`, `qa-mobile`,
+`legal`. В ней сессия работает на своих ветках. Папка
+`C:\Users\Turan\Documents\task-timer` (ветка `main`) принадлежит только
+Publish Agent; Product Manager читает её и ничего в ней не правит. Две сессии в
+одной папке не работают: общий индекс git и крюк перед коммитом смешивают
+чужие правки.
+
+Завести свою копию (Git Bash, `<папка>` и `<префикс>` — из таблицы):
+
+```bash
+git -C /c/Users/Turan/Documents/task-timer worktree add /e/lancible/<папка> -b <префикс>/start main
+cd /e/lancible/<папка> && npm ci          # Mobile, Testing Mobile и Core ещё: npm ci --prefix mobile
+cp /c/Users/Turan/Documents/task-timer/.env.local .   # ключ журнала; значение не печатать
+```
+
+После этого сессия переходит в эту папку — сменой рабочей папки сессии.
+Пользователь подтверждает переход один раз.
+
+Автопамять Claude привязана к пути папки. Чтобы она осталась общей, папку
+`memory` новой копии делаем ссылкой на общую:
+
+```bash
+P=/c/Users/Turan/.claude/projects; mkdir -p "$P/E--lancible-<папка>"
+cmd //c mklink /J "C:\Users\Turan\.claude\projects\E--lancible-<папка>\memory" "C:\Users\Turan\.claude\projects\C--Users-Turan-Documents-task-timer\memory"
+```
+
+### Как ходят задачи
+
+1. **PM ставит задачу.** PM заводит задачу в журнале (`task.id` вида
+   `ГГГГ-ММ-ДД-о-чём`, в `title` — владелец в скобках) и пишет исполнителю
+   сообщением с этим id.
+2. **Исполнитель работает.** Он ведёт журнал по тому же id и работает в
+   ветке `<префикс>/<о-чём>`. Нужна чужая зона — пишет её владельцу.
+3. **Разработчик и тестировщик правят напрямую.** Тестировщик шлёт замечания
+   разработчику, разработчик возвращает исправленное тестировщику. PM видит
+   это в журнале.
+4. **Готово.** Ветка уходит на GitHub (`git push origin <ветка>`). Это не
+   деплой: production берётся только из `main`. Исполнитель сообщает PM и
+   Publish имя ветки и чем проверено; статус в журнале — `review`.
+5. **Деплой.** Пользователь говорит «деплой» → PM поручает Publish Agent.
+   Publish:
+   - просит Legal Manager проверить релиз;
+   - смотрит дифф каждой ветки;
+   - сливает ветки в `main`: сначала Core, потом остальные;
+   - гоняет полный `npm test`;
+   - делает `npm run site:refresh` отдельным коммитом;
+   - пушит, ставит теги, пишет запись в блог;
+   - переводит задачи в журнале в `deployed`.
+
+### Файлы-магниты и общие ресурсы
+
+- **Пересобираемые файлы.** `tests/unit/graph-orphans.baseline.json`,
+  `landing/graph*.html` и числа `/architecture` при слиянии руками не
+  сливаются: Publish пересобирает их (`npm run graph:baseline`,
+  `npm run site:refresh`). Копии ядра в `mobile/src/core/` обновляет только
+  Core (`scripts/sync-mobile-core.js`). Сборку редактора — только Web/Desktop
+  (`npm run build:editor`).
+- **Эмулятор Android и Metro на 8081 — один на всех.** Mobile и Testing Mobile
+  договариваются, кто занимает их сейчас.
+- **Порты браузерных прогонов** (`tests/ports.js`) общие для всех копий, а
+  Playwright переиспользует уже поднятый сервер. Два прогона из разных копий
+  одновременно проверят чужой код. Пока порты не стали свои для каждой копии,
+  браузерные наборы из двух копий сразу не гоняем.
+- **Режим разрешений у всех сессий один.** Иначе каждое сообщение между ними
+  ждёт подтверждения пользователя.
+
 ## Журнал работы
 
 Живёт в Supabase и показывается на `https://lancible.vercel.app/logs`. Страница
