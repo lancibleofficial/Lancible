@@ -1427,6 +1427,10 @@ window.addEventListener('beforeunload', () => { if (savePending) window.api.save
 // Рендер — маршрутизатор
 // ---------------------------------------------------------------------------
 
+/** Какой экран показан сейчас: вид и его проект или задача. */
+let shownScreen = '';
+let settleTimer = 0;
+
 function render() {
   // Отдельного вида «Доска» с 6 октября 2026 нет: доска — вкладка проекта.
   // Сохранённое когда-то «board» открывается как проект на этой вкладке.
@@ -1453,11 +1457,17 @@ function render() {
   el.navItems.forEach((tab) => tab.classList.toggle('active', tab.dataset.view === v));
   renderNavProjects();
 
+  // Анимация — только переход: другой экран, другой проект или другая
+  // задача. Перерисовка на месте (таймер, галочка, синхронизация) экран не
+  // переигрывает — раньше он на каждой мигал прозрачностью.
   const views = { home: el.homeView, projects: el.projectsView, project: el.projectView, task: el.taskView, docs: el.docsView, time: el.timeView, settings: el.settingsView };
+  const shown = `${v}:${v === 'task' ? selectedId : v === 'project' ? state.ui.projectId : ''}`;
+  const entering = shown !== shownScreen;
+  shownScreen = shown;
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
-    if (show) { node.classList.remove('anim'); void node.offsetWidth; node.classList.add('anim'); }
+    if (show && entering) enterView(node);
   }
 
   if (v === 'home') renderHome();
@@ -1471,6 +1481,17 @@ function render() {
   // Модалка задачи живёт поверх любой страницы, и общий render() про неё
   // сам не знает: без этой строки статус, поменянный в ней же, не обновлялся.
   if (!el.tmdlgBackdrop.hidden) renderTaskModal();
+}
+
+/** Переход на экран: он въезжает (viewIn), строки и карточки — лесенкой
+ *  (tileIn). Когда въезд закончился, экран «оседает» (.settled): новые
+ *  строки от перерисовки на месте появляются без анимации. */
+function enterView(node) {
+  node.classList.remove('anim', 'settled');
+  void node.offsetWidth;
+  node.classList.add('anim');
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => node.classList.add('settled'), 600);
 }
 
 /** Старые имена экранов — «calendar» и «stats» — с 7 октября 2026 один

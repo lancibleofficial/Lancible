@@ -338,6 +338,10 @@ b, strong { font-weight: 600; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 .view.anim { animation: viewIn 0.22s var(--ease); }
+/* Строки и карточки въезжают лесенкой только вместе с экраном; на осевшем
+   экране (перерисовка на месте) появляются сразу, без мигания. */
+.view.settled .task-item, .view.settled .ptile, .view.settled .session-item,
+.view.settled .period-list li, .view.settled .cal-day-list li { animation: none; }
 
 /* ========== Слой: Компоненты ========== */
 
