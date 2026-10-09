@@ -2257,38 +2257,83 @@ body.platform-web .tb-account:has(.tb-avatar) { padding-left: 5px; }
 
 /* ---------- Проекты ---------- */
 
-.projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--gap); flex: none; }
+/* Ряд больших карточек, как колода на телефоне: карточка — проект со
+   своими задачами. Не влезли — ряд листается вбок (стрелки в шапке,
+   тачпад, Shift+колесо) и встаёт по краю карточки. Высота ряда — экран
+   без шапки и строки таблицы недавних, но не ниже, чем нужно на пять
+   задач. */
+.projects-deck {
+  display: flex; gap: var(--gap); flex: none;
+  height: clamp(440px, calc(100vh - 230px), 680px);
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x proximity; scroll-padding-inline: 0;
+  overscroll-behavior-x: contain;
+}
+.projects-deck:empty { display: none; }
+#deck-prev[hidden], #deck-next[hidden] { display: none; }
 .ptile {
-  position: relative;
+  flex: 0 0 320px;
+  scroll-snap-align: start;
   background: var(--panel);
-  border: 0;
   border-radius: var(--radius);
-  padding: 16px 18px 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  text-align: left;
+  min-width: 0; min-height: 0;
+  overflow: hidden;
   color: var(--text);
-  font-family: inherit;
-  cursor: pointer;
   animation: tileIn 0.24s var(--ease) backwards;
 }
-.ptile-head { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.ptile-dot { width: 10px; height: 10px; border-radius: 3px; flex: none; background: var(--pc, var(--accent)); }
-.ptile-name { font-weight: 600; font-size: 15px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* Меню проявляется по наведению, чтобы не шуметь в сетке. Закрепление —
+.ptile-head { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 14px 12px 6px 16px; cursor: pointer; border-radius: var(--radius) var(--radius) 0 0; }
+.ptile-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ptile-dot { width: 11px; height: 11px; border-radius: 4px; flex: none; background: var(--pc, var(--accent)); }
+.ptile-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ptile-name { font-family: var(--font-display); font-weight: var(--fw-display); font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ptile-head:hover .ptile-name { text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.ptile-sub { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.ptile-sub .icon { width: 11px; height: 11px; flex: none; }
+.ptile-due { font-weight: 600; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; }
+.ptile-due.soon { color: var(--accent-ink); }
+.ptile-due.overdue { color: var(--danger); }
+.ptile-chev { display: inline-flex; color: var(--text-faint); flex: none; }
+.ptile-chev .icon { width: 13px; height: 13px; }
+/* Меню проявляется по наведению, чтобы не шуметь в ряду. Закрепление —
    пунктом меню: закреплённый проект встаёт в левое меню, а не на карточку. */
 .ptile-menu { opacity: 0; transition: opacity 0.12s var(--ease); }
 .ptile:hover .ptile-menu, .ptile-menu.open, .ptile-menu:focus-visible { opacity: 1; }
-.ptile-desc { font-size: 12.5px; color: var(--text-faint); min-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ptile-figs { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.ptile-figs { display: flex; align-items: baseline; gap: 8px; padding: 4px 16px 8px; font-variant-numeric: tabular-nums; }
 .ptile-time { font-family: var(--font-display); font-weight: var(--fw-display); font-size: 20px; }
 .ptile-money { font-family: var(--font-display); font-weight: var(--fw-display); font-size: 13px; color: var(--text-dim); }
-.ptile-note { margin-left: auto; font-size: 12px; color: var(--text-faint); }
-.ptile-progress { display: block; height: 4px; border-radius: 2px; background: var(--panel-2); overflow: hidden; }
+.ptile-progress { display: block; flex: none; height: 4px; margin: 0 16px; border-radius: 2px; background: var(--panel-2); overflow: hidden; }
 .ptile-progress > i { display: block; height: 100%; background: var(--pc, var(--accent)); transition: width 0.3s var(--ease); }
-.ptile-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; }
+/* Поле новой задачи — сразу под шкалой, как на телефоне. */
+.ptile-qa { display: flex; gap: 6px; margin: 12px 10px 4px; flex: none; }
+.ptile-qa .field { flex: 1; min-width: 0; font-size: 13.5px; }
+/* Задачи — своей прокруткой; строка — общий список строк (.row-list). */
+.ptile-tasks { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0 6px; }
+.ptile-tasks li { padding: 8px 8px 8px 10px; border-radius: var(--radius-sm); transition: opacity 0.24s var(--ease), transform 0.24s var(--ease); }
+.ptile-tasks li:hover { background: var(--panel-2); }
+.ptile-tasks li + li { border-top-color: var(--line); }
+.ptile-tasks li.leaving { opacity: 0; transform: scale(0.9); }
+.ptile-tasks li.ptile-empty { justify-content: center; padding: 24px 0; color: var(--text-faint); font-size: 12.5px; cursor: default; }
+.ptile-tasks li.ptile-empty:hover { background: none; }
+.ptile-task .task-done { width: 16px; height: 16px; margin: 0; flex: none; cursor: pointer; accent-color: var(--accent); }
+.ptile-task .rl-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ptile-task .rl-sub { margin-top: 2px; gap: 5px; }
+.ptile-status { display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ptile-running { color: var(--accent-ink); font-weight: 600; }
+.ptile-sep { color: var(--text-faint); }
+.ptile-task .task-time { color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.ptile-task .rl-play { width: 34px; height: 34px; border-radius: 999px; background: var(--panel-2); color: var(--text); }
+.ptile-task .rl-play:hover { background: var(--raise); }
+.ptile-task .rl-play.run { background: var(--accent); color: var(--accent-text); }
+.ptile-task .rl-play.run .icon { color: inherit; }
+.ptile-open {
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; border: 0; border-top: 1px solid var(--line); background: none;
+  color: var(--text-dim); font: 600 13px var(--font-ui); cursor: pointer;
+}
+.ptile-open:hover { color: var(--text); background: var(--panel-2); }
+.ptile-open .icon { width: 12px; height: 12px; }
 
 #recent-section { padding: 12px 6px 6px; flex: none; }
 #recent-section .island-head { padding: 0 12px 6px; }

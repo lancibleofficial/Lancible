@@ -222,10 +222,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* --- «Проекты»: карточки в один столбец, у недавних задач только
+  /* --- «Проекты»: колода, как на телефоне — карточка во всю ширину без
+     40 px, край следующей виден; листается пальцем и встаёт ровно по
+     карточке. Стрелок нет — их заменяет жест. У недавних задач только
      название и время. Кнопки карточки видны всегда — наведения нет. --- */
-  .projects-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .projects-deck {
+    scroll-snap-type: x mandatory;
+    height: clamp(420px, calc(100dvh - 200px), 640px);
+  }
+  .ptile {
+    flex-basis: calc(100% - 40px);
+  }
+  #deck-prev, #deck-next {
+    display: none;
   }
   .ptile-menu {
     opacity: 1;

@@ -196,15 +196,18 @@
         </aside>
       </main>
 
-      <!-- ПРОЕКТЫ: карточки и таблица недавних задач. Открыть проект — щелчок
-           по карточке, задачу — по строке. -->
+      <!-- ПРОЕКТЫ: ряд больших карточек, как колода на телефоне, — у каждой
+           свои задачи и поле новой задачи; ряд листается вбок (стрелки в
+           шапке, тачпад, Shift+колесо). Ниже — таблица недавних задач. -->
       <main id="projects-view" class="view" hidden>
         <div class="page-head">
           <h1 class="page-title"><span data-i18n="nav.projects">Проекты</span> <span class="h-count" id="home-count"></span></h1>
           <span class="spacer"></span>
+          <button type="button" id="deck-prev" class="icon-btn" data-i18n-aria="deck.prev" aria-label="Предыдущие проекты"><svg class="icon" aria-hidden="true" data-icon="chevron-left" viewBox="7 7 10 10" fill="currentColor"><path d="M14.03 8.47C14.32 8.76 14.32 9.24 14.03 9.53L11.56 12L14.03 14.47C14.32 14.76 14.32 15.24 14.03 15.53C13.74 15.82 13.26 15.82 12.97 15.53L9.97 12.53C9.68 12.24 9.68 11.76 9.97 11.47L12.97 8.47C13.26 8.18 13.74 8.18 14.03 8.47Z"/></svg></button>
+          <button type="button" id="deck-next" class="icon-btn" data-i18n-aria="deck.next" aria-label="Следующие проекты"><svg class="icon" aria-hidden="true" data-icon="chevron-right" viewBox="7 7 10 10" fill="currentColor"><path d="M9.97 8.47C10.26 8.18 10.74 8.18 11.03 8.47L14.03 11.47C14.32 11.76 14.32 12.24 14.03 12.53L11.03 15.53C10.74 15.82 10.26 15.82 9.97 15.53C9.68 15.24 9.68 14.76 9.97 14.47L12.44 12L9.97 9.53C9.68 9.24 9.68 8.76 9.97 8.47Z"/></svg></button>
           <button id="create-project-btn" class="btn-accent"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="home.create">Создать проект</span></button>
         </div>
-        <div class="projects-grid" id="projects-track"></div>
+        <div class="projects-deck" id="projects-track"></div>
         <p id="home-empty" class="muted" data-i18n="home.empty" hidden>Пока нет ни одного проекта. Создай первый.</p>
         <section class="island" id="recent-section" hidden>
           <div class="island-head"><span class="island-title" data-i18n="home.recent">Недавние задачи</span></div>

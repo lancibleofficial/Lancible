@@ -9,7 +9,7 @@
 // без версии, повторения и дедлайна. Эти ветки закрыты здесь.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { taskRowView } = require('../../src/renderer/core/views.js');
+const { taskRowView, deckTasks, deckPinTop } = require('../../src/renderer/core/views.js');
 
 const NOW = new Date(2026, 5, 10, 12).getTime();
 const HOUR = 3_600_000;
@@ -224,4 +224,28 @@ test('дни календаря не трогают задачи', () => {
   const before = JSON.stringify(tasks);
   agendaDays(tasks, calCtx());
   assert.equal(JSON.stringify(tasks), before);
+});
+
+// --- «Проекты»: задачи в карточке ------------------------------------------
+// Правило одно на колоду телефона и ряд карточек десктопа и веба.
+
+test('карточка проекта: выполненных нет, идущая первой, дальше — свежие сверху', () => {
+  const tasks = [
+    { id: 'a', done: false, updatedAt: '2026-06-01T00:00:00.000Z' },
+    { id: 'b', done: true, updatedAt: '2026-06-09T00:00:00.000Z' },
+    { id: 'c', done: false, updatedAt: '2026-06-05T00:00:00.000Z' },
+    { id: 'd', done: false, updatedAt: '2026-06-08T00:00:00.000Z' },
+    { id: 'e', done: false },
+  ];
+  assert.deepEqual(deckTasks(tasks, null).map((x) => x.id), ['d', 'c', 'a', 'e']);
+  assert.deepEqual(deckTasks(tasks, 'a').map((x) => x.id), ['a', 'd', 'c', 'e']);
+  assert.deepEqual(deckTasks(tasks, 'b').map((x) => x.id), ['d', 'c', 'a', 'e'], 'выполненная не возвращается и закрепом');
+  assert.equal(tasks[0].id, 'a', 'исходный массив не переставлен');
+});
+
+test('карточка проекта: идущая держится первой, пока её таймер идёт', () => {
+  assert.equal(deckPinTop('a', { taskId: 'a' }), 'a');
+  assert.equal(deckPinTop('a', null), null);
+  assert.equal(deckPinTop('a', { taskId: 'b' }), null, 'запустили другую — наверх не прыгает никто');
+  assert.equal(deckPinTop(null, { taskId: 'b' }), null);
 });

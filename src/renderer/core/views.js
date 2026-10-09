@@ -191,6 +191,30 @@
     };
   }
 
+  // --- «Проекты»: карточки со списком задач ----------------------------------
+  //
+  // Одно правило на телефон (колода) и на десктоп с вебом (ряд карточек).
+
+  /** Задачи в карточке проекта: выполненные не показываются; сверху идущая,
+   *  если её закрепили первой на входе (pinTaskId), дальше — по последнему
+   *  изменению, свежая сверху. Запуск таймера задачу не меняет, поэтому
+   *  запущенная не прыгает; остановили — у неё свежая отметка, и она
+   *  уезжает наверх. */
+  function deckTasks(tasks, pinTaskId) {
+    const updMs = (task) => (task.updatedAt ? new Date(task.updatedAt).getTime() : 0);
+    return tasks.filter((task) => !task.done)
+      .sort((a, b) => (b.id === pinTaskId) - (a.id === pinTaskId) || updMs(b) - updMs(a));
+  }
+
+  /** Какая задача стоит в карточках первой как идущая. Берётся на входе на
+   *  экран и держится, пока её таймер идёт; остановили или запустили
+   *  другую — первой не стоит никто (новая идущая не прыгает наверх до
+   *  следующего входа). */
+  function deckPinTop(pinTaskId, activeTimer) {
+    if (!pinTaskId) return null;
+    return activeTimer && activeTimer.taskId === pinTaskId ? pinTaskId : null;
+  }
+
   // --- экран проекта --------------------------------------------------------
 
   /**
@@ -259,7 +283,7 @@
     return rows;
   }
 
-  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView, projectListGroups, versionRows };
+  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView, deckTasks, deckPinTop, projectListGroups, versionRows };
 
   if (isNode) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);

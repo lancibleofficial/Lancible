@@ -62,7 +62,7 @@ app.whenReady().then(async () => {
     topbarInsideHomeMain: !!document.querySelector('.home-main > #topbar'),
     recentSectionInsideCenter: !!document.querySelector('.home-center > #recent-section.recent-fixed'),
     homeSideSiblingOfCenter: !!document.querySelector('#home-view > .home-center') && !!document.querySelector('#home-view > #home-side'),
-    projectsGridPresent: !!document.querySelector('.projects-grid'),
+    projectsGridPresent: !!document.querySelector('.projects-deck'),
     pinnedStillCarousel: !!document.querySelector('#pinned-section .carousel'),
     editorWrapOverflowVisible: getComputedStyle(document.getElementById('editor-wrap')).overflow === 'visible',
     timerBarSpaceBetween: getComputedStyle(document.querySelector('.timer-bar')).justifyContent === 'space-between',
