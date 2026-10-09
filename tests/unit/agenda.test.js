@@ -20,12 +20,8 @@ test('неделя начинается с понедельника, какой 
   assert.equal(A.agendaRange('week', at(2026, 9, 27)).from, r.from);
 });
 
-test('день и «4 дня» начинаются с опорной даты', () => {
-  assert.deepEqual(
-    [A.agendaRange('day', WED).days, A.agendaRange('days4', WED).days],
-    [1, 4],
-  );
-  assert.equal(A.agendaRange('days4', WED).from, WED);
+test('день начинается с опорной даты', () => {
+  assert.deepEqual(A.agendaRange('day', WED), { from: WED, to: WED + A.DAY, days: 1 });
 });
 
 test('месяц округляется до целых недель — сетка должна быть прямоугольной', () => {
@@ -37,7 +33,7 @@ test('месяц округляется до целых недель — сет�
 });
 
 test('шаг вперёд и назад возвращает туда же', () => {
-  for (const mode of ['day', 'days4', 'week', 'month', 'agenda']) {
+  for (const mode of ['day', 'week', 'month', 'agenda']) {
     const fwd = A.shiftAnchor(mode, WED, 1);
     const back = A.shiftAnchor(mode, fwd, -1);
     assert.ok(back <= WED && WED < A.shiftAnchor(mode, back, 1), `${mode}: шаг туда-обратно увёл в другой отрезок`);

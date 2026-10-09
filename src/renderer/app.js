@@ -1500,13 +1500,15 @@ function enterView(node) {
 function aliasTimeView() {
   if (state.ui.view === 'calendar') {
     state.ui.view = 'time';
-    if (timeMode() === 'month') state.ui.timeMode = AG_TIME_MODES.includes(agenda.mode) || agenda.mode === 'agenda' ? agenda.mode : 'week';
+    if (timeMode() === 'month') state.ui.timeMode = TIME_MODES.includes(agenda.mode) && agenda.mode !== 'month' ? agenda.mode : 'week';
   } else if (state.ui.view === 'stats') {
     state.ui.view = 'time';
     state.ui.timeMode = 'month';
   }
 }
-const timeMode = () => state.ui.timeMode || 'week';
+// «4 дня» убраны 9 октября 2026: сохранённый когда-то режим открывается неделей.
+const TIME_MODES = ['day', 'week', 'month', 'agenda'];
+const timeMode = () => (TIME_MODES.includes(state.ui.timeMode) ? state.ui.timeMode : 'week');
 
 function openView(view) {
   flushEditor();
@@ -5786,7 +5788,7 @@ function calGroupNode(g, buildRow) {
 
 const AG_SNAP_MIN = 15;   // шаг прилипания при перетаскивании
 const AG_MIN_MIN = 15;    // короче этого запись не сделать: её нечем ухватить
-const AG_TIME_MODES = ['day', 'days4', 'week'];
+const AG_TIME_MODES = ['day', 'week'];
 
 const agenda = {
   mode: 'week',
@@ -6507,7 +6509,7 @@ document.addEventListener('keydown', (e) => {
   const node = document.activeElement;
   if (node && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.isContentEditable)) return;
   const key = e.key.toLowerCase();
-  const modes = { 1: 'day', d: 'day', 2: 'week', w: 'week', 3: 'month', m: 'month', 4: 'days4', x: 'days4', 5: 'agenda', a: 'agenda' };
+  const modes = { 1: 'day', d: 'day', 2: 'week', w: 'week', 3: 'month', m: 'month', 4: 'agenda', 5: 'agenda', a: 'agenda' };
   if (modes[key]) { e.preventDefault(); setTimeMode(modes[key]); return; }
   if (key === 't' || key === 'е') { e.preventDefault(); el.timeToday.click(); return; }
   if (key === 'arrowleft' || key === 'k') { e.preventDefault(); el.timePrev.click(); return; }

@@ -30,11 +30,11 @@
 
   /** Сколько дней показывает режим. У месяца дни считаются отдельно: их
    *  число зависит от того, на какие дни недели пришлись края. */
-  const MODE_DAYS = { day: 1, days4: 4, week: 7 };
+  const MODE_DAYS = { day: 1, week: 7 };
 
   /** Отрезок, который показывает сетка: [начало первого дня, конец последнего).
    *  Месяц округляется до целых недель, чтобы сетка была прямоугольной.
-   *  @param {string} mode — day | days4 | week | month | agenda */
+   *  @param {string} mode — day | week | month | agenda */
   function agendaRange(mode, anchor) {
     const a = startOfDayMs(anchor);
     if (mode === 'week') {
