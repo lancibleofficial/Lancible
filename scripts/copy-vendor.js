@@ -1,4 +1,4 @@
-// Копирует внешние ассеты (Supabase, шрифты Onest и Basique Pro) в src/renderer/vendor,
+// Копирует внешние ассеты (Supabase, шрифты Onest и Basique Pro для логотипа) в src/renderer/vendor,
 // чтобы рендерер грузил всё из своей папки — и в dev, и в собранном .exe.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,14 +16,11 @@ const vendor = [
   [path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'supabase.js'],
 ];
 
-// Имена в личной папке font/ свои: Basique_4=Thin(100) 3=Light(300)
-// 2=Regular(400) 1=Bold(700), Basique=Black(900). Onest там нет — его
-// .woff2 берутся только из assets/fonts.
+// Имена в личной папке font/ свои: Basique_1 — Bold(700). С 9 октября 2026
+// Basique Pro нужен только логотипу, остальное набрано Onest. Onest в
+// font/ нет — его .woff2 берутся только из assets/fonts.
 const fonts = [
-  ['Basique_3.woff2', 'Basique-Light.woff2'],
-  ['Basique_2.woff2', 'Basique-Regular.woff2'],
   ['Basique_1.woff2', 'Basique-Bold.woff2'],
-  ['Basique.woff2', 'Basique-Black.woff2'],
 ];
 
 try {

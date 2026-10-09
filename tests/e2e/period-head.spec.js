@@ -108,8 +108,8 @@ test('режимы идут от меньшего к большему', async ({
   expect(m.modeLabels).toEqual(['День', 'Неделя', 'Месяц', 'Расписание']);
 });
 
-test('название периода набрано Basique Pro', async ({ page }) => {
+test('название периода набрано Onest', async ({ page }) => {
   await open(page);
   const m = await measure(page, 'week');
-  expect(m.titleFont).toMatch(/^"?Basique Pro/);
+  expect(m.titleFont).toMatch(/^"?Onest/);
 });
