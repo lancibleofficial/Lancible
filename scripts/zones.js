@@ -38,7 +38,7 @@ const ZONES = {
     role: 'Core/Backend',
     paths: [
       'src/renderer/core/**', 'mobile/src/core/**', 'supabase/**',
-      'scripts/worklog.js', 'scripts/sync-mobile-core.js', 'scripts/setup-hooks.js', 'scripts/zones.js',
+      'scripts/worklog.js', 'scripts/sync-mobile-core.js', 'scripts/setup-hooks.js', 'scripts/zones.js', 'scripts/setup-worktree.js',
       'scripts/copy-vendor.js', 'scripts/graph-baseline.js', 'scripts/graph-orphans.js', '.githooks/**',
       'package*.json', 'mobile/package*.json',
       '.github/workflows/test.yml', '.gitignore', '.gitattributes', '.graphifyignore',

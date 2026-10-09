@@ -872,6 +872,12 @@
       "at": "L156"
     },
     {
+      "id": "scripts_setup_worktree_main",
+      "label": "main()",
+      "file": "scripts/setup-worktree.js",
+      "at": "L119"
+    },
+    {
       "id": "scripts_shot_capture",
       "label": "capture()",
       "file": "scripts/shot.js",
@@ -1128,12 +1134,6 @@
       "label": "turnInto()",
       "file": "src/editor/commands.js",
       "at": "L493"
-    },
-    {
-      "id": "src_editor_comments_commentspanel_add",
-      "label": ".add()",
-      "file": "src/editor/comments.js",
-      "at": "L105"
     },
     {
       "id": "src_editor_comments_commentspanel_constructor",
