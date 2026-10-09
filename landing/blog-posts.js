@@ -25,6 +25,29 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-10-09',
+    tag: 'release',
+    version: '0.4.0 · mobile 1.2.0',
+    title: {
+      ru: 'Телефон заново, одни иконки на всех платформах и вход без письма на почту',
+      en: 'A rebuilt phone app, one icon set everywhere and sign-up without an email',
+    },
+    body: {
+      ru: [
+        'Приложение для телефона сделано заново — под телефон, а не копией веба. Вкладок пять: Проекты, Задачи, Сегодня, Цифры и Меню. Проекты листаются колодой карточек: в карточке время, деньги, шкала выполненного и задачи, новая задача записывается строкой прямо под шкалой, а «+» у края колоды создаёт проект. «Задачи» собирают всё по дедлайнам, свайп справа налево закрепляет задачу. «Сегодня» показывает день сеткой по часам или списком, «Цифры» — календарь и числа по дням, в «Меню» — профиль, теги, ставка, валюта, язык, тема и уведомления.',
+        'Страница задачи — название, теги и заметки сверху, таймер в шторке снизу: её можно вытянуть до сведений и истории записей, а «Выполнено» всегда под рукой. Дедлайн выбирается календарём и барабанами часов и минут, выбор тега и валюты открывается внутри того же окна, у каждого окна есть крестик. Экраны сменяются пролистыванием, а на iPhone с iOS 26 шапки и панель вкладок — на системном жидком стекле, идущая задача видна в капсуле над вкладками.',
+        'Иконки везде теперь одни — набор Solar: на телефоне, на компьютере и в браузере. На iPhone ими нарисованы даже системная панель вкладок, кнопки шапки и стрелка «назад».',
+        'Версия 0.4.0 для Windows и macOS приносит всё, что раньше появилось в браузере: новый облик, собственный редактор текста с рисованием пером и раздел «Документы». Регистрация стала проще: почта и пароль — и вы сразу внутри, без письма с подтверждением; войти в другой аккаунт можно в любой момент.',
+      ],
+      en: [
+        'The phone app is rebuilt for the phone instead of copying the web. There are five tabs: Projects, Tasks, Today, Figures and Menu. Projects flip as a deck of cards: each card shows time, money, a progress bar and tasks, a new task is typed right under the bar, and the “+” at the edge of the deck creates a project. Tasks gathers everything by deadline, and a right-to-left swipe pins a task. Today shows the day as an hourly grid or a list, Figures shows a calendar and numbers by day, and Menu holds the profile, tags, rate, currency, language, theme and notifications.',
+        'A task page has the title, tags and notes on top and the timer in a sheet at the bottom: pull it up for details and the entry history, while Done stays within reach. A deadline is picked with a calendar and hour and minute wheels, tag and currency pickers open inside the same sheet, and every sheet has a close button. Screens slide from one to the next, and on an iPhone with iOS 26 the headers and the tab bar sit on the system Liquid Glass, with the running task in a capsule above the tabs.',
+        'There is now one icon set everywhere — Solar: on the phone, on desktop and in the browser. On an iPhone even the system tab bar, the header buttons and the back arrow use it.',
+        'Version 0.4.0 for Windows and macOS brings everything that appeared in the browser earlier: the new look, our own text editor with pen drawing and the Documents section. Signing up is simpler: an email and a password and you are in, no confirmation letter; switching to another account works at any time.',
+      ],
+    },
+  },
+  {
     date: '2026-10-07',
     tag: 'feature',
     title: {
