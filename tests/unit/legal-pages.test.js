@@ -82,8 +82,16 @@ test('правовые страницы подключают реквизиты,
       assert.ok(html.includes(`<script src="${src}"></script>`), `${page}: не подключает ${src}`);
     }
     assert.ok(html.indexOf('<script src="business.js">') < html.indexOf('<script src="legal.js">'), `${page}: business.js должен идти раньше legal.js`);
-    const langs = [...html.matchAll(/<button type="button" data-lang="(\w+)"/g)].map((m) => m[1]);
-    assert.deepEqual(langs, LEGAL_LANGS, `${page}: в переключателе не те языки`);
+    // Переключателей на правовой странице два, и это разные вещи: язык
+    // сайта в подвале (ru/en — столько переводов у лендинга) и язык
+    // документа рядом с заголовком (все четыре). Пишут они один и тот же
+    // выбор, см. landing/i18n.js.
+    const doc = html.match(/<section class="page-hero">[\s\S]*?<\/section>/)[0];
+    const docLangs = [...doc.matchAll(/<button type="button" data-lang="(\w+)"/g)].map((m) => m[1]);
+    assert.deepEqual(docLangs, LEGAL_LANGS, `${page}: у документа не те языки`);
+    const foot = html.match(/<footer>[\s\S]*<\/footer>/)[0];
+    const siteLangs = [...foot.matchAll(/<button type="button" data-lang="(\w+)"/g)].map((m) => m[1]);
+    assert.deepEqual(siteLangs, ['ru', 'en'], `${page}: у сайта не те языки`);
   }
 });
 

@@ -118,8 +118,20 @@ footer{padding-block:44px; border-top:1px solid var(--border-soft); flex:none;}
 .footer-legal a:hover{color:var(--accent);}
 .footer-consent{font:inherit; color:inherit; background:none; border:none; padding:0; cursor:pointer;}
 .footer-consent:hover{color:var(--accent);}
+.footer-legal .lang-switch{margin-left:auto; padding:2px;}
+.footer-legal .lang-switch button{padding:4px 10px; font-size:.72rem;}
+@media (max-width: 560px){
+  .footer-legal .lang-switch{margin-left:0;}
+}
 
-/* ---------- переключатель языка (главная и блог) ---------- */
+/* ---------- переключатель языка ---------- */
+/* Два применения: язык сайта в подвале (ru/en) и язык документа на правовых
+   страницах (ещё uk и kk) — пишут они один и тот же выбор.
+   Почему в подвале, а не в шапке: шапке в полном составе хватало 583 px, а с
+   переключателем нужно было уже 764 — подписи ссылки растут с языком
+   («Скачать» 88, «Download» 100, «Завантажити» 126), и на 375 правый блок
+   вылезал за поле страницы на 98 px. Язык и так определяется сам по браузеру,
+   поэтому ручной выбор живёт рядом с «Настройками cookie». */
 .lang-switch{display:inline-flex; gap:2px; padding:3px; flex:none; background:var(--panel); border:1px solid var(--border); border-radius:999px;}
 .lang-switch button{
   font-family:'Sora', system-ui, sans-serif; font-size:.76rem; font-weight:600; letter-spacing:.04em;
