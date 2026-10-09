@@ -130,7 +130,8 @@ test('зелёный текстом на светлой теме тёмный, �
   expect(ratio['--accent-text на --accent'], 'надпись на зелёной кнопке').toBeGreaterThanOrEqual(4.5);
 });
 
-test('текст набран Onest, а лого и крупные числа — Basique Pro', async ({ page }) => {
+// С 9 октября 2026 всё набрано Onest; Basique Pro остался только у лого.
+test('текст, заголовки и крупные числа — Onest, лого — Basique Pro', async ({ page }) => {
   await open(page, 'light');
   const f = await page.evaluate(async () => {
     await document.fonts.ready;
@@ -140,13 +141,15 @@ test('текст набран Onest, а лого и крупные числа �
       nav: fam('.nav-item'),
       logo: fam('.tb-logo-text'),
       heading: fam('.day-title'),
+      number: fam('.kpi-num'),
       loaded: [...document.fonts].filter((x) => x.status === 'loaded').map((x) => `${x.family} ${x.weight}`),
     };
   });
   expect(f.body).toBe('Onest');
   expect(f.nav, 'пункты меню — обычный текст').toBe('Onest');
   expect(f.logo).toBe('Basique Pro');
-  expect(f.heading, 'заголовок страницы — фирменный шрифт').toBe('Basique Pro');
+  expect(f.heading, 'заголовок страницы — Onest').toBe('Onest');
+  expect(f.number, 'крупное число — Onest').toBe('Onest');
   expect(f.loaded.some((x) => x.startsWith('Onest')), `загружено: ${f.loaded}`).toBe(true);
   expect(f.loaded.some((x) => x.startsWith('Basique Pro')), `загружено: ${f.loaded}`).toBe(true);
 });
@@ -187,28 +190,73 @@ test('обычный текст в светлой теме на полступе
   expect(await weight('dark')).toBe('400');
 });
 
-test('капсула идущей задачи — в шапке на любом экране, со стопом внутри', async ({ page }) => {
+// С 9 октября 2026 таймер — в правом верхнем углу: идёт — название, время
+// и «Стоп»; стоит — компактная «▶ Старт», которая всегда запускает последнюю
+// задачу, по которой шло время.
+test('таймер в шапке: «Старт» запускает последнюю задачу, капсула — название, время, «Стоп»', async ({ page }) => {
   await open(page, 'light');
+  await expect(page.locator('#tb-start'), 'задач нет — запускать нечего').toBeHidden();
   await page.evaluate(() => {
+    const now = Date.now();
     const p = { id: 'p1', name: 'П', color: '#87ff65', description: '', pinnedAt: null, createdAt: new Date().toISOString(), tagIds: [] };
     state.projects.push(p);
-    state.tasks.push({ id: 't1', projectId: 'p1', title: 'Идущая задача', notes: '', statusId: null, done: false, totalMs: 0, sessions: [], createdAt: new Date().toISOString(), tagIds: [], dueAt: null });
+    const ses = (h) => [{ start: new Date(now - (h + 1) * 3_600_000).toISOString(), end: new Date(now - h * 3_600_000).toISOString(), ms: 3_600_000 }];
+    state.tasks.push({ id: 't1', projectId: 'p1', title: 'Вчерашняя', notes: '', statusId: null, done: false, totalMs: 3_600_000, sessions: ses(20), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), tagIds: [], dueAt: null });
+    state.tasks.push({ id: 't2', projectId: 'p1', title: 'Последняя', notes: '', statusId: null, done: false, totalMs: 3_600_000, sessions: ses(1), createdAt: new Date().toISOString(), tagIds: [], dueAt: null });
     migrate();
+    state.ui.view = 'settings';
     render();
   });
   await expect(page.locator('#tb-timer')).toBeHidden();
-  await page.evaluate(() => startTimer('t1'));
+  const start = page.locator('#tb-start');
+  await expect(start).toBeVisible();
+  await expect(start).toHaveText('Старт');
+  await expect(start).toHaveAttribute('title', 'Запустить «Последняя»');
+  await start.click();
+  expect(await page.evaluate(() => state.activeTimer.taskId), 'последняя по записи, а не по изменению').toBe('t2');
+  expect(await page.evaluate(() => state.ui.view), '«Старт» не уводит с экрана').toBe('settings');
+
+  await expect(start).toBeHidden();
   await expect(page.locator('#tb-timer')).toBeVisible();
-  await expect(page.locator('#tb-timer-name')).toHaveText('Идущая задача');
-  // Капсула — пилюля того же цвета, что острова, и не меняется между экранами.
+  await expect(page.locator('#tb-timer-name')).toHaveText('Последняя');
+  await expect(page.locator('#tb-timer-stop')).toHaveText('Стоп');
+  // Порядок в капсуле: название, время, «Стоп».
+  const xs = await page.evaluate(() => ['tb-timer-name', 'tb-timer-time', 'tb-timer-stop']
+    .map((id) => document.getElementById(id).getBoundingClientRect().left));
+  expect([...xs].sort((a, b) => a - b)).toEqual(xs);
   const pill = await page.evaluate(() => getComputedStyle(document.getElementById('tb-timer')));
   expect(pill.borderRadius).toBe('999px');
-  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
-  await expect(page.locator('#tb-timer')).toBeVisible();
+  await page.evaluate(() => { state.ui.view = 'home'; render(); });
+  await expect(page.locator('#tb-timer'), 'на любом экране').toBeVisible();
   await page.locator('#tb-timer-stop').click();
   await expect(page.locator('#tb-timer')).toBeHidden();
   expect(await page.evaluate(() => state.activeTimer)).toBeNull();
-  expect(await page.evaluate(() => state.ui.view), 'стоп не уводит с экрана').toBe('settings');
+  expect(await page.evaluate(() => state.ui.view), 'стоп не уводит с экрана').toBe('home');
+  await expect(start, 'остановили — снова «Старт»').toBeVisible();
+});
+
+test('шапка: лого, поиск, колокольчик рядом с ним; таймер — в правом углу', async ({ page }) => {
+  for (const running of [false, true]) {
+    await open(page, 'dark');
+    await page.evaluate((running) => {
+      state.projects.push({ id: 'p1', name: 'П', color: '#87ff65', description: '', pinnedAt: null, createdAt: new Date().toISOString(), tagIds: [] });
+      state.tasks.push({ id: 't1', projectId: 'p1', title: 'Задача', notes: '', statusId: null, done: false, totalMs: 0, sessions: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), tagIds: [], dueAt: null });
+      migrate();
+      if (running) startTimer('t1'); else render();
+    }, running);
+    const m = await page.evaluate((running) => {
+      const r = (sel) => document.querySelector(sel).getBoundingClientRect();
+      return {
+        search: r('.tb-search'), bell: r('#notif-btn'), timer: r(running ? '#tb-timer' : '#tb-start'),
+        bar: r('#titlebar'), account: !!document.querySelector('#titlebar #account-btn'),
+      };
+    }, running);
+    expect(m.bell.left - m.search.right, 'колокольчик — сразу справа от поиска').toBeLessThan(16);
+    expect(m.bell.left).toBeGreaterThan(m.search.right);
+    expect(m.bar.right - m.timer.right, 'таймер — у правого края').toBeLessThan(24);
+    expect(m.timer.left - m.bell.right, 'между колокольчиком и таймером — распорка').toBeGreaterThan(100);
+    expect(m.account, 'профиля в шапке нет').toBe(false);
+  }
 });
 
 test('всплывающее меню поднято тенью над тем, из чего вызвано', async ({ page }) => {
@@ -226,10 +274,10 @@ test('всплывающее меню поднято тенью над тем, �
   }
 });
 
-// У Basique Pro нет начертания между 400 и 700, а Bold тёмным по белому
-// слипался: в светлой теме акценты набраны Regular. Лого — знак, а не текст,
-// и остаётся Bold в обеих.
-test('Basique на акцентах: Bold в тёмной, Regular в светлой; лого — Bold в обеих', async ({ page }) => {
+// Bold тёмным по белому слипается: в светлой теме крупное набрано на
+// ступень легче (у переменного Onest 600 настоящий). Лого — знак, а не
+// текст, и остаётся Bold в обеих.
+test('крупное: 700 в тёмной, 600 в светлой; лого — Bold в обеих', async ({ page }) => {
   const weights = async (theme) => {
     await open(page, theme);
     return page.evaluate(() => {
@@ -242,36 +290,47 @@ test('Basique на акцентах: Bold в тёмной, Regular в светл
     });
   };
   expect(await weights('dark')).toEqual({ day: '700', logo: '700', period: '700' });
-  expect(await weights('light')).toEqual({ day: '400', logo: '700', period: '400' });
+  expect(await weights('light')).toEqual({ day: '600', logo: '700', period: '600' });
 });
 
-// Профиль в шапке — тот же предмет, что поиск: заливка, скругление, без
-// рамки. Раньше у кнопки оставалась браузерная рамка, а у вошедшего рядом с
-// буквой стоял ещё и человечек: свойство hidden у SVG ничего не прячет.
+// С 9 октября 2026 профиль — последним пунктом левой панели, под языком и
+// «Свернуть», на десктопе и в вебе. У гостя — значок и «Войти», у вошедшего
+// — кружок с буквой и имя; свойство hidden у SVG ничего не прячет, поэтому
+// человечек прячется атрибутом.
 for (const theme of ['dark', 'light']) {
-  test(`${theme}: профиль в шапке выглядит как поиск рядом`, async ({ page }) => {
+  test(`${theme}: профиль — внизу левой панели`, async ({ page }) => {
     await open(page, theme);
     const look = () => page.evaluate(() => {
-      const a = getComputedStyle(document.getElementById('account-btn'));
-      const s = getComputedStyle(document.querySelector('.tb-search'));
-      const icon = document.querySelector('#account-btn > svg.icon');
+      const btn = document.getElementById('account-btn');
+      const rail = document.getElementById('navrail');
+      const items = [...rail.querySelectorAll(':scope > .nav-item')].filter((n) => n.offsetParent);
+      const icon = btn.querySelector(':scope > svg.icon');
+      const r = btn.getBoundingClientRect();
+      const rr = rail.getBoundingClientRect();
       return {
-        border: a.borderTopWidth, bg: a.backgroundColor, searchBg: s.backgroundColor,
-        radius: a.borderRadius, searchRadius: s.borderRadius,
-        icon: icon.getBoundingClientRect().width > 0, avatar: !!document.querySelector('#account-btn .tb-avatar'),
+        inRail: rail.contains(btn), last: items[items.length - 1] === btn,
+        nearBottom: rr.bottom - r.bottom, label: document.getElementById('account-label').textContent,
+        bg: getComputedStyle(btn).backgroundColor, navBg: getComputedStyle(items[0]).backgroundColor,
+        icon: icon.getBoundingClientRect().width > 0, avatar: !!btn.querySelector('.nav-avatar'),
       };
     });
-    // Фон у пилюли меняется плавно (transition), а тема только что
-    // переключилась — ждём, пока переход доиграет.
-    await expect.poll(async () => { const l = await look(); return l.bg === l.searchBg; }, { message: 'заливка — как у поиска' }).toBe(true);
     const guest = await look();
-    expect(guest.border, 'без рамки').toBe('0px');
-    expect(guest.radius).toBe(guest.searchRadius);
+    expect(guest.inRail).toBe(true);
+    expect(guest.last, 'последний пункт панели').toBe(true);
+    expect(guest.nearBottom, 'у нижнего края').toBeLessThan(24);
+    expect(guest.bg, 'выглядит как остальные пункты').toBe(guest.navBg);
+    expect(guest.label).toBe('Войти');
     expect(guest.icon, 'у гостя — значок входа').toBe(true);
 
     await page.evaluate(() => { currentUser = { id: 'u1', email: 'turan@example.com', name: 'Turan' }; renderAccountBtn(); });
     const user = await look();
+    expect(user.label).toBe('Turan');
     expect(user.avatar, 'у вошедшего — кружок с буквой').toBe(true);
     expect(user.icon, 'и без человечка рядом').toBe(false);
+
+    // Свёрнутая панель: подписи нет, имя — подсказкой, кружок на месте.
+    await page.evaluate(() => { state.ui.navCollapsed = true; render(); });
+    await expect(page.locator('#account-btn')).toHaveAttribute('title', 'Turan');
+    await expect(page.locator('#account-btn .nav-avatar')).toBeVisible();
   });
 }

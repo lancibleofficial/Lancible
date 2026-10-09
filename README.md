@@ -59,7 +59,7 @@
   стандартные и весь webkit-кастом молча игнорируется (скроллбар откатывается
   на вид по умолчанию — широкий, со стрелками), хотя приложение — Electron/
   Chromium-only, кроссбраузерный fallback тут не нужен.
-- Шрифт **Basique Pro** (woff2, веса 300/400/700/900). Исходники — в папке
+- Шрифт **Basique Pro** — только логотип (woff2, Bold 700; остальное набрано Onest). Исходники — в папке
   `font/` (её кладёт пользователь); `scripts/copy-vendor.js` копирует нужные
   начертания в `src/renderer/vendor/fonts/` на `postinstall`. Если `font/` нет —
   интерфейс откатывается на системный шрифт.
@@ -366,7 +366,7 @@ Build desktop installers → Run workflow) с тегом в поле ввода.
 | `src/preload.js` | Мост `window.api` (`load` / `save` / `exportXlsx` / `copy` / `setTitlebarOverlay` / `checkForUpdate` / `downloadUpdate` / `installUpdate` + подписки `onUpdate*`). |
 | `src/xlsx.js` | Мини-генератор .xlsx (ZIP + OOXML) без зависимостей. |
 | `src/renderer/index.html` | Разметка: `#titlebar` (лого + поиск), `#navrail` (+ переключатели темы/языка), `#home-view` (статистика внутри `.home-main`, `.projects-grid`, `#recent-section.recent-fixed`), `#project/calendar-view`, вкладки задачи (`#task-tabs`/`#tab-notes`/`#tab-history`), фильтр задач в `#sidebar`, попапы кастомного календаря/времени (`#dp-pop`/`#tp-pop`, общие для периода в календаре и диалога записи времени), диалог подтверждения (`#confirm-backdrop`), `#search-panel`. Все статичные подписи размечены `data-i18n*`. Иконки — инлайн-SVG. |
-| `src/renderer/styles.css` | Стили, палитра (тёмная/светлая — CSS-переменные + `[data-theme]`/`prefers-color-scheme`), анимации, `@font-face` Basique Pro. `.icon` — `--icon` цвет. |
+| `src/renderer/styles.css` | Стили, палитра (тёмная/светлая — CSS-переменные + `[data-theme]`/`prefers-color-scheme`), анимации, `@font-face` Onest и Basique Pro (лого). `.icon` — `--icon` цвет. |
 | `src/renderer/app.js` | Логика: **i18n** (словарь `T`, `t()`, `pluralForm()`, `applyStaticTranslations()`, `LOCALE_MAP`), **темы** (`applyTheme`/`cycleTheme`), рейл (сворачивание — один класс `body.nav-collapsed`, элементы вынесены в `position:absolute` ради плавной анимации ширины), поиск из шапки, маршрутизатор видов, плитки/карусели, недавние задачи (без готовых), календарь (`aggregateDays`/`rangeAgg`, режимы month/week/day, `renderViewTotal` — итог за месяц/неделю всегда в правой панели, `calState.periodOn` + `renderPeriodSummary`), обобщённые попапы даты/времени (`openDatePicker`/`openTimePicker`, принимают anchor+value+callback — используются и календарём, и диалогом записи времени), фильтр задач по статусу (`taskFilter`, `filteredProjectTasks`), вкладки задачи (`setTaskTab`), диалог подтверждения (`confirmDialog`, замена `window.confirm`), диалоги проекта и записи времени, меню, пины, редактор (цвет текста + таблицы + `cellBg` через Parchment StyleAttributor), таймер, деньги (`sessionRate`), экспорт (заголовки тоже через `t()`), миграция. |
 | `scripts/copy-vendor.js` | Копирует Quill + шрифт в `src/renderer/vendor/` (postinstall). |
 | `scripts/make-icon.js` | Генерирует `build/icon.*` из `build/logo-accent.svg` (canvas + `Path2D`/`Image`, собирает `.ico` через `png-to-ico`). |

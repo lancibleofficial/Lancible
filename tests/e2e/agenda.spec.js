@@ -268,8 +268,9 @@ test('режимы переключаются и показывают разно
 
   await mode('day');
   await expect(page.locator('.ag-col')).toHaveCount(1);
-  await mode('days4');
-  await expect(page.locator('.ag-col')).toHaveCount(4);
+  await mode('week');
+  await expect(page.locator('.ag-col')).toHaveCount(7);
+  await expect(page.locator('#time-modes button[data-mode="days4"]'), '«4 дня» убраны').toHaveCount(0);
 
   // Месяц — сетка итогов по дням, часовой сетки нет.
   await mode('month');
@@ -555,3 +556,12 @@ for (const theme of ['dark', 'light']) {
     expect(await bg('.ag-list-row:not(.ghost)'), 'строка расписания').not.toBe(await bg('#ag-main'));
   });
 }
+
+// «4 дня» убраны 9 октября 2026. У кого режим был сохранён — открывается
+// неделя, а не пустая сетка без кнопки, которая бы горела.
+test('сохранённый режим «4 дня» открывается неделей', async ({ page }) => {
+  await seed(page);
+  await page.evaluate(() => { state.ui.timeMode = 'days4'; agenda.mode = 'days4'; openView('time'); });
+  await expect(page.locator('.ag-col')).toHaveCount(7);
+  await expect(page.locator('#time-modes button.on')).toHaveAttribute('data-mode', 'week');
+});

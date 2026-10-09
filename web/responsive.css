@@ -67,6 +67,7 @@
   }
   .tb-search {
     max-width: none;
+    min-width: 0;
     height: 38px;
     margin: auto 10px;
     border-radius: 12px;
@@ -79,12 +80,21 @@
   #search-input {
     font-size: 14.5px;
   }
-  /* На телефонной ширине доступ к аккаунту уже даёт нижняя плашка
-     (#mobile-account-btn) — свой пункт в шапке рядом с поиском тут только
-     отнимал бы и без того тесное место. Селектор повторяет тот, что
-     показывает кнопку в вебе, иначе он проигрывает по специфичности. */
-  body.platform-web .tb-account {
+  /* Таймер в шапке — коротко: без названия задачи и без подписей, только
+     время и значок «Стоп»; «Старт» — одним значком. */
+  .tb-timer-name,
+  .tb-timer-stop span,
+  .tb-start span {
     display: none;
+  }
+  .tb-timer-stop {
+    width: 26px;
+    padding: 0;
+  }
+  .tb-start {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
   }
   .tb-gap {
     min-width: 0;
@@ -222,10 +232,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* --- «Проекты»: карточки в один столбец, у недавних задач только
+  /* --- «Проекты»: колода, как на телефоне — карточка во всю ширину без
+     40 px, край следующей виден; листается пальцем и встаёт ровно по
+     карточке. Стрелок нет — их заменяет жест. У недавних задач только
      название и время. Кнопки карточки видны всегда — наведения нет. --- */
-  .projects-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .projects-deck {
+    scroll-snap-type: x mandatory;
+    height: clamp(420px, calc(100dvh - 200px), 640px);
+  }
+  .ptile {
+    flex-basis: calc(100% - 40px);
+  }
+  #deck-prev, #deck-next {
+    display: none;
   }
   .ptile-menu {
     opacity: 1;
@@ -239,6 +258,46 @@
   .recent-row > :nth-child(3),
   .recent-row > :nth-child(5) {
     display: none;
+  }
+
+  /* --- Скелетон загрузки — по раскладке телефонной ширины: значок лого,
+     поиск во всю ширину, «Старт» значком, одна колонка островов, снизу
+     плашка вкладок вместо левой панели. --- */
+  .skel-topbar {
+    height: 50px;
+    padding: 0 10px 0 12px;
+  }
+  .skel-logo {
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+  }
+  .skel-start {
+    width: 38px;
+    padding: 0;
+  }
+  .skel-start .skel {
+    display: none;
+  }
+  .skel-rail,
+  .skel-side {
+    display: none;
+  }
+  .skel-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .skel-body {
+    padding-bottom: calc(62px + var(--gap));
+  }
+  .skel-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app-skeleton::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 62px;
+    background: var(--panel);
   }
 
   /* --- Модалки и плавающее меню становятся нижними шторками --- */

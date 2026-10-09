@@ -56,6 +56,49 @@ test('окно срока не выходит за край экрана', async
   expect(m.bottom, 'нижний край').toBeLessThanOrEqual(m.h);
 });
 
+// 9 октября 2026: «Готово» стояла в одной строке со временем, не помещалась
+// и вылезала за край окна, а список часов тянулся на весь экран.
+test('всё содержимое окна срока — внутри окна', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await openTask(page, new Date(2026, 5, 12, 18, 0).toISOString());
+  await page.locator('#due-date-btn').click();
+  const out = await page.evaluate(() => {
+    const pop = document.getElementById('dp-pop').getBoundingClientRect();
+    return [...document.querySelectorAll('#dp-pop button, #dp-pop input')]
+      .filter((n) => n.offsetParent)
+      .map((n) => [n.id || n.className || n.textContent, n.getBoundingClientRect()])
+      .filter(([, r]) => r.left < pop.left - 0.5 || r.right > pop.right + 0.5 || r.bottom > pop.bottom + 0.5)
+      .map(([name]) => name);
+  });
+  expect(out, 'вылезают за край окна').toEqual([]);
+});
+
+test('список часов короткий, прокручивается и открыт на выбранном', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await openTask(page, new Date(2026, 5, 12, 18, 0).toISOString());
+  await page.locator('#due-date-btn').click();
+  await page.locator('#dp-hours-pick').click();
+  const m = await page.evaluate(() => {
+    const menu = document.getElementById('ctx-menu');
+    const r = menu.getBoundingClientRect();
+    const sel = menu.querySelector('.ctx-item.sel').getBoundingClientRect();
+    return { h: r.height, w: r.width, top: r.top, bottom: r.bottom, scrolls: menu.scrollHeight > menu.clientHeight, selIn: sel.top >= r.top && sel.bottom <= r.bottom };
+  });
+  expect(m.h, 'не выше восьми с половиной строк').toBeLessThanOrEqual(268);
+  expect(m.w, 'узкий — под двузначное число').toBeLessThan(120);
+  expect(m.scrolls).toBe(true);
+  expect(m.selIn, '18 видно сразу').toBe(true);
+  expect(m.top).toBeGreaterThanOrEqual(0);
+  expect(m.bottom).toBeLessThanOrEqual(860);
+  // Своя прокрутка списка его не закрывает.
+  await page.locator('#ctx-menu').hover();
+  await page.mouse.wheel(0, 200);
+  await page.waitForTimeout(150);
+  await expect(page.locator('#ctx-menu')).toBeVisible();
+  await page.locator('#ctx-menu .ctx-item', { hasText: /^23$/ }).click();
+  expect(await due(page)).toBe('2026-06-12 23:00');
+});
+
 test('в окне срока под календарём — часы и минуты; день его не закрывает', async ({ page }) => {
   await openTask(page, new Date(2026, 5, 12, 18, 0).toISOString());
   await page.locator('#due-date-btn').click();

@@ -383,19 +383,19 @@
       "id": "mobile_src_screens_projectsscreen_cardrow_ondone",
       "label": "onDone()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L379"
+      "at": "L370"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectcard_submit",
       "label": "submit()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L441"
+      "at": "L432"
     },
     {
       "id": "mobile_src_screens_projectsscreen_projectsscreen_openprojectscreen",
       "label": "openProjectScreen()",
       "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L192"
+      "at": "L183"
     },
     {
       "id": "mobile_src_screens_projectstatusesscreen_projectstatusesscreen_onadd",
@@ -1553,25 +1553,25 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L6284"
+      "at": "L6493"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L5900"
+      "at": "L6109"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L5890"
+      "at": "L6099"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L6290"
+      "at": "L6499"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
@@ -1589,109 +1589,109 @@
       "id": "src_renderer_app_applyremind",
       "label": "applyRemind()",
       "file": "src/renderer/app.js",
-      "at": "L5017"
+      "at": "L5226"
     },
     {
       "id": "src_renderer_app_authdismissible",
       "label": "authDismissible()",
       "file": "src/renderer/app.js",
-      "at": "L1166"
+      "at": "L1171"
     },
     {
       "id": "src_renderer_app_boardlane",
       "label": "boardLane()",
       "file": "src/renderer/app.js",
-      "at": "L2512"
+      "at": "L2704"
     },
     {
       "id": "src_renderer_app_calshift",
       "label": "calShift()",
       "file": "src/renderer/app.js",
-      "at": "L1949"
+      "at": "L2141"
     },
     {
       "id": "src_renderer_app_changepassword",
       "label": "changePassword()",
       "file": "src/renderer/app.js",
-      "at": "L1056"
+      "at": "L1061"
     },
     {
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L4330"
+      "at": "L4530"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L6443"
+      "at": "L6652"
     },
     {
       "id": "src_renderer_app_committime",
       "label": "commitTime()",
       "file": "src/renderer/app.js",
-      "at": "L2195"
+      "at": "L2387"
     },
     {
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L6199"
+      "at": "L6408"
     },
     {
       "id": "src_renderer_app_deletestatus",
       "label": "deleteStatus()",
       "file": "src/renderer/app.js",
-      "at": "L3012"
+      "at": "L3204"
     },
     {
       "id": "src_renderer_app_deletetask",
       "label": "deleteTask()",
       "file": "src/renderer/app.js",
-      "at": "L3806"
+      "at": "L3998"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L5386"
+      "at": "L5595"
     },
     {
       "id": "src_renderer_app_dppickfrom",
       "label": "dpPickFrom()",
       "file": "src/renderer/app.js",
-      "at": "L2104"
+      "at": "L2296"
     },
     {
       "id": "src_renderer_app_expdlgrange",
       "label": "expdlgRange()",
       "file": "src/renderer/app.js",
-      "at": "L4232"
+      "at": "L4432"
     },
     {
       "id": "src_renderer_app_exportallprojects",
       "label": "exportAllProjects()",
       "file": "src/renderer/app.js",
-      "at": "L4345"
+      "at": "L4545"
     },
     {
       "id": "src_renderer_app_gettag",
       "label": "getTag()",
       "file": "src/renderer/app.js",
-      "at": "L2657"
+      "at": "L2849"
     },
     {
       "id": "src_renderer_app_handleauthsubmit",
       "label": "handleAuthSubmit()",
       "file": "src/renderer/app.js",
-      "at": "L970"
+      "at": "L975"
     },
     {
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L5187"
+      "at": "L5396"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
@@ -1703,67 +1703,67 @@
       "id": "src_renderer_app_isscrollbox",
       "label": "isScrollBox()",
       "file": "src/renderer/app.js",
-      "at": "L4953"
+      "at": "L5162"
     },
     {
       "id": "src_renderer_app_markscrollhover",
       "label": "markScrollHover()",
       "file": "src/renderer/app.js",
-      "at": "L4955"
+      "at": "L5164"
     },
     {
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L3783"
+      "at": "L3975"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L5143"
+      "at": "L5352"
     },
     {
       "id": "src_renderer_app_openlangmenu",
       "label": "openLangMenu()",
       "file": "src/renderer/app.js",
-      "at": "L585"
+      "at": "L588"
     },
     {
       "id": "src_renderer_app_openlegal",
       "label": "openLegal()",
       "file": "src/renderer/app.js",
-      "at": "L625"
+      "at": "L628"
     },
     {
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L5342"
+      "at": "L5551"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L6437"
+      "at": "L6646"
     },
     {
       "id": "src_renderer_app_opensearch",
       "label": "openSearch()",
       "file": "src/renderer/app.js",
-      "at": "L1835"
+      "at": "L2027"
     },
     {
       "id": "src_renderer_app_openview",
       "label": "openView()",
       "file": "src/renderer/app.js",
-      "at": "L1490"
+      "at": "L1518"
     },
     {
       "id": "src_renderer_app_pickrangeday",
       "label": "pickRangeDay()",
       "file": "src/renderer/app.js",
-      "at": "L2005"
+      "at": "L2197"
     },
     {
       "id": "src_renderer_app_promptdialog",
@@ -1775,31 +1775,37 @@
       "id": "src_renderer_app_saveonboarding",
       "label": "saveOnboarding()",
       "file": "src/renderer/app.js",
-      "at": "L1018"
+      "at": "L1023"
     },
     {
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L4062"
+      "at": "L4262"
     },
     {
       "id": "src_renderer_app_savetagdialog",
       "label": "saveTagDialog()",
       "file": "src/renderer/app.js",
-      "at": "L2800"
+      "at": "L2992"
+    },
+    {
+      "id": "src_renderer_app_scrolldeck",
+      "label": "scrollDeck()",
+      "file": "src/renderer/app.js",
+      "at": "L1848"
     },
     {
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L6404"
+      "at": "L6613"
     },
     {
       "id": "src_renderer_app_settaskversion",
       "label": "setTaskVersion()",
       "file": "src/renderer/app.js",
-      "at": "L5238"
+      "at": "L5447"
     },
     {
       "id": "src_renderer_app_statusesofkind",
@@ -1808,22 +1814,28 @@
       "at": "L301"
     },
     {
+      "id": "src_renderer_app_tickprojects",
+      "label": "tickProjects()",
+      "file": "src/renderer/app.js",
+      "at": "L1979"
+    },
+    {
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L3547"
+      "at": "L3739"
     },
     {
       "id": "src_renderer_app_togglesyncenabled",
       "label": "toggleSyncEnabled()",
       "file": "src/renderer/app.js",
-      "at": "L1391"
+      "at": "L1396"
     },
     {
       "id": "src_renderer_app_updateprofilename",
       "label": "updateProfileName()",
       "file": "src/renderer/app.js",
-      "at": "L1044"
+      "at": "L1049"
     },
     {
       "id": "src_renderer_core_format_fmtshort",
@@ -2069,7 +2081,7 @@
       "id": "tests_e2e_projects_spec_seed",
       "label": "seed()",
       "file": "tests/e2e/projects.spec.js",
-      "at": "L13"
+      "at": "L14"
     },
     {
       "id": "tests_e2e_repeat_spec_opentask",
@@ -2088,6 +2100,18 @@
       "label": "taskState()",
       "file": "tests/e2e/repeat.spec.js",
       "at": "L52"
+    },
+    {
+      "id": "tests_e2e_skeleton_spec_rects",
+      "label": "rects()",
+      "file": "tests/e2e/skeleton.spec.js",
+      "at": "L16"
+    },
+    {
+      "id": "tests_e2e_skeleton_spec_skeletononly",
+      "label": "skeletonOnly()",
+      "file": "tests/e2e/skeleton.spec.js",
+      "at": "L21"
     },
     {
       "id": "tests_e2e_stats_spec_cards",
@@ -2160,6 +2184,18 @@
       "label": "seed()",
       "file": "tests/e2e/today.spec.js",
       "at": "L13"
+    },
+    {
+      "id": "tests_e2e_transitions_spec_animating",
+      "label": "animating()",
+      "file": "tests/e2e/transitions.spec.js",
+      "at": "L29"
+    },
+    {
+      "id": "tests_e2e_transitions_spec_seed",
+      "label": "seed()",
+      "file": "tests/e2e/transitions.spec.js",
+      "at": "L11"
     },
     {
       "id": "tests_e2e_versions_spec_dropon",
