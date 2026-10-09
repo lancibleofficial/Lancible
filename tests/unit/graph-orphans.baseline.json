@@ -437,37 +437,37 @@
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onexcel",
       "label": "onExcel()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L122"
+      "at": "L141"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopencurrency",
       "label": "onOpenCurrency()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L109"
+      "at": "L128"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopenlanguage",
       "label": "onOpenLanguage()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L99"
+      "at": "L118"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopenrate",
       "label": "onOpenRate()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L119"
+      "at": "L138"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onopensystemnotifications",
       "label": "onOpenSystemNotifications()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L95"
+      "at": "L114"
     },
     {
       "id": "mobile_src_screens_settingsscreen_settingsscreen_onupdatepress",
       "label": "onUpdatePress()",
       "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L65"
+      "at": "L70"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_onexcel",
@@ -692,6 +692,18 @@
       "at": "L19"
     },
     {
+      "id": "mobile_tests_settingsupdate_test_pressupdate",
+      "label": "pressUpdate()",
+      "file": "mobile/tests/SettingsUpdate.test.js",
+      "at": "L33"
+    },
+    {
+      "id": "mobile_tests_settingsupdate_test_sheet",
+      "label": "sheet()",
+      "file": "mobile/tests/SettingsUpdate.test.js",
+      "at": "L41"
+    },
+    {
       "id": "mobile_tests_statsscreen_test_nav",
       "label": "nav()",
       "file": "mobile/tests/StatsScreen.test.js",
@@ -744,6 +756,24 @@
       "label": "nav()",
       "file": "mobile/tests/TodayScreen.test.js",
       "at": "L12"
+    },
+    {
+      "id": "mobile_tests_updatecheck_test_apk",
+      "label": "apk()",
+      "file": "mobile/tests/updateCheck.test.js",
+      "at": "L27"
+    },
+    {
+      "id": "mobile_tests_updatecheck_test_target",
+      "label": "target()",
+      "file": "mobile/tests/updateCheck.test.js",
+      "at": "L57"
+    },
+    {
+      "id": "mobile_tests_updatecheck_test_update",
+      "label": "update()",
+      "file": "mobile/tests/updateCheck.test.js",
+      "at": "L26"
     },
     {
       "id": "scripts_build_landing_app_build",

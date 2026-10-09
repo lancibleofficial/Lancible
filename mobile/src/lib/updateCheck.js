@@ -11,7 +11,8 @@
 //
 // Форма манифеста:
 //   { "android": { "version": "1.1.0", "url": "<страница релиза>",
-//                  "apk": "<прямая ссылка на .apk>" },
+//                  "apk": "<прямая ссылка на .apk>",
+//                  "size": <размер .apk в байтах, необязательно> },
 //     "ios":     { "version": "1.1.0", "url": "<TestFlight или App Store>" } }
 //
 // Про iOS. Поставить обновление «прямо из приложения» там невозможно в
@@ -20,7 +21,10 @@
 // только переход по ссылке — это не упрощение, а единственный существующий
 // путь. На Android установщик системный, и туда файл передать можно.
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+// Только классы File и Paths. Функции из корня пакета (deleteAsync,
+// createDownloadResumable, getContentUriAsync…) с SDK 54 бросают ошибку на
+// вызове — на них обновление и не работало с 1.1.1 по 1.2.0.
+import { File, Paths } from 'expo-file-system';
 import * as IntentLauncher from 'expo-intent-launcher';
 import Constants from 'expo-constants';
 
@@ -62,6 +66,7 @@ export async function checkForUpdate() {
       version: entry.version,
       url: entry.url || FALLBACK_RELEASES_URL,
       apk: entry.apk || null,
+      size: Number(entry.size) || null,
       canInstall: Platform.OS === 'android' && !!entry.apk,
     };
   } catch {
@@ -73,35 +78,60 @@ export async function checkForUpdate() {
  * Скачивает APK во временную папку приложения и отдаёт его системному
  * установщику. onProgress(0..1) вызывается по мере скачивания.
  *
- * Возвращает {ok} либо {ok:false, reason}. Установку дальше ведёт система:
- * она сама покажет запрос на разрешение «ставить из этого источника», если
- * пользователь его ещё не давал, и сама спросит подтверждение. Подменить этот
- * экран приложение не может и не должно.
+ * Возвращает {ok} либо {ok:false, reason}, где reason — что именно не вышло:
+ *   download — файл не скачался (нет сети, ответ сервера не 2xx);
+ *   size     — скачался не целиком: меньше, чем обещали манифест или сервер;
+ *   install  — система не открыла установщик.
+ * Установку дальше ведёт система: она сама покажет запрос на разрешение
+ * «ставить из этого источника», если пользователь его ещё не давал, и сама
+ * спросит подтверждение. Подменить этот экран приложение не может и не должно.
  */
 export async function downloadAndInstall(update, onProgress) {
   if (Platform.OS !== 'android' || !update || !update.apk) return { ok: false, reason: 'unsupported' };
-  const target = `${FileSystem.cacheDirectory}Lancible-${update.version}.apk`;
+  const file = new File(Paths.cache, `Lancible-${update.version}.apk`);
+  // Сколько байт обещал сервер (Content-Length); -1 — не сказал. Берётся
+  // наибольшее: закончив, DownloadTask сам шлёт последний прогресс с
+  // totalBytes = размер файла, и у недокачанного он меньше обещанного.
+  let announced = -1;
   try {
     // Остаток прошлой попытки мог остаться битым — качаем заново.
-    await FileSystem.deleteAsync(target, { idempotent: true });
-    const task = FileSystem.createDownloadResumable(update.apk, target, {}, (p) => {
-      if (!onProgress || !p.totalBytesExpectedToWrite) return;
-      onProgress(p.totalBytesWritten / p.totalBytesExpectedToWrite);
+    if (file.exists) file.delete();
+    const task = File.createDownloadTask(update.apk, file, {
+      onProgress: ({ bytesWritten, totalBytes }) => {
+        announced = Math.max(announced, totalBytes);
+        if (onProgress && totalBytes > 0) onProgress(bytesWritten / totalBytes);
+      },
     });
-    const result = await task.downloadAsync();
-    if (!result || !result.uri) return { ok: false, reason: 'download' };
+    // Ответ не 2xx здесь бросает («HTTP 404»), а не ложится в файл
+    // страницей ошибки.
+    if (!(await task.downloadAsync())) return { ok: false, reason: 'download' };
+  } catch (err) {
+    console.warn('Не удалось скачать обновление:', err);
+    return { ok: false, reason: 'download' };
+  }
 
+  // Недокачанный APK установщик отвергнет с невнятным «Приложение не
+  // установлено» — лучше остановиться здесь и сказать, что случилось.
+  // Манифест знает размер точно, сервер — по Content-Length; если не знает
+  // никто, отсекается хотя бы пустой файл.
+  const expected = update.size || (announced > 0 ? announced : 0);
+  if (file.size === 0 || (expected && file.size !== expected)) {
+    console.warn(`Обновление скачалось не целиком: ${file.size} байт из ${expected || '?'}`);
+    try { file.delete(); } catch { /* не удалилось — перезапишется следующей попыткой */ }
+    return { ok: false, reason: 'size' };
+  }
+
+  try {
     // Системному установщику нельзя передать file:// — начиная с Android 7
     // это падает с FileUriExposedException. Нужен content:// через
     // FileProvider, который expo-file-system выдаёт сам.
-    const contentUri = await FileSystem.getContentUriAsync(result.uri);
     await IntentLauncher.startActivityAsync('android.intent.action.INSTALL_PACKAGE', {
-      data: contentUri,
+      data: file.contentUri,
       flags: 1, // FLAG_GRANT_READ_URI_PERMISSION — без него установщик не прочитает файл
     });
     return { ok: true };
   } catch (err) {
-    console.warn('Не удалось обновиться:', err);
+    console.warn('Не удалось открыть установщик:', err);
     return { ok: false, reason: 'install' };
   }
 }

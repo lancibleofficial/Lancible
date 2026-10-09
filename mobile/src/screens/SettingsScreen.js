@@ -26,6 +26,7 @@ import { notificationFeed } from '../lib/due';
 import { buildAllProjectsSheets, buildPeriodSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { openSheet, closeSheet } from '../store/useSheetStore';
+import { confirmSheet } from '../lib/dialogs';
 import { setSyncEnabled } from '../lib/sync';
 import { permissionStatus, ensurePermission } from '../lib/notifications';
 import { checkForUpdate, downloadAndInstall } from '../lib/updateCheck';
@@ -62,6 +63,10 @@ export default function SettingsScreen({ navigation }) {
 
   // Android: качаем APK прямо здесь и отдаём системному установщику. iOS
   // такого не позволяет — там остаётся переход по ссылке.
+  //
+  // Не вышло — говорим, что именно, и даём выбрать. Раньше экран молча
+  // открывал страницу релиза, и поломка самого обновления с 1.1.1 по 1.2.0
+  // выглядела как «так задумано».
   async function onUpdatePress() {
     if (!update) return;
     if (!update.canInstall) { Linking.openURL(update.url); return; }
@@ -69,7 +74,21 @@ export default function SettingsScreen({ navigation }) {
     setUpdateProgress(0);
     const res = await downloadAndInstall(update, setUpdateProgress);
     setUpdating(false);
-    if (!res.ok) Linking.openURL(update.url);
+    if (res.ok) return;
+    const why = {
+      download: t(lang, 'settings.update_error_download'),
+      size: t(lang, 'settings.update_error_size'),
+      install: t(lang, 'settings.update_error_install'),
+    };
+    confirmSheet({
+      title: t(lang, 'settings.update_failed'),
+      message: why[res.reason] || why.download,
+      actions: [
+        { label: t(lang, 'settings.update_retry'), onPress: onUpdatePress },
+        { label: t(lang, 'settings.update_in_browser'), onPress: () => Linking.openURL(update.url) },
+        { label: t(lang, 'common.cancel'), cancel: true },
+      ],
+    });
   }
 
   useEffect(() => {

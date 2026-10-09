@@ -108,4 +108,7 @@ jobs:
 
       - name: Напомнить про манифест обновлений
         run: |
-          echo "::notice::APK опубликован. Осталось поднять версию до ${{ steps.meta.outputs.version }} в latest.json репозитория lancible-updates — иначе установленные копии о новой версии не узнают."
+          # size — размер файла в байтах: начиная с 1.2.1 приложение сверяет с
+          # ним скачанное и недокачанный APK установщику не отдаёт.
+          size=$(stat -c %s "$APK_NAME")
+          echo "::notice::APK опубликован. Осталось поднять в latest.json репозитория lancible-updates version до ${{ steps.meta.outputs.version }} и size до $size — иначе установленные копии о новой версии не узнают."

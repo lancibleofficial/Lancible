@@ -159,6 +159,10 @@ export const T = {
 
     'settings.section_tags': 'Теги', 'tag.pick': 'Теги', 'tag.add': 'Новый тег', 'tag.none': 'Тегов пока нет', 'tag.dialog_new': 'Новый тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Название тега', 'tag.search_ph': 'Найти или создать', 'tag.create_named': 'Создать тег «{name}»', 'tag.name_taken': 'Тег с таким названием уже есть', 'tag.unused': 'не используется', 'tag.used_projects': 'проектов: {n}', 'tag.used_tasks': 'задач: {n}', 'tag.delete_confirm': 'Удалить тег «{name}»?', 'tag.delete_used': 'Тег «{name}» используется ({n}). Он будет снят со всех и удалён. Продолжить?', 'tag.empty_hint': 'Общие теги видны во всех проектах. Свои у проекта — в его настройках.', 'tag.color_label': 'Цвет',
     'settings.update_available': 'Доступна версия {version}', 'settings.update_download': 'Скачать', 'settings.update_install': 'Обновить', 'settings.update_downloading': 'Скачивание… {percent}%',
+    'settings.update_failed': 'Не удалось обновить', 'settings.update_retry': 'Повторить', 'settings.update_in_browser': 'Скачать в браузере',
+    'settings.update_error_download': 'Файл не скачался. Проверьте интернет и попробуйте ещё раз.',
+    'settings.update_error_size': 'Файл скачался не целиком. Попробуйте ещё раз.',
+    'settings.update_error_install': 'Android не открыл установщик. Скачайте файл в браузере и откройте его.',
     'sync.conflict_title': 'Какие данные оставить?',
     'sync.conflict_text': 'На сервере уже есть сохранённые данные, а на этом устройстве — свои. Какие использовать?',
     'sync.use_server': 'С сервера', 'sync.use_local': 'С этого устройства',
@@ -462,6 +466,10 @@ export const T = {
 
     'settings.section_tags': 'Tags', 'tag.pick': 'Tags', 'tag.add': 'New tag', 'tag.none': 'No tags yet', 'tag.dialog_new': 'New tag', 'tag.dialog_edit': 'Tag', 'tag.name_ph': 'Tag name', 'tag.search_ph': 'Find or create', 'tag.create_named': 'Create tag “{name}”', 'tag.name_taken': 'A tag with this name already exists', 'tag.unused': 'not used', 'tag.used_projects': 'projects: {n}', 'tag.used_tasks': 'tasks: {n}', 'tag.delete_confirm': 'Delete the tag “{name}”?', 'tag.delete_used': 'The tag “{name}” is in use ({n}). It will be removed from everything and deleted. Continue?', 'tag.empty_hint': 'Shared tags are visible in every project. A project’s own tags live in its setup.', 'tag.color_label': 'Colour',
     'settings.update_available': 'Version {version} is available', 'settings.update_download': 'Download', 'settings.update_install': 'Update', 'settings.update_downloading': 'Downloading… {percent}%',
+    'settings.update_failed': "Couldn't update", 'settings.update_retry': 'Try again', 'settings.update_in_browser': 'Download in browser',
+    'settings.update_error_download': "The file didn't download. Check your connection and try again.",
+    'settings.update_error_size': 'The file downloaded only partly. Try again.',
+    'settings.update_error_install': "Android didn't open the installer. Download the file in your browser and open it.",
     'sync.conflict_title': 'Which data should we keep?',
     'sync.conflict_text': 'There is already saved data on the server, and this device has its own too. Which should we use?',
     'sync.use_server': 'From the server', 'sync.use_local': 'From this device',
@@ -765,6 +773,10 @@ export const T = {
 
     'settings.section_tags': 'Теги', 'tag.pick': 'Теги', 'tag.add': 'Новий тег', 'tag.none': 'Тегів поки немає', 'tag.dialog_new': 'Новий тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Назва тега', 'tag.search_ph': 'Знайти або створити', 'tag.create_named': 'Створити тег «{name}»', 'tag.name_taken': 'Тег із такою назвою вже є', 'tag.unused': 'не використовується', 'tag.used_projects': 'проектів: {n}', 'tag.used_tasks': 'завдань: {n}', 'tag.delete_confirm': 'Видалити тег «{name}»?', 'tag.delete_used': 'Тег «{name}» використовується ({n}). Його буде знято з усього і видалено. Продовжити?', 'tag.empty_hint': 'Спільні теги видимі в усіх проєктах. Власні теги проєкту — у його налаштуваннях.', 'tag.color_label': 'Колір',
     'settings.update_available': 'Доступна версія {version}', 'settings.update_download': 'Завантажити', 'settings.update_install': 'Оновити', 'settings.update_downloading': 'Завантаження… {percent}%',
+    'settings.update_failed': 'Не вдалося оновити', 'settings.update_retry': 'Повторити', 'settings.update_in_browser': 'Завантажити в браузері',
+    'settings.update_error_download': 'Файл не завантажився. Перевірте інтернет і спробуйте ще раз.',
+    'settings.update_error_size': 'Файл завантажився не повністю. Спробуйте ще раз.',
+    'settings.update_error_install': 'Android не відкрив інсталятор. Завантажте файл у браузері й відкрийте його.',
     'sync.conflict_title': 'Які дані залишити?',
     'sync.conflict_text': 'На сервері вже є збережені дані, а на цьому пристрої — свої. Які використати?',
     'sync.use_server': 'З сервера', 'sync.use_local': 'З цього пристрою',
@@ -1068,6 +1080,10 @@ export const T = {
 
     'settings.section_tags': 'Тегтер', 'tag.pick': 'Тегтер', 'tag.add': 'Жаңа тег', 'tag.none': 'Тегтер әлі жоқ', 'tag.dialog_new': 'Жаңа тег', 'tag.dialog_edit': 'Тег', 'tag.name_ph': 'Тег атауы', 'tag.search_ph': 'Табу немесе құру', 'tag.create_named': '«{name}» тегін құру', 'tag.name_taken': 'Мұндай атаулы тег бар', 'tag.unused': 'қолданылмайды', 'tag.used_projects': 'жобалар: {n}', 'tag.used_tasks': 'тапсырмалар: {n}', 'tag.delete_confirm': '«{name}» тегін жою керек пе?', 'tag.delete_used': '«{name}» тегі қолданыста ({n}). Ол барлық жерден алынып, жойылады. Жалғастыру керек пе?', 'tag.empty_hint': 'Ортақ тегтер барлық жобада көрінеді. Жобаның өз тегтері — оның баптауларында.', 'tag.color_label': 'Түс',
     'settings.update_available': '{version} нұсқасы қолжетімді', 'settings.update_download': 'Жүктеп алу', 'settings.update_install': 'Жаңарту', 'settings.update_downloading': 'Жүктелуде… {percent}%',
+    'settings.update_failed': 'Жаңарту мүмкін болмады', 'settings.update_retry': 'Қайталау', 'settings.update_in_browser': 'Браузерде жүктеу',
+    'settings.update_error_download': 'Файл жүктелмеді. Интернетті тексеріп, қайталап көріңіз.',
+    'settings.update_error_size': 'Файл толық жүктелмеді. Қайталап көріңіз.',
+    'settings.update_error_install': 'Android орнатқышты ашпады. Файлды браузерде жүктеп, ашыңыз.',
     'sync.conflict_title': 'Қай деректерді қалдырамыз?',
     'sync.conflict_text': 'Серверде деректер бар, осы құрылғыда да өз деректері бар. Қайсысын пайдаланамыз?',
     'sync.use_server': 'Сервердегі', 'sync.use_local': 'Осы құрылғыдағы',
