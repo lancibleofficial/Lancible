@@ -15,8 +15,8 @@
  *   - файлы зоны этого префикса;
  *   - DESIGN.md и ARCHITECTURE.md — каждый правит свой раздел;
  *   - тесты к своей правке (tests/**, mobile/tests/**) — веткам разработчиков.
- * Ветка main и ветки без «/» — без ограничений: там сливает Publish. Ветка с
- * незнакомым префиксом (например, claude/… облачных сессий) — отказ.
+ * Ветка main — без ограничений: там сливает Publish. Ветка с незнакомым
+ * префиксом (например, claude/… облачных сессий) или вовсе без «/» — отказ.
  */
 
 const ZONES = {
@@ -129,14 +129,16 @@ function describeOwner(zone) {
 
 /**
  * Проверка коммита. Возвращает { ok, free, prefix, refused: [{ file, owner }] }.
- * free — ветка без ограничений (main, без префикса).
+ * free — ветка без ограничений: main или detached HEAD (пустое имя).
  */
 function checkCommit(branch, files) {
-  if (!branch || FREE_BRANCHES.includes(branch) || !branch.includes('/')) {
+  if (!branch || FREE_BRANCHES.includes(branch)) {
     return { ok: true, free: true, refused: [] };
   }
-  const prefix = branch.slice(0, branch.indexOf('/'));
-  const zone = ZONES[prefix];
+  // Ветка без «/» (fix, test) — такой же отказ, как незнакомый префикс:
+  // иначе любое имя без префикса обходило бы проверку целиком.
+  const prefix = branch.includes('/') ? branch.slice(0, branch.indexOf('/')) : null;
+  const zone = prefix && ZONES[prefix];
   if (!zone || zone.branchless) {
     return { ok: false, unknownPrefix: true, prefix, refused: files.map((file) => ({ file, owner: ownerOf(file) })) };
   }
@@ -155,7 +157,9 @@ function checkCommit(branch, files) {
 function formatRefusal(branch, result) {
   const lines = [];
   if (result.unknownPrefix) {
-    lines.push(`Коммит остановлен: у ветки ${branch} незнакомый префикс «${result.prefix}/».`);
+    lines.push(result.prefix
+      ? `Коммит остановлен: у ветки ${branch} незнакомый префикс «${result.prefix}/».`
+      : `Коммит остановлен: у ветки ${branch} нет префикса роли. Без ограничений коммитится только main.`);
     lines.push('Префиксы ролей: ' + Object.keys(ZONES).filter((z) => !ZONES[z].branchless).map((z) => `${z}/`).join(', ') +
       '. Таблица зон — CLAUDE.md → «Команда агентов», в коде — scripts/zones.js.');
     return lines.join('\n');

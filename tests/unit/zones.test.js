@@ -64,7 +64,6 @@ test('пересобираемое Publish и регламент — тольк�
   assert.equal(checkCommit('web/x', ['landing/blog-posts.js']).ok, false);
   assert.equal(checkCommit('core/x', ['CLAUDE.md']).ok, false);
   assert.ok(checkCommit('main', ['CLAUDE.md', 'landing/blog-posts.js', 'src/renderer/app.js']).ok);
-  assert.ok(checkCommit('hotfix', ['src/renderer/core/status.js']).ok, 'ветка без префикса — без ограничений');
   assert.ok(checkCommit('', ['x']).ok, 'detached HEAD — без ограничений');
 });
 
@@ -76,6 +75,14 @@ test('незнакомый префикс — отказ с подсказкой
   assert.match(text, /незнакомый префикс «claude\/»/);
   assert.match(text, /scripts\/zones\.js/);
   assert.equal(checkCommit('publish/x', ['README.md']).ok, false, 'у Publish нет веток с префиксом');
+});
+
+test('ветка без «/» — отказ: без ограничений только main', () => {
+  for (const branch of ['fix', 'test', 'hotfix']) {
+    const r = checkCommit(branch, ['src/renderer/core/status.js']);
+    assert.equal(r.ok, false, branch);
+    assert.match(formatRefusal(branch, r), new RegExp(`у ветки ${branch} нет префикса роли`));
+  }
 });
 
 test('отказ называет файл, ветку и владельца', () => {
