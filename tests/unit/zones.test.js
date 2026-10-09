@@ -87,6 +87,20 @@ test('снимок сирот графа коммитится с любой ве
   assert.equal(checkCommit('claude/x', ['tests/unit/graph-orphans.baseline.json']).ok, false);
 });
 
+// Legal поднимает версию в core/legal.js, а mobile-core.test.js требует
+// побайтную копию в mobile/src/core/ в том же коммите.
+test('копию ядра коммитит владелец оригинала, только побайтную', () => {
+  const same = () => true;
+  const differs = () => false;
+  assert.ok(checkCommit('legal/x', ['src/renderer/core/legal.js', 'mobile/src/core/legal.js'], same).ok);
+  assert.ok(checkCommit('gfx/x', ['src/renderer/core/icons.js', 'mobile/src/core/icons.js'], same).ok);
+  assert.equal(checkCommit('legal/x', ['mobile/src/core/legal.js'], differs).ok, false, 'правка копии руками');
+  assert.equal(checkCommit('legal/x', ['mobile/src/core/status.js'], same).ok, false, 'чужой оригинал');
+  assert.equal(checkCommit('web/x', ['mobile/src/core/legal.js'], same).ok, false);
+  assert.equal(checkCommit('legal/x', ['mobile/src/core/legal.js']).ok, false, 'без проверки — не пропускаем');
+  assert.ok(checkCommit('core/x', ['mobile/src/core/status.js']).ok, 'копии — по-прежнему зона Core');
+});
+
 test('ветка без «/» — отказ: без ограничений только main', () => {
   for (const branch of ['fix', 'test', 'hotfix']) {
     const r = checkCommit(branch, ['src/renderer/core/status.js']);

@@ -113,6 +113,12 @@ function specificity(pattern) {
 const RULES = Object.entries(ZONES).flatMap(([zone, { paths }]) =>
   paths.map((pattern) => ({ zone, pattern, re: toRegExp(pattern), weight: specificity(pattern) })));
 
+/** Оригинал копии ядра: mobile/src/core/x.js → src/renderer/core/x.js. */
+function mirrorOriginal(file) {
+  const m = file.match(/^mobile\/src\/core\/(.+)$/);
+  return m ? `src/renderer/core/${m[1]}` : null;
+}
+
 function matches(file, patterns) {
   return patterns.some((p) => toRegExp(p).test(file));
 }
@@ -135,8 +141,15 @@ function describeOwner(zone) {
 /**
  * Проверка коммита. Возвращает { ok, free, prefix, refused: [{ file, owner }] }.
  * free — ветка без ограничений: main или detached HEAD (пустое имя).
+ *
+ * sameAsOriginal(copy, original) — совпадает ли копия ядра в индексе с
+ * оригиналом побайтно. Копии в mobile/src/core/ — зона Core, но копию
+ * чужого оригинала (legal.js у Legal, icons.js у gfx) коммитит владелец
+ * оригинала: sync-mobile-core.js копирует механически, а тест
+ * mobile-core.test.js требует копию в том же коммите. Пропускаем только
+ * побайтную копию — правка «руками» в копии так не пройдёт.
  */
-function checkCommit(branch, files) {
+function checkCommit(branch, files, sameAsOriginal = () => false) {
   if (!branch || FREE_BRANCHES.includes(branch)) {
     return { ok: true, free: true, refused: [] };
   }
@@ -154,6 +167,8 @@ function checkCommit(branch, files) {
     if (matches(file, SHARED)) continue;
     // Тесты к своей правке — но не пересобираемые Publish файлы внутри tests/.
     if (DEVELOPERS.includes(prefix) && matches(file, TESTS) && !(owner && ZONES[owner].branchless)) continue;
+    const original = mirrorOriginal(file);
+    if (original && ownerOf(original) === prefix && sameAsOriginal(file, original)) continue;
     refused.push({ file, owner });
   }
   return { ok: refused.length === 0, prefix, refused };
@@ -192,7 +207,10 @@ if (require.main === module) {
   let branch = '';
   try { branch = git('symbolic-ref', '--short', '-q', 'HEAD').trim(); } catch { process.exit(0); } // detached HEAD
   const files = git('diff', '--cached', '--name-only', '--no-renames', '-z').split('\0').filter(Boolean);
-  const result = checkCommit(branch, files);
+  // Сравниваем то, что уйдёт в коммит: id объектов в индексе.
+  const blob = (file) => { try { return git('rev-parse', `:${file}`).trim(); } catch { return null; } };
+  const sameAsOriginal = (copy, original) => { const a = blob(copy); return !!a && a === blob(original); };
+  const result = checkCommit(branch, files, sameAsOriginal);
   if (result.ok) process.exit(0);
   console.error(formatRefusal(branch, result));
   console.error('Разово обойти: git commit --no-verify');
