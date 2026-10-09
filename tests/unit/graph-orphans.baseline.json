@@ -1130,12 +1130,6 @@
       "at": "L493"
     },
     {
-      "id": "src_editor_comments_commentspanel_add",
-      "label": ".add()",
-      "file": "src/editor/comments.js",
-      "at": "L105"
-    },
-    {
       "id": "src_editor_comments_commentspanel_constructor",
       "label": ".constructor()",
       "file": "src/editor/comments.js",
@@ -2466,6 +2460,12 @@
       "label": "ses()",
       "file": "tests/unit/mobile-reports.test.js",
       "at": "L48"
+    },
+    {
+      "id": "tests_unit_ports_test_portlist",
+      "label": "portList()",
+      "file": "tests/unit/ports.test.js",
+      "at": "L23"
     },
     {
       "id": "tests_unit_project_views_test_ctx",
