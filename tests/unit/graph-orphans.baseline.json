@@ -857,7 +857,7 @@
       "id": "scripts_publish_site_publishgraph",
       "label": "publishGraph()",
       "file": "scripts/publish-site.js",
-      "at": "L77"
+      "at": "L98"
     },
     {
       "id": "scripts_publish_site_rebuildgraph",
@@ -869,7 +869,7 @@
       "id": "scripts_publish_site_refreshnumbers",
       "label": "refreshNumbers()",
       "file": "scripts/publish-site.js",
-      "at": "L156"
+      "at": "L181"
     },
     {
       "id": "scripts_shot_capture",
@@ -2376,6 +2376,24 @@
       "label": "vercel()",
       "file": "tests/unit/landing.test.js",
       "at": "L190"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_allowed",
+      "label": "ALLOWED",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L43"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_externalloads",
+      "label": "externalLoads()",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L62"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_read",
+      "label": "read()",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L27"
     },
     {
       "id": "tests_unit_legal_pages_test_articles",
