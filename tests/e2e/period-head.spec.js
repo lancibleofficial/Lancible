@@ -43,7 +43,7 @@ const measure = (page, mode) => page.evaluate(([m, sel]) => {
   return out;
 }, [mode, SEL]);
 
-const MODES = ['day', 'days4', 'week', 'month', 'agenda'];
+const MODES = ['day', 'week', 'month', 'agenda'];
 
 test('«Свернуть» и режимы слева, «Сегодня» и стрелки перед названием периода, действия справа', async ({ page }) => {
   await open(page);
@@ -105,11 +105,11 @@ for (const mode of MODES) {
 test('режимы идут от меньшего к большему', async ({ page }) => {
   await open(page);
   const m = await measure(page, 'week');
-  expect(m.modeLabels).toEqual(['День', '4 дня', 'Неделя', 'Месяц', 'Расписание']);
+  expect(m.modeLabels).toEqual(['День', 'Неделя', 'Месяц', 'Расписание']);
 });
 
-test('название периода набрано Basique Pro', async ({ page }) => {
+test('название периода набрано Onest', async ({ page }) => {
   await open(page);
   const m = await measure(page, 'week');
-  expect(m.titleFont).toMatch(/^"?Basique Pro/);
+  expect(m.titleFont).toMatch(/^"?Onest/);
 });

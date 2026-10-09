@@ -3,6 +3,7 @@ node_modules/
 # Генерируются заново скриптом scripts/sync-web-assets.js на каждой сборке
 app.js
 styles.css
+theme-boot.js
 xlsx.js
 editor.js
 core/

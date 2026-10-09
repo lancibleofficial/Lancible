@@ -206,8 +206,14 @@ test('полоса прокрутки прячется, пока область 
   await page.setViewportSize({ width: 1280, height: 600 });
   await open(page);
   await page.evaluate(() => {
+    // Карточки проектов стоят в ряд и вниз страницу не тянут — её длинной
+    // делает таблица недавних задач под ними.
+    const now = Date.now();
     for (let i = 0; i < 24; i++) {
       state.projects.push({ id: `px${i}`, name: `Проект ${i}`, color: '#5ec8f2', description: '', pinnedAt: null, createdAt: new Date().toISOString(), tagIds: [] });
+      const start = new Date(now - (i + 2) * 3_600_000).toISOString();
+      const end = new Date(now - (i + 1) * 3_600_000).toISOString();
+      state.tasks.push({ id: `tx${i}`, projectId: `px${i}`, title: `Задача ${i}`, done: false, totalMs: 3_600_000, sessions: [{ start, end, ms: 3_600_000 }], tagIds: [], createdAt: start, updatedAt: end });
     }
     state.ui.view = 'projects';
     render();

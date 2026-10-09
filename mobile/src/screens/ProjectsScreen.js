@@ -40,6 +40,7 @@ import { useTicker } from '../hooks/useTicker';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useColors, spacing, radius, fontSize, displayFamily, tabBarClearance } from '../theme';
 import { t } from '../lib/i18n';
+import Views from '../core/views.js';
 
 // Край следующей карточки виден: по нему понятно, что колода продолжается.
 const PEEK = 40;
@@ -67,24 +68,14 @@ const LEAVE = { duration: 240, easing: Easing.in(Easing.cubic) };
 // Шкала прогресса доползает до нового значения.
 const FILL = { duration: 420, easing: Easing.out(Easing.cubic) };
 
-/** Порядок задач в карточке: идущая (если её закрепили первой на входе),
- *  дальше — по последнему изменению, свежая сверху; выполненные не
- *  показываются. */
+/** Порядок задач в карточке — правило ядра (core/views.js), общее с
+ *  десктопом и вебом. pinTop — { taskId } идущей, закреплённой на входе. */
 export function cardTasks(tasks, pinTop) {
-  const updMs = (task) => (task.updatedAt ? new Date(task.updatedAt).getTime() : 0);
-  const top = pinTop && pinTop.taskId;
-  return tasks.filter((task) => !task.done)
-    .sort((a, b) => (b.id === top) - (a.id === top) || updMs(b) - updMs(a));
+  return Views.deckTasks(tasks, pinTop && pinTop.taskId);
 }
 
-/** Какая задача стоит в карточках первой как идущая. Берётся на входе на
- *  экран и держится, пока её таймер идёт; остановили или запустили
- *  другую — первой не стоит никто (новая идущая не прыгает наверх до
- *  следующего входа). */
-export function nextPinTop(pinTop, activeTimer) {
-  if (!pinTop) return null;
-  return activeTimer && activeTimer.taskId === pinTop ? pinTop : null;
-}
+/** Какая задача стоит в карточках первой как идущая — тоже из ядра. */
+export const nextPinTop = (pinTop, activeTimer) => Views.deckPinTop(pinTop, activeTimer);
 
 /** Куда встать колоде после отпускания: по положению с поправкой на
  *  скорость, не дальше соседней с той, с которой начали, и в пределах

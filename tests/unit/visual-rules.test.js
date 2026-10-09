@@ -160,6 +160,7 @@ const COMPONENTS = [
   'period-head', 'period-nav', 'period-title', 'island', 'settings-card',
   'btn-soft', 'btn-accent', 'island-head', 'island-title', 'island-note', 'island-empty',
   'page-head', 'page-title', 'row-list', 'rl-main', 'sq-btn', 'tag-chip', 'tag-dot', 'tag-add-btn',
+  'empty-state', 'empty-state-title', 'empty-state-text',
 ];
 
 test('styles.css: слои по порядку, общие детали — только в слое «Компоненты»', () => {

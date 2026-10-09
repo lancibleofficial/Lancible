@@ -123,7 +123,7 @@ const el = {
   updateBtn: $('update-btn'), updateBtnLabel: $('update-btn-label'), updateProgress: $('update-progress'),
 
   accountBtn: $('account-btn'), accountLabel: $('account-label'),
-  tbTimer: $('tb-timer'), tbTimerTime: $('tb-timer-time'), tbTimerName: $('tb-timer-name'), tbTimerStop: $('tb-timer-stop'),
+  tbTimer: $('tb-timer'), tbTimerTime: $('tb-timer-time'), tbTimerName: $('tb-timer-name'), tbTimerStop: $('tb-timer-stop'), tbStart: $('tb-start'),
   mobileTabbar: $('mobile-tabbar'),
   mobileBackToList: $('mobile-back-to-list'),
   authBackdrop: $('auth-backdrop'),
@@ -169,9 +169,9 @@ const el = {
   settingsDeleteRow: $('settings-delete-row'),
   modalLabel2: $('modal-label2'), modalInput2: $('modal-input2'), modalError: $('modal-error'),
 
-  homeCount: $('home-count'), projectsTrack: $('projects-track'),
+  homeCount: $('home-count'), projectsTrack: $('projects-track'), deckPrev: $('deck-prev'), deckNext: $('deck-next'),
   recentSection: $('recent-section'), recentTrack: $('recent-track'),
-  homeEmpty: $('home-empty'), createProjectBtn: $('create-project-btn'),
+  homeEmpty: $('home-empty'), homeEmptyCreate: $('home-empty-create'), createProjectBtn: $('create-project-btn'),
 
   phDot: $('ph-dot'), phName: $('ph-name'), projectMenuBtn: $('project-menu-btn'),
   projTabs: [...document.querySelectorAll('#proj-tabs button')], projList: $('proj-list'),
@@ -552,6 +552,9 @@ function applyTheme() {
   const theme = (state.settings && state.settings.theme) || 'system';
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', theme);
+  // Копия выбора для theme-boot.js: на следующем запуске тема встанет до
+  // первой отрисовки, и скелетон загрузки не мелькнёт чужой темой.
+  try { localStorage.setItem('lancible.theme', theme); } catch (e) { /* хранилище закрыто */ }
 
   for (const btn of el.themeTabs) btn.classList.toggle('on', btn.dataset.theme === theme);
   window.api.setTitlebarOverlay(theme).catch(() => {});
@@ -716,15 +719,17 @@ function renderAccountBtn() {
   el.accountLabel.textContent = name;
   // Кружок с первой буквой — только у вошедшего: у гостя пилюля остаётся
   // кнопкой входа со значком.
-  const avatar = el.accountBtn.querySelector('.tb-avatar');
+  const avatar = el.accountBtn.querySelector('.nav-avatar');
   const icon0 = el.accountBtn.querySelector('.icon');
+  // В свёрнутой панели подписи не видно — имя всплывает подсказкой.
+  el.accountBtn.title = name;
   if (currentUser) {
     if (!avatar) {
       const a = document.createElement('span');
-      a.className = 'tb-avatar';
+      a.className = 'nav-avatar';
       el.accountBtn.insertBefore(a, el.accountLabel);
     }
-    el.accountBtn.querySelector('.tb-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase();
+    el.accountBtn.querySelector('.nav-avatar').textContent = (name || '?').trim().charAt(0).toUpperCase();
     // У SVG нет свойства hidden — только атрибут. Через свойство значок не
     // прятался, и у вошедшего в пилюле стояли и человечек, и буква.
     if (icon0) icon0.setAttribute('hidden', '');
@@ -1427,6 +1432,10 @@ window.addEventListener('beforeunload', () => { if (savePending) window.api.save
 // Рендер — маршрутизатор
 // ---------------------------------------------------------------------------
 
+/** Какой экран показан сейчас: вид и его проект или задача. */
+let shownScreen = '';
+let settleTimer = 0;
+
 function render() {
   // Отдельного вида «Доска» с 6 октября 2026 нет: доска — вкладка проекта.
   // Сохранённое когда-то «board» открывается как проект на этой вкладке.
@@ -1453,11 +1462,17 @@ function render() {
   el.navItems.forEach((tab) => tab.classList.toggle('active', tab.dataset.view === v));
   renderNavProjects();
 
+  // Анимация — только переход: другой экран, другой проект или другая
+  // задача. Перерисовка на месте (таймер, галочка, синхронизация) экран не
+  // переигрывает — раньше он на каждой мигал прозрачностью.
   const views = { home: el.homeView, projects: el.projectsView, project: el.projectView, task: el.taskView, docs: el.docsView, time: el.timeView, settings: el.settingsView };
+  const shown = `${v}:${v === 'task' ? selectedId : v === 'project' ? state.ui.projectId : ''}`;
+  const entering = shown !== shownScreen;
+  shownScreen = shown;
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
-    if (show) { node.classList.remove('anim'); void node.offsetWidth; node.classList.add('anim'); }
+    if (show && entering) enterView(node);
   }
 
   if (v === 'home') renderHome();
@@ -1473,24 +1488,39 @@ function render() {
   if (!el.tmdlgBackdrop.hidden) renderTaskModal();
 }
 
+/** Переход на экран: он въезжает (viewIn), строки и карточки — лесенкой
+ *  (tileIn). Когда въезд закончился, экран «оседает» (.settled): новые
+ *  строки от перерисовки на месте появляются без анимации. */
+function enterView(node) {
+  node.classList.remove('anim', 'settled');
+  void node.offsetWidth;
+  node.classList.add('anim');
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => node.classList.add('settled'), 600);
+}
+
 /** Старые имена экранов — «calendar» и «stats» — с 7 октября 2026 один
  *  раздел «Время»: календарь открывается в своём последнем режиме,
  *  статистика — месяцем. */
 function aliasTimeView() {
   if (state.ui.view === 'calendar') {
     state.ui.view = 'time';
-    if (timeMode() === 'month') state.ui.timeMode = AG_TIME_MODES.includes(agenda.mode) || agenda.mode === 'agenda' ? agenda.mode : 'week';
+    if (timeMode() === 'month') state.ui.timeMode = TIME_MODES.includes(agenda.mode) && agenda.mode !== 'month' ? agenda.mode : 'week';
   } else if (state.ui.view === 'stats') {
     state.ui.view = 'time';
     state.ui.timeMode = 'month';
   }
 }
-const timeMode = () => state.ui.timeMode || 'week';
+// «4 дня» убраны 9 октября 2026: сохранённый когда-то режим открывается неделей.
+const TIME_MODES = ['day', 'week', 'month', 'agenda'];
+const timeMode = () => (TIME_MODES.includes(state.ui.timeMode) ? state.ui.timeMode : 'week');
 
 function openView(view) {
   flushEditor();
   closeMenu();
   closeSearch();
+  // Вход на «Проекты»: идущая задача встаёт в своей карточке первой.
+  if (view === 'projects') deckPin = state.activeTimer ? state.activeTimer.taskId : null;
   state.ui.view = view;
   aliasTimeView();
   render();
@@ -1535,12 +1565,24 @@ function renderStats() {
   renderTbTimer();
 }
 
+/** Что запускает «▶ Старт» в шапке: всегда последнюю задачу, по которой шло
+ *  время; если записей ещё не было — последнюю изменённую из невыполненных. */
+function startableTask() {
+  const last = recentTasks(1)[0];
+  if (last) return last;
+  const updMs = (x) => (x.updatedAt ? new Date(x.updatedAt).getTime() : 0);
+  return state.tasks.filter((x) => !x.done).sort((a, b) => updMs(b) - updMs(a))[0] || null;
+}
+
 /** Капсула идущей задачи в шапке: время с начала записи и название. Без
  *  идущего таймера капсулы нет — пустая пилюля в шапке только путала бы. */
 function renderTbTimer() {
   const at = state.activeTimer;
   const task = at && getTask(at.taskId);
   el.tbTimer.hidden = !task;
+  const next = task ? null : startableTask();
+  el.tbStart.hidden = !next;
+  if (next) el.tbStart.title = t('timer.start_last', { name: next.title || t('task.no_name') });
   if (!task) return;
   el.tbTimerTime.textContent = fmtClock(Date.now() - new Date(at.startedAt).getTime());
   el.tbTimerName.textContent = task.title || t('task.no_name');
@@ -1702,7 +1744,9 @@ function renderNowIsland() {
   const p = getProject(task.projectId);
   el.nowIsland.classList.toggle('idle', !running);
   el.nowLabel.textContent = running ? t('home.now_running') : t('home.now_idle');
-  el.nowSince.textContent = running ? hm(at.startedAt) : t('home.continue');
+  // Без таймера справа пусто: подпись «Продолжить» ничего не добавляла к
+  // кнопке плей под ней.
+  el.nowSince.textContent = running ? hm(at.startedAt) : '';
   el.nowTitle.textContent = task.title || t('task.no_name');
   el.nowProj.innerHTML = `<i class="rl-dot" style="--pc:${p ? p.color : PALETTE[0]}"></i>${escapeHtml(p ? p.name : '')}`;
   el.nowBtn.className = 'sq-btn' + (running ? ' run' : '');
@@ -1745,6 +1789,13 @@ function renderRecentList() {
 // Проекты
 // ---------------------------------------------------------------------------
 
+/** Идущая задача, закреплённая первой в карточках на входе на страницу
+ *  (Core.deckPinTop): запуск таймера с карточки её не переставляет. */
+let deckPin = null;
+/** Набранное в полях новых задач: страница перерисовывается целиком (таймер,
+ *  синхронизация), и без этого текст пропадал бы на полуслове. */
+const deckDrafts = new Map();
+
 function renderProjects() {
   // Закреплённые — первыми, в порядке закрепления; остальные как есть.
   const projects = [...state.projects].sort((a, b) => {
@@ -1753,7 +1804,25 @@ function renderProjects() {
   });
   el.homeCount.textContent = state.projects.length ? `· ${state.projects.length}` : '';
   el.homeEmpty.hidden = state.projects.length > 0;
-  fillNodes(el.projectsTrack, projects.map(projectTile));
+  // Акцентная кнопка — одна на экран: пока проектов нет, она по центру.
+  el.createProjectBtn.hidden = state.projects.length === 0;
+  deckPin = Core.deckPinTop(deckPin, state.activeTimer);
+
+  // Перерисовка не должна сбрасывать то, что человек трогал: ряд, прокрутку
+  // списков в карточках, фокус в поле новой задачи.
+  const track = el.projectsTrack;
+  const left = track.scrollLeft;
+  const lists = new Map([...track.querySelectorAll('.ptile')].map((n) => [n.dataset.id, n.querySelector('.ptile-tasks').scrollTop]));
+  const focused = document.activeElement && document.activeElement.closest('#projects-track .ptile');
+  const focusId = focused && document.activeElement.classList.contains('ptile-qa-in') ? focused.dataset.id : null;
+  fillNodes(track, projects.map(projectTile));
+  track.scrollLeft = left;
+  for (const n of track.querySelectorAll('.ptile')) {
+    if (lists.has(n.dataset.id)) n.querySelector('.ptile-tasks').scrollTop = lists.get(n.dataset.id);
+    if (n.dataset.id === focusId) n.querySelector('.ptile-qa-in').focus({ preventScroll: true });
+  }
+  updateDeckArrows();
+
   const recent = recentTasks(8);
   el.recentSection.hidden = recent.length === 0;
   el.recentTrack.innerHTML = '';
@@ -1768,32 +1837,157 @@ function fillNodes(container, nodes) {
   });
 }
 
+/** Стрелки ряда карточек: гаснут у края, а если ряд влез целиком — их нет. */
+function updateDeckArrows() {
+  const track = el.projectsTrack;
+  const max = track.scrollWidth - track.clientWidth;
+  el.deckPrev.hidden = el.deckNext.hidden = max <= 1;
+  el.deckPrev.disabled = track.scrollLeft <= 1;
+  el.deckNext.disabled = track.scrollLeft >= max - 1;
+}
+
+/** Листнуть ряд на столько карточек, сколько видно целиком. */
+function scrollDeck(dir) {
+  const track = el.projectsTrack;
+  const card = track.querySelector('.ptile');
+  if (!card) return;
+  const step = card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || 0);
+  const fit = Math.max(1, Math.floor((track.clientWidth + 1) / step));
+  track.scrollBy({ left: dir * fit * step, behavior: 'smooth' });
+}
+
+/** Карточка проекта — как колода на телефоне: шапка (открывает проект),
+ *  «✓ готово/всего» и ближайший дедлайн его цветом, время и деньги, шкала
+ *  прогресса, поле новой задачи, задачи со своей прокруткой, внизу —
+ *  «Перейти в проект». */
 function projectTile(p) {
   const tasks = tasksOf(p.id);
   const done = tasks.filter((t2) => t2.done).length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
-  const nextDue = tasks.filter((t2) => !t2.done && t2.dueAt).map((t2) => t2.dueAt).sort()[0];
+  const nextDue = tasks.filter((t2) => !t2.done && t2.dueAt).sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt))[0];
+  const due = nextDue ? dueState(nextDue) : null;
 
   const tile = document.createElement('article');
   tile.className = 'ptile';
   tile.style.setProperty('--pc', p.color || PALETTE[0]);
   tile.dataset.id = p.id;
   tile.innerHTML = `
-    <div class="ptile-head">
+    <div class="ptile-head" role="button" tabindex="0">
       <i class="ptile-dot"></i>
-      <span class="ptile-name">${escapeHtml(p.name)}</span>
-      <button class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}" tabindex="-1">${icon('kebab')}</button>
+      <span class="ptile-title">
+        <span class="ptile-name">${escapeHtml(p.name)}</span>
+        <span class="ptile-sub">${icon('check')}<span class="ptile-count">${done}/${tasks.length}</span>${nextDue ? `<span class="ptile-due ${due}">· ${escapeHtml(dueShort(nextDue))}</span>` : ''}</span>
+      </span>
+      <button type="button" class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}">${icon('kebab')}</button>
+      <span class="ptile-chev">${icon('chevron-right')}</span>
     </div>
-    <div class="ptile-desc">${escapeHtml(p.description || '')}</div>
-    <div class="ptile-figs"><span class="ptile-time">${escapeHtml(fmtDur(projectMs(p.id)))}</span><span class="ptile-money">· ${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span><span class="ptile-note">${escapeHtml(t('home.total_label'))}</span></div>
+    <div class="ptile-figs"><span class="ptile-time">${escapeHtml(fmtDur(projectMs(p.id)))}</span><span class="ptile-money">${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span></div>
     <span class="ptile-progress"><i style="width:${pct}%"></i></span>
-    <div class="ptile-foot"><span>${escapeHtml(t('home.tasks_done', { done, total: tasks.length }))}</span><span>${escapeHtml(nextDue ? t('home.next_due', { date: fmtDateShort(nextDue) }) : t('home.no_due'))}</span></div>`;
-  tile.addEventListener('click', () => openProject(p.id));
+    <form class="ptile-qa">
+      <input class="field ptile-qa-in" type="text" maxlength="200" placeholder="${escapeHtml(t('deck.new_ph'))}" aria-label="${escapeHtml(t('deck.new_ph'))}">
+      <button type="submit" class="btn-soft">${escapeHtml(t('agenda.create_btn'))}</button>
+    </form>
+    <ul class="row-list ptile-tasks"></ul>
+    <button type="button" class="ptile-open">${escapeHtml(t('deck.open'))}${icon('chevron-right')}</button>`;
+
+  const head = tile.querySelector('.ptile-head');
+  head.addEventListener('click', () => openProject(p.id));
+  head.addEventListener('keydown', (e) => { if (e.target === head && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openProject(p.id); } });
   tile.querySelector('.ptile-menu').addEventListener('click', (e) => {
     e.stopPropagation();
     openProjectMenu(p, e.currentTarget);
   });
+  tile.querySelector('.ptile-open').addEventListener('click', () => openProject(p.id));
+
+  // Новая задача — сразу её страница, как на телефоне.
+  const input = tile.querySelector('.ptile-qa-in');
+  input.value = deckDrafts.get(p.id) || '';
+  input.addEventListener('input', () => deckDrafts.set(p.id, input.value));
+  tile.querySelector('.ptile-qa').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const title = input.value.trim();
+    if (!title) { input.focus(); return; }
+    deckDrafts.delete(p.id);
+    const task = newTaskOnAgenda(p.id, title);
+    scheduleSave();
+    selectTask(task.id);
+  });
+
+  const list = tile.querySelector('.ptile-tasks');
+  const own = Core.deckTasks(tasks, deckPin);
+  if (!own.length) list.innerHTML = `<li class="ptile-empty">${escapeHtml(t('deck.no_tasks'))}</li>`;
+  own.forEach((task) => list.appendChild(deckRow(task)));
   return tile;
+}
+
+/** Строка задачи в карточке: галочка, название, тихая мета (статус или
+ *  «идёт сейчас», дедлайн, время), справа плей/стоп. Что показать — решает
+ *  ядро (taskRowView), как в списке проекта. Отмеченная строка сначала тает,
+ *  потом задача закрывается и уходит из карточки. */
+function deckRow(task) {
+  const v = Core.taskRowView(task, taskRowCtx());
+  const li = document.createElement('li');
+  li.className = 'ptile-task' + (v.running ? ' run' : '');
+  li.dataset.id = task.id;
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.className = 'task-done';
+  cb.setAttribute('aria-label', t('task.done_label'));
+  cb.addEventListener('click', (e) => e.stopPropagation());
+  cb.addEventListener('change', () => {
+    li.classList.add('leaving');
+    setTimeout(() => {
+      setTaskDone(task, true);
+      render();
+      scheduleSave();
+    }, 240);
+  });
+
+  const main = elt('span', 'rl-main');
+  main.appendChild(elt('span', 'rl-name', v.title));
+  const sub = elt('span', 'rl-sub');
+  const part = (cls, text) => {
+    if (sub.childNodes.length) sub.appendChild(elt('span', 'ptile-sep', '·'));
+    sub.appendChild(elt('span', cls, text));
+  };
+  if (v.running) part('ptile-running', t('task.running_now'));
+  else if (v.status) {
+    const st = elt('span', 'ptile-status');
+    const dot = elt('i', 'st-swatch');
+    dot.style.setProperty('--sc', v.status.color);
+    st.append(dot, v.status.name);
+    sub.appendChild(st);
+  }
+  if (v.due) part(`ptile-due ${v.due.state}`, v.due.text);
+  if (v.running || taskElapsedMs(task) > 0) part('task-time', v.time);
+  if (sub.childNodes.length) main.appendChild(sub);
+
+  const play = elt('button', `icon-btn rl-play${v.running ? ' run' : ''}`);
+  play.type = 'button';
+  play.setAttribute('aria-label', t(v.running ? 'timer.stop' : 'timer.start'));
+  play.innerHTML = v.running ? SVG_STOP : SVG_PLAY;
+  play.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (v.running) stopTimer(); else startTimer(task.id);
+  });
+
+  li.append(cb, main, play);
+  li.addEventListener('click', () => selectTask(task.id));
+  return li;
+}
+
+/** Пока таймер идёт — время задачи и проекта на карточке ползёт само. */
+function tickProjects() {
+  const at = state.activeTimer;
+  const task = at && getTask(at.taskId);
+  if (!task) return;
+  const tile = el.projectsTrack.querySelector(`.ptile[data-id="${task.projectId}"]`);
+  if (!tile) return;
+  const time = tile.querySelector(`.ptile-task[data-id="${task.id}"] .task-time`);
+  if (time) time.textContent = fmtShort(taskElapsedMs(task));
+  tile.querySelector('.ptile-time').textContent = fmtDur(projectMs(task.projectId));
+  tile.querySelector('.ptile-money').textContent = fmtMoney(projectMoney(task.projectId), currencyOf(task.projectId));
 }
 
 function recentTasks(limit) {
@@ -2106,7 +2300,7 @@ function dpPickFrom(btn, input, values) {
     label: pad2(v),
     selected: Number(input.value) === v,
     onClick: () => { input.value = pad2(v); dpCommitTime(); },
-  })));
+  })), { compact: true });
 }
 function renderDatePicker() {
   const y = dp.view.getFullYear();
@@ -3898,10 +4092,12 @@ async function copyProjectSummary(p) {
 // ---------------------------------------------------------------------------
 
 let menuCleanup = null;
-function openMenu(anchor, items) {
+/** opts.compact — узкий короткий список с прокруткой (часы, минуты). */
+function openMenu(anchor, items, opts = {}) {
   closeMenu();
   const m = el.ctxMenu;
   m.innerHTML = '';
+  m.classList.toggle('compact', !!opts.compact);
   for (const it of items) {
     if (it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); continue; }
     const b = document.createElement('button');
@@ -3913,6 +4109,9 @@ function openMenu(anchor, items) {
     m.appendChild(b);
   }
   m.hidden = false;
+  m.scrollTop = 0;
+  const sel = m.querySelector('.ctx-item.sel');
+  if (sel) m.scrollTop = sel.offsetTop - (m.clientHeight - sel.offsetHeight) / 2;
   const r = anchor.getBoundingClientRect();
   const x = Math.min(r.right - m.offsetWidth, window.innerWidth - m.offsetWidth - 8);
   let y = r.bottom + 4;
@@ -3922,16 +4121,19 @@ function openMenu(anchor, items) {
   anchor.classList.add('open');
   const onDown = (e) => { if (!m.contains(e.target)) closeMenu(); };
   const onKey = (e) => { if (e.key === 'Escape') closeMenu(); };
+  // Прокрутка страницы закрывает меню, а своя — нет: длинный список
+  // прокручивается внутри.
+  const onScroll = (e) => { if (e.target !== m) closeMenu(); };
   setTimeout(() => {
     document.addEventListener('pointerdown', onDown, true);
     document.addEventListener('keydown', onKey, true);
-    document.addEventListener('scroll', closeMenu, true);
+    document.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', closeMenu);
   }, 0);
   menuCleanup = () => {
     document.removeEventListener('pointerdown', onDown, true);
     document.removeEventListener('keydown', onKey, true);
-    document.removeEventListener('scroll', closeMenu, true);
+    document.removeEventListener('scroll', onScroll, true);
     window.removeEventListener('resize', closeMenu);
     anchor.classList.remove('open');
   };
@@ -4758,6 +4960,7 @@ setInterval(() => {
     renderProjectHeader();
   }
   if (state.ui.view === 'home') { renderNowIsland(); renderDayIsland(); }
+  if (state.ui.view === 'projects') tickProjects();
   renderStats();
 }, 250);
 
@@ -4796,6 +4999,10 @@ el.navCollapse.addEventListener('click', toggleNav);
 // уводя с текущего экрана.
 el.tbTimerStop.addEventListener('click', (e) => { e.stopPropagation(); stopTimer(); });
 el.tbTimerStop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); stopTimer(); } });
+el.tbStart.addEventListener('click', () => {
+  const task = startableTask();
+  if (task) startTimer(task.id);
+});
 el.tbTimer.addEventListener('click', () => {
   const task = state.activeTimer && getTask(state.activeTimer.taskId);
   if (!task) return;
@@ -4821,6 +5028,11 @@ el.searchInput.addEventListener('keydown', (e) => {
   }
 });
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
+el.homeEmptyCreate.addEventListener('click', () => openProjectDialog(null));
+el.deckPrev.addEventListener('click', () => scrollDeck(-1));
+el.deckNext.addEventListener('click', () => scrollDeck(1));
+el.projectsTrack.addEventListener('scroll', updateDeckArrows, { passive: true });
+window.addEventListener('resize', () => { if (state.ui.view === 'projects') updateDeckArrows(); });
 el.homeAllProjects.addEventListener('click', () => openView('projects'));
 el.dayAddEntry.addEventListener('click', () => {
   const start = Core.snapMinutes(Date.now(), AG_SNAP_MIN);
@@ -5610,7 +5822,7 @@ function calGroupNode(g, buildRow) {
 
 const AG_SNAP_MIN = 15;   // шаг прилипания при перетаскивании
 const AG_MIN_MIN = 15;    // короче этого запись не сделать: её нечем ухватить
-const AG_TIME_MODES = ['day', 'days4', 'week'];
+const AG_TIME_MODES = ['day', 'week'];
 
 const agenda = {
   mode: 'week',
@@ -6331,7 +6543,7 @@ document.addEventListener('keydown', (e) => {
   const node = document.activeElement;
   if (node && (node.tagName === 'INPUT' || node.tagName === 'TEXTAREA' || node.isContentEditable)) return;
   const key = e.key.toLowerCase();
-  const modes = { 1: 'day', d: 'day', 2: 'week', w: 'week', 3: 'month', m: 'month', 4: 'days4', x: 'days4', 5: 'agenda', a: 'agenda' };
+  const modes = { 1: 'day', d: 'day', 2: 'week', w: 'week', 3: 'month', m: 'month', 4: 'agenda', 5: 'agenda', a: 'agenda' };
   if (modes[key]) { e.preventDefault(); setTimeMode(modes[key]); return; }
   if (key === 't' || key === 'е') { e.preventDefault(); el.timeToday.click(); return; }
   if (key === 'arrowleft' || key === 'k') { e.preventDefault(); el.timePrev.click(); return; }

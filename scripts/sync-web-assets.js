@@ -21,6 +21,7 @@ try {
   // Общий код с десктопом — буквально те же файлы.
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'app.js'), path.join(webDir, 'app.js'));
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'styles.css'), path.join(webDir, 'styles.css'));
+  fs.copyFileSync(path.join(root, 'src', 'renderer', 'theme-boot.js'), path.join(webDir, 'theme-boot.js'));
   fs.copyFileSync(path.join(root, 'src', 'xlsx.js'), path.join(webDir, 'xlsx.js'));
   // Редактор собран заранее и лежит в репозитории — Vercel его не собирает.
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'editor.js'), path.join(webDir, 'editor.js'));

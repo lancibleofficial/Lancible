@@ -7,7 +7,9 @@
  *
  * Как добавить запись:
  *   1. Допиши новый объект В НАЧАЛО массива — порядок в файле = порядок на странице.
- *   2. Заполни оба языка (ru и en) — лента переключается тумблером RU/EN.
+ *   2. Заполни оба языка (ru и en) — язык ленты общий с сайтом (landing/i18n.js).
+ *      Языков у сайта четыре; записи пишутся на двух, а украинскому и
+ *      казахскому посетителю лента показывает английский.
  *   3. Закоммить и задеплой лендинг. Никакой сборки не нужно, это обычный скрипт.
  *
  * Что сюда писать: то, что пользователь реально заметит — новая платформа,
@@ -18,12 +20,30 @@
  *   date    — 'ГГГГ-ММ-ДД', дата выхода. Форматируется на странице автоматически.
  *             Она же даёт записи ссылку вида blog.html#p-2026-09-18; если в
  *             этот день уже есть запись, вторая получит #p-2026-09-18-2.
- *   tag     — 'release' | 'feature' | 'improvement' (подписи — в BLOG_TAGS, в обеих страницах).
+ *   tag     — 'release' | 'feature' | 'improvement' (подписи — blog.tag_* в landing/strings.js).
  *   version — необязательно. Строка вида '0.1.0' или 'mobile 1.0.1', показывается под датой.
  *   title   — { ru, en }: одна строка, без точки в конце.
  *   body    — { ru, en }: массив абзацев. Каждый элемент — отдельный абзац.
  */
 window.LANCIBLE_POSTS = [
+  {
+    date: '2026-10-09',
+    tag: 'improvement',
+    title: {
+      ru: 'Сайт говорит на вашем языке и запоминает выбор',
+      en: 'The site speaks your language and remembers your choice',
+    },
+    body: {
+      ru: [
+        'Раньше язык на сайте был не один, а два: правовые документы помнили свой, лента обновлений — свой. Английский, выбранный в ленте, не доходил до шапки, а смена языка договора возвращала ленту к русскому. Теперь выбор один на весь сайт: сделали его в одном месте — он действует и на главной, и в блоге, и в документах, и в окне о cookie.',
+        'Язык определяется сам, по настройкам браузера: русский, украинский и казахский посетитель получает свой, остальные — английский. Поменять вручную можно в подвале любой страницы, выбор запомнится. У правовых документов остался отдельный переключатель на все четыре языка — там, где все четыре перевода и есть.',
+      ],
+      en: [
+        'The site used to keep two languages instead of one: the legal documents remembered theirs and the update feed remembered its own. English picked in the feed never reached the header, and switching the language of an agreement sent the feed back to Russian. Now the choice covers the whole site: make it once and it holds on the home page, in the blog, in the documents and in the cookie dialog.',
+        'The language is detected from your browser: Russian, Ukrainian and Kazakh visitors get their own, everyone else gets English. You can change it by hand in the footer of any page and the choice is remembered. The legal documents keep a switch of their own with all four languages — that is where all four translations live.',
+      ],
+    },
+  },
   {
     date: '2026-10-09',
     tag: 'release',

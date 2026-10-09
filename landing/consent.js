@@ -138,10 +138,12 @@
     for (const fn of listeners) fn(Object.assign({}, s));
   };
 
+  // Язык баннера — общий язык сайта (landing/i18n.js). Если движок почему-то
+  // не подключён, остаётся прежний разбор: ?lang=, затем язык страницы.
   const lang = () => {
-    let stored = null;
-    try { stored = global.localStorage.getItem('lancible:legal-lang'); } catch { /* нет хранилища */ }
-    return pickLang(global.location.search, stored, doc.documentElement.lang);
+    const site = global.LancibleLang && global.LancibleLang.current;
+    if (LANGS.includes(site)) return site;
+    return pickLang(global.location.search, null, doc.documentElement.lang);
   };
 
   let box = null;
