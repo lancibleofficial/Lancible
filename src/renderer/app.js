@@ -1081,21 +1081,64 @@ async function signOut() {
   toast(t('auth.signed_out_toast'));
 }
 
+// Картинки редактора в облаке лежат в doc-assets/<id пользователя>/ и
+// каскадом за пользователем не уходят: байты живут в хранилище, и стереть их
+// можно только через Storage API, не SQL. Страж guard_account_assets в базе
+// (supabase/storage.sql) не даёт удалить аккаунт, пока в папке что-то есть, —
+// поэтому папка стирается раньше, чем зовётся delete_my_account.
+const ASSET_BUCKET = 'doc-assets';
+
+/** Стереть свою папку картинок до пустоты. Бросает, если хранилище ответило
+ *  ошибкой — или ничего не стёрло: правило доступа, не пустившее удаление,
+ *  ошибкой не отвечает, и без этой проверки цикл не кончился бы. */
+async function clearCloudAssets(uid) {
+  const bucket = sb.storage.from(ASSET_BUCKET);
+  for (;;) {
+    const { data, error } = await bucket.list(uid, { limit: 1000 });
+    if (error) throw error;
+    const paths = (data || []).filter((o) => o.id).map((o) => `${uid}/${o.name}`);
+    if (!paths.length) return;
+    const { data: removed, error: removeError } = await bucket.remove(paths);
+    if (removeError) throw removeError;
+    if (!removed || !removed.length) throw new Error(`хранилище не стёрло ни одного из ${paths.length} файлов`);
+  }
+}
+
 /** Удаление аккаунта. Клиент держит только ключ anon и удалить пользователя
  *  сам не может — это делает функция delete_my_account в базе
  *  (supabase/legal.sql): стирает того, кто её вызвал, а профиль, проекты,
- *  задачи и синхронизация уходят следом каскадом. Копия данных на
- *  устройстве остаётся: приложение работает и без аккаунта. */
+ *  задачи и синхронизация уходят следом каскадом. Картинки в облаке
+ *  стираются заранее — см. clearCloudAssets. Копия данных на устройстве,
+ *  вместе с картинками, остаётся: приложение работает и без аккаунта. */
 async function deleteAccount() {
   if (!currentUser) return;
   const ok = await confirmDialog(t('account.delete_confirm'), {
     title: t('account.delete_title'), okLabel: t('account.delete'), danger: true,
   });
   if (!ok) return;
-  const { error } = await sb.rpc('delete_my_account');
+  const uid = currentUser.id;
+  // Пока папка стирается, картинки в облако не уходят: иначе файл из очереди
+  // доехал бы в уже пустую папку и страж не дал бы удалить аккаунт.
+  assetsPaused = true;
+  let error = null;
+  try {
+    // Загрузка, начатая до паузы, всё равно может успеть положить файл между
+    // стиранием и удалением — тогда страж отвечает «account assets remain».
+    // На это — один повтор, не больше.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await clearCloudAssets(uid);
+      ({ error } = await sb.rpc('delete_my_account'));
+      if (!error || !/account assets remain/i.test(error.message || '')) break;
+    }
+  } catch (err) {
+    error = err;
+  }
+  assetsPaused = false;
   if (error) {
     console.error('Не удалось удалить аккаунт:', error);
     toast(t('account.delete_error'));
+    // Аккаунт остался — значит, и картинки снова уходят в облако.
+    if (editorAssets) editorAssets.flush();
     return;
   }
   unsubscribeSyncRealtime();
@@ -4623,13 +4666,16 @@ let docLoadedJSON = null;
 // Токен входа для облачного хранилища картинок: хранилище спрашивает его
 // синхронно, а supabase-js отдаёт сессию только через await.
 let assetAuth = null;
+// Пауза облака картинок: пока удаляется аккаунт (deleteAccount), хранилище
+// считается недоступным, и ни вставка, ни докачка в облако не идут.
+let assetsPaused = false;
 sb.auth.onAuthStateChange((_event, session) => {
   assetAuth = session ? { token: session.access_token, userId: session.user.id } : null;
   if (assetAuth && editorAssets) editorAssets.flush();
 });
 
 const editorAssets = window.LancibleEditor ? LancibleEditor.createAssetStore({
-  remote: () => (assetAuth && state.settings.syncEnabled !== false
+  remote: () => (assetAuth && !assetsPaused && state.settings.syncEnabled !== false
     ? { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY, accessToken: assetAuth.token, userId: assetAuth.userId }
     : null),
 }) : null;
