@@ -29,6 +29,13 @@ export const useAppStore = create(
       hasHydrated: false,
       toastMessage: null,
       toastAction: null,
+      // Облако картинок редактора на паузе — пока удаляется аккаунт
+      // (lib/auth.js: deleteAccount). Не сохраняется: пауза живёт одну попытку.
+      assetsPaused: false,
+      // id картинок, стёртых из облака при удалении аккаунта, которое не
+      // удалось: их надо выгрузить обратно. Сохраняется — редактор может
+      // открыться и после перезапуска (EditorScreen → DocEditor).
+      assetRequeue: [],
 
       _runMigration() {
         set((s) => migrate({ ...s }));
@@ -625,6 +632,20 @@ export const useAppStore = create(
         });
       },
 
+      // --- облако картинок редактора ---
+      setAssetsPaused(on) {
+        set({ assetsPaused: !!on });
+      },
+      queueAssetRequeue(ids) {
+        set((s) => ({ assetRequeue: [...new Set([...(s.assetRequeue || []), ...ids])] }));
+      },
+      /** Без аргумента — очистить весь список. */
+      clearAssetRequeue(ids) {
+        if (!ids) { set({ assetRequeue: [] }); return; }
+        const done = new Set(ids);
+        set((s) => ({ assetRequeue: (s.assetRequeue || []).filter((id) => !done.has(id)) }));
+      },
+
       // --- настройки ---
       setSettings(patch) {
         set((s) => ({ settings: { ...s.settings, ...patch } }));
@@ -641,6 +662,7 @@ export const useAppStore = create(
         projects: s.projects, tasks: s.tasks, tags: s.tags,
         statuses: s.statuses, versions: s.versions, documents: s.documents,
         activeTimer: s.activeTimer, ui: s.ui, settings: s.settings,
+        assetRequeue: s.assetRequeue,
       }),
       onRehydrateStorage: () => () => {
         // Срабатывает асинхронно после чтения AsyncStorage — к этому моменту

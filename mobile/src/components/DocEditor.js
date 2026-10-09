@@ -84,6 +84,15 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
     else if (m.type === 'exec') ed.exec(m.name, m.arg);
     else if (m.type === 'flush') ed.flush();
     else if (m.type === 'focus') ed.focus();
+    else if (m.type === 'requeue') {
+      // Картинки снова в очереди на выгрузку: удаление аккаунта стёрло их из
+      // облака, а аккаунт остался. Выгрузит их flush — сейчас, если вход есть,
+      // или когда придёт auth.
+      ed.assets.requeue(m.ids).then(function(n){
+        post({ type: 'requeued', ids: m.ids, n: n });
+        if (S.auth) ed.assets.flush();
+      }, function(err){ post({ type: 'error', message: 'requeue: ' + err }); });
+    }
   }
   document.addEventListener('message', onMessage);
   window.addEventListener('message', onMessage);
@@ -99,10 +108,12 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
  *  settings / onSettings — вид и перо (state.settings.editor);
  *  auth — { url, anonKey, accessToken, userId } для облака картинок или null;
  *  preview — режим предпросмотра; onOpen — касание в предпросмотре;
- *  onToast(message).
+ *  onToast(message);
+ *  requeue — id картинок, которые надо снова выгрузить в облако
+ *  (стор: assetRequeue); onRequeued(ids) — редактор поставил их в очередь.
  */
 const DocEditor = forwardRef(function DocEditor(props, ref) {
-  const { content, onChange, lang, user, settings, onSettings, auth, preview, onOpen, onToast, placeholder } = props;
+  const { content, onChange, lang, user, settings, onSettings, auth, preview, onOpen, onToast, placeholder, requeue, onRequeued } = props;
   const colors = useColors();
   const mode = useThemeMode();
   const webRef = useRef(null);
@@ -125,6 +136,15 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
   useEffect(() => { send({ type: 'auth', auth: auth || null }); }, [auth && auth.accessToken]);
   useEffect(() => { send({ type: 'lang', lang }); }, [lang]);
 
+  // Список на возврат отдаётся, когда страница готова: сообщение, посланное
+  // раньше, WebView потеряет. Пока редактор открыт — и при каждой его смене.
+  const ready = useRef(false);
+  const requeueKey = (requeue || []).join(',');
+  function sendRequeue() {
+    if (ready.current && requeue && requeue.length) send({ type: 'requeue', ids: requeue });
+  }
+  useEffect(sendRequeue, [requeueKey]);
+
   function onMessage(e) {
     let msg;
     try { msg = JSON.parse(e.nativeEvent.data); } catch { return; }
@@ -134,6 +154,8 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
     else if (msg.type === 'tap') onOpen && onOpen();
     else if (msg.type === 'toast') onToast && onToast(msg.message);
     else if (msg.type === 'open' && /^(https?:|mailto:)/i.test(msg.href)) Linking.openURL(msg.href);
+    else if (msg.type === 'ready') { ready.current = true; sendRequeue(); }
+    else if (msg.type === 'requeued') onRequeued && onRequeued(msg.ids);
     else if (msg.type === 'error') console.error('[editor]', msg.message);
   }
 

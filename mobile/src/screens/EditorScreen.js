@@ -42,6 +42,10 @@ export default function EditorScreen({ route, navigation }) {
   const isRunning = kind === 'task' && !!activeTimer && activeTimer.taskId === id;
   useTicker(isRunning);
   const auth = useEditorAuth();
+  // Картинки, стёртые из облака неудавшимся удалением аккаунта: редактор
+  // ставит их обратно в очередь на выгрузку (lib/auth.js: deleteAccount).
+  const assetRequeue = useAppStore((s) => s.assetRequeue);
+  const clearAssetRequeue = useAppStore((s) => s.clearAssetRequeue);
 
   // Содержимое берётся один раз при открытии: дальше хозяин текста —
   // редактор, а стор только записывает за ним.
@@ -126,6 +130,8 @@ export default function EditorScreen({ route, navigation }) {
         auth={auth}
         placeholder={kind === 'doc' ? t(lang, 'editor.placeholder') : undefined}
         onToast={showToast}
+        requeue={assetRequeue}
+        onRequeued={clearAssetRequeue}
       />
     </KeyboardAvoidingView>
   );

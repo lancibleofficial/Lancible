@@ -233,31 +233,25 @@
       "id": "mobile_src_lib_auth_changepassword",
       "label": "changePassword()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L151"
-    },
-    {
-      "id": "mobile_src_lib_auth_deleteaccount",
-      "label": "deleteAccount()",
-      "file": "mobile/src/lib/auth.js",
-      "at": "L126"
+      "at": "L215"
     },
     {
       "id": "mobile_src_lib_auth_saveonboarding",
       "label": "saveOnboarding()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L102"
+      "at": "L103"
     },
     {
       "id": "mobile_src_lib_auth_signinwithgoogle",
       "label": "signInWithGoogle()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L74"
+      "at": "L75"
     },
     {
       "id": "mobile_src_lib_auth_updateprofilename",
       "label": "updateProfileName()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L136"
+      "at": "L200"
     },
     {
       "id": "mobile_src_lib_format_fmttimeshort",
@@ -329,19 +323,19 @@
       "id": "mobile_src_screens_editorscreen_editorscreen_onchange",
       "label": "onChange()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L63"
+      "at": "L67"
     },
     {
       "id": "mobile_src_screens_editorscreen_editorscreen_ontitle",
       "label": "onTitle()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L71"
+      "at": "L75"
     },
     {
       "id": "mobile_src_screens_editorscreen_editorscreen_pickproject",
       "label": "pickProject()",
       "file": "mobile/src/screens/EditorScreen.js",
-      "at": "L76"
+      "at": "L80"
     },
     {
       "id": "mobile_src_screens_homescreen_homescreen_addentry",
@@ -557,7 +551,7 @@
       "id": "mobile_src_store_useappstore_sortedprojecttasks",
       "label": "sortedProjectTasks()",
       "file": "mobile/src/store/useAppStore.js",
-      "at": "L662"
+      "at": "L684"
     },
     {
       "id": "mobile_src_store_useauthstore_applyauthresult",
@@ -576,6 +570,12 @@
       "label": "task()",
       "file": "mobile/tests/cardDone.test.js",
       "at": "L14"
+    },
+    {
+      "id": "mobile_tests_deleteaccount_test_state",
+      "label": "state()",
+      "file": "mobile/tests/deleteAccount.test.js",
+      "at": "L84"
     },
     {
       "id": "mobile_tests_detailheader_ios26_test_header",
@@ -1980,12 +1980,6 @@
       "label": "seed()",
       "file": "tests/e2e/currency.spec.js",
       "at": "L9"
-    },
-    {
-      "id": "tests_e2e_delete_account_spec_calls",
-      "label": "calls()",
-      "file": "tests/e2e/delete-account.spec.js",
-      "at": "L101"
     },
     {
       "id": "tests_e2e_delete_account_spec_clouduploads",

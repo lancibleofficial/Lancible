@@ -7,6 +7,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { sb } from './supabaseClient';
 import Legal from '../core/legal.js';
+import { useAppStore } from '../store/useAppStore';
 
 /** Профиля нет — новый аккаунт, нужен онбординг. Профиль есть, но согласия
  *  с нынешней редакцией документов нет — нужен шаг согласия (core/legal.js).
@@ -120,15 +121,78 @@ export async function saveOnboarding(name, useCase, { consentOnly = false, withP
   }
 }
 
+// Картинки редактора в облаке лежат в doc-assets/<id пользователя>/ и
+// каскадом за аккаунтом не уходят: байты живут в хранилище, стереть их можно
+// только через Storage API, не SQL. Страж в базе (supabase/storage.sql) не
+// даёт удалить аккаунт, пока в папке что-то есть, — поэтому папка стирается
+// раньше, чем зовётся delete_my_account.
+const ASSET_BUCKET = 'doc-assets';
+
+/** Стереть свою папку картинок до пустоты; id стёртых складываются в
+ *  removed. Бросает, если хранилище ответило ошибкой — или ничего не стёрло:
+ *  правило доступа, не пустившее удаление, ошибкой не отвечает, и без этой
+ *  проверки цикл не кончился бы. */
+async function clearCloudAssets(uid, removed) {
+  const bucket = sb.storage.from(ASSET_BUCKET);
+  for (;;) {
+    const { data, error } = await bucket.list(uid, { limit: 1000 });
+    if (error) throw error;
+    const files = (data || []).filter((o) => o.id);
+    if (!files.length) return;
+    const { data: gone, error: removeError } = await bucket.remove(files.map((o) => `${uid}/${o.name}`));
+    if (removeError) throw removeError;
+    if (!gone || !gone.length) throw new Error(`хранилище не стёрло ни одного из ${files.length} файлов`);
+    removed.push(...files.map((o) => o.name));
+  }
+}
+
 /** Удаление аккаунта функцией delete_my_account в базе (supabase/legal.sql):
- *  она стирает того, кто её вызвал, остальное уходит каскадом. Пользователя
- *  на сервере после этого нет — выходим только локально. */
+ *  она стирает того, кто её вызвал, остальное уходит каскадом. Картинки в
+ *  облаке стираются заранее — см. clearCloudAssets. Копия на телефоне,
+ *  вместе с картинками, остаётся. Пользователя на сервере после этого нет —
+ *  выходим только локально. */
 export async function deleteAccount() {
-  const { error } = await sb.rpc('delete_my_account');
+  let uid = null;
+  try {
+    const { data } = await sb.auth.getSession();
+    uid = data && data.session && data.session.user ? data.session.user.id : null;
+  } catch (err) {
+    console.error('Не удалось прочитать сессию:', err);
+  }
+  if (!uid) return { ok: false };
+
+  const removed = [];
+  let error = null;
+  // Пока папка стирается, картинки в облако не уходят (useEditorAuth отдаёт
+  // null): иначе файл из очереди доехал бы в уже пустую папку, и страж не
+  // дал бы удалить аккаунт. Пауза снимается в любом исходе.
+  useAppStore.getState().setAssetsPaused(true);
+  try {
+    // Загрузка, начатая до паузы, всё равно может успеть положить файл между
+    // стиранием и удалением — тогда страж отвечает «account assets remain».
+    // На это — один повтор, не больше.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await clearCloudAssets(uid, removed);
+      ({ error } = await sb.rpc('delete_my_account'));
+      if (!error || !/account assets remain/i.test(error.message || '')) break;
+    }
+  } catch (err) {
+    error = err;
+  } finally {
+    useAppStore.getState().setAssetsPaused(false);
+  }
+
   if (error) {
     console.error('Не удалось удалить аккаунт:', error);
+    // Аккаунт остался, а папка стёрта целиком или частью: без возврата
+    // картинки пропали бы на других устройствах. Те, что есть на этом
+    // телефоне, снова встанут в очередь при следующем открытии редактора
+    // (EditorScreen → DocEditor) и уйдут в облако.
+    if (removed.length) useAppStore.getState().queueAssetRequeue(removed);
     return { ok: false };
   }
+  // Аккаунта больше нет — возвращать в облако нечего и некуда.
+  useAppStore.getState().clearAssetRequeue();
   try { await sb.auth.signOut({ scope: 'local' }); } catch (err) { console.error('Не удалось выйти:', err); }
   return { ok: true };
 }
