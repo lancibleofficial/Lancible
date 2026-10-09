@@ -109,10 +109,14 @@ cp /c/Users/Turan/Documents/task-timer/.env.local .   # ключ журнала;
 Автопамять Claude привязана к пути папки. Чтобы она осталась общей, папку
 `memory` новой копии делаем ссылкой на общую:
 
-```bash
-P=/c/Users/Turan/.claude/projects; mkdir -p "$P/E--lancible-<папка>"
-cmd //c mklink /J "C:\Users\Turan\.claude\projects\E--lancible-<папка>\memory" "C:\Users\Turan\.claude\projects\C--Users-Turan-Documents-task-timer\memory"
+```powershell
+$p = 'C:\Users\Turan\.claude\projects\E--lancible-<папка>\memory'
+New-Item -ItemType Directory -Force (Split-Path $p) | Out-Null
+if (-not (Test-Path $p)) { New-Item -ItemType Junction -Path $p -Target 'C:\Users\Turan\.claude\projects\C--Users-Turan-Documents-task-timer\memory' | Out-Null }
 ```
+
+Именно PowerShell. `cmd //c mklink /J` из Git Bash не работает: ключ `/J`
+по дороге портится.
 
 ### Как ходят задачи
 
