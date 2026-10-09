@@ -857,7 +857,7 @@
       "id": "scripts_publish_site_publishgraph",
       "label": "publishGraph()",
       "file": "scripts/publish-site.js",
-      "at": "L77"
+      "at": "L98"
     },
     {
       "id": "scripts_publish_site_rebuildgraph",
@@ -869,7 +869,7 @@
       "id": "scripts_publish_site_refreshnumbers",
       "label": "refreshNumbers()",
       "file": "scripts/publish-site.js",
-      "at": "L156"
+      "at": "L181"
     },
     {
       "id": "scripts_shot_capture",
@@ -2262,6 +2262,12 @@
       "label": "stored()",
       "file": "tests/landing/legal.spec.js",
       "at": "L12"
+    },
+    {
+      "id": "tests_serve_built_web_prepare",
+      "label": "prepare()",
+      "file": "tests/serve-built-web.js",
+      "at": "L49"
     },
     {
       "id": "tests_unit_agenda_test_at",

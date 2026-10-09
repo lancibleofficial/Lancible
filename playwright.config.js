@@ -46,10 +46,12 @@ module.exports = defineConfig({
   // заранее запустил npm run serve:web.
   webServer: [
     {
-      command: `node scripts/serve-web.js ${PORT_WEB}`,
+      // Веб собирается перед каждым прогоном — см. tests/serve-built-web.js.
+      command: `node tests/serve-built-web.js ${PORT_WEB}`,
       url: `http://localhost:${PORT_WEB}/index.html`,
       reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      // Сборка — секунда, но в свежей копии сначала ставятся web/node_modules.
+      timeout: 180_000,
     },
     {
       command: `node scripts/serve-web.js ${PORT_LANDING} --root landing`,
