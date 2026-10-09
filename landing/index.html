@@ -438,7 +438,7 @@
       let lang = window.LancibleLang.current;
 
       // Запись может не иметь перевода — тогда показываем любой доступный язык.
-      const pick = (field) => (field && (field[lang] || field.ru || field.en)) || '';
+      const pick = (field) => (field && (field[lang] || field.en || field.ru)) || '';
       const paragraphs = (field) => {
         const value = pick(field);
         return Array.isArray(value) ? value : (value ? [value] : []);
