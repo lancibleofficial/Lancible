@@ -260,6 +260,46 @@
     display: none;
   }
 
+  /* --- Скелетон загрузки — по раскладке телефонной ширины: значок лого,
+     поиск во всю ширину, «Старт» значком, одна колонка островов, снизу
+     плашка вкладок вместо левой панели. --- */
+  .skel-topbar {
+    height: 50px;
+    padding: 0 10px 0 12px;
+  }
+  .skel-logo {
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+  }
+  .skel-start {
+    width: 38px;
+    padding: 0;
+  }
+  .skel-start .skel {
+    display: none;
+  }
+  .skel-rail,
+  .skel-side {
+    display: none;
+  }
+  .skel-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .skel-body {
+    padding-bottom: calc(62px + var(--gap));
+  }
+  .skel-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #app-skeleton::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 62px;
+    background: var(--panel);
+  }
+
   /* --- Модалки и плавающее меню становятся нижними шторками --- */
   #modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop {
     align-items: flex-end;

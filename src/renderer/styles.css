@@ -1705,31 +1705,61 @@ body.nav-collapsed #main { margin-left: calc(var(--nav-w-collapsed) + var(--gap)
   transition: opacity 0.18s var(--ease);
 }
 #app-skeleton.hide { opacity: 0; pointer-events: none; }
+/* Раскладка — та же, что у настоящих шапки, рейла и «Сегодня»: те же
+   --gap, --nav-w, --radius, высота шапки 52 и правая колонка 300. Острова —
+   --panel на земле --bg, внутри — переливающиеся полоски --panel-2, как
+   поля и кнопки на островах. Своих цветов у скелетона нет, поэтому он
+   верен обеим темам. */
 .skel {
-  background: linear-gradient(90deg, var(--panel-2) 25%, var(--panel) 50%, var(--panel-2) 75%);
+  display: block;
+  background: linear-gradient(90deg, var(--panel-2) 25%, var(--raise) 50%, var(--panel-2) 75%);
   background-size: 200% 100%;
   animation: skelShimmer 1.4s ease-in-out infinite;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 @keyframes skelShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.skel-topbar {
-  height: 52px; flex: none; display: flex; align-items: center; gap: 16px;
-  padding: 0 16px; border-bottom: 1px solid var(--line);
-}
-.skel-logo { width: 110px; height: 20px; }
-.skel-search { flex: 1; max-width: 400px; height: 28px; }
-.skel-body { flex: 1; display: flex; min-height: 0; }
+.skel-gap { flex: 1; }
+.skel-bar { height: 10px; }
+.skel-w-xs { width: 40px; }
+.skel-w-s { width: 50px; }
+.skel-w-m { width: 80px; }
+.skel-w-l { width: 120px; }
+.skel-w-xl { width: 150px; }
+.skel-w-45 { width: 45%; }
+.skel-w-60 { width: 60%; }
+.skel-w-80 { width: 80%; }
+
+.skel-topbar { height: 52px; flex: none; display: flex; align-items: center; gap: 6px; padding: 0 16px; }
+body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
+.skel-logo { width: 104px; height: 20px; margin-right: 10px; }
+.skel-pill { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; background: var(--panel); border-radius: var(--radius-sm); }
+.skel-search { flex: 1; max-width: 400px; }
+.skel-dot { width: 14px; height: 14px; border-radius: 999px; }
+.skel-bell { width: 16px; height: 16px; margin: 0 7px; border-radius: 5px; }
+.skel-start { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--pill); }
+
+.skel-body { flex: 1; display: flex; gap: var(--gap); min-height: 0; padding: 0 var(--gap) var(--gap); }
 .skel-rail {
-  width: var(--nav-w); flex: none; border-right: 1px solid var(--line);
-  padding: 10px; display: flex; flex-direction: column; gap: 8px;
+  width: var(--nav-w); flex: none; display: flex; flex-direction: column; gap: 27px;
+  padding: 22px 18px; background: var(--rail); border-radius: var(--radius);
 }
-.skel-rail-item { height: 34px; border-radius: 9px; }
-.skel-main { flex: 1; padding: 26px 28px; overflow: hidden; }
-.skel-stats { display: flex; gap: 12px; margin-bottom: 22px; }
-.skel-stat { flex: 1; height: 64px; }
-.skel-line-lg { width: 180px; height: 22px; margin-bottom: 18px; }
-.skel-tiles { display: flex; gap: 14px; flex-wrap: wrap; }
-.skel-tile { width: 250px; height: 150px; }
+/* Шаг строк — как у пунктов рейла: 36 px пункт и 3 px зазор. */
+.skel-row { height: 12px; width: 70%; flex: none; }
+.skel-sec { width: 40%; height: 8px; }
+.skel-main { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--gap); }
+.skel-col { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; }
+.skel-island { background: var(--panel); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; flex: none; }
+.skel-grow { flex: 1; }
+.skel-h1 { width: 200px; height: 18px; }
+.skel-track { height: 52px; margin-top: 6px; border-radius: var(--radius-sm); }
+.skel-day { padding: 18px 20px 30px; }
+.skel-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; padding: 0; }
+.skel-kpis > div { display: flex; flex-direction: column; gap: 9px; padding: 16px 20px; }
+.skel-num { height: 18px; width: 48px; }
+.skel-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.skel-card { height: 64px; border-radius: var(--radius-sm); }
+.skel-now-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.skel-sq { width: 44px; height: 44px; border-radius: 12px; flex: none; }
 
 /* ---------- Профиль внизу левой панели ----------
    С 9 октября 2026 профиль не в шапке, а последним пунктом рейла — под

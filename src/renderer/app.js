@@ -552,6 +552,9 @@ function applyTheme() {
   const theme = (state.settings && state.settings.theme) || 'system';
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', theme);
+  // Копия выбора для theme-boot.js: на следующем запуске тема встанет до
+  // первой отрисовки, и скелетон загрузки не мелькнёт чужой темой.
+  try { localStorage.setItem('lancible.theme', theme); } catch (e) { /* хранилище закрыто */ }
 
   for (const btn of el.themeTabs) btn.classList.toggle('on', btn.dataset.theme === theme);
   window.api.setTitlebarOverlay(theme).catch(() => {});
