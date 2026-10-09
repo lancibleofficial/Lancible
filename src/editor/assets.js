@@ -60,6 +60,12 @@ async function putLocal(id, rec) {
   await idb('readwrite', (s) => s.put(rec, id));
 }
 
+/** Все id картинок на устройстве: из IndexedDB и из памяти. */
+async function allLocalIds() {
+  const keys = (await idb('readonly', (s) => s.getAllKeys())) || [];
+  return [...new Set([...keys.map(String), ...memory.keys()])];
+}
+
 /** Уменьшить фото до разумного: 2400 px по длинной стороне. Сжимаем в
  *  WebP, если браузер умеет, иначе JPEG; картинку с прозрачностью — PNG. */
 export async function downscale(file) {
@@ -151,6 +157,22 @@ export function createAssetStore(opts) {
       const id = src.slice(6);
       const rec = (await getLocal(id)) || (await download(id));
       return rec ? rec.blob : null;
+    },
+    /** Снова поставить в очередь на выгрузку картинки, которые есть на этом
+     *  устройстве, — когда их копии в облаке пропали, а аккаунт остался:
+     *  например, удаление аккаунта стёрло папку и не довершилось. ids — то,
+     *  что после asset:; без ids — все картинки на устройстве. Выгрузит их
+     *  следующий flush(). Возвращает, сколько картинок встало в очередь. */
+    async requeue(ids) {
+      const list = ids ? ids.slice() : await allLocalIds();
+      let n = 0;
+      for (const id of list) {
+        const rec = await getLocal(id);
+        if (!rec) continue;
+        if (!rec.pending) await putLocal(id, Object.assign({}, rec, { pending: true }));
+        n += 1;
+      }
+      return n;
     },
     /** Догнать облако: то, что вставили без сети или без аккаунта. */
     async flush() {

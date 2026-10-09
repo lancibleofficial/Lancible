@@ -21,13 +21,13 @@ const { test, expect } = require('@playwright/test');
  * @param rpcAnswers по одному ответу на каждый вызов delete_my_account:
  *                   'ok' | 'remain' (страж: в папке снова файл) | 'error'
  */
-async function signedIn(page, { files = [], remove = 'ok', rpcAnswers = ['ok'] } = {}) {
+async function signedIn(page, { files = [], list = 'ok', remove = 'ok', rpcAnswers = ['ok'] } = {}) {
   await page.goto('/index.html');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expect(page.locator('#shell')).toBeVisible();
   await page.locator('.nav-item[data-view="settings"]').first().click();
-  await page.evaluate(({ files, remove, rpcAnswers }) => {
+  await page.evaluate(({ files, list, remove, rpcAnswers }) => {
     currentUser = { id: 'u1', email: 'test@example.com', name: null };
     const folder = { files: files.slice() };
     window.__calls = [];
@@ -36,6 +36,7 @@ async function signedIn(page, { files = [], remove = 'ok', rpcAnswers = ['ok'] }
       async list(prefix, opts) {
         window.__calls.push(`list ${bucket}/${prefix} limit=${opts && opts.limit}`);
         window.__pausedDuringList.push(assetsPaused);
+        if (list === 'error') return { data: null, error: { message: 'storage is down' } };
         // Папка-заглушка без id — такие хранилище тоже отдаёт; стирать её нечем.
         return { data: [{ id: null, name: 'sub' }, ...folder.files.map((n) => ({ id: `id-${n}`, name: n }))], error: null };
       },
@@ -61,7 +62,34 @@ async function signedIn(page, { files = [], remove = 'ok', rpcAnswers = ['ok'] }
       return { data: null, error: null };
     };
     renderSettings();
-  }, { files, remove, rpcAnswers });
+  }, { files, list, remove, rpcAnswers });
+}
+
+/** Облако картинок «вошедшего»: хранилище картинок получает токен, а его
+ *  выгрузки перехватываются и пишутся в массив адресов. */
+async function cloudUploads(page) {
+  const uploads = [];
+  await page.route('**/storage/v1/object/doc-assets/u1/*', (route) => {
+    if (route.request().method() === 'POST') uploads.push(route.request().url().split('/').pop());
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+  await page.evaluate(() => { assetAuth = { token: 'test-token', userId: 'u1' }; });
+  return uploads;
+}
+
+/** Картинка, которая есть на этом устройстве и уже выгружена в облако. */
+async function localImage(page, id) {
+  await page.evaluate((id) => new Promise((resolve, reject) => {
+    const req = indexedDB.open('lancible-assets', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('blobs');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const tx = req.result.transaction('blobs', 'readwrite');
+      tx.objectStore('blobs').put({ blob: new Blob(['png'], { type: 'image/png' }), type: 'image/png', pending: false }, id);
+      tx.oncomplete = () => { req.result.close(); resolve(); };
+      tx.onerror = () => reject(tx.error);
+    };
+  }), id);
 }
 
 async function confirmDelete(page) {
@@ -142,6 +170,52 @@ test('страж отказал и при повторе — повторов б
   await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
   expect((await calls(page)).filter((c) => c.startsWith('rpc'))).toEqual(['rpc delete_my_account', 'rpc delete_my_account']);
   expect(await signedOut(page)).toBe(false);
+});
+
+test('папка стёрта, а аккаунт остался — картинки с устройства снова уходят в облако', async ({ page }) => {
+  // Сбой сети между стиранием и удалением: без возврата картинки пропали бы
+  // на других устройствах. img2 на этом устройстве нет — вернуть её нечем.
+  await signedIn(page, { files: ['img1', 'img2'], rpcAnswers: ['error'] });
+  await localImage(page, 'img1');
+  const uploads = await cloudUploads(page);
+  await confirmDelete(page);
+  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  await expect.poll(() => uploads).toEqual(['img1']);
+  expect(await signedOut(page)).toBe(false);
+});
+
+test('requeue без списка возвращает в очередь все картинки устройства', async ({ page }) => {
+  // Так зовёт телефон: в момент сбоя его редактор обычно закрыт, и список
+  // стёртого он не держит — возвращает всё при следующем открытии.
+  await signedIn(page);
+  await localImage(page, 'img1');
+  await localImage(page, 'img2');
+  const uploads = await cloudUploads(page);
+  expect(await page.evaluate(() => editorAssets.requeue())).toBe(2);
+  await page.evaluate(() => editorAssets.flush());
+  await expect.poll(() => uploads.slice().sort()).toEqual(['img1', 'img2']);
+});
+
+test('стирание не началось — возвращать в облако нечего', async ({ page }) => {
+  await signedIn(page, { files: ['img1'], list: 'error' });
+  await localImage(page, 'img1');
+  const uploads = await cloudUploads(page);
+  await confirmDelete(page);
+  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  expect(await calls(page)).toEqual(['list doc-assets/u1 limit=1000']);
+  // flush после сбоя всё равно проходит, но выгружать ему нечего.
+  await page.waitForTimeout(300);
+  expect(uploads).toEqual([]);
+});
+
+test('аккаунт удалён — картинки в облако не возвращаются', async ({ page }) => {
+  await signedIn(page, { files: ['img1'] });
+  await localImage(page, 'img1');
+  const uploads = await cloudUploads(page);
+  await confirmDelete(page);
+  await expect.poll(() => signedOut(page)).toBe(true);
+  await page.waitForTimeout(300);
+  expect(uploads).toEqual([]);
 });
 
 test('другая ошибка удаления не повторяется', async ({ page }) => {

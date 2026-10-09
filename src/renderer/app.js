@@ -1090,17 +1090,20 @@ const ASSET_BUCKET = 'doc-assets';
 
 /** Стереть свою папку картинок до пустоты. Бросает, если хранилище ответило
  *  ошибкой — или ничего не стёрло: правило доступа, не пустившее удаление,
- *  ошибкой не отвечает, и без этой проверки цикл не кончился бы. */
-async function clearCloudAssets(uid) {
+ *  ошибкой не отвечает, и без этой проверки цикл не кончился бы.
+ *  removedIds — сюда складываются id картинок, которые ушли из облака: если
+ *  аккаунт в итоге останется, их надо вернуть (см. deleteAccount). */
+async function clearCloudAssets(uid, removedIds) {
   const bucket = sb.storage.from(ASSET_BUCKET);
   for (;;) {
     const { data, error } = await bucket.list(uid, { limit: 1000 });
     if (error) throw error;
-    const paths = (data || []).filter((o) => o.id).map((o) => `${uid}/${o.name}`);
-    if (!paths.length) return;
-    const { data: removed, error: removeError } = await bucket.remove(paths);
+    const files = (data || []).filter((o) => o.id);
+    if (!files.length) return;
+    const { data: removed, error: removeError } = await bucket.remove(files.map((o) => `${uid}/${o.name}`));
     if (removeError) throw removeError;
-    if (!removed || !removed.length) throw new Error(`хранилище не стёрло ни одного из ${paths.length} файлов`);
+    if (!removed || !removed.length) throw new Error(`хранилище не стёрло ни одного из ${files.length} файлов`);
+    removedIds.push(...files.map((o) => o.name));
   }
 }
 
@@ -1120,13 +1123,14 @@ async function deleteAccount() {
   // Пока папка стирается, картинки в облако не уходят: иначе файл из очереди
   // доехал бы в уже пустую папку и страж не дал бы удалить аккаунт.
   assetsPaused = true;
+  const removedIds = [];
   let error = null;
   try {
     // Загрузка, начатая до паузы, всё равно может успеть положить файл между
     // стиранием и удалением — тогда страж отвечает «account assets remain».
     // На это — один повтор, не больше.
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      await clearCloudAssets(uid);
+      await clearCloudAssets(uid, removedIds);
       ({ error } = await sb.rpc('delete_my_account'));
       if (!error || !/account assets remain/i.test(error.message || '')) break;
     }
@@ -1137,8 +1141,13 @@ async function deleteAccount() {
   if (error) {
     console.error('Не удалось удалить аккаунт:', error);
     toast(t('account.delete_error'));
-    // Аккаунт остался — значит, и картинки снова уходят в облако.
-    if (editorAssets) editorAssets.flush();
+    // Аккаунт остался, а папка в облаке уже стёрта целиком или частью: без
+    // возврата картинки пропали бы на других устройствах. Те, что есть на
+    // этом, снова встают в очередь и уходят в облако следующим flush.
+    if (editorAssets) {
+      if (removedIds.length) await editorAssets.requeue(removedIds);
+      editorAssets.flush();
+    }
     return;
   }
   unsubscribeSyncRealtime();
