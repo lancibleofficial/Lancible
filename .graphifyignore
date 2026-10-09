@@ -3,3 +3,7 @@
 # Исходники редактора — src/editor/, их граф видит.
 src/renderer/editor.js
 mobile/src/editor/editorBundle.js
+
+# Сторонние библиотеки лендинга (landing/vendor) — чужой минифицированный код:
+# в графе он дал бы сотни узлов без имён.
+landing/vendor/
