@@ -171,7 +171,7 @@ const el = {
 
   homeCount: $('home-count'), projectsTrack: $('projects-track'), deckPrev: $('deck-prev'), deckNext: $('deck-next'),
   recentSection: $('recent-section'), recentTrack: $('recent-track'),
-  homeEmpty: $('home-empty'), createProjectBtn: $('create-project-btn'),
+  homeEmpty: $('home-empty'), homeEmptyCreate: $('home-empty-create'), createProjectBtn: $('create-project-btn'),
 
   phDot: $('ph-dot'), phName: $('ph-name'), projectMenuBtn: $('project-menu-btn'),
   projTabs: [...document.querySelectorAll('#proj-tabs button')], projList: $('proj-list'),
@@ -1804,6 +1804,8 @@ function renderProjects() {
   });
   el.homeCount.textContent = state.projects.length ? `· ${state.projects.length}` : '';
   el.homeEmpty.hidden = state.projects.length > 0;
+  // Акцентная кнопка — одна на экран: пока проектов нет, она по центру.
+  el.createProjectBtn.hidden = state.projects.length === 0;
   deckPin = Core.deckPinTop(deckPin, state.activeTimer);
 
   // Перерисовка не должна сбрасывать то, что человек трогал: ряд, прокрутку
@@ -5026,6 +5028,7 @@ el.searchInput.addEventListener('keydown', (e) => {
   }
 });
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
+el.homeEmptyCreate.addEventListener('click', () => openProjectDialog(null));
 el.deckPrev.addEventListener('click', () => scrollDeck(-1));
 el.deckNext.addEventListener('click', () => scrollDeck(1));
 el.projectsTrack.addEventListener('scroll', updateDeckArrows, { passive: true });

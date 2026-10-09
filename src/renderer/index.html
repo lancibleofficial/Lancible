@@ -239,7 +239,19 @@
           <button id="create-project-btn" class="btn-accent"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="home.create">Создать проект</span></button>
         </div>
         <div class="projects-deck" id="projects-track"></div>
-        <p id="home-empty" class="muted" data-i18n="home.empty" hidden>Пока нет ни одного проекта. Создай первый.</p>
+        <!-- Пустой экран: картинка пустой карточки, заголовок, пояснение и
+             единственная акцентная кнопка — кнопка в шапке на это время
+             прячется. -->
+        <div class="empty-state" id="home-empty" hidden>
+          <div class="es-art" aria-hidden="true">
+            <i class="es-card es-back"></i>
+            <i class="es-card es-mid"></i>
+            <span class="es-card es-front"><i class="es-dot"></i><i class="es-line"></i><i class="es-line es-short"></i><i class="es-progress"></i><i class="es-row"></i><i class="es-row"></i></span>
+          </div>
+          <h2 class="empty-state-title" data-i18n="home.empty_title">У вас пока нет проектов</h2>
+          <p class="empty-state-text" data-i18n="home.empty_text">Проект собирает задачи, время и деньги. Создайте первый — его карточка появится здесь.</p>
+          <button type="button" id="home-empty-create" class="btn-accent"><svg class="icon" aria-hidden="true" data-icon="plus" viewBox="7 7 10 10" fill="currentColor"><path d="M12.75 9C12.75 8.59 12.41 8.25 12 8.25C11.59 8.25 11.25 8.59 11.25 9L11.25 11.25H9C8.59 11.25 8.25 11.59 8.25 12C8.25 12.41 8.59 12.75 9 12.75H11.25V15C11.25 15.41 11.59 15.75 12 15.75C12.41 15.75 12.75 15.41 12.75 15L12.75 12.75H15C15.41 12.75 15.75 12.41 15.75 12C15.75 11.59 15.41 11.25 15 11.25H12.75V9Z"/></svg><span data-i18n="home.create">Создать проект</span></button>
+        </div>
         <section class="island" id="recent-section" hidden>
           <div class="island-head"><span class="island-title" data-i18n="home.recent">Недавние задачи</span></div>
           <div class="recent-head"><span></span><span data-i18n="task.col_task">Задача</span><span data-i18n="task.col_last">Последняя запись</span><span data-i18n="task.col_time">Время</span><span data-i18n="task.col_money">Заработано</span></div>
@@ -572,8 +584,8 @@
             <p class="doc-list-empty muted" id="doc-list-empty" hidden></p>
           </aside>
           <section class="island docs-main">
-            <div class="docs-empty" id="doc-empty" hidden>
-              <p class="muted" data-i18n="docs.empty_hint">Документ — для текста, который не задача: бриф, договор, черновик статьи, конспект.</p>
+            <div class="empty-state docs-empty" id="doc-empty" hidden>
+              <p class="empty-state-text" data-i18n="docs.empty_hint">Документ — для текста, который не задача: бриф, договор, черновик статьи, конспект.</p>
               <button type="button" id="doc-empty-new" class="btn-accent" data-i18n="docs.new">Новый</button>
             </div>
             <div class="docs-doc" id="doc-main" hidden>

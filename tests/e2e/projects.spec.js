@@ -222,17 +222,56 @@ test('таблица недавних задач: плей в строке за�
   expect(await page.evaluate(() => [state.ui.view, selectedId])).toEqual(['task', 't1']);
 });
 
-test('без проектов — подсказка, кнопка создания на месте', async ({ page }) => {
-  await pinClock(page);
-  await page.goto('/index.html');
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await page.evaluate(() => openView('projects'));
-  await expect(page.locator('#home-empty')).toBeVisible();
-  await expect(page.locator('#recent-section')).toBeHidden();
-  await page.locator('#create-project-btn').click();
-  await expect(page.locator('#pdlg-backdrop')).toBeVisible();
-});
+// Пустой экран (9 октября 2026): по центру картинка пустой карточки,
+// «У вас пока нет проектов», пояснение и единственная акцентная кнопка —
+// кнопка в шапке на это время прячется.
+for (const scheme of ['dark', 'light']) {
+  test(`${scheme}: без проектов — пустой экран по центру с одной кнопкой «Создать проект»`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await pinClock(page);
+    await page.goto('/index.html');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.evaluate(() => openView('projects'));
+    const empty = page.locator('#home-empty');
+    await expect(empty).toBeVisible();
+    await expect(empty.locator('.empty-state-title')).toHaveText('У вас пока нет проектов');
+    await expect(empty.locator('.es-art')).toBeVisible();
+    await expect(page.locator('#recent-section')).toBeHidden();
+    await expect(page.locator('#create-project-btn'), 'в шапке кнопки нет — она по центру').toBeHidden();
+    await expect(page.locator('#projects-view .btn-accent:visible')).toHaveCount(1);
+    await expect(page.locator('#projects-view')).toHaveClass(/\bsettled\b/);
+    const m = await page.evaluate(() => {
+      const view = document.getElementById('projects-view').getBoundingClientRect();
+      const head = document.querySelector('#projects-view .page-head').getBoundingClientRect();
+      const box = document.querySelector('#home-empty').getBoundingClientRect();
+      const card = getComputedStyle(document.querySelector('.es-front')).backgroundColor;
+      const probe = document.createElement('div');
+      probe.style.background = 'var(--panel)';
+      document.body.appendChild(probe);
+      const panelColor = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return {
+        dx: Math.abs((box.left + box.right) / 2 - (view.left + view.right - 12) / 2),
+        dy: Math.abs((box.top + box.bottom) / 2 - (head.bottom + view.bottom) / 2),
+        card, panelColor,
+      };
+    });
+    expect(m.dx, 'по центру по горизонтали').toBeLessThanOrEqual(2);
+    expect(m.dy, 'по центру по вертикали под шапкой').toBeLessThanOrEqual(16);
+    expect(m.card, 'картинка — из токенов темы').toBe(m.panelColor);
+
+    await empty.locator('#home-empty-create').click();
+    await expect(page.locator('#pdlg-backdrop')).toBeVisible();
+    await page.locator('#pdlg-name').fill('Первый');
+    await page.locator('#pdlg-save').click();
+    await page.evaluate(() => openView('projects'));
+    await expect(empty, 'проект есть — пустого экрана нет').toBeHidden();
+    await expect(page.locator('#create-project-btn')).toBeVisible();
+    await expect(page.locator('.ptile')).toHaveCount(1);
+  });
+}
 
 // Закреп — не булавкой на карточке, а пунктом меню: закреплённый проект
 // встаёт в левое меню своей группой «Быстрый доступ», над остальными.
