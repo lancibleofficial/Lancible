@@ -1691,7 +1691,10 @@ body.nav-collapsed #main { margin-left: calc(var(--nav-w-collapsed) + var(--gap)
 #home-view { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--gap); overflow: hidden; }
 .home-main, .home-side { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; min-width: 0; overflow-y: auto; }
 /* «Проекты»: шапка строкой, сетка карточек, таблица недавних задач. */
-#projects-view { display: flex; flex-direction: column; gap: var(--gap); overflow-y: auto; }
+/* Страница доходит до правого края окна (поле --gap — внутри неё): так
+   ряд карточек ниже может уйти до самого края, а не обрываться в воздухе
+   за 12 px до него. Шапка и таблица недавних стоят на прежних местах. */
+#projects-view { display: flex; flex-direction: column; gap: var(--gap); overflow-y: auto; margin-right: calc(var(--gap) * -1); padding-right: var(--gap); }
 
 /* ---------- Скелетон начальной загрузки ---------- */
 
@@ -2288,6 +2291,9 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
    задач. */
 .projects-deck {
   display: flex; gap: var(--gap); flex: none;
+  /* Ряд — до края окна: карточка, ушедшая вправо, видна до самого края, а
+     в конце ряда последняя карточка встаёт с полем --gap. */
+  margin-right: calc(var(--gap) * -1); padding-right: var(--gap);
   height: clamp(440px, calc(100vh - 230px), 680px);
   overflow-x: auto; overflow-y: hidden;
   scroll-snap-type: x proximity; scroll-padding-inline: 0;

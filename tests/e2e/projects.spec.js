@@ -182,6 +182,26 @@ test('карточки стоят в ряд одной высоты и лист�
   await page.locator('#deck-prev').click();
   await expect.poll(scrollX).toBe(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'страница вбок не едет').toBe(true);
+  // Ряд доходит до правого края окна: карточку справа не обрезает в воздухе.
+  const edge = await page.evaluate(() => {
+    const track = document.getElementById('projects-track').getBoundingClientRect();
+    const head = document.querySelector('#projects-view .page-head').getBoundingClientRect();
+    const cut = [...document.querySelectorAll('.ptile')].find((n) => n.getBoundingClientRect().right > track.right);
+    return { right: track.right, w: innerWidth, head: head.right, cutVisible: cut ? Math.round(innerWidth - cut.getBoundingClientRect().left) : null };
+  });
+  expect(edge.right, 'ряд — до края окна').toBe(edge.w);
+  expect(edge.w - edge.head, 'шапка страницы — с прежним полем').toBeGreaterThanOrEqual(12);
+  expect(edge.cutVisible, 'край следующей карточки виден до края окна').toBeGreaterThan(0);
+  // В конце ряда последняя карточка встаёт с полем --gap, а не вплотную к краю.
+  const end = await page.evaluate(() => {
+    const track = document.getElementById('projects-track');
+    track.style.scrollSnapType = 'none';
+    track.scrollLeft = track.scrollWidth;
+    const cards = track.querySelectorAll('.ptile');
+    return Math.round(innerWidth - cards[cards.length - 1].getBoundingClientRect().right);
+  });
+  expect(end).toBe(12);
+  await page.evaluate(() => { const track = document.getElementById('projects-track'); track.style.scrollSnapType = ''; track.scrollLeft = 0; });
 
   // Влезли все — стрелок нет.
   await page.evaluate(() => { state.projects = state.projects.slice(0, 2); render(); });
@@ -247,16 +267,18 @@ test('узкий веб — колода, как на телефоне: карт
   await seed(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => render());
+  // Меряем после въезда: карточки появляются с анимацией (scale 0.98).
+  await expect(page.locator('#projects-view')).toHaveClass(/\bsettled\b/);
   const got = await page.evaluate(() => {
     const track = document.getElementById('projects-track');
-    const card = track.querySelector('.ptile');
+    const second = track.querySelectorAll('.ptile')[1];
     return {
-      peek: track.clientWidth - card.offsetWidth,
+      peek: Math.round(innerWidth - second.getBoundingClientRect().left),
       snap: getComputedStyle(track).scrollSnapType,
       pageX: document.documentElement.scrollWidth <= innerWidth,
     };
   });
-  expect(got.peek, 'от следующей карточки видно 40 px без зазора').toBe(40);
+  expect(got.peek, 'от следующей карточки видно 40 px — до края экрана').toBe(40);
   expect(got.snap).toBe('x mandatory');
   expect(got.pageX, 'страница вбок не едет').toBe(true);
   await expect(page.locator('#deck-prev')).toBeHidden();
