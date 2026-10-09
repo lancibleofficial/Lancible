@@ -857,7 +857,7 @@
       "id": "scripts_publish_site_publishgraph",
       "label": "publishGraph()",
       "file": "scripts/publish-site.js",
-      "at": "L77"
+      "at": "L98"
     },
     {
       "id": "scripts_publish_site_rebuildgraph",
@@ -869,7 +869,7 @@
       "id": "scripts_publish_site_refreshnumbers",
       "label": "refreshNumbers()",
       "file": "scripts/publish-site.js",
-      "at": "L156"
+      "at": "L181"
     },
     {
       "id": "scripts_shot_capture",
@@ -2394,6 +2394,12 @@
       "label": "skeleton()",
       "file": "tests/unit/legal-pages.test.js",
       "at": "L28"
+    },
+    {
+      "id": "tests_unit_legal_strings_test_legalkeys",
+      "label": "legalKeys()",
+      "file": "tests/unit/legal-strings.test.js",
+      "at": "L37"
     },
     {
       "id": "tests_unit_migrate_test_deps",
