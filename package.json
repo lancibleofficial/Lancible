@@ -1,7 +1,7 @@
 {
   "name": "lancible",
   "productName": "Lancible",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Lancible — задачи, учёт времени и заработка",
   "main": "src/main.js",
   "scripts": {
