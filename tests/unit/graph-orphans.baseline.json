@@ -872,6 +872,12 @@
       "at": "L156"
     },
     {
+      "id": "scripts_setup_worktree_main",
+      "label": "main()",
+      "file": "scripts/setup-worktree.js",
+      "at": "L119"
+    },
+    {
       "id": "scripts_shot_capture",
       "label": "capture()",
       "file": "scripts/shot.js",
