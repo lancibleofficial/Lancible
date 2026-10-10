@@ -99,7 +99,7 @@ test('папка в doc-assets стирается до пустоты, и тол
 
 test('хранилище ответило ошибкой — аккаунт не трогаем', async () => {
   sb.bucket.remove.mockImplementation(async () => ({ data: null, error: { message: 'boom' } }));
-  expect(await deleteAccount()).toEqual({ ok: false });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
   expect(sb.rpc).not.toHaveBeenCalled();
   expect(state().assetsPaused).toBe(false);
   // Ничего не стёрто — и возвращать нечего.
@@ -110,7 +110,7 @@ test('remove, который ничего не стёр, — ошибка, а н
   // Так отвечает правило доступа, не пустившее удаление: без ошибки, но
   // пустым списком.
   sb.bucket.remove.mockImplementation(async () => ({ data: [], error: null }));
-  expect(await deleteAccount()).toEqual({ ok: false });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
   expect(sb.bucket.list).toHaveBeenCalledTimes(1);
   expect(sb.rpc).not.toHaveBeenCalled();
   expect(state().assetsPaused).toBe(false);
@@ -134,14 +134,14 @@ test('«account assets remain» — один повтор стирания и у
 
 test('повтор — один: второй «account assets remain» — отказ', async () => {
   rpcAnswers = [{ error: { message: 'account assets remain' } }, { error: { message: 'account assets remain' } }];
-  expect(await deleteAccount()).toEqual({ ok: false });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
   expect(sb.rpc).toHaveBeenCalledTimes(2);
   expect(state().assetsPaused).toBe(false);
 });
 
 test('папку стёрли, а аккаунт остался — стёртое встаёт в очередь на возврат', async () => {
   rpcAnswers = [{ error: { message: 'Failed to fetch' } }];
-  expect(await deleteAccount()).toEqual({ ok: false });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'delete' });
   expect(state().assetRequeue).toEqual(['a', 'b']);
   expect(state().assetsPaused).toBe(false);
   expect(sb.auth.signOut).not.toHaveBeenCalled();

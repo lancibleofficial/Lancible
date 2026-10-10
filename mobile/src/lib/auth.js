@@ -166,15 +166,25 @@ export async function deleteAccount() {
   // Пока папка стирается, картинки в облако не уходят (useEditorAuth отдаёт
   // null): иначе файл из очереди доехал бы в уже пустую папку, и страж не
   // дал бы удалить аккаунт. Пауза снимается в любом исходе.
+  // Отказ из-за картинок — отдельная причина: человеку говорится, что
+  // аккаунт не удалён именно потому, что картинки стереть не вышло
+  // (account.delete_assets_error), а не общее «не удалось удалить».
+  let assetsFailed = false;
   useAppStore.getState().setAssetsPaused(true);
   try {
     // Загрузка, начатая до паузы, всё равно может успеть положить файл между
     // стиранием и удалением — тогда страж отвечает «account assets remain».
     // На это — один повтор, не больше.
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      await clearCloudAssets(uid, removed);
+      try {
+        await clearCloudAssets(uid, removed);
+      } catch (err) {
+        assetsFailed = true;
+        throw err;
+      }
       ({ error } = await sb.rpc('delete_my_account'));
-      if (!error || !/account assets remain/i.test(error.message || '')) break;
+      assetsFailed = !!error && /account assets remain/i.test(error.message || '');
+      if (!assetsFailed) break;
     }
   } catch (err) {
     error = err;
@@ -189,7 +199,7 @@ export async function deleteAccount() {
     // телефоне, снова встанут в очередь при следующем открытии редактора
     // (EditorScreen → DocEditor) и уйдут в облако.
     if (removed.length) useAppStore.getState().queueAssetRequeue(removed);
-    return { ok: false };
+    return { ok: false, reason: assetsFailed ? 'assets' : 'delete' };
   }
   // Аккаунта больше нет — возвращать в облако нечего и некуда.
   useAppStore.getState().clearAssetRequeue();

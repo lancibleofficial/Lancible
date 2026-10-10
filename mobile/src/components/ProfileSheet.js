@@ -63,7 +63,10 @@ export default function ProfileSheet() {
           onPress: async () => {
             const result = await deleteAccount();
             closeSheet();
-            showToast(t(lang, result.ok ? 'account.deleted_toast' : 'account.delete_error'));
+            if (result.ok) showToast(t(lang, 'account.deleted_toast'));
+            // Картинки стереть не вышло — аккаунт цел, и сказать надо именно это.
+            else if (result.reason === 'assets') showToast(t(lang, 'account.delete_assets_error'));
+            else showToast(t(lang, 'account.delete_error'));
           },
         },
         { label: t(lang, 'common.cancel'), cancel: true },
