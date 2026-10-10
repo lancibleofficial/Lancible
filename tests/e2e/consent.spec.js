@@ -102,6 +102,8 @@ test('«Удалить аккаунт» есть только у вошедше�
     currentUser = { id: 'u1', email: 'test@example.com', name: null };
     window.__rpc = [];
     sb.rpc = async (name) => { window.__rpc.push(name); return { error: null }; };
+    // Папка картинок пуста; сам порядок стирания — в delete-account.spec.js.
+    sb.storage.from = () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ data: [], error: null }) });
     renderSettings();
   });
   await expect(page.locator('#settings-delete-row')).toBeVisible();
