@@ -2438,6 +2438,12 @@
       "at": "L28"
     },
     {
+      "id": "tests_unit_license_test_read",
+      "label": "read()",
+      "file": "tests/unit/license.test.js",
+      "at": "L11"
+    },
+    {
       "id": "tests_unit_migrate_test_deps",
       "label": "deps()",
       "file": "tests/unit/migrate.test.js",
