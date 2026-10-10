@@ -26,6 +26,9 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const BUCKET = 'doc-assets';
 const PAGE = 1000;
+// Предел кругов стирания: 100 × 1000 картинок — с запасом на любого
+// человека. Дальше — 409, а не цикл без конца на сервере у всех.
+const MAX_ROUNDS = 100;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -55,13 +58,18 @@ Deno.serve(async (req) => {
 
   // Стираем свою папку, пока список не опустеет: за раз приходит не больше
   // PAGE имён. Только папка этого uid — путь собирается из проверенного id.
-  for (;;) {
+  for (let round = 0; ; round++) {
+    if (round >= MAX_ROUNDS) return reply(409, { error: 'assets remain', detail: 'too many rounds' });
     const { data: page, error: listErr } = await admin.storage.from(BUCKET).list(uid, { limit: PAGE });
     if (listErr) return reply(409, { error: 'assets remain', detail: listErr.message });
     const paths = (page || []).filter((o) => o.id).map((o) => `${uid}/${o.name}`);
     if (!paths.length) break;
-    const { error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
+    const { data: removed, error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
     if (rmErr) return reply(409, { error: 'assets remain', detail: rmErr.message });
+    // Ошибки нет, но ничего не стёрто — список не сократится, и цикл крутился
+    // бы вхолостую. Со служебным ключом так быть не должно; если всё же —
+    // это 409, а не вечный цикл.
+    if (!removed || !removed.length) return reply(409, { error: 'assets remain', detail: 'nothing removed' });
   }
 
   // Строки в таблицах уходят каскадом от auth.users. Если картинка успела
