@@ -29,6 +29,27 @@ window.LANCIBLE_POSTS = [
   {
     date: '2026-10-10',
     tag: 'release',
+    version: '0.4.2',
+    title: {
+      ru: 'Удаление аккаунта — одним шагом на сервере',
+      en: 'Account deletion in one step on the server',
+    },
+    body: {
+      ru: [
+        'На компьютере и в браузере удаление аккаунта теперь делает сервер, одним действием: стирает картинки из заметок и сам аккаунт. Раньше приложение делало это по шагам, и обрыв связи посередине мог оставить дело наполовину. Теперь аккаунт либо удалён целиком, либо остаётся, а картинки, которые успели стереться, возвращаются в облако с вашего устройства.',
+        'Если картинки стереть не удалось, приложение так и скажет — аккаунт не удалён именно поэтому, — а не общее «проверьте соединение».',
+        'В браузере всё уже работает, версия 0.4.2 для Windows и macOS придёт обновлением сама. Телефон перейдёт на новый способ в следующем обновлении.',
+      ],
+      en: [
+        'On the computer and in the browser, deleting your account is now done by the server in a single step: it erases the images in your notes and the account itself. Before, the app did this step by step, and a dropped connection halfway could leave things half-done. Now the account is either deleted completely or stays, and any images that were already erased go back to the cloud from your device.',
+        'If the images could not be erased, the app says exactly that — the account was not deleted for this reason — instead of a generic “check your connection”.',
+        'It already works in the browser; version 0.4.2 for Windows and macOS arrives as an update on its own. The phone switches to the new way in its next update.',
+      ],
+    },
+  },
+  {
+    date: '2026-10-10',
+    tag: 'release',
     version: '0.4.1 · mobile 1.2.2',
     title: {
       ru: 'Картинки с телефона уходят в облако, а удаление аккаунта стирает и их',
