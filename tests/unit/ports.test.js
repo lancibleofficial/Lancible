@@ -26,6 +26,27 @@ test('у одной папки порты всегда одни и те же', (
   assert.deepEqual(portsFor('E:/lancible/qa-web'), portsFor('E:/lancible/qa-web'));
 });
 
+test('у копий из регламента порты прибиты — одинаково на Windows и на Linux', () => {
+  // Числа сняты на Windows 10 октября 2026. Путь с буквой диска
+  // разбирается правилами Windows на любой платформе, поэтому и в CI на
+  // Linux порты обязаны совпасть. Поменялись — значит, у всех копий
+  // съехали порты, и браузерные прогоны снова могут встретить чужой сервер.
+  const expected = {
+    'C:/Users/Turan/Documents/task-timer': 25116,
+    'E:/lancible/web': 22024,
+    'E:/lancible/mobile': 32632,
+    'E:/lancible/core': 26764,
+    'E:/lancible/gfx': 27580,
+    'E:/lancible/qa-web': 20100,
+    'E:/lancible/qa-mobile': 26588,
+    'E:/lancible/legal': 22516,
+  };
+  for (const [root, port] of Object.entries(expected)) {
+    assert.equal(portsFor(root).run.PORT_WEB, port, `${root}: порт сдвинулся`);
+    assert.equal(portsFor(root.replace(/\//g, '\\')).run.PORT_WEB, port, `${root} с обратными слэшами: порт сдвинулся`);
+  }
+});
+
 test('регистр букв и вид слэшей на Windows порты не меняют', () => {
   assert.deepEqual(portsFor('E:\\lancible\\qa-web\\'), portsFor('e:/Lancible/QA-WEB'));
 });

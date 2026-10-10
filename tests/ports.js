@@ -28,10 +28,18 @@ const FIRST = 20000;
 const SLOTS = 4000; // по четыре порта на копию: 20000 … 35999
 
 /** Путь копии в одном написании: на Windows регистр букв и вид слэшей не
- *  меняют папку, а значит не должны менять и порты. */
+ *  меняют папку, а значит не должны менять и порты.
+ *
+ *  Путь с буквой диска разбирается правилами Windows (path.win32) на любой
+ *  платформе. Иначе на Linux path.resolve('E:\\lancible\\qa-web') считает его
+ *  относительным, приклеивает к текущей папке — и тот же путь даёт там
+ *  другие порты (так и упал CI 10 октября 2026). */
 function normalizeRoot(root) {
-  const abs = path.resolve(root).replace(/\\/g, '/').replace(/\/+$/, '');
-  return process.platform === 'win32' || /^[a-z]:\//i.test(abs) ? abs.toLowerCase() : abs;
+  const windowsPath = process.platform === 'win32' || /^[a-z]:[\\/]/i.test(root);
+  const abs = (windowsPath ? path.win32.resolve(root) : path.posix.resolve(root))
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '');
+  return windowsPath ? abs.toLowerCase() : abs;
 }
 
 /** FNV-1a: короткий, без зависимостей и одинаковый на любой машине. */
