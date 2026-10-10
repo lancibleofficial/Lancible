@@ -39,7 +39,10 @@ module.exports = defineConfig({
     {
       name: 'visual',
       testDir: './tests/visual',
-      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT_LANDING}` },
+      // Язык лендинга с 10 октября берётся из браузера. Без закреплённой
+      // локали снимок зависел бы от языка машины, на которой его сняли.
+      // Русский — основной язык сайта, на нём и эталоны.
+      use: { ...devices['Desktop Chrome'], locale: 'ru-RU', baseURL: `http://localhost:${PORT_LANDING}` },
     },
   ],
   // Серверы поднимаются сами — тест не должен зависеть от того, что кто-то
