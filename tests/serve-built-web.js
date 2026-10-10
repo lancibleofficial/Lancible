@@ -14,6 +14,12 @@
 //   1. нет web/node_modules — ставим их тем же способом, что CI;
 //   2. собираем web/;
 //   3. проверяем, что сборка полная, и громко падаем, если нет.
+//
+// Следствие для проверок «на старом коде». web/ пересобирается при каждом
+// прогоне, поэтому подменять файлы в web/ бесполезно — сборка перезапишет
+// их из src/. Чтобы прогнать набор на прежней версии, подменяйте исходник:
+//   git checkout <коммит> -- src/renderer/app.js      (или styles.css, core/…)
+// а после проверки верните его: git checkout HEAD -- src/renderer/app.js.
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
