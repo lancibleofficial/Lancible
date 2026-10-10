@@ -51,6 +51,8 @@ const ZONES = {
     paths: [
       'scripts/make-solar-icons.js', 'scripts/make-ios-icons.js', 'scripts/make-icon.js',
       'scripts/make-mobile-icons.js', 'src/renderer/core/icons.js', 'mobile/assets/**', 'build/**', 'assets/**',
+      // Шрифты — тоже графика, где бы ни лежали. @font-face — в стилях поверхности.
+      'landing/fonts/**',
     ],
   },
   'qa-web': {
