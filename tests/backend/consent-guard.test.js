@@ -101,12 +101,22 @@ test('редакция не откатывается, время ставит с
   assert.equal(next.version, NEWER);
   assert.ok(serverNow(next.at, from), 'время новой редакции взято с устройства');
 
+  // Часовой пояс: сервер считает по UTC, а редакцию датируем по своему дню.
+  // Завтра по UTC — ещё редакция (выпущена до полуночи UTC), послезавтра — нет.
+  const utcDay = (shift) => new Date(Date.now() + shift * 86400000).toISOString().slice(0, 10);
+  assert.ok((await update(consent(utcDay(1)))).ok);
+  const tomorrow = await read();
+  assert.equal(tomorrow.version, utcDay(1), 'редакция «завтра по UTC» отброшена — допуск на часовой пояс не работает');
+  assert.ok((await update(consent(utcDay(3)))).ok);
+  assert.deepEqual(await read(), tomorrow, 'дата через три дня принята за редакцию');
+
   // Записанные до стража мусор или будущая дата защиты не получают.
   // Поверх редакции их не записать (проверено выше), поэтому профиль
   // заводится заново — так они могли оказаться в нём до стража.
   for (const junk of ['v2', '9999-12-31']) {
     await call('DELETE', `/rest/v1/profiles?id=eq.${user.id}`, { token: user.token });
-    assert.ok((await upsert({ terms_version: junk })).ok);
+    assert.ok((await upsert({ terms_version: junk, terms_accepted_at: FAKE_AT })).ok);
+    assert.equal((await read()).at, null, `при «${junk}» осталось время принятия без принятой редакции`);
     assert.ok((await update(consent(OLDER))).ok);
     assert.equal((await read()).version, OLDER, `записанный «${junk}» держится — клиент переспрашивал бы по кругу`);
   }
