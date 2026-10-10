@@ -18,6 +18,11 @@
  *   }
  *   EOF
  *
+ * title нужен, только когда задача заводится. Для уже заведённой его можно
+ * не передавать — тогда меняются лишь присланные поля (статус, итог), а
+ * название остаётся прежним. Подставлять название наугад нельзя: запись
+ * обновляет задачу по id, и чужое название затрёт настоящее.
+ *
  * Если ключа нет или сеть недоступна, запись не теряется: она ложится в
  * logs/pending.jsonl, и следующая запись (или `node scripts/worklog.js flush`)
  * сначала досылает очередь по порядку. Отправленное дублируется в
@@ -63,7 +68,7 @@ function serviceKey() {
 
 function validate(payload) {
   const task = payload && payload.task;
-  if (!task || !task.id || !task.title) throw new Error('нужен task.id и task.title');
+  if (!task || !task.id) throw new Error('нужен task.id');
   if (!/^[a-z0-9-]+$/.test(task.id)) throw new Error(`task.id должен быть слагом: ${task.id}`);
   if (task.status && !STATUSES.includes(task.status)) {
     throw new Error(`неизвестный статус "${task.status}", допустимы: ${STATUSES.join(', ')}`);
@@ -104,6 +109,19 @@ async function select(table, query) {
   return res.json();
 }
 
+/** Обновляет строки по фильтру, возвращает обновлённые. */
+async function patch(table, filter, fields) {
+  const key = serviceKey();
+  if (!key) throw new Error('NO_KEY');
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+    method: 'PATCH',
+    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+  return res.json();
+}
+
 /** Ставит время каждому событию без него — один раз, при создании записи. */
 function stamp(payload, now = new Date().toISOString()) {
   return { ...payload, events: (payload.events || []).map((ev) => (ev.at ? ev : { ...ev, at: now })) };
@@ -129,7 +147,18 @@ async function send(payload) {
   // пришли в теле запроса.
   for (const k of Object.keys(task)) if (task[k] === undefined || task[k] === null) delete task[k];
 
-  await request('work_log_tasks', [task], { Prefer: 'return=minimal,resolution=merge-duplicates' });
+  if (task.title) {
+    await request('work_log_tasks', [task], { Prefer: 'return=minimal,resolution=merge-duplicates' });
+  } else {
+    // Без названия — только обновление заведённой задачи: вставка без title
+    // упала бы на NOT NULL ещё до разбора конфликта.
+    const updated = await patch('work_log_tasks', `id=eq.${encodeURIComponent(task.id)}`, task);
+    if (!updated.length) {
+      const err = new Error(`задачи ${task.id} ещё нет — при заведении нужен task.title`);
+      err.code = 'NO_TASK';
+      throw err;
+    }
+  }
 
   const events = payload.events || [];
   if (!events.length) return 0;
@@ -174,6 +203,8 @@ async function flush({ quiet = false } = {}) {
       archive(payload);
       ok++;
     } catch (err) {
+      // Задачи нет и названия нет — повтор не поможет, а очередь бы встала.
+      if (err.code === 'NO_TASK') { console.error(`выброшена запись ${i + 1}: ${err.message}`); continue; }
       console.error(`остановился на записи ${i + 1}: ${err.message}`);
       left.push(lines[i]);
     }
@@ -204,7 +235,7 @@ async function main() {
       const m10 = n % 10, m100 = n % 100;
       const word = m10 === 1 && m100 !== 11 ? 'событие'
         : m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? 'события' : 'событий';
-      console.log(`  ${payload.task.id} — ${payload.task.title} (${n} ${word})`);
+      console.log(`  ${payload.task.id} — ${payload.task.title || '(название прежнее)'} (${n} ${word})`);
     }
     return;
   }
@@ -235,6 +266,11 @@ async function main() {
     archive(payload);
     console.log(`записано: ${payload.task.id}, событий ${n}`);
   } catch (err) {
+    if (err.code === 'NO_TASK') {
+      // Повтор не поможет — в очередь не кладём.
+      console.error(`запись отклонена: ${err.message}`);
+      process.exit(1);
+    }
     queue(payload);
     const why = err.message === 'NO_KEY'
       ? 'нет SUPABASE_SERVICE_ROLE_KEY (переменная окружения или .env.local в корне)'
@@ -245,4 +281,4 @@ async function main() {
 
 if (require.main === module) main().catch((err) => { console.error(err); process.exit(1); });
 
-module.exports = { stamp, missingEvents };
+module.exports = { stamp, missingEvents, validate };

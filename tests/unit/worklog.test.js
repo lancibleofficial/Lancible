@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
-const { stamp, missingEvents } = require('../../scripts/worklog.js');
+const { stamp, missingEvents, validate } = require('../../scripts/worklog.js');
 
 const ROOT = path.resolve(__dirname, '../..');
 
@@ -49,4 +49,13 @@ test('очередь и архив журнала не лежат в git', () =>
     assert.doesNotThrow(() => execFileSync('git', ['check-ignore', '-q', '--no-index', file], { cwd: ROOT, stdio: 'ignore' }),
       `${file} должен быть в .gitignore`);
   }
+});
+
+// 10 октября 2026 запись с выдуманным title затёрла названия трёх задач:
+// задача обновляется по id. Для заведённой задачи title можно не слать —
+// тогда send() обновляет только присланные поля, а без задачи отказывает.
+test('validate: id обязателен, title — только при заведении задачи', () => {
+  assert.throws(() => validate({ task: { title: 'Без id' } }), /нужен task\.id/);
+  assert.doesNotThrow(() => validate({ task: { id: 'x-1', status: 'review' }, events: [] }));
+  assert.throws(() => validate({ task: { id: 'Не слаг' } }), /слагом/);
 });
