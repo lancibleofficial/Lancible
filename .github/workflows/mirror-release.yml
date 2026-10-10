@@ -1,0 +1,116 @@
+name: Mirror release to R2
+
+# Переводит УЖЕ вышедший релиз на раздачу из Cloudflare R2, не выпуская новую
+# версию: скачивает ассеты релиза с GitHub (с раннера это быстро), кладёт их
+# в бакет R2 по тому же пути, что и release.yml — v<версия>/<имя файла>, и
+# переопубликовывает манифесты (latest.yml, latest-mac.yml) в Supabase Storage
+# со ссылками на R2. Нужен, чтобы перевести версию, вышедшую до появления R2
+# (0.4.2), и чтобы повторить заливку, если в release.yml она упала.
+#
+# Манифесты берутся из ассетов самого релиза — electron-builder кладёт их туда
+# с голыми именами файлов, их и переписывает scripts/publish-release.js.
+# sha512 и размеры не меняются: файлы те же, что на GitHub.
+#
+# Фид не откатывается: если версия релиза старше той, что сейчас в
+# latest.yml на Supabase, файлы всё равно уезжают в R2 (старые блокмапы нужны
+# для дифференциальной загрузки), а манифесты не трогаются.
+#
+# Запуск:
+#   gh workflow run mirror-release.yml -f tag=v0.4.2
+# Секреты репозитория: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+# R2_BUCKET, R2_PUBLIC_URL — те же, что у release.yml; SUPABASE_SERVICE_ROLE_KEY
+# нужен для фида (без него файлы зальются, а манифесты нет).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег вышедшего релиза (например v0.4.2)'
+        required: true
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SUPABASE_URL: https://yiglgfkjjvwijukdzutw.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # aws cli новых версий добавляет к запросам контрольные суммы, которых R2
+      # не понимает, — просим считать их только там, где без них нельзя.
+      AWS_DEFAULT_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      GH_TOKEN: ${{ github.token }}
+      # Тег идёт в оболочку через переменную, а не подстановкой в текст команды.
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Проверить тег и ключи R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9][0-9A-Za-z._-]*$ ]]; then
+            echo "::error::Тег «$TAG» не похож на десктопный (v0.4.2): зеркалятся только релизы с тегом v*."
+            exit 1
+          fi
+          for name in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET R2_PUBLIC_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Не задан секрет $name — без ключей Cloudflare R2 зеркалить некуда. Нужны R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_URL."
+              exit 1
+            fi
+          done
+
+      - name: Скачать ассеты релиза
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir release-assets \
+            --pattern '*.exe' --pattern '*.exe.blockmap' \
+            --pattern '*.dmg' --pattern '*.dmg.blockmap' \
+            --pattern '*.zip' --pattern '*.zip.blockmap' \
+            --pattern 'latest.yml' --pattern 'latest-mac.yml'
+          ls -l release-assets
+
+      # Имена приводятся к тем, что записаны в ссылках манифеста, и файлы
+      # заливаются в v<версия>/ — подробности в шапке scripts/publish-release.js.
+      # Манифесты ниже идут только после этого шага: при ошибке загрузки он
+      # падает, и фид не укажет в пустоту.
+      - name: Выложить файлы в Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          node scripts/publish-release.js release-assets --stage r2-stage
+          aws s3 cp r2-stage "s3://${R2_BUCKET}/${TAG}/" --recursive \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+      - name: Переключить фид автообновления на R2
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        env:
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          set -euo pipefail
+          version_of() { sed -n 's/^version:[[:space:]]*//p' | head -1 | tr -d '\r'; }
+          manifest=release-assets/latest.yml
+          [ -f "$manifest" ] || manifest=release-assets/latest-mac.yml
+          version=$(version_of < "$manifest")
+          current=$( (curl -fsS "$SUPABASE_URL/storage/v1/object/public/releases/latest.yml" | version_of) || true )
+          if [ -n "$current" ] && [ "$(printf '%s\n%s\n' "$version" "$current" | sort -V | tail -1)" != "$version" ]; then
+            echo "::warning::В фиде сейчас версия $current, новее $version, — манифесты не тронуты, файлы $TAG только добавлены в R2."
+            exit 0
+          fi
+          node scripts/publish-release.js release-assets \
+            --release-base "${R2_PUBLIC_URL%/}/${TAG}" --check-urls
+
+      - name: Предупредить, если фид не переключён
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
+        run: echo "::warning::Секрет SUPABASE_SERVICE_ROLE_KEY не задан — файлы $TAG в R2 лежат, но фид автообновления не переключён."

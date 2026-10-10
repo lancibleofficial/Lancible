@@ -80,7 +80,7 @@ const ZONES = {
     sensitive: true,
     paths: [
       'landing/blog-posts.js', 'landing/graph*.html',
-      '.github/workflows/release.yml', '.github/workflows/mobile-release.yml',
+      '.github/workflows/release.yml', '.github/workflows/mirror-release.yml', '.github/workflows/mobile-release.yml',
       'scripts/publish-site.js', 'scripts/publish-release.js', 'README.md',
     ],
   },

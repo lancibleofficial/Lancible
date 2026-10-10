@@ -8,6 +8,15 @@ name: Build desktop installers
 # Storage, см. scripts/publish-release.js и build.publish в package.json) —
 # тут только страница релиза со ссылками на скачивание для новых
 # пользователей, embed-конфиг фида автообновления не трогаем.
+#
+# Большие файлы для автообновления раздаёт Cloudflare R2, а не GitHub: у GitHub
+# Releases скорость скачивания ~19 КБ/с (обновление в 82 МБ — больше часа), у
+# Cloudflare ~18 МБ/с. Установщики и блокмапы заливаются в бакет R2 по пути
+# v<версия>/<имя файла>, а в фид (Supabase Storage) уходят манифесты со
+# ссылками туда. GitHub Releases остаются архивом. Секреты репозитория:
+# R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET,
+# R2_PUBLIC_URL (публичный адрес бакета, https://pub-….r2.dev, без «/» на конце).
+# Пока их нет, выкат работает по-старому: ссылки в фиде ведут на GitHub.
 on:
   push:
     tags:
@@ -69,6 +78,11 @@ jobs:
     env:
       SUPABASE_URL: https://yiglgfkjjvwijukdzutw.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      # aws cli новых версий добавляет к запросам контрольные суммы, которых R2
+      # не понимает, — просим считать их только там, где без них нельзя.
+      AWS_DEFAULT_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
     steps:
       # Нужен сам репозиторий: страницу релиза собирает готовый экшен, а вот
       # фид автообновления заливает наш скрипт из scripts/.
@@ -98,21 +112,71 @@ jobs:
             artifacts/windows-installer/*
             artifacts/mac-installer/*
 
+      # Куда класть большие файлы. Секреты R2 в условиях шагов недоступны
+      # (contexts secrets там нет), поэтому наличие всех пяти проверяется здесь
+      # и результат читают следующие шаги.
+      - name: Проверить, заданы ли ключи Cloudflare R2
+        id: r2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          if [ -n "$R2_ACCOUNT_ID" ] && [ -n "$R2_ACCESS_KEY_ID" ] && [ -n "$R2_SECRET_ACCESS_KEY" ] && [ -n "$R2_BUCKET" ] && [ -n "$R2_PUBLIC_URL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Секреты Cloudflare R2 заданы не полностью (нужны R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_URL) — ссылки в фиде автообновления остаются на GitHub Releases, а они медленные."
+          fi
+
+      # Файлы раскладываются под теми именами, что будут в ссылках фида
+      # («Lancible Setup 0.4.3.exe» → «Lancible.Setup.0.4.3.exe»), и заливаются
+      # в v<версия>/. Раскладка совпадает с GitHub (.../download/v<версия>/<имя>):
+      # electron-updater ищет блокмап прошлой версии, подставляя её номер в
+      # адрес нового файла. Шаг падает, если загрузка не удалась, — а фид ниже
+      # идёт только после него, так что он не укажет в пустоту.
+      - name: Выложить установщики в Cloudflare R2
+        if: ${{ steps.r2.outputs.enabled == 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          node scripts/publish-release.js artifacts --stage r2-stage
+          aws s3 cp r2-stage "s3://${R2_BUCKET}/${TAG}/" --recursive \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
       # Второй, отдельный канал: страница релиза выше — это ссылки для новых
       # пользователей, а здесь заполняется фид, из которого уже установленные
       # копии узнают о новой версии (electron-updater, см. build.publish в
       # package.json). Без этого шага обновление пришлось бы заливать руками с
       # локальной машины, и о нём легко забыть.
       #
-      # В бакет уезжают только манифесты: сами установщики (78 и 174 МБ) Supabase
+      # В бакет уезжают только манифесты: сами установщики (82 и 180 МБ) Supabase
       # Storage не принимает, поэтому ссылки внутри манифестов переписываются на
-      # ассеты только что опубликованного релиза — их GitHub раздаёт без
-      # ограничений по размеру. Подробности в шапке скрипта.
+      # R2, куда файлы легли шагом выше, а без секретов R2 — на ассеты только
+      # что опубликованного релиза GitHub. С R2 перед заливкой каждая ссылка
+      # проверяется запросом HEAD (--check-urls): не отвечает или размер не
+      # тот — фид не трогается. Подробности в шапке скрипта.
       #
-      # Если секрет не задан, шаг пропускается и релиз всё равно выходит — без
-      # фида, но со ссылками на скачивание.
-      - name: Залить фид автообновления в Supabase Storage
-        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+      # Если секрет Supabase не задан, шаги пропускаются и релиз всё равно
+      # выходит — без фида, но со ссылками на скачивание.
+      - name: Залить фид автообновления в Supabase Storage (файлы в R2)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' && steps.r2.outputs.enabled == 'true' }}
+        env:
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: >
+          node scripts/publish-release.js artifacts
+          --release-base "${R2_PUBLIC_URL%/}/${TAG}" --check-urls
+
+      - name: Залить фид автообновления в Supabase Storage (файлы на GitHub)
+        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' && steps.r2.outputs.enabled != 'true' }}
         run: >
           node scripts/publish-release.js artifacts
           --release-base https://github.com/${{ github.repository }}/releases/download/${{ steps.tag.outputs.tag }}

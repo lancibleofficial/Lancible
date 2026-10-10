@@ -295,13 +295,47 @@ npm run build:dmg   # macOS — только на самом маке (огра�
    (`.exe`/`.dmg`/`.zip` + `.blockmap` + `latest*.yml`), в публичный Supabase
    Storage bucket `releases` (нужны `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`
    в `.env`, см. комментарий в `scripts/publish-release.js` — файл `.env`
-   никогда не коммитится).
+   никогда не коммитится). Так вручную — для своего хостинга: Supabase не
+   принимает файлы больше 50 МБ, а наши установщики весят 82 и 180 МБ. По тегу
+   всё делает CI, см. следующий абзац.
+
+**Раздача установщиков из Cloudflare R2.** Фид автообновления в Supabase
+хранит только манифесты (`latest.yml`, `latest-mac.yml`), а сами файлы
+раздаёт Cloudflare R2: GitHub Releases при замере 10 октября 2026 отдавал
+~19 КБ/с (обновление в 82 МБ — больше часа), Cloudflare — ~18 МБ/с. GitHub
+Releases остаются архивом и страницей «Скачать».
+
+- `.github/workflows/release.yml` по тегу `v*`: собирает установщики, публикует
+  GitHub Release, раскладывает файлы под именами из ссылок
+  (`node scripts/publish-release.js artifacts --stage r2-stage`), заливает их в
+  R2 по пути `v<версия>/<имя файла>` (`aws s3 cp --endpoint-url
+  https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`) и только после этого кладёт
+  в Supabase манифесты со ссылками `<R2_PUBLIC_URL>/v<версия>/<имя файла>`
+  (`--release-base … --check-urls`: каждая ссылка проверяется запросом HEAD).
+- Секреты репозитория (Settings → Secrets and variables → Actions):
+  `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (ключ API R2 с
+  правом записи в бакет), `R2_BUCKET` (имя бакета), `R2_PUBLIC_URL` (публичный
+  адрес бакета вида `https://pub-….r2.dev` — включить в настройках бакета,
+  «Public access» → «R2.dev subdomain»; без `/` на конце). Нужен и прежний
+  `SUPABASE_SERVICE_ROLE_KEY`. Пока R2-секреты заданы не все, выкат идёт
+  по-старому: ссылки в фиде ведут на GitHub, в логе — предупреждение.
+- Уже вышедший релиз переводится на R2 без нового выпуска:
+  `gh workflow run mirror-release.yml -f tag=v0.4.2` (Actions → Mirror release to
+  R2 → Run workflow). Он скачивает ассеты релиза, заливает их в R2 и
+  переопубликовывает манифесты; фид не откатывается — релиз старше версии в
+  `latest.yml` только добавляет файлы в R2.
+- Публичный адрес `r2.dev` у Cloudflare ограничен по частоте запросов и не
+  предназначен для постоянной раздачи; при появлении своего домена его
+  подключают к бакету (Settings → Custom Domains) и подставляют в
+  `R2_PUBLIC_URL`, а вышедшие версии переводит тот же `mirror-release.yml`.
+- Кнопки скачивания на лендинге ведут на GitHub Releases и от R2 не зависят.
 
 **Публикация релиза на GitHub** (страница «Скачать» выше, для новых
 пользователей — отдельный канал от автообновления, не трогает feed
 `electron-updater`): запушить тег `vX.Y.Z` — `.github/workflows/release.yml`
 соберёт установщики на настоящих Windows- и macOS-раннерах и опубликует их
-как ассеты GitHub Release. Тот же workflow можно запустить вручную (Actions →
+как ассеты GitHub Release (и заодно, при заданных секретах R2, зальёт файлы в R2
+и фид — см. выше). Тот же workflow можно запустить вручную (Actions →
 Build desktop installers → Run workflow) с тегом в поле ввода.
 
 > На этой машине у `npm` есть allowlist на install-скрипты зависимостей
@@ -378,8 +412,9 @@ Build desktop installers → Run workflow) с тегом в поле ввода.
 | `src/renderer/app.js` | Логика: **i18n** (словарь `T`, `t()`, `pluralForm()`, `applyStaticTranslations()`, `LOCALE_MAP`), **темы** (`applyTheme`/`cycleTheme`), рейл (сворачивание — один класс `body.nav-collapsed`, элементы вынесены в `position:absolute` ради плавной анимации ширины), поиск из шапки, маршрутизатор видов, плитки/карусели, недавние задачи (без готовых), календарь (`aggregateDays`/`rangeAgg`, режимы month/week/day, `renderViewTotal` — итог за месяц/неделю всегда в правой панели, `calState.periodOn` + `renderPeriodSummary`), обобщённые попапы даты/времени (`openDatePicker`/`openTimePicker`, принимают anchor+value+callback — используются и календарём, и диалогом записи времени), фильтр задач по статусу (`taskFilter`, `filteredProjectTasks`), вкладки задачи (`setTaskTab`), диалог подтверждения (`confirmDialog`, замена `window.confirm`), диалоги проекта и записи времени, меню, пины, редактор (цвет текста + таблицы + `cellBg` через Parchment StyleAttributor), таймер, деньги (`sessionRate`), экспорт (заголовки тоже через `t()`), миграция. |
 | `scripts/copy-vendor.js` | Копирует Quill + шрифт в `src/renderer/vendor/` (postinstall). |
 | `scripts/make-icon.js` | Генерирует `build/icon.*` из `build/logo-accent.svg` (canvas + `Path2D`/`Image`, собирает `.ico` через `png-to-ico`). |
-| `scripts/publish-release.js` | Заливает всё, что есть в `dist/` (Windows и/или macOS), в Supabase Storage — канал автообновления (`npm run publish:release`). |
-| `.github/workflows/release.yml` | Собирает установщики на Windows- и macOS-раннерах GitHub Actions и публикует их как ассеты GitHub Release — канал скачивания для новых пользователей (см. «Скачать» выше), с автообновлением никак не связан. |
+| `scripts/publish-release.js` | Фид автообновления: `--release-base` кладёт в Supabase Storage манифесты со ссылками на R2 (или GitHub), `--stage` раскладывает файлы для заливки в R2, без ключей — заливает всё из `dist/` как есть (`npm run publish:release`). |
+| `.github/workflows/release.yml` | Собирает установщики на Windows- и macOS-раннерах GitHub Actions, публикует GitHub Release (архив и страница «Скачать»), заливает файлы в Cloudflare R2 и после этого — манифесты в фид автообновления. |
+| `.github/workflows/mirror-release.yml` | Ручной запуск: переводит уже вышедший релиз на R2 (`gh workflow run mirror-release.yml -f tag=v0.4.2`), не выпуская новую версию. |
 | `supabase/schema.sql` | Схема БД для аккаунтов/синхронизации (таблицы + RLS-политики), выполняется вручную в SQL Editor проекта. |
 | `scripts/smoke.js` | Headless-проверка UI (`npm run smoke`); окно рендерера — на изолированной сессии (`partition: 'nopersist:smoke'`), чтобы реальная Supabase-сессия из ручных прогонов не протекала между запусками. |
 | `scripts/xlsx-check.js` | Проверка генератора .xlsx (`npm run check:xlsx`). |
