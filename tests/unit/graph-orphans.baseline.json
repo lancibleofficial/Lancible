@@ -2468,6 +2468,12 @@
       "at": "L48"
     },
     {
+      "id": "tests_unit_ports_test_portlist",
+      "label": "portList()",
+      "file": "tests/unit/ports.test.js",
+      "at": "L23"
+    },
+    {
       "id": "tests_unit_project_views_test_ctx",
       "label": "ctx()",
       "file": "tests/unit/project-views.test.js",

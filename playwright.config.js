@@ -44,17 +44,24 @@ module.exports = defineConfig({
   ],
   // Серверы поднимаются сами — тест не должен зависеть от того, что кто-то
   // заранее запустил npm run serve:web.
+  //
+  // Уже поднятый сервер не переиспользуется никогда. Раньше переиспользовался
+  // (кроме CI), и прогон, застав на порту сервер другой копии репозитория,
+  // молча проверял её код. Порты у копий теперь разные (tests/ports.js), так
+  // что занятый порт значит одно из двух: висит свой прошлый сервер или
+  // совпали порты двух копий. В обоих случаях прогон падает сразу и громко
+  // («port is already used»), а не проверяет не то.
   webServer: [
     {
       command: `node scripts/serve-web.js ${PORT_WEB}`,
       url: `http://localhost:${PORT_WEB}/index.html`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 30_000,
     },
     {
       command: `node scripts/serve-web.js ${PORT_LANDING} --root landing`,
       url: `http://localhost:${PORT_LANDING}/index.html`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 30_000,
     },
   ],
