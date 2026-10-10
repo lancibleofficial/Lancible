@@ -13,6 +13,7 @@
 import { render, renderHook, act, waitFor } from '@testing-library/react-native';
 import { useAppStore } from '../src/store/useAppStore';
 import { deleteAccount } from '../src/lib/auth';
+import { FunctionsHttpError, FunctionsFetchError } from '@supabase/supabase-js';
 import { sb } from '../src/lib/supabaseClient';
 import { useEditorAuth } from '../src/hooks/useEditorAuth';
 import DocEditor from '../src/components/DocEditor';
@@ -26,6 +27,7 @@ jest.mock('../src/lib/supabaseClient', () => {
       bucket,
       storage: { from: jest.fn(() => bucket) },
       rpc: jest.fn(),
+      functions: { invoke: jest.fn() },
       auth: {
         getSession: jest.fn(() => Promise.resolve({ data: { session: { access_token: 'tok', user: { id: 'u1' } } } })),
         signOut: jest.fn(() => Promise.resolve({})),
@@ -52,6 +54,8 @@ jest.mock('react-native-webview', () => {
 // вызов пишется в calls — по ним сверяется порядок.
 let folder;
 let rpcAnswers;
+// Ответ функции delete-account; по умолчанию её нет (404) — прежний путь.
+let fnAnswer;
 let calls;
 
 beforeEach(() => {
@@ -60,10 +64,19 @@ beforeEach(() => {
   rpcAnswers = [];
   sb.storage.from.mockClear();
   sb.auth.signOut.mockClear();
-  sb.bucket.list.mockReset().mockImplementation(async (uid) => {
-    calls.push(`list ${uid}`);
+  fnAnswer = () => ({ data: null, error: new FunctionsHttpError({ status: 404 }) });
+  sb.bucket.list.mockReset().mockImplementation(async (uid, opts = {}) => {
+    const offset = opts.offset || 0;
+    const limit = opts.limit || 100;
+    calls.push(`list ${uid} с ${offset}`);
+    const page = [...folder].slice(offset, offset + limit).map((name) => ({ id: `id-${name}`, name }));
     // Подпапка приходит без id — её стирать нечем и незачем.
-    return { data: [...[...folder].map((name) => ({ id: `id-${name}`, name })), { id: null, name: 'sub' }], error: null };
+    if (offset === 0 && page.length < limit) page.push({ id: null, name: 'sub' });
+    return { data: page, error: null };
+  });
+  sb.functions.invoke.mockReset().mockImplementation(async (name) => {
+    calls.push(`invoke ${name}, пауза ${useAppStore.getState().assetsPaused}`);
+    return fnAnswer();
   });
   sb.bucket.remove.mockReset().mockImplementation(async (paths) => {
     calls.push(`remove ${paths.join(',')}`);
@@ -83,13 +96,71 @@ afterEach(() => jest.restoreAllMocks());
 
 const state = () => useAppStore.getState();
 
-test('папка в doc-assets стирается до пустоты, и только потом удаляется аккаунт', async () => {
+// --- серверная функция delete-account -------------------------------------
+
+test('200: папка прочитана, функция удалила аккаунт — выходим локально', async () => {
+  fnAnswer = () => ({ data: { deleted: true }, error: null });
   expect(await deleteAccount()).toEqual({ ok: true });
   expect(sb.storage.from).toHaveBeenCalledWith('doc-assets');
+  expect(calls).toEqual(['list u1 с 0', 'invoke delete-account, пауза true']);
+  expect(sb.rpc).not.toHaveBeenCalled();
+  expect(sb.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  expect(state().assetsPaused).toBe(false);
+  expect(state().assetRequeue).toEqual([]);
+});
+
+test('409: картинки стереть не вышло — своя причина, прочитанное встаёт на возврат', async () => {
+  fnAnswer = () => ({ data: null, error: new FunctionsHttpError({ status: 409 }) });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
+  // Что функция успела стереть, она не говорит — на возврат всё прочитанное.
+  expect(state().assetRequeue).toEqual(['a', 'b']);
+  expect(sb.rpc).not.toHaveBeenCalled();
+  expect(sb.auth.signOut).not.toHaveBeenCalled();
+  expect(state().assetsPaused).toBe(false);
+});
+
+test('500: картинки стёрты, аккаунт цел — прочитанное встаёт на возврат, общая ошибка', async () => {
+  fnAnswer = () => ({ data: null, error: new FunctionsHttpError({ status: 500 }) });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'delete' });
+  expect(state().assetRequeue).toEqual(['a', 'b']);
+  expect(sb.rpc).not.toHaveBeenCalled();
+  expect(state().assetsPaused).toBe(false);
+});
+
+test('прочий ответ (401) — общая ошибка, ничего не трогаем', async () => {
+  fnAnswer = () => ({ data: null, error: new FunctionsHttpError({ status: 401 }) });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'delete' });
+  expect(state().assetRequeue).toEqual([]);
+  expect(sb.rpc).not.toHaveBeenCalled();
+  expect(sb.bucket.remove).not.toHaveBeenCalled();
+});
+
+test('папка не прочиталась — страховаться нечем, функцию не зовём', async () => {
+  sb.bucket.list.mockImplementation(async () => ({ data: null, error: { message: 'boom' } }));
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'delete' });
+  expect(sb.functions.invoke).not.toHaveBeenCalled();
+  expect(sb.rpc).not.toHaveBeenCalled();
+  expect(state().assetsPaused).toBe(false);
+});
+
+test('папка читается страницами по 1000, на возврат идёт вся', async () => {
+  folder = new Set(Array.from({ length: 1001 }, (_, i) => `f${i}`));
+  fnAnswer = () => ({ data: null, error: new FunctionsHttpError({ status: 409 }) });
+  expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
+  expect(calls.slice(0, 2)).toEqual(['list u1 с 0', 'list u1 с 1000']);
+  expect(state().assetRequeue).toHaveLength(1001);
+});
+
+// --- функции нет (404) или до неё не достучаться: прежний путь -------------
+
+test('404: папка стирается отсюда до пустоты, потом delete_my_account', async () => {
+  expect(await deleteAccount()).toEqual({ ok: true });
   expect(calls).toEqual([
-    'list u1',
+    'list u1 с 0',
+    'invoke delete-account, пауза true',
+    'list u1 с 0',
     'remove u1/a,u1/b',
-    'list u1',
+    'list u1 с 0',
     'rpc delete_my_account, пауза true',
   ]);
   expect(sb.auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
@@ -97,7 +168,13 @@ test('папка в doc-assets стирается до пустоты, и тол
   expect(state().assetRequeue).toEqual([]);
 });
 
-test('хранилище ответило ошибкой — аккаунт не трогаем', async () => {
+test('сеть до функции не дошла — тоже прежний путь', async () => {
+  fnAnswer = () => ({ data: null, error: new FunctionsFetchError(new TypeError('Network request failed')) });
+  expect(await deleteAccount()).toEqual({ ok: true });
+  expect(sb.rpc).toHaveBeenCalledWith('delete_my_account');
+});
+
+test('прежний путь: хранилище ответило ошибкой — аккаунт не трогаем', async () => {
   sb.bucket.remove.mockImplementation(async () => ({ data: null, error: { message: 'boom' } }));
   expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
   expect(sb.rpc).not.toHaveBeenCalled();
@@ -106,17 +183,18 @@ test('хранилище ответило ошибкой — аккаунт не
   expect(state().assetRequeue).toEqual([]);
 });
 
-test('remove, который ничего не стёр, — ошибка, а не вечный цикл', async () => {
+test('прежний путь: remove, который ничего не стёр, — ошибка, а не вечный цикл', async () => {
   // Так отвечает правило доступа, не пустившее удаление: без ошибки, но
   // пустым списком.
   sb.bucket.remove.mockImplementation(async () => ({ data: [], error: null }));
   expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
-  expect(sb.bucket.list).toHaveBeenCalledTimes(1);
+  // Одно чтение — страховка перед функцией, второе — первый круг стирания.
+  expect(sb.bucket.list).toHaveBeenCalledTimes(2);
   expect(sb.rpc).not.toHaveBeenCalled();
   expect(state().assetsPaused).toBe(false);
 });
 
-test('«account assets remain» — один повтор стирания и удаления', async () => {
+test('прежний путь: «account assets remain» — один повтор стирания и удаления', async () => {
   // Загрузка, начатая до паузы, успела положить файл между стиранием и
   // удалением.
   rpcAnswers = [{ error: { message: 'account assets remain' } }];
@@ -126,20 +204,20 @@ test('«account assets remain» — один повтор стирания и у
     return rpcAnswers.shift();
   });
   expect(await deleteAccount()).toEqual({ ok: true });
-  expect(calls).toEqual([
-    'list u1', 'remove u1/a,u1/b', 'list u1', 'rpc delete_my_account, пауза true',
-    'list u1', 'remove u1/late', 'list u1', 'rpc delete_my_account, пауза true',
+  expect(calls.slice(2)).toEqual([
+    'list u1 с 0', 'remove u1/a,u1/b', 'list u1 с 0', 'rpc delete_my_account, пауза true',
+    'list u1 с 0', 'remove u1/late', 'list u1 с 0', 'rpc delete_my_account, пауза true',
   ]);
 });
 
-test('повтор — один: второй «account assets remain» — отказ', async () => {
+test('прежний путь: повтор — один, второй «account assets remain» — отказ', async () => {
   rpcAnswers = [{ error: { message: 'account assets remain' } }, { error: { message: 'account assets remain' } }];
   expect(await deleteAccount()).toEqual({ ok: false, reason: 'assets' });
   expect(sb.rpc).toHaveBeenCalledTimes(2);
   expect(state().assetsPaused).toBe(false);
 });
 
-test('папку стёрли, а аккаунт остался — стёртое встаёт в очередь на возврат', async () => {
+test('прежний путь: папку стёрли, а аккаунт остался — стёртое встаёт в очередь на возврат', async () => {
   rpcAnswers = [{ error: { message: 'Failed to fetch' } }];
   expect(await deleteAccount()).toEqual({ ok: false, reason: 'delete' });
   expect(state().assetRequeue).toEqual(['a', 'b']);
