@@ -48,127 +48,117 @@
    если пользователю есть что заметить. Правила отбора описаны в шапке файла:
    мелкие правки туда не идут, для них есть журнал.
 
-Пункты 9 и 10 с 10 октября 2026 выполняет Publish Agent — см. «Команда
-агентов» ниже.
+Пункты 9 и 10 выполняет главный сеанс по чек-листу выката — см. «Как
+устроена работа» ниже.
 
-## Команда агентов
+## Как устроена работа
 
-Принято 10 октября 2026. Над проектом работают параллельные сессии Claude,
-у каждой своя зона. Пользователь говорит только с Product Manager. Всё
-остальное общение идёт между сессиями: сообщения по имени сессии и задачи в
-журнале.
+Принято 10 октября 2026 вместо команды из девяти постоянных сессий: она жгла
+токены на пересказ и двойную проверку. Тесты, крюк перед коммитом, журнал и
+graphify остались.
 
-### Роли и зоны
+### Главный сеанс и субагенты
 
-Сессия пишет только в своей зоне. Нужна правка в чужой зоне — пишет её
-владельцу, сама её не делает.
+- **Пользователь говорит с одним сеансом.** Он держит план, раздаёт работу,
+  принимает её и выкатывает.
+- **Работу делают одноразовые субагенты** (инструмент Agent, агенты OMC:
+  `oh-my-claudecode:explore`, `executor`, `architect`, `verifier`,
+  `code-reviewer`, `test-engineer`, `security-reviewer`, `designer`).
+  Одна фича — один исполнитель, от правки до теста.
+- **Промпт субагента самодостаточен:** что сделать, какие файлы, чем
+  проверить. Первым шагом — `graphify query`. Субагент делает правку с
+  тестом в своей ветке, возвращает отчёт в несколько строк и завершается.
+- **Параллельные правки** — с `isolation: "worktree"`: у каждого субагента
+  своя копия, общий индекс git не смешивает чужие правки.
+- **Модель по задаче:** поиск, прогоны тестов, механика — haiku или sonnet;
+  код — sonnet; архитектура и сложное ревью — opus. Большие задачи — режимы
+  OMC: `team`, `autopilot`, `ralph`, `plan`/`ralplan`, `verify`.
+- **Проверка — один раз в конце:** субагент `verifier` или `code-reviewer`
+  и зелёный набор. Правовая сверка — только к релизу и только если менялись
+  тексты, данные или сторонние лицензии: субагент с чек-листом
+  `COMPLIANCE.md`.
 
-| Сессия | Своя зона (что правит) | Ветки | Задачи от |
-|---|---|---|---|
-| **Product Manager** | ничего в репозитории; ведёт задачи в журнале | — | пользователь |
-| **Web/Desktop** | `src/main.js`, `src/preload.js`, `src/xlsx.js`, `src/renderer/**` (кроме `core/`), `src/editor/**` и его сборки (`src/renderer/editor.js`, `mobile/src/editor/editorBundle.js`), `web/**`, `landing/**` (кроме юридических текстов и `blog-posts.js`) | `web/…` | PM |
-| **Mobile (Android/IOS)** | `mobile/**`, кроме `mobile/src/core/`, `mobile/src/editor/editorBundle.js`, `mobile/assets/`, `mobile/tests/` | `mobile/…` | PM |
-| **Core/Backend** | `src/renderer/core/**` (кроме `icons.js`) и копии в `mobile/src/core/`, `supabase/**`, служебные `scripts/` (журнал, синхронизация ядра, крюки), зависимости (`package*.json` в корне и в `mobile/`), `.github/workflows/test.yml` | `core/…` | любая сессия |
-| **Icons and Graphics** | иконки и графика: `scripts/make-solar-icons.js`, `make-ios-icons.js`, `make-icon.js`, `make-mobile-icons.js`, `src/renderer/core/icons.js`, `mobile/assets/**`, `build/`, `assets/`, шрифты | `gfx/…` | PM |
-| **Testing (Web/Desktop)** | веб, десктоп и лендинг: `tests/**` (кроме `tests/unit/mobile-*`), `playwright.config.js`, `scripts/watch.js`, `scripts/smoke.js`, `scripts/visual-update.js` | `qa-web/…` | PM; правки — прямо Web/Desktop |
-| **Testing Mobile (Android/IOS)** | `mobile/tests/**`, `mobile/jest.setup.js`, `tests/unit/mobile-*` | `qa-mobile/…` | PM; правки — прямо Mobile |
-| **Legal Manager** | тексты: `landing/{privacy,terms,legal,refund,cookies,delete-account}.html`, `landing/business.js`, `src/renderer/core/legal.js`, `COMPLIANCE.md`, `supabase/legal.sql` | `legal/…` | PM; Publish — перед каждым релизом |
-| **Publish Agent** | ветка `main` и теги, `landing/blog-posts.js`, всё пересобираемое после слияния (снимок графа, `/graph`, числа `/architecture`), `release.yml`, `mobile-release.yml`, `latest.json` в lancible-updates | `main` | PM, по команде «деплой» |
+### Области и чек-лист ревью
 
-Общие правила для всех ролей:
+Области — не владение, а чек-лист: что проверить, если правка их задела. Крюк
+перед коммитом (`scripts/zones.js`) коммит не останавливает. Он напоминает,
+какие области задеты, когда их две и больше или задета чувствительная
+(правовые тексты, выкат, регламент). Тест `tests/unit/zones.test.js`
+сверяет таблицу с кодом.
 
-- **Тесты к правке пишет автор правки, в своей ветке.** Это не залезание в зону
-  тестировщика. Тестировщик ведёт приёмку, регрессию и инфраструктуру тестов и
-  не меняет продуктовый код.
-- **Общие документы.** `DESIGN.md` и `ARCHITECTURE.md` каждый правит в своём
-  разделе. Сам этот регламент меняется только по слову пользователя.
-- **Иконки и графика** — только через Icons and Graphics.
-- **Цвета (токены)** остаются за своей поверхностью: см. `DESIGN.md`.
+| Область | Что входит | Что проверить |
+|---|---|---|
+| **Веб, десктоп, лендинг** | `src/main.js`, `src/preload.js`, `src/xlsx.js`, `src/renderer/**`, `src/editor/**`, `mobile/src/editor/editorBundle.js`, `web/**`, `landing/**` | e2e и тесты лендинга; `web/index.html` вслед за `src/renderer/index.html`; после правки редактора — `npm run build:editor` |
+| **Телефон** | `mobile/**` | `npm run test:mobile`, `check:mobile-build`, `expo export` для iOS |
+| **Ядро, база, инфраструктура** | `src/renderer/core/**`, `mobile/src/core/**`, `supabase/**`, `.githooks/**`, `package.json` | копии ядра — только `sync-mobile-core.js`, побайтно; права доступа — `test:backend` |
+| **Иконки и графика** | `src/renderer/core/icons.js`, `scripts/make-solar-icons.js`, `mobile/assets/**`, `assets/**`, `landing/fonts/**` | иконки — только через генератор, сторож `tests/unit/icons.test.js` |
+| **Тесты и их инфраструктура** | `tests/**`, `mobile/tests/**`, `playwright.config.js` | тест к правке — в том же коммите; эталоны снимков — только на Windows |
+| **Правовые тексты** | `landing/{privacy,terms,legal,refund,cookies,delete-account}.html`, `src/renderer/core/legal.js`, `COMPLIANCE.md` | четыре языка, строки в обоих словарях; новая `TERMS_VERSION` — тексты сливать до тегов |
+| **Выкат и пересобираемое** | `landing/blog-posts.js`, `landing/graph*.html`, `scripts/publish-site.js`, `README.md` | граф и числа `/architecture` не править руками — пересобирать |
+| **Регламент и настройки сессий** | `CLAUDE.md`, `.claude/**` | меняется только по слову пользователя |
 
-### Где кто работает
+Остальное из прежних правил остаётся: иконки и графика — через генератор;
+цвета (токены) — за своей поверхностью (`DESIGN.md`); `DESIGN.md` и
+`ARCHITECTURE.md` правятся в нужном разделе.
 
-У каждой пишущей сессии своя копия репозитория — git worktree — в
-`E:\lancible\<папка>`: `web`, `mobile`, `core`, `gfx`, `qa-web`, `qa-mobile`,
-`legal`. В ней сессия работает на своих ветках. Папка
-`C:\Users\Turan\Documents\task-timer` (ветка `main`) принадлежит только
-Publish Agent; Product Manager читает её и ничего в ней не правит. Две сессии в
-одной папке не работают: общий индекс git и крюк перед коммитом смешивают
-чужие правки.
+### Копии и ветки
 
-Завести свою копию (Git Bash, `<папка>` и `<префикс>` — из таблицы):
+- **Главный сеанс работает из `E:\lancible\web`**; копии субагентов — на
+  диске E (на C места почти нет). Основная папка
+  `C:\Users\Turan\Documents\task-timer` держит `main`.
+- **Ветки** — `<область>/<о-чём>` (`web/…`, `mobile/…`, `core/…`, `gfx/…`,
+  `legal/…`, `qa/…`): это договорённость об именах, а не проверка.
+- **Новая копия готовится одной командой:** `npm run setup:worktree` ставит
+  зависимости, распаковывает Electron (под Node 26 сам он распаковывается не
+  до конца) и копирует `.env.local`, не печатая значение. «НЕ ГОТОВО» —
+  работать в копии нельзя. Телефон — с флагом `--mobile`.
+- **Порты браузерных прогонов** свои у каждой копии (`node tests/ports.js`),
+  поэтому прогоны из разных копий не мешают друг другу.
+- **Перед подтягиванием `main`** копия откладывает `logs/*.jsonl` в свою
+  папку (`../logs-keep-<папка>`), потом возвращает и досылает очередь
+  `node scripts/worklog.js flush`.
 
-```bash
-git -C /c/Users/Turan/Documents/task-timer worktree add /e/lancible/<папка> -b <префикс>/start main
-cd /e/lancible/<папка> && npm run setup:worktree
-```
+### Выкат — по слову «деплой»
 
-Скрипт ставит зависимости корня, веба и (для Mobile, Testing Mobile и Core)
-телефона, проверяет, что Electron распакован, и копирует `.env.local` из
-основной копии, не печатая значение. Сообщение «НЕ ГОТОВО» значит, что копия
-не готова и работать в ней нельзя.
-
-После этого сессия переходит в эту папку — сменой рабочей папки сессии.
-Пользователь подтверждает переход один раз.
-
-Автопамять Claude привязана к пути папки. Чтобы она осталась общей, папку
-`memory` новой копии делаем ссылкой на общую:
-
-```powershell
-$p = 'C:\Users\Turan\.claude\projects\E--lancible-<папка>\memory'
-New-Item -ItemType Directory -Force (Split-Path $p) | Out-Null
-if (-not (Test-Path $p)) { New-Item -ItemType Junction -Path $p -Target 'C:\Users\Turan\.claude\projects\C--Users-Turan-Documents-task-timer\memory' | Out-Null }
-```
-
-Именно PowerShell. `cmd //c mklink /J` из Git Bash не работает: ключ `/J`
-по дороге портится.
-
-Перед подтягиванием `main` копия откладывает `logs/*.jsonl` в свою папку
-`../logs-keep-<папка>`, а не в общую: все копии лежат рядом в `E:\lancible`,
-и общая папка при одновременном подтягивании затёрла бы чужую очередь
-журнала. После слияния журнал возвращается в `logs/`, а очередь досылается
-`node scripts/worklog.js flush`.
-
-### Как ходят задачи
-
-1. **PM ставит задачу.** PM заводит задачу в журнале (`task.id` вида
-   `ГГГГ-ММ-ДД-о-чём`, в `title` — владелец в скобках) и пишет исполнителю
-   сообщением с этим id.
-2. **Исполнитель работает.** Он ведёт журнал по тому же id и работает в
-   ветке `<префикс>/<о-чём>`. Нужна чужая зона — пишет её владельцу.
-3. **Разработчик и тестировщик правят напрямую.** Тестировщик шлёт замечания
-   разработчику, разработчик возвращает исправленное тестировщику. PM видит
-   это в журнале.
-4. **Готово.** Ветка уходит на GitHub (`git push origin <ветка>`). Это не
-   деплой: production берётся только из `main`. Исполнитель сообщает PM и
-   Publish имя ветки и чем проверено; статус в журнале — `review`.
-5. **Деплой.** Пользователь говорит «деплой» → PM поручает Publish Agent.
-   Publish:
-   - просит Legal Manager проверить релиз;
-   - смотрит дифф каждой ветки;
-   - сливает ветки в `main`: сначала Core, потом остальные;
-   - гоняет полный `npm test`;
-   - делает `npm run site:refresh` отдельным коммитом;
-   - пушит, ставит теги, пишет запись в блог;
-   - переводит задачи в журнале в `deployed`.
+1. **Состав.** У каждой ветки CI зелёный. Ветки-связки сливаются вместе и по
+   порядку: сначала ядро, потом остальное.
+2. **Правовая сверка** — если менялись тексты, данные или сторонние
+   лицензии (`COMPLIANCE.md`, правовые строки в обоих словарях).
+3. **Слияние.** Ветка `release/<дата>` от `origin/main`, в неё — ветки
+   выката. Конфликты в `tests/unit/graph-orphans.baseline.json` и
+   `landing/graph*.html` руками не сливаются: `npm run graph:baseline`,
+   `npm run site:refresh`.
+4. **Полный набор на Windows:** `npm test` и `npm run test:visual` (эталоны
+   win32 CI на Linux не проверяет).
+5. **`npm run site:refresh`** отдельным коммитом, затем
+   `git push origin HEAD:main`. Проверить `/app/build.json` на сайте.
+6. **Релиз приложений.**
+   - Десктоп: версия в `package.json` и lock одним коммитом, тег `v*` —
+     Windows и macOS вместе, одинаковые.
+   - Телефон: `mobile/app.json` и `versionCode`, тег `mobile-v*`.
+   - Проверить: установщики в релизе, `latest.yml`/`latest-mac.yml` в
+     бакете `releases`, APK и `latest.json` в lancible-updates, кнопки
+     лендинга (`index.html` и `strings.js` на четырёх языках).
+7. **Новая `TERMS_VERSION`** — тексты сливаются до тегов, иначе согласие
+   ходит по кругу.
+8. **После выката:** запись в блог, если людям есть что заметить; журнал →
+   `deployed`; копии подтягивают `main` и гоняют `npm run setup:worktree`.
+9. **Необратимое** — удаление релизов, веток, файлов — только с
+   подтверждения пользователя.
 
 ### Файлы-магниты и общие ресурсы
 
-- **Пересобираемые файлы.** `tests/unit/graph-orphans.baseline.json`,
-  `landing/graph*.html` и числа `/architecture` при слиянии руками не
-  сливаются: Publish пересобирает их (`npm run graph:baseline`,
-  `npm run site:refresh`). Копии ядра в `mobile/src/core/` обновляются только
-  скриптом `scripts/sync-mobile-core.js` и только побайтно. Запускает его
-  Core, а для своего файла — владелец оригинала (`legal.js` — Legal Manager,
-  `icons.js` — Icons and Graphics), в том же коммите, что и правка оригинала.
-  Сборку редактора — только Web/Desktop (`npm run build:editor`).
-- **Эмулятор Android и Metro на 8081 — один на всех.** Mobile и Testing Mobile
-  договариваются, кто занимает их сейчас.
-- **Порты браузерных прогонов** (`tests/ports.js`) общие для всех копий, а
-  Playwright переиспользует уже поднятый сервер. Два прогона из разных копий
-  одновременно проверят чужой код. Пока порты не стали свои для каждой копии,
-  браузерные наборы из двух копий сразу не гоняем.
-- **Режим разрешений у всех сессий один.** Иначе каждое сообщение между ними
-  ждёт подтверждения пользователя.
+- **Пересобираемое.** `tests/unit/graph-orphans.baseline.json`,
+  `landing/graph*.html` и числа `/architecture` пересобираются, руками не
+  сливаются.
+- **Копии ядра** в `mobile/src/core/` — только `scripts/sync-mobile-core.js`,
+  побайтно, в том же коммите, что и правка оригинала.
+- **Сборка редактора** — `npm run build:editor` после правки `src/editor/`.
+- **Эмулятор Android и Metro на 8081** — один на машину: два субагента
+  телефона одновременно их не занимают.
+- **`sb.functions` в supabase-js — геттер:** в тестах подменять свойство
+  целиком (`Object.defineProperty(sb, 'functions', …)`), а не метод
+  `invoke`.
 
 ## Журнал работы
 
