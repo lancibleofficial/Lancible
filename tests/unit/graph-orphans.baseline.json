@@ -233,7 +233,7 @@
       "id": "mobile_src_lib_auth_changepassword",
       "label": "changePassword()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L215"
+      "at": "L295"
     },
     {
       "id": "mobile_src_lib_auth_saveonboarding",
@@ -251,7 +251,7 @@
       "id": "mobile_src_lib_auth_updateprofilename",
       "label": "updateProfileName()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L200"
+      "at": "L280"
     },
     {
       "id": "mobile_src_lib_format_fmttimeshort",
@@ -1379,25 +1379,25 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L6551"
+      "at": "L6630"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L6167"
+      "at": "L6246"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L6157"
+      "at": "L6236"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L6557"
+      "at": "L6636"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
@@ -1415,25 +1415,25 @@
       "id": "src_renderer_app_applyremind",
       "label": "applyRemind()",
       "file": "src/renderer/app.js",
-      "at": "L5284"
+      "at": "L5363"
     },
     {
       "id": "src_renderer_app_authdismissible",
       "label": "authDismissible()",
       "file": "src/renderer/app.js",
-      "at": "L1223"
+      "at": "L1302"
     },
     {
       "id": "src_renderer_app_boardlane",
       "label": "boardLane()",
       "file": "src/renderer/app.js",
-      "at": "L2758"
+      "at": "L2837"
     },
     {
       "id": "src_renderer_app_calshift",
       "label": "calShift()",
       "file": "src/renderer/app.js",
-      "at": "L2195"
+      "at": "L2274"
     },
     {
       "id": "src_renderer_app_changepassword",
@@ -1445,67 +1445,67 @@
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L4584"
+      "at": "L4663"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L6710"
+      "at": "L6789"
     },
     {
       "id": "src_renderer_app_committime",
       "label": "commitTime()",
       "file": "src/renderer/app.js",
-      "at": "L2441"
+      "at": "L2520"
     },
     {
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L6466"
+      "at": "L6545"
     },
     {
       "id": "src_renderer_app_deletestatus",
       "label": "deleteStatus()",
       "file": "src/renderer/app.js",
-      "at": "L3258"
+      "at": "L3337"
     },
     {
       "id": "src_renderer_app_deletetask",
       "label": "deleteTask()",
       "file": "src/renderer/app.js",
-      "at": "L4052"
+      "at": "L4131"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L5653"
+      "at": "L5732"
     },
     {
       "id": "src_renderer_app_dppickfrom",
       "label": "dpPickFrom()",
       "file": "src/renderer/app.js",
-      "at": "L2350"
+      "at": "L2429"
     },
     {
       "id": "src_renderer_app_expdlgrange",
       "label": "expdlgRange()",
       "file": "src/renderer/app.js",
-      "at": "L4486"
+      "at": "L4565"
     },
     {
       "id": "src_renderer_app_exportallprojects",
       "label": "exportAllProjects()",
       "file": "src/renderer/app.js",
-      "at": "L4599"
+      "at": "L4678"
     },
     {
       "id": "src_renderer_app_gettag",
       "label": "getTag()",
       "file": "src/renderer/app.js",
-      "at": "L2903"
+      "at": "L2982"
     },
     {
       "id": "src_renderer_app_handleauthsubmit",
@@ -1517,7 +1517,7 @@
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L5454"
+      "at": "L5533"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
@@ -1529,25 +1529,25 @@
       "id": "src_renderer_app_isscrollbox",
       "label": "isScrollBox()",
       "file": "src/renderer/app.js",
-      "at": "L5220"
+      "at": "L5299"
     },
     {
       "id": "src_renderer_app_markscrollhover",
       "label": "markScrollHover()",
       "file": "src/renderer/app.js",
-      "at": "L5222"
+      "at": "L5301"
     },
     {
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L4029"
+      "at": "L4108"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L5410"
+      "at": "L5489"
     },
     {
       "id": "src_renderer_app_openlangmenu",
@@ -1565,31 +1565,31 @@
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L5609"
+      "at": "L5688"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L6704"
+      "at": "L6783"
     },
     {
       "id": "src_renderer_app_opensearch",
       "label": "openSearch()",
       "file": "src/renderer/app.js",
-      "at": "L2081"
+      "at": "L2160"
     },
     {
       "id": "src_renderer_app_openview",
       "label": "openView()",
       "file": "src/renderer/app.js",
-      "at": "L1570"
+      "at": "L1649"
     },
     {
       "id": "src_renderer_app_pickrangeday",
       "label": "pickRangeDay()",
       "file": "src/renderer/app.js",
-      "at": "L2251"
+      "at": "L2330"
     },
     {
       "id": "src_renderer_app_promptdialog",
@@ -1607,31 +1607,31 @@
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L4316"
+      "at": "L4395"
     },
     {
       "id": "src_renderer_app_savetagdialog",
       "label": "saveTagDialog()",
       "file": "src/renderer/app.js",
-      "at": "L3046"
+      "at": "L3125"
     },
     {
       "id": "src_renderer_app_scrolldeck",
       "label": "scrollDeck()",
       "file": "src/renderer/app.js",
-      "at": "L1902"
+      "at": "L1981"
     },
     {
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L6671"
+      "at": "L6750"
     },
     {
       "id": "src_renderer_app_settaskversion",
       "label": "setTaskVersion()",
       "file": "src/renderer/app.js",
-      "at": "L5505"
+      "at": "L5584"
     },
     {
       "id": "src_renderer_app_statusesofkind",
@@ -1643,19 +1643,19 @@
       "id": "src_renderer_app_tickprojects",
       "label": "tickProjects()",
       "file": "src/renderer/app.js",
-      "at": "L2033"
+      "at": "L2112"
     },
     {
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L3793"
+      "at": "L3872"
     },
     {
       "id": "src_renderer_app_togglesyncenabled",
       "label": "toggleSyncEnabled()",
       "file": "src/renderer/app.js",
-      "at": "L1448"
+      "at": "L1527"
     },
     {
       "id": "src_renderer_app_updateprofilename",
@@ -1691,7 +1691,7 @@
       "id": "supabase_functions_delete_account_index_reply",
       "label": "reply()",
       "file": "supabase/functions/delete-account/index.ts",
-      "at": "L36"
+      "at": "L39"
     },
     {
       "id": "tests_unit_visual_rules_test_expand",
