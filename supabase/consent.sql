@@ -10,11 +10,12 @@
 -- принятия новой редакции пропал бы. Поправить старые клиенты нельзя — они
 -- уже установлены, поэтому правило держит база.
 --
--- Правило: записанная редакция-дата не уменьшается. Если записана дата
--- ISO (ГГГГ-ММ-ДД), а пришла дата старше, пустое значение или не дата,
--- остаются записанные terms_version и terms_accepted_at — это и есть след
--- принятия более новой редакции. Новая редакция-дата записывается как
--- обычно; даты ISO строкой сравниваются верно.
+-- Правило: записанная редакция не уменьшается. Редакция — дата ISO
+-- (ГГГГ-ММ-ДД) не позже сегодняшнего дня. Если записана редакция, а пришла
+-- та же, старше, пустое значение или не редакция, остаются записанные
+-- terms_version и terms_accepted_at — это и есть след принятия более новой
+-- редакции. Более новая редакция записывается, а время её принятия ставит
+-- сервер (now()), не часы устройства. Даты ISO строкой сравниваются верно.
 --
 -- Почему только даты (замечание Legal Manager). Через API человек может
 -- записать в свою строку что угодно. Строка «zzzz» больше любой даты: без
@@ -25,18 +26,46 @@
 --
 -- Колонки согласия заводит supabase/legal.sql; без них функция не нужна.
 
+-- Действующая редакция — дата ISO не позже сегодняшнего дня. Будущая дата
+-- не версия: '9999-12-31', записанная через API в свою строку, иначе
+-- навсегда сняла бы вопрос о любой новой редакции (замечание Legal Manager).
+create or replace function public.is_terms_version(v text)
+returns boolean
+language sql
+stable  -- не immutable: зависит от current_date
+set search_path = ''
+as $$
+  select v ~ '^\d{4}-\d{2}-\d{2}$' and v <= to_char(current_date, 'YYYY-MM-DD');
+$$;
+-- Право EXECUTE у public не отзываем: триггер ниже работает с правами
+-- пишущего клиента и зовёт эту функцию от его имени.
+
+-- Время принятия ставит сервер, а не часы устройства: запись согласия должна
+-- годиться как доказательство (GDPR ст. 7(1)), а часы можно сбить. Время
+-- меняется, только когда принята более новая редакция; повторное согласие
+-- с той же редакцией оставляет время первого.
 create or replace function public.keep_newest_terms()
 returns trigger
 language plpgsql
 set search_path = ''
 as $$
+declare
+  new_valid boolean := coalesce(public.is_terms_version(new.terms_version), false);
 begin
-  if old.terms_version ~ '^\d{4}-\d{2}-\d{2}$'
-     and (new.terms_version is null
-          or new.terms_version !~ '^\d{4}-\d{2}-\d{2}$'
-          or new.terms_version < old.terms_version) then
-    new.terms_version := old.terms_version;
-    new.terms_accepted_at := old.terms_accepted_at;
+  -- При вставке OLD пуст — к нему обращаемся только в ветке UPDATE.
+  if tg_op = 'UPDATE' then
+    if coalesce(public.is_terms_version(old.terms_version), false)
+       and (not new_valid or new.terms_version <= old.terms_version) then
+      -- Пришла та же, более старая, пустая, будущая или не дата — оставляем
+      -- записанное вместе со временем принятия.
+      new.terms_version := old.terms_version;
+      new.terms_accepted_at := old.terms_accepted_at;
+      return new;
+    end if;
+  end if;
+  if new_valid then
+    -- Принята более новая редакция (или первая) — время ставит сервер.
+    new.terms_accepted_at := now();
   end if;
   return new;
 end;
@@ -44,9 +73,10 @@ $$;
 
 revoke all on function public.keep_newest_terms() from public;
 
--- before update ловит и update, и upsert (ветка on conflict do update):
--- клиенты пишут согласие обоими путями.
+-- before insert or update: онбординг заводит профиль upsert-ом (первый раз —
+-- вставка), повторное согласие пишет update; upsert по существующей строке —
+-- ветка on conflict do update, это тоже update.
 drop trigger if exists keep_newest_terms on public.profiles;
 create trigger keep_newest_terms
-  before update on public.profiles
+  before insert or update on public.profiles
   for each row execute function public.keep_newest_terms();
