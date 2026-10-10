@@ -1898,6 +1898,12 @@
       "at": "L49"
     },
     {
+      "id": "tests_backend_consent_guard_test_call",
+      "label": "call()",
+      "file": "tests/backend/consent-guard.test.js",
+      "at": "L22"
+    },
+    {
       "id": "tests_backend_rls_test_get",
       "label": "get()",
       "file": "tests/backend/rls.test.js",
