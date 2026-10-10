@@ -13,8 +13,8 @@
 отказывается собирать `.dmg` не на самом маке) и публикуются на странице
 релизов:
 
-- **Windows** — [последняя версия](https://github.com/lancibleofficial/Lancible/releases/latest) → файл `Lancible Setup *.exe`
-- **macOS** — [последняя версия](https://github.com/lancibleofficial/Lancible/releases/latest) → файл `Lancible-*.dmg` (universal — подходит и Apple Silicon, и Intel)
+- **Windows** — [кнопка на сайте](https://lancible.vercel.app/#platforms) → файл `Lancible Setup *.exe`
+- **macOS** — [кнопка на сайте](https://lancible.vercel.app/#platforms) → файл `Lancible-*.dmg` (universal — подходит и Apple Silicon, и Intel)
 
 Все релизы: <https://github.com/lancibleofficial/Lancible/releases>
 

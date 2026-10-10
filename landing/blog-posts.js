@@ -29,6 +29,29 @@ window.LANCIBLE_POSTS = [
   {
     date: '2026-10-10',
     tag: 'release',
+    version: '0.4.1 · mobile 1.2.2',
+    title: {
+      ru: 'Картинки с телефона уходят в облако, а удаление аккаунта стирает и их',
+      en: 'Phone images reach the cloud, and deleting your account erases them too',
+    },
+    body: {
+      ru: [
+        'Картинки, вставленные в заметки на телефоне, теперь выгружаются в облако и видны на компьютере и в браузере. Раньше с телефона они не уходили ни в одной версии: вход не доходил до редактора, и картинка оставалась только на устройстве.',
+        'Удаление аккаунта теперь стирает и картинки из заметок — на телефоне, на компьютере и в браузере. Окно подтверждения прямо называет, что удалится. Если стереть картинки не вышло, аккаунт остаётся на месте, а картинки возвращаются в облако — ничего не теряется наполовину.',
+        'Логотип теперь набран тем же шрифтом Onest, что и весь интерфейс. Казахский перевод обращается на «сіз». Мы обновили Условия использования и Политику конфиденциальности — при следующем входе приложение попросит принять новую редакцию. В новых версиях принятое в одном приложении больше не переспрашивается в другом.',
+        'Версия 0.4.1 для Windows и macOS придёт обновлением сама. На телефоне с версией 1.2.1 обновление ставится из меню приложения; с 1.2.0 и раньше — один раз вручную, скачав APK на главной странице сайта.',
+      ],
+      en: [
+        'Images you paste into notes on your phone are now uploaded to the cloud and show up on your computer and in the browser. Before, they never left the phone in any version: sign-in did not reach the editor, so the image stayed on the device.',
+        'Deleting your account now erases the images in your notes as well — on the phone, on the computer and in the browser. The confirmation dialog says plainly what will be deleted. If erasing the images fails, the account stays and the images go back to the cloud, so nothing is left half-deleted.',
+        'The logo is now set in Onest, the same font as the rest of the interface. The Kazakh translation addresses you formally («сіз»). We have updated the Terms of Service and the Privacy Policy: next time you sign in, the app will ask you to accept the new version. In the new versions, what you accept in one app is no longer asked again in another.',
+        'Version 0.4.1 for Windows and macOS arrives as an update on its own. On a phone with 1.2.1 the update installs from the app menu; with 1.2.0 or earlier, install it by hand once by downloading the APK from the home page of the site.',
+      ],
+    },
+  },
+  {
+    date: '2026-10-10',
+    tag: 'release',
     version: 'mobile 1.2.1',
     title: {
       ru: 'Телефон 1.2.1: обновление из приложения снова работает',
