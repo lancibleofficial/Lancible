@@ -2606,16 +2606,22 @@
       "at": "L19"
     },
     {
+      "id": "tests_unit_wording_test_clean",
+      "label": "clean()",
+      "file": "tests/unit/wording.test.js",
+      "at": "L92"
+    },
+    {
       "id": "tests_unit_wording_test_strings",
       "label": "strings()",
       "file": "tests/unit/wording.test.js",
-      "at": "L47"
+      "at": "L48"
     },
     {
       "id": "tests_unit_wording_test_word",
       "label": "word()",
       "file": "tests/unit/wording.test.js",
-      "at": "L42"
+      "at": "L43"
     },
     {
       "id": "tests_visual_landing_spec_onlychrome",
