@@ -32,6 +32,23 @@ test('согласие нужно без профиля, со старой ве�
   assert.equal(L.needsConsent({ terms_version: L.TERMS_VERSION, age_confirmed: true }), false);
 });
 
+// 10 октября 2026: клиент со старой редакцией переспрашивал того, кто уже
+// принял новую в другом клиенте, и переписывал её назад. Спрашиваем только
+// если принятая редакция старше текущей.
+test('согласие не спрашивается, если принята редакция новее своей', () => {
+  const next = '9999-12-31';
+  assert.equal(L.needsConsent({ terms_version: next, age_confirmed: true }), false, 'принята более новая — не переспрашивать');
+  assert.equal(L.needsConsent({ terms_version: L.TERMS_VERSION, age_confirmed: true }), false, 'та же — не переспрашивать');
+  assert.equal(L.needsConsent({ terms_version: '2020-01-01', age_confirmed: true }), true, 'старше — спросить');
+  assert.equal(L.needsConsent({ terms_version: '', age_confirmed: true }), true, 'пустая — спросить');
+  assert.equal(L.needsConsent({ terms_version: next, age_confirmed: false }), true, 'возраст не подтверждён — спросить');
+  // Не дата — значит, не принято: строкой «v2» больше любой даты, и без
+  // проверки формата такая запись навсегда сняла бы вопрос.
+  for (const junk of ['v2', 'zzzz', '2026-10-10T00:00', null, 20261010]) {
+    assert.equal(L.needsConsent({ terms_version: junk, age_confirmed: true }), true, `«${junk}» — спросить`);
+  }
+});
+
 test('принятое согласие записывает версию, время и возраст — и снимает вопрос', () => {
   const f = L.consentFields(Date.UTC(2026, 9, 7, 12, 0));
   assert.deepEqual(f, { terms_version: L.TERMS_VERSION, terms_accepted_at: '2026-10-07T12:00:00.000Z', age_confirmed: true });
