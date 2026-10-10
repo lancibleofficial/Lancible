@@ -905,7 +905,7 @@
       "id": "scripts_worklog_main",
       "label": "main()",
       "file": "scripts/worklog.js",
-      "at": "L146"
+      "at": "L192"
     },
     {
       "id": "scripts_xlsx_check_assert",
@@ -2394,6 +2394,24 @@
       "label": "vercel()",
       "file": "tests/unit/landing.test.js",
       "at": "L190"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_allowed",
+      "label": "ALLOWED",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L43"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_externalloads",
+      "label": "externalLoads()",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L62"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_read",
+      "label": "read()",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L27"
     },
     {
       "id": "tests_unit_legal_pages_test_articles",
