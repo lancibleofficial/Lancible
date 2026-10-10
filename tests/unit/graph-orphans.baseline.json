@@ -1688,6 +1688,12 @@
       "at": "L49"
     },
     {
+      "id": "supabase_functions_delete_account_index_reply",
+      "label": "reply()",
+      "file": "supabase/functions/delete-account/index.ts",
+      "at": "L36"
+    },
+    {
       "id": "tests_unit_visual_rules_test_expand",
       "label": "expand()",
       "file": "tests/unit/visual-rules.test.js",
