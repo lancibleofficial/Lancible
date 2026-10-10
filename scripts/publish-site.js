@@ -73,8 +73,32 @@ function scanForSecrets(text) {
 }
 
 // --- 3. граф на лендинг --------------------------------------------------------------
+//
+// Библиотеку рисования шаблон graphify берёт с unpkg, а Политика cookie
+// обещает, что сторонние сервисы о визите не узнают. Поэтому ссылка
+// подменяется копией с нашего адреса (landing/vendor), а любая другая
+// внешняя загрузка останавливает публикацию: graphify, сменивший версию
+// библиотеки, не должен молча увезти на сайт чужой адрес. Атрибут integrity
+// своей копии не нужен — она приходит с того же адреса, что и страница.
+
+const VIS = 'vis-network-9.1.6.min.js';
+const VIS_CDN = /<script\s+src="https:\/\/unpkg\.com\/vis-network@9\.1\.6\/standalone\/umd\/vis-network\.min\.js"[^>]*><\/script>/;
+const EXTERNAL = /<(script|link|img|iframe)\b[^>]*\s(src|href)\s*=\s*["']?(https?:)?\/\//i;
+
+function localizeVendor(html) {
+  const out = html.replace(VIS_CDN, `<script src="vendor/${VIS}"></script>`);
+  const ext = out.match(EXTERNAL);
+  if (ext) {
+    throw new Error(`в графе осталась внешняя загрузка «${ext[0].slice(0, 80)}…» — graphify сменил библиотеку? `
+      + 'Положите её копию в landing/vendor и поправьте VIS в scripts/publish-site.js');
+  }
+  return out;
+}
 
 function publishGraph() {
+  if (!fs.existsSync(path.join(LANDING, 'vendor', VIS))) {
+    throw new Error(`нет landing/vendor/${VIS} — без неё граф на /graph не нарисуется`);
+  }
   let html = fs.readFileSync(OUT, 'utf8');
   const leaks = scanForSecrets(html);
   if (leaks.length) {
@@ -87,6 +111,7 @@ function publishGraph() {
     .replace(/<title>[^<]*<\/title>/, '<title>Граф кода Lancible</title>')
     .replace('<head>', '<head>\n<meta name="robots" content="noindex, nofollow">');
   if (!html.includes('noindex')) throw new Error('не вышло поставить noindex в страницу графа');
+  html = localizeVendor(html);
   fs.writeFileSync(path.join(LANDING, 'graph-view.html'), html);
   say(`граф выложен: landing/graph-view.html (${(html.length / 1048576).toFixed(1)} МБ), секретов не найдено`);
 }
@@ -178,8 +203,8 @@ function refreshNumbers() {
 
 // --- запуск ----------------------------------------------------------------------------
 
-// Тест подключает этот файл ради scanForSecrets и plural — и не должен при
-// этом пересобирать граф и переписывать страницы.
+// Тесты подключают этот файл ради scanForSecrets, plural и localizeVendor — и
+// не должны при этом пересобирать граф и переписывать страницы.
 if (require.main === module) {
   try {
     rebuildGraph();
@@ -192,4 +217,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { scanForSecrets, plural };
+module.exports = { scanForSecrets, plural, localizeVendor, VIS };

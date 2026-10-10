@@ -1,5 +1,5 @@
 // Пересоздать эталоны снимков для этой системы. Запуск:
-// npm run test:visual:update
+// npm run test:visual:update [-- <файл или -g название>]
 //
 // Зачем отдельный скрипт, а не флаг в npm-строке. Режим «сейчас мы заводим
 // эталоны» должен быть явным, и отличать его надо не по умолчаниям
@@ -18,7 +18,10 @@ const ROOT = path.join(__dirname, '..');
 
 const child = spawn(
   process.execPath,
-  ['node_modules/@playwright/test/cli.js', 'test', '--project=visual', '--update-snapshots'],
+  // Дальше — что передали после --: файл или -g «название». Так переснимают
+  // только разобранные эталоны, а не всё, что сейчас расходится:
+  //   npm run test:visual:update -- tests/visual/web.spec.js
+  ['node_modules/@playwright/test/cli.js', 'test', '--project=visual', '--update-snapshots=changed', ...process.argv.slice(2)],
   {
     cwd: ROOT,
     env: { ...process.env, LANCIBLE_SNAPSHOTS: 'update' },

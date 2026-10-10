@@ -1,4 +1,11 @@
-// Headless-проверка UI. Запуск: npm run smoke
+// Десктоп целиком, в Electron без окна. Запуск: npm run smoke
+//
+// Что здесь, а что в e2e. Экраны и их поведение подробно проверяет
+// tests/e2e/ в браузере. Здесь — то, чего браузер не видит: preload и IPC
+// (данные приходят из main-процесса и уходят туда же, выгрузка Excel пишет
+// файл через main, рамка окна узнаёт о теме, кнопка обновления слушает
+// события автообновления) и сквозной путь человека по настоящему окну.
+// Итог — scripts/smoke-result.json; код выхода 0 только если прошло всё.
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -8,6 +15,50 @@ const { buildWorkbook } = require('../src/xlsx');
 const RESULT = path.join(__dirname, 'smoke-result.json');
 const errors = [];
 const exportsWritten = [];
+
+// --- падать громко, а не висеть ---------------------------------------------
+//
+// До 10 октября 2026 прогон висел вечно. Проверки звали getComputedStyle и
+// .click() на элементах, которых после редизайна нет; исключение внутри окна
+// отклоняло executeJavaScript, его никто не ловил, app.quit() не вызывался.
+// Теперь каждый шаг в окне ловит свою ошибку и возвращает её с именем шага,
+// а пропавший элемент называется селектором (need). Сторож гасит прогон,
+// если тот всё-таки повис. Любая проверка, вернувшая false, роняет итог.
+
+/** Предел на весь прогон. Нормальный прогон укладывается в 15–20 секунд. */
+const DEADLINE_MS = 120_000;
+
+/** Помощник внутри окна: элемент или громкая ошибка с селектором. */
+const PAGE_HELPERS = "const need = (s) => { const e = document.querySelector(s); if (!e) throw new Error('нет элемента ' + s); return e; };";
+
+function finish(result) {
+  clearTimeout(watchdog);
+  fs.writeFileSync(RESULT, JSON.stringify(result, null, 2), 'utf-8');
+  console.log('SMOKE RESULT:', JSON.stringify(result, null, 2));
+  if (!result.ok) console.error(`SMOKE FAILED: ${result.fatal || `не прошли: ${result.failed.join(', ')}`}`);
+  app.exit(result.ok ? 0 : 1);
+}
+
+function fail(message) {
+  finish({ ok: false, fatal: message, failed: [], errors });
+}
+
+const watchdog = setTimeout(
+  () => fail(`прогон не закончился за ${DEADLINE_MS / 1000} с — где-то ждёт элемента или события`),
+  DEADLINE_MS,
+);
+
+/** Шаг в окне. Electron отдаёт наружу только «Script failed to execute»,
+ *  поэтому ошибка ловится внутри страницы и возвращается текстом. */
+async function inPage(win, name, code) {
+  const wrapped = `(async () => { ${PAGE_HELPERS} try { return await (${code}); } catch (e) { return { __smokeError: String((e && e.message) || e) }; } })()`;
+  const res = await win.webContents.executeJavaScript(wrapped);
+  if (res && typeof res === 'object' && res.__smokeError) throw new Error(`${name}: ${res.__smokeError}`);
+  return res;
+}
+
+/** Имена проверок, вернувших false: их список и есть причина провала. */
+const falseChecks = (group, obj) => Object.entries(obj).filter(([, v]) => v === false).map(([k]) => `${group}.${k}`);
 
 let store = {
   projects: [{ id: 'old-p', name: 'Старый проект', createdAt: '2026-08-20T10:00:00.000Z' }],
@@ -39,6 +90,14 @@ ipcMain.handle('export:xlsx', (_e, { defaultName, sheets }) => {
 });
 
 app.whenReady().then(async () => {
+  try {
+    await run();
+  } catch (err) {
+    fail(err.message);
+  }
+});
+
+async function run() {
   const win = new BrowserWindow({
     show: false, titleBarStyle: 'hidden',
     webPreferences: {
@@ -57,253 +116,172 @@ app.whenReady().then(async () => {
   await win.loadFile(path.join(__dirname, '..', 'src', 'renderer', 'index.html'));
   await new Promise((r) => setTimeout(r, 1500));
 
-  const probe = await win.webContents.executeJavaScript(`(() => ({
-    quill: typeof window.Quill === 'function',
-    topbarInsideHomeMain: !!document.querySelector('.home-main > #topbar'),
-    recentSectionInsideCenter: !!document.querySelector('.home-center > #recent-section.recent-fixed'),
-    homeSideSiblingOfCenter: !!document.querySelector('#home-view > .home-center') && !!document.querySelector('#home-view > #home-side'),
-    projectsGridPresent: !!document.querySelector('.projects-deck'),
-    pinnedStillCarousel: !!document.querySelector('#pinned-section .carousel'),
-    editorWrapOverflowVisible: getComputedStyle(document.getElementById('editor-wrap')).overflow === 'visible',
-    timerBarSpaceBetween: getComputedStyle(document.querySelector('.timer-bar')).justifyContent === 'space-between',
+  // --- разметка окна ---------------------------------------------------------
+  //
+  // С 10 октября проверяются только устойчивые части — то, без чего десктоп
+  // не работает. Подробности вида и поведения экранов — забота e2e
+  // (tests/e2e/), которые гоняются на каждой правке; здесь у них был
+  // устаревший дубль, и он-то и вешал прогон после редизайна.
+  const probe = await inPage(win, 'разметка', `(() => ({
+    shellPresent: !!document.getElementById('shell'),
+    navHasAllViews: ['home', 'projects', 'docs', 'time', 'settings']
+      .every((v) => !!document.querySelector('.nav-item[data-view="' + v + '"]')),
+    editorWrapPresent: !!document.getElementById('editor-wrap'),
     sdlgUsesButtons: !!document.getElementById('sdlg-date-btn') && !document.getElementById('sdlg-date'),
-    tpPopPresent: !!document.getElementById('tp-pop'),
+    datePickerPresent: !!document.getElementById('dp-pop'),
+    timePickerPresent: !!document.getElementById('tp-pop'),
     themeTabsPresent: document.querySelectorAll('.theme-tab').length === 3,
     langSelectRemoved: !document.getElementById('lang-select'),
     langTogglePresent: !!document.getElementById('lang-toggle'),
-    topbarHasNoBorderLine: getComputedStyle(document.getElementById('topbar')).borderBottomWidth === '0px',
-    taskTitleRowWraps: getComputedStyle(document.querySelector('.task-title-row')).flexWrap === 'wrap',
-    homeHeadWraps: getComputedStyle(document.querySelector('.home-head')).flexWrap === 'wrap',
-    calNavPresent: !!document.querySelector('.cal-nav'),
-    updateBtnHiddenByDefault: document.getElementById('update-btn').hidden === true,
+    updateBtnHiddenByDefault: need('#update-btn').hidden === true,
     supabaseClientLoaded: typeof window.supabase === 'object' && typeof window.supabase.createClient === 'function',
     accountBtnPresent: !!document.getElementById('account-btn'),
     authModalPresent: !!document.getElementById('auth-backdrop'),
     googleBtnPresent: !!document.getElementById('auth-google-btn'),
   }))()`);
 
-  const flow = await win.webContents.executeJavaScript(`(async () => {
+  // --- сценарий: тем же путём, что и человек ---------------------------------
+  const flow = await inPage(win, 'сценарий', `(async () => {
     const out = {};
-    const wait = (ms) => new Promise(r => setTimeout(r, ms));
-    const $ = (s) => document.querySelector(s);
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const visible = (el) => !!el && el.getClientRects().length > 0 && !el.closest('[hidden]');
+    const typeInto = (sel, value) => {
+      const input = need(sel);
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const pickMenu = (text) => {
+      const item = [...document.querySelectorAll('#ctx-menu .ctx-item')].find((b) => b.textContent.includes(text));
+      if (!item) throw new Error('в меню нет пункта «' + text + '»');
+      item.click();
+    };
 
-    // --- i18n: кастомный дропдаун языка (не нативный <select>) переключает статичные и динамические строки ---
-    out.defaultLangIsRu = document.querySelector('.nav-label[data-i18n="nav.home"]').textContent === 'Обзор';
-    document.getElementById('lang-toggle').click();
+    // Данные пришли из main-процесса (data:load), а не из пустого состояния.
+    out.storeLoadedFromMain = state.projects.some((p) => p.name === 'Старый проект');
+
+    // --- язык: свой выпадающий список, а не системный <select> ---
+    const homeLabel = () => need('.nav-item[data-view="home"] [data-i18n="nav.home"]').textContent.trim();
+    out.defaultLangIsRu = homeLabel() === Core.T.ru['nav.home'];
+    need('#lang-toggle').click();
     await wait(40);
-    out.langMenuOpenedWithFourOptions = document.querySelectorAll('#ctx-menu .ctx-item').length === 4;
-    out.langMenuMarksCurrentSelected = !!document.querySelector('#ctx-menu .ctx-item.sel');
-    [...document.querySelectorAll('#ctx-menu .ctx-item')].find(b => b.textContent.includes('English')).click();
+    out.langMenuHasFourLanguages = document.querySelectorAll('#ctx-menu .ctx-item').length === 4;
+    pickMenu('English');
     await wait(60);
-    out.navLabelTranslatedToEnglish = document.querySelector('.nav-label[data-i18n="nav.home"]').textContent === 'Overview';
-    // Строка должна совпадать с ключом search.placeholder из core/i18n.js.
-    // Записана буквально намеренно: проверка обязана падать, если подпись
-    // поменяли не подумав, а не подстраиваться под неё молча.
-    out.searchPlaceholderTranslated = document.getElementById('search-input').placeholder === 'Search';
-    out.statLabelTranslated = document.querySelector('.stat-card span[data-i18n="stats.worked"]').textContent === 'total worked';
+    out.navTranslatedToEnglish = homeLabel() === Core.T.en['nav.home'];
+    need('#lang-toggle').click();
+    await wait(40);
+    pickMenu('Русский');
+    await wait(60);
+    out.navBackToRussian = homeLabel() === Core.T.ru['nav.home'];
 
-    // --- тема: icon-табы (не цикличная кнопка) ---
+    // --- тема: три вкладки; рамку окна main-процесс узнаёт через IPC ---
     const html = document.documentElement;
-    out.themeStartsUnset = !html.hasAttribute('data-theme');
-    document.querySelector('.theme-tab[data-theme="light"]').click();
+    need('.theme-tab[data-theme="light"]').click();
     await wait(30);
     out.themeBecomesLight = html.getAttribute('data-theme') === 'light';
-    out.lightTabMarkedOn = document.querySelector('.theme-tab[data-theme="light"]').classList.contains('on');
-    document.querySelector('.theme-tab[data-theme="dark"]').click();
+    need('.theme-tab[data-theme="dark"]').click();
     await wait(30);
     out.themeBecomesDark = html.getAttribute('data-theme') === 'dark';
-    document.querySelector('.theme-tab[data-theme="system"]').click();
+    need('.theme-tab[data-theme="system"]').click();
     await wait(30);
     out.themeBackToSystem = !html.hasAttribute('data-theme');
 
-    // возвращаемся на русский для остальных проверок (не завязанных на язык)
-    document.getElementById('lang-toggle').click();
-    await wait(40);
-    [...document.querySelectorAll('#ctx-menu .ctx-item')].find(b => b.textContent.includes('Русский')).click();
+    // --- проект и три задачи ---
+    openView('projects');
     await wait(60);
+    const createBtn = [...document.querySelectorAll('#create-project-btn, #home-empty-create')].find(visible);
+    if (!createBtn) throw new Error('нет видимой кнопки «Создать проект» (#create-project-btn, #home-empty-create)');
+    createBtn.click();
+    await wait(60);
+    typeInto('#pdlg-name', 'Проект №2');
+    need('#pdlg-save').click();
+    await wait(100);
+    out.projectOpensAfterCreate = visible(need('#project-view')) && /Проект №2/.test(need('#project-view').textContent);
+    for (const title of ['Задача A', 'Задача B', 'Задача C']) {
+      need('#new-task-btn').click();
+      await wait(60);
+      typeInto('#task-title', title);
+      need('#task-back').click();
+      await wait(60);
+    }
+    out.projectListsThreeTasks = document.querySelectorAll('#task-list .task-item').length === 3;
 
-    // --- проект + несколько задач ---
-    $('#create-project-btn').click();
-    await wait(50);
-    $('#pdlg-name').value = 'Проект №2';
-    $('#pdlg-name').dispatchEvent(new Event('input', { bubbles: true }));
-    $('#pdlg-save').click();
+    // --- таймер: старт и стоп пишут запись времени ---
+    const taskA = [...document.querySelectorAll('#task-list .task-item')].find((t) => /Задача A/.test(t.textContent));
+    if (!taskA) throw new Error('в #task-list нет «Задача A»');
+    taskA.click();
     await wait(80);
-
-    const addTask = (title) => {
-      $('#new-task-btn').click();
-      $('#task-title').value = title;
-      $('#task-title').dispatchEvent(new Event('input', { bubbles: true }));
-    };
-    addTask('Задача A');
-    addTask('Задача B');
-    addTask('Задача C');
-    await wait(50);
-    out.projectsGridHoldsTiles = document.querySelectorAll('#projects-track .ptile').length >= 1;
-
-    // --- timer-btn: старт/стоп через новую разметку (span-иконка + span-текст) ---
-    [...document.querySelectorAll('#task-list .task-item')].find(t => /Задача A/.test(t.textContent)).click();
-    await wait(30);
-    out.timerLabelStartsAsStart = document.getElementById('timer-btn-label').textContent === 'Старт';
-    $('#timer-btn').click();
+    const label = () => need('#timer-btn-label').textContent.trim();
+    out.timerShowsStart = label() === Core.T.ru['timer.start'];
+    need('#timer-btn').click();
     await wait(1100);
-    out.timerLabelBecomesStop = document.getElementById('timer-btn-label').textContent === 'Стоп';
-    $('#timer-btn').click();
-    await wait(60);
-    out.sessionRecorded = true; // не падает — уже достаточно
-
-    // --- диалог "Добавить запись": кастомные дата/время вместо системных ---
-    document.querySelector('.task-tabs button[data-tab="history"]').click();
-    await wait(30);
-    $('#add-session-btn').click();
-    await wait(60);
-    out.sdlgOpened = !$('#sdlg-backdrop').hidden;
-    $('#sdlg-date-btn').click();
-    await wait(40);
-    out.customDatePickerOpenedInDialog = !$('#dp-pop').hidden;
-    const dayBtn = [...document.querySelectorAll('#dp-days .dp-day:not(.empty)')][10];
-    dayBtn.click();
-    await wait(40);
-    out.datePickerClosedAfterPick = $('#dp-pop').hidden;
-    out.sdlgDateBtnShowsPickedDate = /\\d/.test($('#sdlg-date-btn').textContent);
-
-    $('#sdlg-start-btn').click();
-    await wait(40);
-    out.customTimePickerOpened = !$('#tp-pop').hidden;
-    out.timePickerHas24Hours = document.querySelectorAll('#tp-hours button').length === 24;
-    out.timePickerHas60Minutes = document.querySelectorAll('#tp-minutes button').length === 60;
-    const hourBtn = [...document.querySelectorAll('#tp-hours button')].find(b => b.textContent === '09');
-    hourBtn.click();
-    await wait(30);
-    const minBtn = [...document.querySelectorAll('#tp-minutes button')].find(b => b.textContent === '30');
-    minBtn.click();
-    await wait(30);
-    out.timePickerStaysOpenForBothPicks = !$('#tp-pop').hidden;
-    out.sdlgStartBtnShowsPickedTime = $('#sdlg-start-btn').textContent === '09:30';
-    $('#sdlg-cancel').click();
-    await wait(40);
-    out.timePickerClosesWithDialog = $('#tp-pop').hidden;
-
-    // --- фильтр статуса и удаление всё ещё работают (регресс с прошлых раундов) ---
-    document.querySelector('.tf-status button[data-status="all"]').click();
-    await wait(30);
-    out.taskListHasThreeTasks = document.querySelectorAll('#task-list .task-item').length === 3;
-
-    // --- карточки "Недавние задачи": фон = --panel (не --panel-2, чтобы не выглядели тускло) ---
-    document.querySelector('.nav-item[data-view="home"]').click();
-    await wait(40);
-    const rtile = document.querySelector('#recent-track .rtile');
-    const bgProbe = document.createElement('div');
-    bgProbe.style.background = 'var(--panel)';
-    document.body.appendChild(bgProbe);
-    const expectedPanelBg = getComputedStyle(bgProbe).backgroundColor;
-    bgProbe.remove();
-    out.recentTileUsesPanelBg = !!rtile && getComputedStyle(rtile).backgroundColor === expectedPanelBg;
-
-    // --- часовые строки в "День": не сжимаются флексом ниже контента (регресс — раньше чипы вылезали за границы часа) ---
-    // Календарь живёт внутри «Статистики» — отдельного пункта меню у него нет.
-    document.querySelector('.nav-item[data-view="stats"]').click();
-    await wait(40);
-    document.querySelector('.cal-modes button[data-mode="day"]').click();
-    await wait(60);
-    const hourRow = document.querySelector('.hour-row');
-    out.hourRowFlexShrinkIsZero = !!hourRow && getComputedStyle(hourRow).flexShrink === '0';
-    document.querySelector('.cal-modes button[data-mode="month"]').click();
-    await wait(40);
-
-    // --- стрелки карусели: полностью скрыты (не просто задизейблены opacity), когда скроллить некуда ---
-    document.querySelector('.nav-item[data-view="home"]').click();
-    await wait(40);
-    const recentCarousel = document.getElementById('recent-track').closest('.carousel');
-    const [rLeft, rRight] = recentCarousel.querySelectorAll('.car-arrow');
-    out.carouselArrowsHiddenWhenNoOverflow = !!rLeft && !!rRight && rLeft.hidden && rRight.hidden;
-
-    // --- теги: завести, повесить на задачу и на проект, увидеть чипы ---
-    // Проходим тем же путём, что и человек: через настройки и пикеры, а не
-    // подстановкой в состояние — иначе проверка не заметит, если кнопка
-    // перестанет открывать окно.
-    document.querySelector('.nav-item[data-view="settings"]').click();
-    await wait(60);
-    document.getElementById('tags-add').click();
-    await wait(60);
-    out.tagDialogOpens = !$('#tagdlg-backdrop').hidden;
-    document.getElementById('tagdlg-name').value = 'Срочное';
-    document.getElementById('tagdlg-save').click();
-    await wait(60);
-    // state — лексическая переменная модуля, в window её нет: обращаемся прямо.
-    out.tagCreated = state.tags.length === 1 && state.tags[0].name === 'Срочное';
-    out.tagRowShowsUnused = /не используется/.test(document.querySelector('#tags-list .settings-row-btn').textContent);
-
-    // На задачу.
-    const tagTask = state.tasks[0];
-    state.ui.view = 'project';
-    state.ui.projectId = tagTask.projectId;
-    selectedId = tagTask.id;
-    loadEditor(tagTask);
-    render();
-    setTaskTab('settings');
-    await wait(60);
-    document.getElementById('task-tags-add').click();
-    await wait(60);
-    out.tagPickerOpens = !!document.querySelector('.tag-pop .tag-pop-item');
-    document.querySelector('.tag-pop .tag-pop-item').click();
-    await wait(60);
-    document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    await wait(40);
-    out.taskTagChipRendered = document.querySelectorAll('#task-tags .tag-chip').length === 1;
-
-    // На проект.
-    openProjectDialog(getProject(tagTask.projectId));
-    await wait(60);
-    document.getElementById('pdlg-tags-add').click();
-    await wait(60);
-    document.querySelector('.tag-pop .tag-pop-item').click();
-    document.getElementById('pdlg-title').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    await wait(40);
-    document.getElementById('pdlg-save').click();
+    out.timerShowsStop = label() === Core.T.ru['timer.stop'];
+    need('#timer-btn').click();
     await wait(80);
-    out.projectTagChipRendered = document.querySelectorAll('#ph-tags .tag-chip').length === 1;
-    out.tagRowCountsBoth = /проектов: 1/.test(
-      (() => { state.ui.view = 'settings'; render(); return document.querySelector('#tags-list .settings-row-btn').textContent; })(),
-    );
-    // В списке задач тегов быть не должно — там и так тесно.
-    state.ui.view = 'project';
-    render();
-    await wait(40);
-    out.taskListHasNoTagChips = document.querySelectorAll('#task-list .tag-chip').length === 0;
+    const a = state.tasks.find((t) => t.title === 'Задача A');
+    out.sessionRecorded = !!a && a.sessions.length === 1 && a.sessions[0].ms >= 1000;
 
-    // --- диалог входа: открытие/закрытие (без реальных сетевых вызовов Supabase) ---
-    document.getElementById('account-btn').click();
+    // --- запись времени вручную: свои дата и время, не системные поля ---
+    need('.task-tabs button[data-tab="history"]').click();
     await wait(40);
-    out.authModalOpensOnAccountClick = !$('#auth-backdrop').hidden;
-    document.getElementById('auth-cancel').click();
+    need('#add-session-btn').click();
+    await wait(60);
+    out.sessionDialogOpens = !need('#sdlg-backdrop').hidden;
+    need('#sdlg-date-btn').click();
     await wait(40);
-    out.authModalClosesOnCancel = $('#auth-backdrop').hidden;
+    out.datePickerOpens = !need('#dp-pop').hidden;
+    need('#sdlg-cancel').click();
+    await wait(40);
+    out.sessionDialogCloses = need('#sdlg-backdrop').hidden;
 
-    // --- экспорт для проверки xlsx (теперь с переведёнными заголовками) ---
-    [...document.querySelectorAll('#projects-track .ptile')]
-      .find(t => /Проект №2/.test(t.textContent)).querySelector('.ptile-menu').click();
+    // --- теги: через настройки, как человек ---
+    openView('settings');
+    await wait(60);
+    need('#tags-add').click();
+    await wait(60);
+    out.tagDialogOpens = !need('#tagdlg-backdrop').hidden;
+    typeInto('#tagdlg-name', 'Срочное');
+    need('#tagdlg-save').click();
+    await wait(60);
+    out.tagCreated = state.tags.some((t) => t.name === 'Срочное');
+
+    // --- окно входа: открывается и закрывается без сети ---
+    need('#account-btn').click();
     await wait(40);
-    [...document.querySelectorAll('#ctx-menu .ctx-item')].find(x => /Скачать Excel/.test(x.textContent)).click();
-    await wait(150);
+    out.authModalOpens = !need('#auth-backdrop').hidden;
+    need('#auth-cancel').click();
+    await wait(40);
+    out.authModalCloses = need('#auth-backdrop').hidden;
+
+    // --- выгрузка проекта: файл пишет main-процесс (export:xlsx) ---
+    const p2 = state.projects.find((p) => p.name === 'Проект №2');
+    openProject(p2.id);
+    await wait(80);
+    need('#export-project-btn').click();
+    await wait(200);
 
     return out;
   })()`);
+
+  // Сохранение дошло до main-процесса (data:save): задачи лежат в его копии.
+  // Сохраняет приложение с задержкой 400 мс (scheduleSave) — ждём дольше.
+  await new Promise((r) => setTimeout(r, 800));
+  flow.savedThroughMain = store.tasks.filter((t) => /^Задача [ABC]$/.test(t.title)).length === 3;
 
   await new Promise((r) => setTimeout(r, 200));
 
   // --- автообновление: кнопка реагирует на события из главного процесса ---
   win.webContents.send('update:available', { version: '9.9.9' });
   await new Promise((r) => setTimeout(r, 60));
-  const updateAfterAvailable = await win.webContents.executeJavaScript(`
-    JSON.stringify({ hidden: document.getElementById('update-btn').hidden, label: document.getElementById('update-btn-label').textContent })
+  const updateAfterAvailable = await inPage(win, 'обновление: доступно', `
+    JSON.stringify({ hidden: need('#update-btn').hidden, label: need('#update-btn-label').textContent })
   `);
   win.webContents.send('update:progress', { percent: 42 });
   await new Promise((r) => setTimeout(r, 30));
   win.webContents.send('update:ready');
   await new Promise((r) => setTimeout(r, 30));
-  const updateAfterReady = await win.webContents.executeJavaScript(`
-    JSON.stringify({ label: document.getElementById('update-btn-label').textContent })
+  const updateAfterReady = await inPage(win, 'обновление: готово', `
+    JSON.stringify({ label: need('#update-btn-label').textContent })
   `);
   flow.updateBtnShowsOnAvailable = !JSON.parse(updateAfterAvailable).hidden;
   // Строка должна совпадать с ключом update.ready из core/i18n.js. Здесь она
@@ -337,9 +315,13 @@ app.whenReady().then(async () => {
     exportOk,
     overlaySyncedOnThemeChange: overlayCalls.includes('light') && overlayCalls.includes('dark'),
     errors,
-    ok: errors.length === 0,
   };
-  fs.writeFileSync(RESULT, JSON.stringify(result, null, 2), 'utf-8');
-  console.log('SMOKE RESULT:', JSON.stringify(result, null, 2));
-  app.quit();
-});
+  result.failed = [
+    ...falseChecks('probe', probe),
+    ...falseChecks('flow', flow),
+    ...(exportOk ? [] : ['exportOk']),
+    ...(result.overlaySyncedOnThemeChange ? [] : ['overlaySyncedOnThemeChange']),
+  ];
+  result.ok = errors.length === 0 && result.failed.length === 0;
+  finish(result);
+}

@@ -39,22 +39,34 @@ module.exports = defineConfig({
     {
       name: 'visual',
       testDir: './tests/visual',
-      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT_LANDING}` },
+      // Язык лендинга с 10 октября берётся из браузера. Без закреплённой
+      // локали снимок зависел бы от языка машины, на которой его сняли.
+      // Русский — основной язык сайта, на нём и эталоны.
+      use: { ...devices['Desktop Chrome'], locale: 'ru-RU', baseURL: `http://localhost:${PORT_LANDING}` },
     },
   ],
   // Серверы поднимаются сами — тест не должен зависеть от того, что кто-то
   // заранее запустил npm run serve:web.
+  //
+  // Уже поднятый сервер не переиспользуется никогда. Раньше переиспользовался
+  // (кроме CI), и прогон, застав на порту сервер другой копии репозитория,
+  // молча проверял её код. Порты у копий теперь разные (tests/ports.js), так
+  // что занятый порт значит одно из двух: висит свой прошлый сервер или
+  // совпали порты двух копий. В обоих случаях прогон падает сразу и громко
+  // («port is already used»), а не проверяет не то.
   webServer: [
     {
-      command: `node scripts/serve-web.js ${PORT_WEB}`,
+      // Веб собирается перед каждым прогоном — см. tests/serve-built-web.js.
+      command: `node tests/serve-built-web.js ${PORT_WEB}`,
       url: `http://localhost:${PORT_WEB}/index.html`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30_000,
+      reuseExistingServer: false,
+      // Сборка — секунда, но в свежей копии сначала ставятся web/node_modules.
+      timeout: 180_000,
     },
     {
       command: `node scripts/serve-web.js ${PORT_LANDING} --root landing`,
       url: `http://localhost:${PORT_LANDING}/index.html`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 30_000,
     },
   ],
