@@ -166,3 +166,51 @@ test('scripts/zones.js не расходится с таблицей в CLAUDE.m
   }
   assert.ok(checked > 30, `сверено путей: ${checked}`);
 });
+
+// Правовая строка должна лечь в оба словаря одним коммитом
+// (legal-strings.test.js), а словари — в разных зонах. 10 октября 2026 это
+// закончилось --no-verify; теперь владелец одного словаря кладёт ту же
+// правовую строку и в другой.
+const { legalMirrorOk, LEGAL_PREFIXES, DICTS } = require('../../scripts/zones.js');
+
+test('правовые префиксы крюка — те же, что у legal-strings.test.js', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'tests', 'unit', 'legal-strings.test.js'), 'utf8');
+  const m = src.match(/const PREFIXES = (\[[^\]]+\])/);
+  assert.ok(m, 'в legal-strings.test.js не найден PREFIXES');
+  assert.deepEqual(JSON.parse(m[1].replace(/'/g, '"')), LEGAL_PREFIXES);
+});
+
+test('чужой словарь: проходят только правовые строки, равные своим', () => {
+  const own = { ru: { 'account.delete_x': 'Текст' }, en: { 'account.delete_x': 'Text' } };
+  const before = { ru: { 'task.title': 'Задача' }, en: { 'task.title': 'Task' } };
+  const after = { ru: { 'task.title': 'Задача', 'account.delete_x': 'Текст' }, en: { 'task.title': 'Task', 'account.delete_x': 'Text' } };
+  const lines = ["+    'account.delete_x': 'Текст',", "+    'account.delete_x': 'Text',"];
+  assert.equal(legalMirrorOk({ diffLines: lines, before, after, own }), true);
+
+  assert.equal(legalMirrorOk({ diffLines: lines, before, after: { ...after, en: { ...after.en, 'account.delete_x': 'Txt' } }, own }), false,
+    'значение не равно своему');
+  assert.equal(legalMirrorOk({ diffLines: lines, before, after: { ...after, ru: { ...after.ru, 'task.title': 'Дело' } }, own }), false,
+    'заодно поменян неправовой ключ');
+  assert.equal(legalMirrorOk({ diffLines: [...lines, '+const evil = 1;'], before, after, own }), false,
+    'в диффе строка без правового ключа');
+  assert.equal(legalMirrorOk({ diffLines: [], before, after: before, own }), false, 'пустая правка');
+});
+
+test('правило — только владельцу парного словаря', () => {
+  const yes = () => true;
+  assert.equal(DICTS['mobile/src/lib/i18n.js'], 'src/renderer/core/i18n.js');
+  assert.ok(checkCommit('core/x', ['src/renderer/core/i18n.js', 'mobile/src/lib/i18n.js'], undefined, yes).ok);
+  assert.ok(checkCommit('mobile/x', ['mobile/src/lib/i18n.js', 'src/renderer/core/i18n.js'], undefined, yes).ok);
+  assert.equal(checkCommit('web/x', ['mobile/src/lib/i18n.js'], undefined, yes).ok, false, 'web не владеет словарём');
+  assert.equal(checkCommit('core/x', ['mobile/src/lib/i18n.js'], undefined, () => false).ok, false, 'не только правовое');
+  assert.equal(checkCommit('core/x', ['mobile/src/lib/other.js'], undefined, yes).ok, false, 'не словарь');
+});
+
+test('значения-функции (формы множественного числа) не считаются правкой', () => {
+  // При каждой загрузке словаря функция — новый объект; сравнение — по тексту.
+  const plural = () => (n) => (n === 1 ? 'задача' : 'задачи');
+  const own = { ru: { 'account.delete_x': 'Текст' } };
+  const before = { ru: { 'plural.task': plural() } };
+  const after = { ru: { 'plural.task': plural(), 'account.delete_x': 'Текст' } };
+  assert.equal(legalMirrorOk({ diffLines: ["+    'account.delete_x': 'Текст',"], before, after, own }), true);
+});

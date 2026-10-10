@@ -115,6 +115,55 @@ function specificity(pattern) {
 const RULES = Object.entries(ZONES).flatMap(([zone, { paths }]) =>
   paths.map((pattern) => ({ zone, pattern, re: toRegExp(pattern), weight: specificity(pattern) })));
 
+// Правовые строки живут в двух словарях — у десктопа и у телефона — и
+// tests/unit/legal-strings.test.js требует, чтобы они совпадали побайтно в
+// одном коммите. Словари в разных зонах (Core и Mobile), поэтому новая
+// правовая строка упиралась в крюк с обеих сторон: 10 октября 2026 её
+// пришлось коммитить с --no-verify. Теперь владелец одного словаря может
+// положить ту же правовую строку и в другой — см. legalMirrorOk.
+const DICTS = {
+  'src/renderer/core/i18n.js': 'mobile/src/lib/i18n.js',
+  'mobile/src/lib/i18n.js': 'src/renderer/core/i18n.js',
+};
+// Те же префиксы, что в legal-strings.test.js; расхождение ловит zones.test.js.
+const LEGAL_PREFIXES = ['auth.consent_', 'account.delete', 'about.privacy', 'about.terms', 'about.legal'];
+const isLegalKey = (key) => LEGAL_PREFIXES.some((p) => key.startsWith(p));
+const LEGAL_LINE = new RegExp(`'(?:${LEGAL_PREFIXES.map((p) => p.replace(/\./g, '\\.')).join('|')})[^']*'\\s*:`);
+
+/**
+ * Правка чужого словаря — только правовые строки, равные своим.
+ *
+ *   diffLines — изменённые строки диффа чужого словаря (+/-);
+ *   before / after — его словарь T до и после коммита;
+ *   own — свой словарь T в этом же коммите.
+ *
+ * Пропускаем, если каждая изменённая строка диффа несёт правовой ключ
+ * (иначе в коммит мог бы уехать и посторонний код), по смыслу менялись
+ * только правовые ключи, и каждое новое значение побайтно равно своему.
+ */
+// Значения словаря бывают и функциями (формы множественного числа): при
+// каждой загрузке это новый объект, поэтому сравниваем по содержимому.
+const sameValue = (x, y) => x === y
+  || (typeof x === 'function' && typeof y === 'function' && String(x) === String(y))
+  || (typeof x === 'object' && x !== null && JSON.stringify(x) === JSON.stringify(y));
+
+function legalMirrorOk({ diffLines, before, after, own }) {
+  if (!diffLines.length || !diffLines.every((l) => LEGAL_LINE.test(l))) return false;
+  const langs = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  let changed = 0;
+  for (const lang of langs) {
+    const b = (before && before[lang]) || {};
+    const a = (after && after[lang]) || {};
+    for (const key of new Set([...Object.keys(b), ...Object.keys(a)])) {
+      if (sameValue(b[key], a[key])) continue;
+      if (!isLegalKey(key)) return false;
+      if (a[key] !== undefined && a[key] !== ((own && own[lang]) || {})[key]) return false;
+      changed += 1;
+    }
+  }
+  return changed > 0;
+}
+
 /** Оригинал копии ядра: mobile/src/core/x.js → src/renderer/core/x.js. */
 function mirrorOriginal(file) {
   const m = file.match(/^mobile\/src\/core\/(.+)$/);
@@ -151,7 +200,7 @@ function describeOwner(zone) {
  * mobile-core.test.js требует копию в том же коммите. Пропускаем только
  * побайтную копию — правка «руками» в копии так не пройдёт.
  */
-function checkCommit(branch, files, sameAsOriginal = () => false) {
+function checkCommit(branch, files, sameAsOriginal = () => false, legalMirror = () => false) {
   if (!branch || FREE_BRANCHES.includes(branch)) {
     return { ok: true, free: true, refused: [] };
   }
@@ -171,6 +220,8 @@ function checkCommit(branch, files, sameAsOriginal = () => false) {
     if (DEVELOPERS.includes(prefix) && matches(file, TESTS) && !(owner && ZONES[owner].branchless)) continue;
     const original = mirrorOriginal(file);
     if (original && ownerOf(original) === prefix && sameAsOriginal(file, original)) continue;
+    // Чужой словарь — только владельцу парного словаря и только правовые строки.
+    if (DICTS[file] && ownerOf(DICTS[file]) === prefix && legalMirror(file, DICTS[file])) continue;
     refused.push({ file, owner });
   }
   return { ok: refused.length === 0, prefix, refused };
@@ -194,7 +245,7 @@ function formatRefusal(branch, result) {
   return lines.join('\n');
 }
 
-module.exports = { ZONES, SHARED, TESTS, DEVELOPERS, ownerOf, checkCommit, formatRefusal };
+module.exports = { ZONES, SHARED, TESTS, DEVELOPERS, LEGAL_PREFIXES, DICTS, ownerOf, checkCommit, formatRefusal, legalMirrorOk };
 
 if (require.main === module) {
   const { execFileSync } = require('node:child_process');
@@ -212,7 +263,33 @@ if (require.main === module) {
   // Сравниваем то, что уйдёт в коммит: id объектов в индексе.
   const blob = (file) => { try { return git('rev-parse', `:${file}`).trim(); } catch { return null; } };
   const sameAsOriginal = (copy, original) => { const a = blob(copy); return !!a && a === blob(original); };
-  const result = checkCommit(branch, files, sameAsOriginal);
+
+  // Словарь T из версии файла (':' — индекс, 'HEAD:' — до коммита).
+  const show = (spec) => { try { return git('show', spec); } catch { return null; } };
+  const loadDict = (file, rev) => {
+    const src = show(`${rev}${file}`);
+    if (src === null) return null;
+    if (file === 'mobile/src/lib/i18n.js') {
+      // ES-модуль телефона — так же, как его читает legal-strings.test.js.
+      const body = src.replace(/^import[\s\S]*?from '[^']+';$/gm, '').replace(/^export /gm, '');
+      const box = {};
+      new Function('module', 'Lang', `${body};module.exports = { T };`)(box, require('../src/renderer/core/lang.js'));
+      return box.exports.T;
+    }
+    const mod = { exports: {} };
+    new Function('module', 'exports', 'globalThis', src)(mod, mod.exports, {});
+    return mod.exports.T;
+  };
+  const legalMirror = (file, own) => {
+    try {
+      const diffLines = git('diff', '--cached', '-U0', '--', file).split('\n')
+        .filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---) /.test(l));
+      return legalMirrorOk({ diffLines, before: loadDict(file, 'HEAD:'), after: loadDict(file, ':'), own: loadDict(own, ':') });
+    } catch {
+      return false; // не разобрали словарь — пусть решает человек, а не крюк
+    }
+  };
+  const result = checkCommit(branch, files, sameAsOriginal, legalMirror);
   if (result.ok) process.exit(0);
   console.error(formatRefusal(branch, result));
   console.error('Разово обойти: git commit --no-verify');
