@@ -1107,28 +1107,28 @@ async function clearCloudAssets(uid, removedIds) {
   }
 }
 
-/** Удаление аккаунта. Клиент держит только ключ anon и удалить пользователя
- *  сам не может — это делает функция delete_my_account в базе
- *  (supabase/legal.sql): стирает того, кто её вызвал, а профиль, проекты,
- *  задачи и синхронизация уходят следом каскадом. Картинки в облаке
- *  стираются заранее — см. clearCloudAssets. Копия данных на устройстве,
- *  вместе с картинками, остаётся: приложение работает и без аккаунта. */
-async function deleteAccount() {
-  if (!currentUser) return;
-  const ok = await confirmDialog(t('account.delete_confirm'), {
-    title: t('account.delete_title'), okLabel: t('account.delete'), danger: true,
-  });
-  if (!ok) return;
-  const uid = currentUser.id;
-  // Пока папка стирается, картинки в облако не уходят: иначе файл из очереди
-  // доехал бы в уже пустую папку и страж не дал бы удалить аккаунт.
-  assetsPaused = true;
-  const removedIds = [];
+/** Имена всех файлов своей папки картинок — страницами по 1000. Бросает,
+ *  если хранилище ответило ошибкой. */
+async function listCloudAssets(uid) {
+  const bucket = sb.storage.from(ASSET_BUCKET);
+  const ids = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await bucket.list(uid, { limit: 1000, offset });
+    if (error) throw error;
+    const page = data || [];
+    ids.push(...page.filter((o) => o.id).map((o) => o.name));
+    if (page.length < 1000) return ids;
+  }
+}
+
+/** Старый путь удаления — для случая, когда функции delete-account нет или
+ *  до неё не дошли: клиент сам стирает папку и зовёт delete_my_account в
+ *  базе (supabase/legal.sql). removedIds — сюда складываются id стёртых
+ *  картинок. Возвращает { error, assetsFailed }. */
+async function deleteAccountLegacy(uid, removedIds) {
   let error = null;
-  // Отказ из-за картинок — своя причина, как на телефоне: человеку говорится,
-  // что аккаунт не удалён именно потому, что картинки стереть не вышло
-  // (account.delete_assets_error), а не общее «не удалось удалить». Это и
-  // ошибка самого стирания, и страж, который не пустил и после повтора.
+  // Отказ из-за картинок — и ошибка самого стирания, и страж, который не
+  // пустил и после повтора.
   let assetsFailed = false;
   try {
     // Загрузка, начатая до паузы, всё равно может успеть положить файл между
@@ -1148,15 +1148,83 @@ async function deleteAccount() {
   } catch (err) {
     error = err;
   }
+  return { error, assetsFailed };
+}
+
+/** Код ответа функции delete-account; null — до функции не дошли. */
+function functionStatus(error) {
+  if (!error) return 200;
+  return error.context && typeof error.context.status === 'number' ? error.context.status : null;
+}
+
+/** Удаление аккаунта. Клиент держит только ключ anon и удалить пользователя
+ *  сам не может. Делает это Edge Function delete-account
+ *  (supabase/functions/delete-account): со служебным ключом стирает папку
+ *  картинок и пользователя, а профиль, проекты, задачи и синхронизация
+ *  уходят каскадом. Ответы: 200 — удалено; 409 — картинки стереть не вышло,
+ *  аккаунт цел; 500 — картинки стёрты, аккаунт цел. Нет функции (404) или
+ *  нет связи с ней — старый путь, deleteAccountLegacy. Копия данных на
+ *  устройстве, вместе с картинками, остаётся: приложение работает и без
+ *  аккаунта. */
+async function deleteAccount() {
+  if (!currentUser) return;
+  const ok = await confirmDialog(t('account.delete_confirm'), {
+    title: t('account.delete_title'), okLabel: t('account.delete'), danger: true,
+  });
+  if (!ok) return;
+  const uid = currentUser.id;
+  // Пока папка стирается, картинки в облако не уходят: иначе файл из очереди
+  // доехал бы в уже пустую папку и аккаунт не удалился бы.
+  assetsPaused = true;
+  let error = null;
+  // 'assets' — аккаунт не удалён из-за картинок (account.delete_assets_error,
+  // как на телефоне); 'delete' — любая другая причина (account.delete_error).
+  let reason = 'delete';
+  // Что вернуть в облако, если аккаунт остался, а картинки уже стёрты.
+  let requeueIds = [];
+  try {
+    // Что лежит в облаке — заранее: функция в ответах 409 и 500 не говорит,
+    // что успела стереть, а при 409 часть картинок уже может быть стёрта.
+    // Не прочитали — функцию не зовём: вернуть стёртое было бы нечем.
+    const listed = await listCloudAssets(uid);
+    let fnError = null;
+    let status = null;
+    try {
+      ({ error: fnError } = await sb.functions.invoke('delete-account'));
+      status = functionStatus(fnError);
+    } catch (err) {
+      fnError = err;
+    }
+    if (status === 200) {
+      error = null;
+    } else if (status === 404 || status === null) {
+      // Функции нет или до неё не дошли — старый путь.
+      const removedIds = [];
+      const legacy = await deleteAccountLegacy(uid, removedIds);
+      error = legacy.error;
+      reason = legacy.assetsFailed ? 'assets' : 'delete';
+      requeueIds = removedIds;
+    } else {
+      error = fnError;
+      if (status === 409) reason = 'assets';
+      // 409 и 5xx: сервер мог стереть часть картинок или все — возвращаем
+      // весь прочитанный список. Лишнее безвредно: requeue пропускает то,
+      // чего нет на устройстве, а выгрузка идёт с перезаписью.
+      if (status === 409 || status >= 500) requeueIds = listed;
+    }
+  } catch (err) {
+    // Сюда попадает только ошибка чтения папки: функцию не звали.
+    error = err;
+  }
   assetsPaused = false;
   if (error) {
     console.error('Не удалось удалить аккаунт:', error);
-    toast(t(assetsFailed ? 'account.delete_assets_error' : 'account.delete_error'));
+    toast(t(reason === 'assets' ? 'account.delete_assets_error' : 'account.delete_error'));
     // Аккаунт остался, а папка в облаке уже стёрта целиком или частью: без
     // возврата картинки пропали бы на других устройствах. Те, что есть на
     // этом, снова встают в очередь и уходят в облако следующим flush.
     if (editorAssets) {
-      if (removedIds.length) await editorAssets.requeue(removedIds);
+      if (requeueIds.length) await editorAssets.requeue(requeueIds);
       editorAssets.flush();
     }
     return;

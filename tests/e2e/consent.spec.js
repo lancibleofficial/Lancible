@@ -102,8 +102,11 @@ test('«Удалить аккаунт» есть только у вошедше�
     currentUser = { id: 'u1', email: 'test@example.com', name: null };
     window.__rpc = [];
     sb.rpc = async (name) => { window.__rpc.push(name); return { error: null }; };
-    // Папка картинок пуста; сам порядок стирания — в delete-account.spec.js.
+    // Папка картинок пуста, функция delete-account отвечает 200; ответы и
+    // старый путь — в delete-account.spec.js. sb.functions — геттер, поэтому
+    // подменяется само свойство.
     sb.storage.from = () => ({ list: async () => ({ data: [], error: null }), remove: async () => ({ data: [], error: null }) });
+    Object.defineProperty(sb, 'functions', { configurable: true, value: { invoke: async (name) => { window.__rpc.push(name); return { data: { deleted: true }, error: null }; } } });
     renderSettings();
   });
   await expect(page.locator('#settings-delete-row')).toBeVisible();
@@ -112,7 +115,7 @@ test('«Удалить аккаунт» есть только у вошедше�
   await expect(page.locator('#confirm-backdrop')).toBeVisible();
   expect(await page.evaluate(() => window.__rpc)).toEqual([]);
   await page.locator('#confirm-ok').click();
-  await expect.poll(() => page.evaluate(() => window.__rpc)).toEqual(['delete_my_account']);
+  await expect.poll(() => page.evaluate(() => window.__rpc)).toEqual(['delete-account']);
   await expect(page.locator('#settings-delete-row')).toBeHidden();
   expect(await page.evaluate(() => currentUser)).toBeNull();
 });
