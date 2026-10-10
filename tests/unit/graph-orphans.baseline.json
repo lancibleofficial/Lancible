@@ -890,6 +890,12 @@
       "at": "L9"
     },
     {
+      "id": "scripts_smoke_run",
+      "label": "run()",
+      "file": "scripts/smoke.js",
+      "at": "L100"
+    },
+    {
       "id": "scripts_watch_main",
       "label": "main()",
       "file": "scripts/watch.js",
