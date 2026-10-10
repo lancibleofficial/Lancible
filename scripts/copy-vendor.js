@@ -1,4 +1,4 @@
-// Копирует внешние ассеты (Supabase, шрифты Onest и Basique Pro для логотипа) в src/renderer/vendor,
+// Копирует внешние ассеты (Supabase, шрифт Onest) в src/renderer/vendor,
 // чтобы рендерер грузил всё из своей папки — и в dev, и в собранном .exe.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -16,36 +16,24 @@ const vendor = [
   [path.join(root, 'node_modules', '@supabase', 'supabase-js', 'dist', 'umd', 'supabase.js'), 'supabase.js'],
 ];
 
-// Имена в личной папке font/ свои: Basique_1 — Bold(700). С 9 октября 2026
-// Basique Pro нужен только логотипу, остальное набрано Onest. Onest в
-// font/ нет — его .woff2 берутся только из assets/fonts.
-const fonts = [
-  ['Basique_1.woff2', 'Basique-Bold.woff2'],
-];
-
 try {
+  // Шрифты — точное зеркало assets/fonts: папку очищаем, иначе убранное
+  // начертание оставалось бы в vendor/ и уезжало в установщик десктопа.
+  // Так 10 октября 2026 ушёл Basique Pro (лицензии на него нет): логотип
+  // теперь набран Onest, как и всё остальное.
+  fs.rmSync(fontDest, { recursive: true, force: true });
   fs.mkdirSync(fontDest, { recursive: true });
 
   for (const [from, name] of vendor) {
     fs.copyFileSync(from, path.join(dest, name));
   }
 
-  const fontSrc = path.join(root, 'font');
   const committedFonts = path.join(root, 'assets', 'fonts'); // .woff2 в гите — есть всегда
-  // Сначала закоммиченные .woff2 целиком: они покрывают и Basique, и Onest.
   let copied = 0;
   if (fs.existsSync(committedFonts)) {
     for (const name of fs.readdirSync(committedFonts).filter((n) => n.endsWith('.woff2'))) {
       fs.copyFileSync(path.join(committedFonts, name), path.join(fontDest, name));
       copied += 1;
-    }
-  }
-  // Поверх — личная папка font/, если она есть: там исходники Basique Pro
-  // под своими именами, и они главнее копии в гите.
-  if (fs.existsSync(fontSrc)) {
-    for (const [from, name] of fonts) {
-      const p = path.join(fontSrc, from);
-      if (fs.existsSync(p)) fs.copyFileSync(p, path.join(fontDest, name));
     }
   }
   if (copied) {
