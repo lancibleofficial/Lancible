@@ -76,4 +76,26 @@ test('редакция в профиле не уменьшается, новая
   // Ещё более новая редакция записывается как обычно.
   assert.ok((await update(NEWER)).ok);
   assert.deepEqual(await read(), { version: NEWER.terms_version, at: NEWER.terms_accepted_at });
+
+  // Мусор поверх даты не проходит: «zzzz» строкой больше любой даты.
+  assert.ok((await update({ ...OLD, terms_version: 'zzzz' })).ok);
+  assert.deepEqual(await read(), { version: NEWER.terms_version, at: NEWER.terms_accepted_at }, 'мусор перезаписал редакцию');
+});
+
+test('записанный мусор защиты не получает — его исправляет любая дата', async (t) => {
+  if (process.env.LANCIBLE_ACCOUNT_TEST !== '1' || !user) {
+    t.todo('идёт после первого теста, по LANCIBLE_ACCOUNT_TEST=1');
+    return;
+  }
+  // Поверх даты мусор не записать (это проверено выше), поэтому профиль
+  // заводится заново: вставка триггер не зовёт, и мусор ложится как есть —
+  // так он мог оказаться в профиле до стража.
+  const patch = (fields) => call('PATCH', `/rest/v1/profiles?id=eq.${user.id}`, { token: user.token, body: fields, prefer: 'return=minimal' });
+  const get = async () => (await call('GET', `/rest/v1/profiles?select=terms_version&id=eq.${user.id}`, { token: user.token })).json[0].terms_version;
+  await call('DELETE', `/rest/v1/profiles?id=eq.${user.id}`, { token: user.token });
+  assert.ok((await call('POST', '/rest/v1/profiles', { token: user.token, body: [{ id: user.id, terms_version: 'v2' }], prefer: 'return=minimal' })).ok);
+  assert.equal(await get(), 'v2');
+  // ...и записанный мусор исправляется даже более старой датой.
+  assert.ok((await patch(OLD)).ok);
+  assert.equal(await get(), OLD.terms_version, 'записанный мусор держится — клиент переспрашивал бы по кругу');
 });
