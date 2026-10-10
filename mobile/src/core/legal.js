@@ -40,7 +40,14 @@
    *  подтверждён. */
   function needsConsent(profile) {
     if (!profile) return true;
-    return profile.terms_version !== TERMS_VERSION || profile.age_confirmed !== true;
+    // Спрашиваем, только если принятая редакция СТАРШЕ текущей. Новее — значит,
+    // человек уже принял её в более свежем клиенте: переспрашивать и
+    // переписывать её своей, более старой, нельзя. Даты ISO строкой
+    // сравниваются верно, а всё, что на дату не похоже, считаем непринятым:
+    // иначе строка вроде «v2» оказалась бы «новее» любой даты.
+    const v = profile.terms_version;
+    const accepted = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= TERMS_VERSION;
+    return !accepted || profile.age_confirmed !== true;
   }
 
   /** Поля профиля, которые записывает принятое согласие. */
