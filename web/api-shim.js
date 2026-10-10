@@ -8,8 +8,8 @@ window.__LANCIBLE_PLATFORM__ = 'web';
 // Браузерная реализация window.api — то же самое, что preload.js даёт
 // рендереру в Electron, только через localStorage/navigator.clipboard/Blob
 // вместо IPC в главный процесс. Должен грузиться ДО app.js (см. index.html).
-// Методы автообновления (checkForUpdate/downloadUpdate/installUpdate/
-// onUpdate*) и OAuth-редирект-через-IPC (openExternal/onOAuthCallback)
+// Методы автообновления (checkForUpdate/getUpdateStatus/downloadUpdate/
+// installUpdate/onUpdate*) и OAuth-редирект-через-IPC (openExternal/onOAuthCallback)
 // намеренно не определены — на вебе они не нужны, а app.js либо явно
 // проверяет их наличие (`if (window.api.onUpdateAvailable)`), либо просто
 // не вызывает их в web-ветке (см. IS_WEB в app.js).
@@ -37,6 +37,11 @@ window.__LANCIBLE_PLATFORM__ = 'web';
     },
     copy: (text) => navigator.clipboard.writeText(String(text ?? '')),
     setTitlebarOverlay: () => Promise.resolve(true), // на вебе нет нативного заголовка окна
+
+    // Версия — та же строка, что на десктопе: version.js собирается из
+    // корневого package.json (scripts/sync-web-assets.js), десктоп берёт её у
+    // main-процесса. Грузится раньше этого файла (см. index.html).
+    getVersion: () => Promise.resolve(window.__LANCIBLE_VERSION__ || ''),
 
     exportXlsx: ({ defaultName, sheets }) => {
       try {

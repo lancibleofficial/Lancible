@@ -4,8 +4,9 @@
 // вендорные библиотеки (Supabase UMD — из web/node_modules,
 // куда их кладёт обычный `npm install` внутри web/, т.к. Root Directory на
 // Vercel — web/, и корневой node_modules там недоступен) + закоммиченные
-// шрифты Basique Pro. web/index.html, web/api-shim.js, web/responsive.css —
-// пишутся руками и не трогаются этим скриптом.
+// шрифты Basique Pro + web/version.js с версией из корневого package.json.
+// web/index.html, web/api-shim.js, web/responsive.css — пишутся руками и не
+// трогаются этим скриптом.
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -23,6 +24,11 @@ try {
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'styles.css'), path.join(webDir, 'styles.css'));
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'theme-boot.js'), path.join(webDir, 'theme-boot.js'));
   fs.copyFileSync(path.join(root, 'src', 'xlsx.js'), path.join(webDir, 'xlsx.js'));
+  // Версия приложения — из корневого package.json, той же строкой, что десктоп
+  // получает от app.getVersion(). Внешним файлом, а не тегом в index.html: CSP
+  // (script-src 'self') инлайн-скрипты не пускает. Читает его api-shim.js.
+  const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  fs.writeFileSync(path.join(webDir, 'version.js'), `window.__LANCIBLE_VERSION__ = ${JSON.stringify(version)};\n`);
   // Редактор собран заранее и лежит в репозитории — Vercel его не собирает.
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'editor.js'), path.join(webDir, 'editor.js'));
 

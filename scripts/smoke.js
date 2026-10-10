@@ -77,7 +77,13 @@ ipcMain.handle('data:load', () => store);
 ipcMain.handle('data:save', (_e, d) => { store = d; return true; });
 ipcMain.handle('clipboard:write', () => true);
 ipcMain.handle('theme:set-overlay', (_e, theme) => { overlayCalls.push(theme); return true; });
-ipcMain.handle('update:check', () => ({ ok: false, reason: 'dev' }));
+// Что main отвечает окну про обновление: состояние (update:status) и итог
+// ручной проверки (update:check). Смоук подменяет их, как и остальной IPC.
+let updateStatus = { phase: 'idle', version: null, percent: 0 };
+let updateCheckAnswer = { ok: true, available: false, version: '0.0.0' };
+ipcMain.handle('app:version', () => app.getVersion());
+ipcMain.handle('update:check', () => updateCheckAnswer);
+ipcMain.handle('update:status', () => updateStatus);
 ipcMain.handle('update:download', () => ({ ok: true }));
 ipcMain.handle('update:install', () => true);
 ipcMain.handle('shell:open-external', () => true);
@@ -270,6 +276,33 @@ async function run() {
 
   await new Promise((r) => setTimeout(r, 200));
 
+  // --- версия и ручная проверка обновлений: подвал Настроек ---
+  //
+  // Версию окно получает от main (app:version), а ссылка «Проверить
+  // обновления» есть только на десктопе. Строки ниже записаны буквально, по
+  // той же причине, что и у кнопки обновления: см. комментарий дальше.
+  const appVersion = app.getVersion();
+  const footer = await inPage(win, 'подвал настроек', `(async () => {
+    openView('settings');
+    await new Promise((r) => setTimeout(r, 60));
+    const link = need('#settings-update-check');
+    const out = {
+      version: need('#settings-version').textContent,
+      apiVersion: await window.api.getVersion(),
+      statusPhase: (await window.api.getUpdateStatus()).phase,
+      linkVisible: link.getClientRects().length > 0 && !link.closest('[hidden]'),
+      linkLabel: link.textContent,
+    };
+    link.click();
+    await new Promise((r) => setTimeout(r, 120));
+    out.afterCheckLabel = link.textContent;
+    return out;
+  })()`);
+  flow.footerShowsVersion = footer.version === `Lancible · ${appVersion}` && footer.apiVersion === appVersion;
+  flow.updateStatusAnswers = footer.statusPhase === 'idle';
+  flow.updateCheckLinkVisible = footer.linkVisible === true && footer.linkLabel === 'Проверить обновления';
+  flow.updateCheckSaysLatest = footer.afterCheckLabel === 'Установлена последняя версия';
+
   // --- автообновление: кнопка реагирует на события из главного процесса ---
   win.webContents.send('update:available', { version: '9.9.9' });
   await new Promise((r) => setTimeout(r, 60));
@@ -288,6 +321,20 @@ async function run() {
   // записана буквально намеренно: проверка обязана падать, если текст кнопки
   // поменяли не подумав, а не подстраиваться под него молча.
   flow.updateBtnLabelMatchesReady = JSON.parse(updateAfterReady).label === 'Установить и перезапустить';
+
+  // Состояние переживает перезагрузку окна: событие «готово» пришло давно,
+  // окно его не помнит, но main помнит и отвечает на update:status.
+  updateStatus = { phase: 'ready', version: '9.9.9', percent: 100 };
+  const reloaded = new Promise((r) => win.webContents.once('did-finish-load', r));
+  win.webContents.reload();
+  await reloaded;
+  await new Promise((r) => setTimeout(r, 800));
+  const afterReload = await inPage(win, 'обновление: после перезагрузки', `
+    JSON.stringify({ hidden: need('#update-btn').hidden, label: need('#update-btn-label').textContent, link: need('#settings-update-check').textContent })
+  `);
+  const restored = JSON.parse(afterReload);
+  flow.updateBtnRestoredAfterReload = !restored.hidden && restored.label === 'Установить и перезапустить'
+    && restored.link === 'Установить и перезапустить';
 
   const unzip = (buf) => {
     const files = {};

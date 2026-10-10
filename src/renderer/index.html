@@ -152,7 +152,7 @@
 
       <button id="update-btn" class="nav-item nav-update" hidden>
         <svg class="icon" aria-hidden="true" data-icon="download" viewBox="0 0 24 24" fill="currentColor"><path d="M12.55 16.51C12.41 16.66 12.21 16.75 12 16.75C11.79 16.75 11.59 16.66 11.45 16.51L7.45 12.13C7.17 11.83 7.19 11.35 7.49 11.07C7.8 10.79 8.27 10.81 8.55 11.12L11.25 14.07V3C11.25 2.59 11.59 2.25 12 2.25C12.41 2.25 12.75 2.59 12.75 3V14.07L15.45 11.12C15.73 10.81 16.2 10.79 16.51 11.07C16.81 11.35 16.83 11.83 16.55 12.13L12.55 16.51Z"/><path d="M3.75 15C3.75 14.59 3.41 14.25 3 14.25C2.59 14.25 2.25 14.59 2.25 15V15.05C2.25 16.42 2.25 17.52 2.37 18.39C2.49 19.29 2.75 20.05 3.35 20.65C3.95 21.25 4.71 21.51 5.61 21.63C6.48 21.75 7.58 21.75 8.95 21.75H15.05C16.42 21.75 17.52 21.75 18.39 21.63C19.29 21.51 20.05 21.25 20.65 20.65C21.25 20.05 21.51 19.29 21.63 18.39C21.75 17.52 21.75 16.42 21.75 15.05V15C21.75 14.59 21.41 14.25 21 14.25C20.59 14.25 20.25 14.59 20.25 15C20.25 16.44 20.25 17.44 20.15 18.19C20.05 18.93 19.87 19.31 19.59 19.59C19.31 19.87 18.93 20.05 18.19 20.15C17.44 20.25 16.44 20.25 15 20.25H9C7.56 20.25 6.56 20.25 5.81 20.15C5.07 20.05 4.69 19.87 4.41 19.59C4.13 19.31 3.95 18.93 3.85 18.19C3.75 17.44 3.75 16.44 3.75 15Z"/></svg>
-        <span class="nav-label" id="update-btn-label" data-i18n="update.available">Доступно обновление</span>
+        <span class="nav-label" id="update-btn-label">Доступно обновление</span>
         <span class="nav-progress" id="update-progress" style="width:0%"></span>
       </button>
 
@@ -733,7 +733,10 @@
             </div>
           </section>
           </div>
-          <div class="settings-footer">Lancible</div>
+          <div class="settings-footer">
+            <span id="settings-version">Lancible</span>
+            <button type="button" class="linklike" id="settings-update-check" hidden></button>
+          </div>
         </div>
       </div>
     </div>

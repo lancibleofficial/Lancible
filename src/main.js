@@ -175,30 +175,65 @@ function createWindow(initialData) {
 // только по явному действию пользователя (кнопка в интерфейсе).
 // ---------------------------------------------------------------------------
 
+// Раз в час, пока приложение открыто. До 10 октября 2026 проверка шла один раз
+// при запуске: кто не закрывал приложение сутками, сидел на старой версии,
+// хотя новая давно лежала в фиде.
+const UPDATE_RECHECK_MS = 60 * 60 * 1000;
+
+// Состояние обновления держит main, а не окно: событие autoUpdater приходит
+// ровно один раз, а окно можно перезагрузить или открыть позже (на маке
+// приложение живёт и без окна). Окно спрашивает его через update:status и
+// по нему рисует кнопку. phase: idle | downloading | ready.
+const IDLE_UPDATE = { phase: 'idle', version: null, percent: 0 };
+let updateStatus = IDLE_UPDATE;
+
+// На маке окно закрывают, а процесс остаётся: тогда mainWindow уже уничтожен.
+function sendToWindow(channel, payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
+}
+
+// Одна проверка на всех: и по таймеру, и по кнопке в Настройках. Пока
+// обновление качается или уже скачано, сервер не спрашиваем — ответ известен.
+async function checkForUpdate() {
+  if (updateStatus.phase !== 'idle') return { ok: true, available: true, version: updateStatus.version };
+  const res = await autoUpdater.checkForUpdates();
+  // Ошибка скачивания уже ушла событием error — отдельный обработчик тут лишь
+  // не даёт ей стать необработанным отказом промиса.
+  res?.downloadPromise?.catch(() => {});
+  return { ok: true, available: !!res?.isUpdateAvailable, version: res?.updateInfo?.version ?? null };
+}
+
 function setupAutoUpdater() {
   autoUpdater.on('update-available', (info) => {
-    mainWindow?.webContents.send('update:available', { version: info.version });
+    updateStatus = { phase: 'downloading', version: info.version, percent: 0 };
+    sendToWindow('update:available', { version: info.version });
   });
   autoUpdater.on('download-progress', (progress) => {
-    mainWindow?.webContents.send('update:progress', { percent: progress.percent });
+    updateStatus = { ...updateStatus, phase: 'downloading', percent: progress.percent };
+    sendToWindow('update:progress', { percent: progress.percent });
   });
-  autoUpdater.on('update-downloaded', () => {
-    mainWindow?.webContents.send('update:ready');
+  autoUpdater.on('update-downloaded', (info) => {
+    updateStatus = { phase: 'ready', version: info?.version ?? updateStatus.version, percent: 100 };
+    sendToWindow('update:ready');
   });
   autoUpdater.on('error', (err) => {
     console.error('[autoUpdater]', err);
-    mainWindow?.webContents.send('update:error', { message: err.message });
+    // Оборванное скачивание — снова «ничего нет»: следующая проверка найдёт
+    // то же обновление и начнёт заново. Уже скачанное (ready) ошибкой не
+    // теряется: файл на месте, установка от сети не зависит.
+    if (updateStatus.phase === 'downloading') updateStatus = IDLE_UPDATE;
+    sendToWindow('update:error', { message: err.message });
   });
 
   ipcMain.handle('update:check', async () => {
     if (!app.isPackaged) return { ok: false, reason: 'dev' };
     try {
-      await autoUpdater.checkForUpdates();
-      return { ok: true };
+      return await checkForUpdate();
     } catch (err) {
       return { ok: false, error: err.message };
     }
   });
+  ipcMain.handle('update:status', () => updateStatus);
   ipcMain.handle('update:download', async () => {
     try {
       await autoUpdater.downloadUpdate();
@@ -250,6 +285,7 @@ app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
   }
 
+  ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('data:load', () => loadData());
   ipcMain.handle('data:save', (_event, data) => {
     saveData(data);
@@ -311,8 +347,10 @@ app.whenReady().then(() => {
     mainWindow.webContents.once('did-finish-load', () => handleAuthCallbackUrl(url));
   }
   if (app.isPackaged) {
+    const quietCheck = () => checkForUpdate().catch((err) => console.error('[autoUpdater] check:', err.message));
     // Небольшая задержка, чтобы не мешать первому рендеру окна.
-    setTimeout(() => autoUpdater.checkForUpdates().catch((err) => console.error('[autoUpdater] startup check:', err.message)), 3000);
+    setTimeout(quietCheck, 3000);
+    setInterval(quietCheck, UPDATE_RECHECK_MS);
   }
 
   app.on('activate', () => {

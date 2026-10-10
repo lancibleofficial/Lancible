@@ -160,6 +160,7 @@ const el = {
   agCreate: $('ag-create'),
   settingsView: $('settings-view'), settingsProfile: $('settings-profile'),
   settingsLangRow: $('settings-lang-row'), settingsLangValue: $('settings-lang-value'),
+  settingsVersion: $('settings-version'), settingsUpdateCheck: $('settings-update-check'),
   settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
   settingsSyncToggle: $('settings-sync-toggle'),
   settingsRate: $('settings-rate'), settingsCurrency: $('settings-currency'),
@@ -676,6 +677,7 @@ if (el.mobileBackToList) {
 // ---------------------------------------------------------------------------
 
 let updateState = 'idle'; // idle | available | downloading | ready
+let updateCheck = 'idle'; // idle | checking | latest | failed — ручная проверка из Настроек
 
 function renderUpdateBtn() {
   el.updateBtn.hidden = updateState === 'idle';
@@ -684,7 +686,31 @@ function renderUpdateBtn() {
     : updateState === 'downloading' ? 'update.downloading'
     : 'update.available';
   el.updateBtnLabel.textContent = t(key);
+  renderUpdateCheck();
 }
+
+// Ссылка в подвале Настроек. Нашлось обновление — дальше работает кнопка в
+// панели, а подпись здесь повторяет её состояние (и «ready» так же ставит).
+function renderUpdateCheck() {
+  const key = updateState === 'ready' ? 'update.ready'
+    : updateState === 'downloading' ? 'update.downloading'
+    : updateCheck === 'checking' ? 'update.checking'
+    : updateCheck === 'latest' ? 'update.latest'
+    : updateCheck === 'failed' ? 'update.check_failed'
+    : 'update.check';
+  el.settingsUpdateCheck.textContent = t(key);
+  el.settingsUpdateCheck.disabled = updateState === 'downloading' || updateCheck === 'checking';
+}
+
+// Состояние обновления держит main (src/main.js), окно его только рисует.
+// Спрашиваем на старте и после ошибки: так кнопка переживает перезагрузку
+// окна и событие, пришедшее раньше, чем окно успело подписаться.
+function applyUpdateStatus(s) {
+  updateState = s.phase === 'ready' || s.phase === 'downloading' ? s.phase : 'idle';
+  el.updateProgress.style.width = `${Math.round(s.percent || 0)}%`;
+  renderUpdateBtn();
+}
+const syncUpdateStatus = () => window.api.getUpdateStatus().then(applyUpdateStatus).catch(() => {});
 
 // В вебе обновлений нет вовсе: страница и так всегда свежая, а window.api там
 // этих методов не предоставляет (см. web/api-shim.js). Проверка на их наличие
@@ -696,13 +722,34 @@ if (window.api.onUpdateAvailable) {
   window.api.onUpdateAvailable(() => { updateState = 'downloading'; renderUpdateBtn(); });
   window.api.onUpdateProgress(({ percent }) => { el.updateProgress.style.width = `${Math.round(percent || 0)}%`; });
   window.api.onUpdateReady(() => { updateState = 'ready'; renderUpdateBtn(); });
-  window.api.onUpdateError(() => { updateState = 'idle'; renderUpdateBtn(); });
+  window.api.onUpdateError(syncUpdateStatus);
+  syncUpdateStatus();
+  el.settingsUpdateCheck.hidden = false;
+  renderUpdateCheck();
 }
 
 el.updateBtn.addEventListener('click', () => {
   // Пока идёт скачивание, кнопка только показывает прогресс — нажимать нечего.
   if (updateState === 'ready') window.api.installUpdate();
 });
+el.settingsUpdateCheck.addEventListener('click', async () => {
+  if (updateState === 'ready') { window.api.installUpdate(); return; }
+  updateCheck = 'checking';
+  renderUpdateCheck();
+  let res;
+  try { res = await window.api.checkForUpdate(); } catch { res = { ok: false }; }
+  // Нашлось — подпись возьмёт состояние скачивания, «последней версии» не будет.
+  updateCheck = !res.ok ? 'failed' : res.available ? 'idle' : 'latest';
+  await syncUpdateStatus();
+  renderUpdateCheck();
+});
+
+// Версия — одна строка на обеих поверхностях: десктоп спрашивает main
+// (app.getVersion()), веб берёт её из корневого package.json при сборке
+// (web/version.js). Как на телефоне: «Lancible · 0.4.2».
+if (window.api.getVersion) {
+  window.api.getVersion().then((v) => { if (v) el.settingsVersion.textContent = `Lancible · ${v}`; }).catch(() => {});
+}
 
 // ---------------------------------------------------------------------------
 // Аккаунт: вход/регистрация (email+пароль) и онбординг. Вход опционален —

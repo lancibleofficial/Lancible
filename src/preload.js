@@ -12,7 +12,9 @@ contextBridge.exposeInMainWorld('api', {
   openNotificationSettings: () => ipcRenderer.invoke('shell:open-notification-settings'),
   onOAuthCallback: (cb) => ipcRenderer.on('auth:oauth-callback', (_e, data) => cb(data)),
 
+  getVersion: () => ipcRenderer.invoke('app:version'),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
+  getUpdateStatus: () => ipcRenderer.invoke('update:status'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   onUpdateAvailable: (cb) => ipcRenderer.on('update:available', (_e, data) => cb(data)),

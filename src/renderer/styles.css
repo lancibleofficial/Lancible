@@ -2877,7 +2877,8 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .settings-row-danger .icon { color: var(--danger); }
 .settings-row.switch { cursor: pointer; }
 .settings-row.switch .switch-track { margin-left: auto; }
-.settings-footer { text-align: center; color: var(--text-faint); font-size: 12px; margin-top: 4px; }
+.settings-footer { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 2px var(--gap); text-align: center; color: var(--text-faint); font-size: 12px; margin-top: 4px; }
+.settings-footer .linklike:disabled { cursor: default; }
 @media (max-width: 900px) {
   .settings-grid, .settings-rows-2col { grid-template-columns: minmax(0, 1fr); }
 }

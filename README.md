@@ -270,8 +270,9 @@ npm run build:dmg   # macOS — только на самом маке (огра�
 `dist/Lancible-X.Y.Z-mac.zip` (universal, arm64+x64) + `dist/latest-mac.yml`
 через `npm run package:mac`.
 
-Приложение **обновляет себя само** на обеих платформах: при запуске
-(только в собранном приложении, не в `npm start`) `src/main.js` через
+Приложение **обновляет себя само** на обеих платформах: при запуске и затем
+раз в час, пока оно открыто (только в собранном приложении, не в
+`npm start`), `src/main.js` через
 `electron-updater` тихо проверяет манифест (`latest.yml`/`latest-mac.yml`),
 опубликованный в Supabase Storage (см. ниже); если версия новее — в левом
 рейле снизу появляется зелёная кнопка «Доступно обновление»; клик скачивает
@@ -280,6 +281,12 @@ npm run build:dmg   # macOS — только на самом маке (огра�
 кликами не показывается (`oneClick: true` обязателен для этого на Windows —
 без него `quitAndInstall()` открывает полный мастер установки и не завершает
 процесс).
+
+Состояние обновления (`idle` / `downloading` / `ready`) держит main и отдаёт
+окну по `update:status`, поэтому кнопка переживает перезагрузку окна. В
+подвале Настроек — «Lancible · <версия>» (на десктопе версию отдаёт
+`app:version`, на вебе она записывается в `web/version.js` из корневого
+`package.json` при сборке) и ссылка «Проверить обновления» — ручная проверка.
 
 **Публикация новой версии для автообновления** (существующим пользователям):
 1. Подними `"version"` в `package.json`.
@@ -364,7 +371,7 @@ Build desktop installers → Run workflow) с тегом в поле ввода.
 | Файл | Назначение |
 | --- | --- |
 | `src/main.js` | Главный процесс: окно (свой titlebar, без меню), `data.json` + миграция, диалог .xlsx, синхронизация цвета кнопок окна с темой (`theme:set-overlay`), автообновление через `electron-updater` (`update:check`/`update:download`/`update:install`). |
-| `src/preload.js` | Мост `window.api` (`load` / `save` / `exportXlsx` / `copy` / `setTitlebarOverlay` / `checkForUpdate` / `downloadUpdate` / `installUpdate` + подписки `onUpdate*`). |
+| `src/preload.js` | Мост `window.api` (`load` / `save` / `exportXlsx` / `copy` / `setTitlebarOverlay` / `getVersion` / `checkForUpdate` / `getUpdateStatus` / `downloadUpdate` / `installUpdate` + подписки `onUpdate*`). |
 | `src/xlsx.js` | Мини-генератор .xlsx (ZIP + OOXML) без зависимостей. |
 | `src/renderer/index.html` | Разметка: `#titlebar` (лого + поиск), `#navrail` (+ переключатели темы/языка), `#home-view` (статистика внутри `.home-main`, `.projects-grid`, `#recent-section.recent-fixed`), `#project/calendar-view`, вкладки задачи (`#task-tabs`/`#tab-notes`/`#tab-history`), фильтр задач в `#sidebar`, попапы кастомного календаря/времени (`#dp-pop`/`#tp-pop`, общие для периода в календаре и диалога записи времени), диалог подтверждения (`#confirm-backdrop`), `#search-panel`. Все статичные подписи размечены `data-i18n*`. Иконки — инлайн-SVG. |
 | `src/renderer/styles.css` | Стили, палитра (тёмная/светлая — CSS-переменные + `[data-theme]`/`prefers-color-scheme`), анимации, `@font-face` Onest. `.icon` — `--icon` цвет. |

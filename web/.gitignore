@@ -5,6 +5,7 @@ app.js
 styles.css
 theme-boot.js
 xlsx.js
+version.js
 editor.js
 core/
 vendor/
