@@ -282,3 +282,19 @@ test('на служебные страницы нет ссылок с сайта
     }
   }
 });
+
+test('кнопки скачивания десктопа ведут в R2, на версию из подписи', () => {
+  // С 10 октября 2026 установщики раздаёт Cloudflare R2: с GitHub Releases
+  // они шли у части людей ~19 КБ/с, и установщик в 82 МБ качался час.
+  // Раскладка в бакете — v<версия>/<файл>, как кладёт .github/workflows/release.yml.
+  // Подпись над кнопкой и адрес — одна версия, иначе кнопка обещает одно, а
+  // отдаёт другое.
+  const html = read('index.html');
+  const cards = [...html.matchAll(/<span>v(\d+\.\d+\.\d+)<\/span>[\s\S]*?<a class="platform-cta" href="([^"]+)"/g)]
+    .filter(([, , href]) => /\.(exe|dmg)$/.test(href));
+  assert.equal(cards.length, 2, 'на главной две кнопки десктопа: .exe и .dmg');
+  for (const [, version, href] of cards) {
+    assert.match(href, /^https:\/\/pub-[0-9a-f]+\.r2\.dev\//, `${href}: установщик должен идти из R2, а не с GitHub`);
+    assert.ok(href.includes(`/v${version}/`) && href.includes(version), `${href}: адрес не на версию v${version} из подписи`);
+  }
+});

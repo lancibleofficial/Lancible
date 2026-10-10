@@ -29,6 +29,27 @@ window.LANCIBLE_POSTS = [
   {
     date: '2026-10-10',
     tag: 'release',
+    version: '0.4.3',
+    title: {
+      ru: 'Обновления приходят сами и качаются за секунды',
+      en: 'Updates arrive on their own and download in seconds',
+    },
+    body: {
+      ru: [
+        'Lancible на компьютере теперь проверяет обновления раз в час, пока открыт. Раньше он делал это только при запуске, и если приложение не закрывали сутками, новая версия до него не доходила.',
+        'Установщики и обновления теперь раздаются с серверов Cloudflare. У части пользователей скачивание с прежнего места растягивалось на час, теперь оно занимает секунды.',
+        'В Настройках на компьютере и в браузере видна версия Lancible, а на компьютере рядом с ней есть кнопка «Проверить обновления».',
+      ],
+      en: [
+        'Lancible on the computer now checks for updates every hour while it is open. Before, it only checked at launch, so if the app stayed open for days, a new version never reached it.',
+        'Installers and updates are now served from Cloudflare. For some people downloads from the old location took up to an hour; now they take seconds.',
+        'Settings on the computer and in the browser show the Lancible version, and on the computer there is a “Check for updates” button next to it.',
+      ],
+    },
+  },
+  {
+    date: '2026-10-10',
+    tag: 'release',
     version: '0.4.2',
     title: {
       ru: 'Удаление аккаунта — одним шагом на сервере',
