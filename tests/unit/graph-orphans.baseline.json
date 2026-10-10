@@ -584,6 +584,18 @@
       "at": "L22"
     },
     {
+      "id": "mobile_tests_doceditorbridge_test_last",
+      "label": "last()",
+      "file": "mobile/tests/DocEditorBridge.test.js",
+      "at": "L28"
+    },
+    {
+      "id": "mobile_tests_doceditorbridge_test_say",
+      "label": "say()",
+      "file": "mobile/tests/DocEditorBridge.test.js",
+      "at": "L27"
+    },
+    {
       "id": "mobile_tests_documentsscreen_test_nav",
       "label": "nav()",
       "file": "mobile/tests/DocumentsScreen.test.js",

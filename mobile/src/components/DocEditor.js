@@ -133,12 +133,20 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
   const send = (msg) => webRef.current?.postMessage(JSON.stringify(msg));
   useImperativeHandle(ref, () => ({ send, flush: () => send({ type: 'flush' }) }));
 
+  // Сообщение, посланное до «ready», страница не получит: WebView ещё грузит
+  // её. Поэтому всё, что может поменяться после первого рендера, страница
+  // получает заново по «ready». Без этого вход терялся всегда: сессия
+  // (useEditorAuth) приходит асинхронно, раньше страницы, и в облако с
+  // телефона не уходило ни одной картинки.
+  const ready = useRef(false);
+  const latest = useRef({ auth, lang });
+  latest.current = { auth, lang };
+
   useEffect(() => { send({ type: 'auth', auth: auth || null }); }, [auth && auth.accessToken]);
   useEffect(() => { send({ type: 'lang', lang }); }, [lang]);
 
-  // Список на возврат отдаётся, когда страница готова: сообщение, посланное
-  // раньше, WebView потеряет. Пока редактор открыт — и при каждой его смене.
-  const ready = useRef(false);
+  // Список на возврат — тоже по «ready», и пока редактор открыт — при каждой
+  // его смене.
   const requeueKey = (requeue || []).join(',');
   function sendRequeue() {
     if (ready.current && requeue && requeue.length) send({ type: 'requeue', ids: requeue });
@@ -154,7 +162,12 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
     else if (msg.type === 'tap') onOpen && onOpen();
     else if (msg.type === 'toast') onToast && onToast(msg.message);
     else if (msg.type === 'open' && /^(https?:|mailto:)/i.test(msg.href)) Linking.openURL(msg.href);
-    else if (msg.type === 'ready') { ready.current = true; sendRequeue(); }
+    else if (msg.type === 'ready') {
+      ready.current = true;
+      send({ type: 'auth', auth: latest.current.auth || null });
+      send({ type: 'lang', lang: latest.current.lang });
+      sendRequeue();
+    }
     else if (msg.type === 'requeued') onRequeued && onRequeued(msg.ids);
     else if (msg.type === 'error') console.error('[editor]', msg.message);
   }
@@ -179,6 +192,10 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
         allowFileAccess={false}
         domStorageEnabled
         javaScriptEnabled
+        // Только в разработке: страницу редактора можно открыть в отладчике
+        // (chrome://inspect на Android, Safari на iOS) — IndexedDB, консоль,
+        // сеть. В выпускной сборке __DEV__ ложно, и WebView закрыт.
+        webviewDebuggingEnabled={__DEV__}
       />
     </View>
   );
