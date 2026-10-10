@@ -1,12 +1,15 @@
-/* Редакция условий в профиле не откатывается назад (supabase/consent.sql).
- * Запуск: LANCIBLE_ACCOUNT_TEST=1 npm run test:backend
+/* Редакция условий в профиле не откатывается, время ставит сервер
+ * (supabase/consent.sql). Запуск: LANCIBLE_ACCOUNT_TEST=1 npm run test:backend
  *
  * Старые установленные клиенты (десктоп 0.4.0, телефон 1.2.1) знают только
  * редакцию 2026-10-07 и переписывают ею профиль того, кто уже принял
  * 2026-10-10 в другом клиенте. Тест повторяет оба пути записи согласия —
  * upsert (онбординг) и update (повторное согласие) — на временном
- * пользователе и проверяет, что более новая редакция и время её принятия
- * сохраняются, а ещё более новая записывается как обычно.
+ * пользователе и проверяет:
+ *   - более новая редакция и время её принятия не откатываются;
+ *   - время принятия ставит сервер, а не присланные часы устройства;
+ *   - мусор и будущая дата поверх редакции не проходят;
+ *   - записанный мусор или будущая дата исправляются любой редакцией.
  *
  * Живая часть заводит настоящего пользователя в боевой базе — только по
  * явному запросу (LANCIBLE_ACCOUNT_TEST=1; в GitHub — ручной запуск), как и
@@ -30,9 +33,12 @@ async function call(method, path, { token, body, prefer } = {}) {
   return { status: res.status, ok: res.ok, text, json };
 }
 
-const NEW = { terms_version: '2026-10-10', terms_accepted_at: '2026-10-10T09:00:00.000Z', age_confirmed: true };
-const OLD = { terms_version: '2026-10-07', terms_accepted_at: '2026-10-10T12:00:00.000Z', age_confirmed: true };
-const NEWER = { terms_version: '2026-11-01', terms_accepted_at: '2026-11-01T09:00:00.000Z', age_confirmed: true };
+// Редакции только в прошлом: будущая дата редакцией не считается.
+const OLDER = '2026-01-01';
+const NEW = '2026-02-01';
+const NEWER = '2026-03-01';
+const FAKE_AT = '2000-01-01T00:00:00.000Z'; // «часы устройства» — сервер их не берёт
+const HINT = 'выполните supabase/consent.sql в SQL Editor';
 
 let user = null;
 
@@ -42,7 +48,7 @@ test.after(async () => {
   if (!r.ok) console.error(`не удалось убрать тестового пользователя ${user.id}: ${r.status} ${r.text.slice(0, 200)}`);
 });
 
-test('редакция в профиле не уменьшается, новая — записывается', async (t) => {
+test('редакция не откатывается, время ставит сервер, мусор не проходит', async (t) => {
   if (process.env.LANCIBLE_ACCOUNT_TEST !== '1') {
     t.todo('живая часть заводит настоящего пользователя — запуск: LANCIBLE_ACCOUNT_TEST=1 npm run test:backend');
     return;
@@ -56,46 +62,62 @@ test('редакция в профиле не уменьшается, новая
   const read = async () => {
     const r = await call('GET', `/rest/v1/profiles?select=terms_version,terms_accepted_at&id=eq.${user.id}`, { token: user.token });
     assert.equal(r.status, 200, r.text.slice(0, 200));
-    return { version: r.json[0].terms_version, at: new Date(r.json[0].terms_accepted_at).toISOString() };
+    return { version: r.json[0].terms_version, at: r.json[0].terms_accepted_at && Date.parse(r.json[0].terms_accepted_at) };
   };
+  const consent = (version) => ({ terms_version: version, terms_accepted_at: FAKE_AT, age_confirmed: true });
   const upsert = (fields) => call('POST', '/rest/v1/profiles', {
     token: user.token, body: [{ id: user.id, ...fields }], prefer: 'resolution=merge-duplicates,return=minimal',
   });
   const update = (fields) => call('PATCH', `/rest/v1/profiles?id=eq.${user.id}`, { token: user.token, body: fields, prefer: 'return=minimal' });
+  const serverNow = (at, from) => at >= from - 60000 && at <= Date.now() + 60000; // минута на расхождение часов
 
-  assert.ok((await upsert(NEW)).ok, 'онбординг с новой редакцией не записался');
-  assert.deepEqual(await read(), { version: NEW.terms_version, at: NEW.terms_accepted_at });
+  // Онбординг (вставка): время — серверное, не присланное.
+  let from = Date.now();
+  assert.ok((await upsert(consent(NEW))).ok, 'онбординг не записался');
+  const first = await read();
+  assert.equal(first.version, NEW);
+  assert.ok(serverNow(first.at, from), `время принятия взято с устройства — ${HINT}`);
 
   // Старый клиент переспросил и пишет свою редакцию — обоими путями.
-  const hint = 'редакция откатилась — выполните supabase/consent.sql в SQL Editor';
-  assert.ok((await update(OLD)).ok);
-  assert.deepEqual(await read(), { version: NEW.terms_version, at: NEW.terms_accepted_at }, `update: ${hint}`);
-  assert.ok((await upsert(OLD)).ok);
-  assert.deepEqual(await read(), { version: NEW.terms_version, at: NEW.terms_accepted_at }, `upsert: ${hint}`);
-
-  // Ещё более новая редакция записывается как обычно.
-  assert.ok((await update(NEWER)).ok);
-  assert.deepEqual(await read(), { version: NEWER.terms_version, at: NEWER.terms_accepted_at });
-
-  // Мусор поверх даты не проходит: «zzzz» строкой больше любой даты.
-  assert.ok((await update({ ...OLD, terms_version: 'zzzz' })).ok);
-  assert.deepEqual(await read(), { version: NEWER.terms_version, at: NEWER.terms_accepted_at }, 'мусор перезаписал редакцию');
-});
-
-test('записанный мусор защиты не получает — его исправляет любая дата', async (t) => {
-  if (process.env.LANCIBLE_ACCOUNT_TEST !== '1' || !user) {
-    t.todo('идёт после первого теста, по LANCIBLE_ACCOUNT_TEST=1');
-    return;
+  for (const [how, write] of [['update', update], ['upsert', upsert]]) {
+    assert.ok((await write(consent(OLDER))).ok);
+    assert.deepEqual(await read(), first, `${how}: редакция откатилась — ${HINT}`);
   }
-  // Поверх даты мусор не записать (это проверено выше), поэтому профиль
-  // заводится заново: вставка триггер не зовёт, и мусор ложится как есть —
-  // так он мог оказаться в профиле до стража.
-  const patch = (fields) => call('PATCH', `/rest/v1/profiles?id=eq.${user.id}`, { token: user.token, body: fields, prefer: 'return=minimal' });
-  const get = async () => (await call('GET', `/rest/v1/profiles?select=terms_version&id=eq.${user.id}`, { token: user.token })).json[0].terms_version;
-  await call('DELETE', `/rest/v1/profiles?id=eq.${user.id}`, { token: user.token });
-  assert.ok((await call('POST', '/rest/v1/profiles', { token: user.token, body: [{ id: user.id, terms_version: 'v2' }], prefer: 'return=minimal' })).ok);
-  assert.equal(await get(), 'v2');
-  // ...и записанный мусор исправляется даже более старой датой.
-  assert.ok((await patch(OLD)).ok);
-  assert.equal(await get(), OLD.terms_version, 'записанный мусор держится — клиент переспрашивал бы по кругу');
+
+  // Повторное согласие с той же редакцией не сдвигает время первого.
+  assert.ok((await update(consent(NEW))).ok);
+  assert.deepEqual(await read(), first, 'та же редакция сдвинула время принятия');
+
+  // Мусор и будущая дата поверх редакции не проходят.
+  for (const junk of ['zzzz', '9999-12-31', null]) {
+    assert.ok((await update(consent(junk))).ok);
+    assert.deepEqual(await read(), first, `«${junk}» перезаписал редакцию`);
+  }
+
+  // Более новая редакция записывается, время — снова серверное.
+  from = Date.now();
+  assert.ok((await update(consent(NEWER))).ok);
+  const next = await read();
+  assert.equal(next.version, NEWER);
+  assert.ok(serverNow(next.at, from), 'время новой редакции взято с устройства');
+
+  // Часовой пояс: сервер считает по UTC, а редакцию датируем по своему дню.
+  // Завтра по UTC — ещё редакция (выпущена до полуночи UTC), послезавтра — нет.
+  const utcDay = (shift) => new Date(Date.now() + shift * 86400000).toISOString().slice(0, 10);
+  assert.ok((await update(consent(utcDay(1)))).ok);
+  const tomorrow = await read();
+  assert.equal(tomorrow.version, utcDay(1), 'редакция «завтра по UTC» отброшена — допуск на часовой пояс не работает');
+  assert.ok((await update(consent(utcDay(3)))).ok);
+  assert.deepEqual(await read(), tomorrow, 'дата через три дня принята за редакцию');
+
+  // Записанные до стража мусор или будущая дата защиты не получают.
+  // Поверх редакции их не записать (проверено выше), поэтому профиль
+  // заводится заново — так они могли оказаться в нём до стража.
+  for (const junk of ['v2', '9999-12-31']) {
+    await call('DELETE', `/rest/v1/profiles?id=eq.${user.id}`, { token: user.token });
+    assert.ok((await upsert({ terms_version: junk, terms_accepted_at: FAKE_AT })).ok);
+    assert.equal((await read()).at, null, `при «${junk}» осталось время принятия без принятой редакции`);
+    assert.ok((await update(consent(OLDER))).ok);
+    assert.equal((await read()).version, OLDER, `записанный «${junk}» держится — клиент переспрашивал бы по кругу`);
+  }
 });
