@@ -84,6 +84,15 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
     else if (m.type === 'exec') ed.exec(m.name, m.arg);
     else if (m.type === 'flush') ed.flush();
     else if (m.type === 'focus') ed.focus();
+    else if (m.type === 'requeue') {
+      // Картинки снова в очереди на выгрузку: удаление аккаунта стёрло их из
+      // облака, а аккаунт остался. Выгрузит их flush — сейчас, если вход есть,
+      // или когда придёт auth.
+      ed.assets.requeue(m.ids).then(function(n){
+        post({ type: 'requeued', ids: m.ids, n: n });
+        if (S.auth) ed.assets.flush();
+      }, function(err){ post({ type: 'error', message: 'requeue: ' + err }); });
+    }
   }
   document.addEventListener('message', onMessage);
   window.addEventListener('message', onMessage);
@@ -99,10 +108,12 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
  *  settings / onSettings — вид и перо (state.settings.editor);
  *  auth — { url, anonKey, accessToken, userId } для облака картинок или null;
  *  preview — режим предпросмотра; onOpen — касание в предпросмотре;
- *  onToast(message).
+ *  onToast(message);
+ *  requeue — id картинок, которые надо снова выгрузить в облако
+ *  (стор: assetRequeue); onRequeued(ids) — редактор поставил их в очередь.
  */
 const DocEditor = forwardRef(function DocEditor(props, ref) {
-  const { content, onChange, lang, user, settings, onSettings, auth, preview, onOpen, onToast, placeholder } = props;
+  const { content, onChange, lang, user, settings, onSettings, auth, preview, onOpen, onToast, placeholder, requeue, onRequeued } = props;
   const colors = useColors();
   const mode = useThemeMode();
   const webRef = useRef(null);
@@ -122,8 +133,25 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
   const send = (msg) => webRef.current?.postMessage(JSON.stringify(msg));
   useImperativeHandle(ref, () => ({ send, flush: () => send({ type: 'flush' }) }));
 
+  // Сообщение, посланное до «ready», страница не получит: WebView ещё грузит
+  // её. Поэтому всё, что может поменяться после первого рендера, страница
+  // получает заново по «ready». Без этого вход терялся всегда: сессия
+  // (useEditorAuth) приходит асинхронно, раньше страницы, и в облако с
+  // телефона не уходило ни одной картинки.
+  const ready = useRef(false);
+  const latest = useRef({ auth, lang });
+  latest.current = { auth, lang };
+
   useEffect(() => { send({ type: 'auth', auth: auth || null }); }, [auth && auth.accessToken]);
   useEffect(() => { send({ type: 'lang', lang }); }, [lang]);
+
+  // Список на возврат — тоже по «ready», и пока редактор открыт — при каждой
+  // его смене.
+  const requeueKey = (requeue || []).join(',');
+  function sendRequeue() {
+    if (ready.current && requeue && requeue.length) send({ type: 'requeue', ids: requeue });
+  }
+  useEffect(sendRequeue, [requeueKey]);
 
   function onMessage(e) {
     let msg;
@@ -134,6 +162,13 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
     else if (msg.type === 'tap') onOpen && onOpen();
     else if (msg.type === 'toast') onToast && onToast(msg.message);
     else if (msg.type === 'open' && /^(https?:|mailto:)/i.test(msg.href)) Linking.openURL(msg.href);
+    else if (msg.type === 'ready') {
+      ready.current = true;
+      send({ type: 'auth', auth: latest.current.auth || null });
+      send({ type: 'lang', lang: latest.current.lang });
+      sendRequeue();
+    }
+    else if (msg.type === 'requeued') onRequeued && onRequeued(msg.ids);
     else if (msg.type === 'error') console.error('[editor]', msg.message);
   }
 
@@ -157,6 +192,10 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
         allowFileAccess={false}
         domStorageEnabled
         javaScriptEnabled
+        // Только в разработке: страницу редактора можно открыть в отладчике
+        // (chrome://inspect на Android, Safari на iOS) — IndexedDB, консоль,
+        // сеть. В выпускной сборке __DEV__ ложно, и WebView закрыт.
+        webviewDebuggingEnabled={__DEV__}
       />
     </View>
   );
