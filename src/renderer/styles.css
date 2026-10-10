@@ -8,8 +8,8 @@
 
 /* ---------- Шрифты ----------
    С 9 октября 2026 всё набирается Onest — и текст, и заголовки, и крупные
-   числа (--font-display ниже — тот же Onest, плотнее). Basique Pro остался
-   только у логотипа, одним начертанием Bold.
+   числа (--font-display ниже — тот же Onest, плотнее). С 10 октября и
+   логотип: лицензии на Basique Pro, которым он был набран, нет.
 
    Onest — переменный шрифт: одна гарнитура даёт любой вес от 100 до 900,
    поэтому лесенка 400/500/600/700 в разметке работает без подмен. Файлов
@@ -24,8 +24,6 @@
 @font-face { font-family: 'Onest'; src: url('vendor/fonts/Onest-Latin.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: 'Onest'; src: url('vendor/fonts/Onest-LatinExt.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 
-@font-face { font-family: 'Basique Pro'; src: url('vendor/fonts/Basique-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
-
 /* ========== Слой: Палитра ========== */
 
 /* ---------- Палитра ---------- */
@@ -35,9 +33,10 @@
 
   --font-ui: 'Onest', -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   /* Крупное — заголовки, числа, суммы — тот же Onest, что текст, только
-     плотнее (--fw-display). Логотип — Basique Pro, своим токеном. */
+     плотнее (--fw-display). Логотип — тоже Onest, но своим токеном: у знака
+     свой вес и своя разрядка (.tb-logo-text). */
   --font-display: var(--font-ui);
-  --font-logo: 'Basique Pro', var(--font-ui);
+  --font-logo: var(--font-ui);
   /* Вес обычного текста. В светлой теме на полступени плотнее: тёмные буквы
      на белом читаются тоньше, чем светлые на тёмном. Onest переменный, 450
      у него настоящий, а не подобранный. */
@@ -1502,11 +1501,15 @@ body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
   -webkit-app-region: drag;
 }
 .tb-logo-mark { width: 22px; height: 22px; flex: none; color: var(--accent-ink); }
+/* Вес и разрядка подобраны замером под прежний логотип (Basique Pro Bold,
+   16 px, разрядка 0.4): у Onest 800 та же «краска» (352 против 349 px²) и
+   высота заглавной (12.3 px), а разрядка −0.1 возвращает ширину слова
+   (64.5 против 64.6 px). */
 .tb-logo-text {
   font-family: var(--font-logo);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 16px;
-  letter-spacing: 0.4px;
+  letter-spacing: -0.1px;
   white-space: nowrap;
 }
 .tb-search .icon { color: var(--icon); flex: none; }

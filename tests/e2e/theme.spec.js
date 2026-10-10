@@ -130,8 +130,10 @@ test('зелёный текстом на светлой теме тёмный, �
   expect(ratio['--accent-text на --accent'], 'надпись на зелёной кнопке').toBeGreaterThanOrEqual(4.5);
 });
 
-// С 9 октября 2026 всё набрано Onest; Basique Pro остался только у лого.
-test('текст, заголовки и крупные числа — Onest, лого — Basique Pro', async ({ page }) => {
+// С 9 октября 2026 всё набрано Onest, с 10 октября — и лого: лицензии на
+// Basique Pro, которым он был набран, нет. Файла Basique в приложении больше
+// нет, и загружаться его шрифту неоткуда.
+test('текст, заголовки, крупные числа и лого — Onest, Basique Pro не грузится', async ({ page }) => {
   await open(page, 'light');
   const f = await page.evaluate(async () => {
     await document.fonts.ready;
@@ -140,6 +142,7 @@ test('текст, заголовки и крупные числа — Onest, л�
       body: fam('body'),
       nav: fam('.nav-item'),
       logo: fam('.tb-logo-text'),
+      logoWeight: getComputedStyle(document.querySelector('.tb-logo-text')).fontWeight,
       heading: fam('.day-title'),
       number: fam('.kpi-num'),
       loaded: [...document.fonts].filter((x) => x.status === 'loaded').map((x) => `${x.family} ${x.weight}`),
@@ -147,11 +150,12 @@ test('текст, заголовки и крупные числа — Onest, л�
   });
   expect(f.body).toBe('Onest');
   expect(f.nav, 'пункты меню — обычный текст').toBe('Onest');
-  expect(f.logo).toBe('Basique Pro');
+  expect(f.logo, 'логотип').toBe('Onest');
+  expect(f.logoWeight, 'вес логотипа подобран под прежний Basique Pro Bold').toBe('800');
   expect(f.heading, 'заголовок страницы — Onest').toBe('Onest');
   expect(f.number, 'крупное число — Onest').toBe('Onest');
   expect(f.loaded.some((x) => x.startsWith('Onest')), `загружено: ${f.loaded}`).toBe(true);
-  expect(f.loaded.some((x) => x.startsWith('Basique Pro')), `загружено: ${f.loaded}`).toBe(true);
+  expect([...await page.evaluate(() => [...document.fonts].map((x) => x.family))].some((x) => /Basique/i.test(x)), 'объявлен шрифт Basique Pro').toBe(false);
 });
 
 test('у Onest есть казахские буквы и цифры одинаковой ширины', async ({ page }) => {
@@ -277,7 +281,7 @@ test('всплывающее меню поднято тенью над тем, �
 // Bold тёмным по белому слипается: в светлой теме крупное набрано на
 // ступень легче (у переменного Onest 600 настоящий). Лого — знак, а не
 // текст, и остаётся Bold в обеих.
-test('крупное: 700 в тёмной, 600 в светлой; лого — Bold в обеих', async ({ page }) => {
+test('крупное: 700 в тёмной, 600 в светлой; лого — 800 в обеих', async ({ page }) => {
   const weights = async (theme) => {
     await open(page, theme);
     return page.evaluate(() => {
@@ -289,8 +293,9 @@ test('крупное: 700 в тёмной, 600 в светлой; лого — B
       return out;
     });
   };
-  expect(await weights('dark')).toEqual({ day: '700', logo: '700', period: '700' });
-  expect(await weights('light')).toEqual({ day: '600', logo: '700', period: '600' });
+  // Лого — знак: вес один в обеих темах, 800 у Onest — под прежний Basique Pro Bold.
+  expect(await weights('dark')).toEqual({ day: '700', logo: '800', period: '700' });
+  expect(await weights('light')).toEqual({ day: '600', logo: '800', period: '600' });
 });
 
 // С 9 октября 2026 профиль — последним пунктом левой панели, под языком и
