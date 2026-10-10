@@ -99,9 +99,13 @@ Publish Agent; Product Manager читает её и ничего в ней не 
 
 ```bash
 git -C /c/Users/Turan/Documents/task-timer worktree add /e/lancible/<папка> -b <префикс>/start main
-cd /e/lancible/<папка> && npm ci          # Mobile, Testing Mobile и Core ещё: npm ci --prefix mobile
-cp /c/Users/Turan/Documents/task-timer/.env.local .   # ключ журнала; значение не печатать
+cd /e/lancible/<папка> && npm run setup:worktree
 ```
+
+Скрипт ставит зависимости корня, веба и (для Mobile, Testing Mobile и Core)
+телефона, проверяет, что Electron распакован, и копирует `.env.local` из
+основной копии, не печатая значение. Сообщение «НЕ ГОТОВО» значит, что копия
+не готова и работать в ней нельзя.
 
 После этого сессия переходит в эту папку — сменой рабочей папки сессии.
 Пользователь подтверждает переход один раз.
@@ -146,9 +150,11 @@ if (-not (Test-Path $p)) { New-Item -ItemType Junction -Path $p -Target 'C:\User
 - **Пересобираемые файлы.** `tests/unit/graph-orphans.baseline.json`,
   `landing/graph*.html` и числа `/architecture` при слиянии руками не
   сливаются: Publish пересобирает их (`npm run graph:baseline`,
-  `npm run site:refresh`). Копии ядра в `mobile/src/core/` обновляет только
-  Core (`scripts/sync-mobile-core.js`). Сборку редактора — только Web/Desktop
-  (`npm run build:editor`).
+  `npm run site:refresh`). Копии ядра в `mobile/src/core/` обновляются только
+  скриптом `scripts/sync-mobile-core.js` и только побайтно. Запускает его
+  Core, а для своего файла — владелец оригинала (`legal.js` — Legal Manager,
+  `icons.js` — Icons and Graphics), в том же коммите, что и правка оригинала.
+  Сборку редактора — только Web/Desktop (`npm run build:editor`).
 - **Эмулятор Android и Metro на 8081 — один на всех.** Mobile и Testing Mobile
   договариваются, кто занимает их сейчас.
 - **Порты браузерных прогонов** (`tests/ports.js`) общие для всех копий, а

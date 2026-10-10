@@ -19,9 +19,20 @@
  *   EOF
  *
  * Если ключа нет или сеть недоступна, запись не теряется: она ложится в
- * logs/pending.jsonl, и следующий `node scripts/worklog.js flush` досылает
- * очередь по порядку. Отправленное дублируется в logs/sent.jsonl — локальная
- * копия на случай, если до базы будет не достучаться.
+ * logs/pending.jsonl, и следующая запись (или `node scripts/worklog.js flush`)
+ * сначала досылает очередь по порядку. Отправленное дублируется в
+ * logs/sent.jsonl — локальная копия на случай, если до базы будет не
+ * достучаться.
+ *
+ * Оба файла в git не живут (.gitignore): у каждой копии репозитория своя
+ * очередь, а журнал один — в базе. В git они конфликтовали при каждом слиянии
+ * веток, а закоммиченная очередь досылалась повторно из каждой копии.
+ *
+ * Повторная отправка не задваивает события. Время события ставится один раз,
+ * когда запись создана, и уезжает в очередь вместе с ней; перед вставкой
+ * скрипт читает уже записанные события задачи и пропускает совпавшие. Так
+ * переживается и потерянный ответ сервера: вставка дошла, ответ нет, запись
+ * осталась в очереди — при досылке её события найдутся в базе.
  */
 
 const fs = require('fs');
@@ -83,6 +94,33 @@ async function request(table, rows, extraHeaders) {
   if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
 }
 
+async function select(table, query) {
+  const key = serviceKey();
+  if (!key) throw new Error('NO_KEY');
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+    headers: { apikey: key, Authorization: `Bearer ${key}` },
+  });
+  if (!res.ok) throw new Error(`${table}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+  return res.json();
+}
+
+/** Ставит время каждому событию без него — один раз, при создании записи. */
+function stamp(payload, now = new Date().toISOString()) {
+  return { ...payload, events: (payload.events || []).map((ev) => (ev.at ? ev : { ...ev, at: now })) };
+}
+
+/**
+ * События записи, которых ещё нет в базе. С временем событие узнаётся по
+ * виду, заголовку и моменту; без времени (записи из очереди до 10 октября
+ * 2026) — по виду, заголовку и подробностям.
+ */
+function missingEvents(events, existing) {
+  const sameMoment = (a, b) => Date.parse(a) === Date.parse(b);
+  return events.filter((ev) => !existing.some((ex) => ex.kind === ev.kind && ex.title === ev.title && (
+    ev.at ? sameMoment(ex.at, ev.at) : (ex.detail || null) === (ev.detail || null)
+  )));
+}
+
 async function send(payload) {
   const now = new Date().toISOString();
   const task = { ...payload.task, updated_at: now };
@@ -93,7 +131,11 @@ async function send(payload) {
 
   await request('work_log_tasks', [task], { Prefer: 'return=minimal,resolution=merge-duplicates' });
 
-  const events = (payload.events || []).map((ev) => ({
+  const events = payload.events || [];
+  if (!events.length) return 0;
+  const existing = await select('work_log_events',
+    `select=kind,title,detail,at&task_id=eq.${encodeURIComponent(payload.task.id)}`);
+  const rows = missingEvents(events, existing).map((ev) => ({
     task_id: payload.task.id,
     kind: ev.kind,
     title: ev.title,
@@ -101,8 +143,8 @@ async function send(payload) {
     round: ev.round || payload.task.round || 1,
     at: ev.at || now,
   }));
-  if (events.length) await request('work_log_events', events);
-  return events.length;
+  if (rows.length) await request('work_log_events', rows);
+  return rows.length;
 }
 
 function queue(payload) {
@@ -115,10 +157,13 @@ function archive(payload) {
   fs.appendFileSync(SENT, JSON.stringify({ sent_at: new Date().toISOString(), payload }) + '\n', 'utf8');
 }
 
-async function flush() {
-  if (!fs.existsSync(PENDING)) return console.log('очередь пуста');
-  const lines = fs.readFileSync(PENDING, 'utf8').split('\n').filter(Boolean);
-  if (!lines.length) return console.log('очередь пуста');
+/** Досылает очередь по порядку. Возвращает, сколько записей в ней осталось. */
+async function flush({ quiet = false } = {}) {
+  const lines = fs.existsSync(PENDING) ? fs.readFileSync(PENDING, 'utf8').split('\n').filter(Boolean) : [];
+  if (!lines.length) {
+    if (!quiet) console.log('очередь пуста');
+    return 0;
+  }
   const left = [];
   let ok = 0;
   for (let i = 0; i < lines.length; i++) {
@@ -134,7 +179,8 @@ async function flush() {
     }
   }
   fs.writeFileSync(PENDING, left.length ? left.join('\n') + '\n' : '', 'utf8');
-  console.log(`отправлено: ${ok}, осталось в очереди: ${left.length}`);
+  console.log(`очередь: отправлено ${ok}, осталось ${left.length}`);
+  return left.length;
 }
 
 async function readStdin() {
@@ -171,10 +217,17 @@ async function main() {
 
   let payload;
   try {
-    payload = validate(JSON.parse(raw));
+    payload = stamp(validate(JSON.parse(raw)));
   } catch (err) {
     console.error(`запись отклонена: ${err.message}`);
     process.exit(1);
+  }
+
+  // Сначала очередь: журнал читается по времени, и новая запись не должна
+  // обгонять старые. Не ушла очередь — новая встаёт за ней.
+  if (await flush({ quiet: true })) {
+    queue(payload);
+    return console.log(`в очередь за неотправленными: ${payload.task.id}`);
   }
 
   try {
@@ -190,4 +243,6 @@ async function main() {
   }
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+if (require.main === module) main().catch((err) => { console.error(err); process.exit(1); });
+
+module.exports = { stamp, missingEvents };
