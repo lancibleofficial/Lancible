@@ -14,6 +14,12 @@
 // пишется в журнал window.__calls.
 const { test, expect } = require('@playwright/test');
 
+// Две причины отказа — две строки (core/i18n.js): картинки не стёрлись
+// (account.delete_assets_error, как на телефоне) и всё остальное
+// (account.delete_error).
+const ASSETS_ERROR = 'Не удалось стереть картинки из заметок, поэтому аккаунт не удалён. Попробуйте ещё раз.';
+const DELETE_ERROR = 'Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.';
+
 /**
  * Открыть настройки вошедшим пользователем u1 с подменённым облаком.
  * @param files      имена файлов в doc-assets/u1/
@@ -134,7 +140,7 @@ test('пустая папка — аккаунт удаляется сразу',
 test('ошибка при стирании — аккаунт не удаляется, человек видит причину', async ({ page }) => {
   await signedIn(page, { files: ['a.webp'], remove: 'error' });
   await confirmDelete(page);
-  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  await expect(page.locator('#toast')).toHaveText(ASSETS_ERROR);
   expect(await calls(page)).toEqual(['list doc-assets/u1 limit=1000', 'remove u1/a.webp']);
   expect(await signedOut(page)).toBe(false);
   expect(await page.evaluate(() => assetsPaused)).toBe(false);
@@ -143,7 +149,7 @@ test('ошибка при стирании — аккаунт не удаляе�
 test('хранилище молча ничего не стёрло — не крутимся вечно и аккаунт не трогаем', async ({ page }) => {
   await signedIn(page, { files: ['a.webp'], remove: 'noop' });
   await confirmDelete(page);
-  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  await expect(page.locator('#toast')).toHaveText(ASSETS_ERROR);
   expect(await calls(page)).toEqual(['list doc-assets/u1 limit=1000', 'remove u1/a.webp']);
   expect(await signedOut(page)).toBe(false);
 });
@@ -167,7 +173,7 @@ test('файл доехал между стиранием и удалением 
 test('страж отказал и при повторе — повторов больше нет, аккаунт остался', async ({ page }) => {
   await signedIn(page, { files: [], rpcAnswers: ['remain', 'remain', 'ok'] });
   await confirmDelete(page);
-  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  await expect(page.locator('#toast')).toHaveText(ASSETS_ERROR);
   expect((await calls(page)).filter((c) => c.startsWith('rpc'))).toEqual(['rpc delete_my_account', 'rpc delete_my_account']);
   expect(await signedOut(page)).toBe(false);
 });
@@ -179,7 +185,7 @@ test('папка стёрта, а аккаунт остался — картин
   await localImage(page, 'img1');
   const uploads = await cloudUploads(page);
   await confirmDelete(page);
-  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  await expect(page.locator('#toast')).toHaveText(DELETE_ERROR);
   await expect.poll(() => uploads).toEqual(['img1']);
   expect(await signedOut(page)).toBe(false);
 });
@@ -201,7 +207,7 @@ test('стирание не началось — возвращать в обл�
   await localImage(page, 'img1');
   const uploads = await cloudUploads(page);
   await confirmDelete(page);
-  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  await expect(page.locator('#toast')).toHaveText(ASSETS_ERROR);
   expect(await calls(page)).toEqual(['list doc-assets/u1 limit=1000']);
   // flush после сбоя всё равно проходит, но выгружать ему нечего.
   await page.waitForTimeout(300);
@@ -221,7 +227,7 @@ test('аккаунт удалён — картинки в облако не во
 test('другая ошибка удаления не повторяется', async ({ page }) => {
   await signedIn(page, { files: [], rpcAnswers: ['error', 'ok'] });
   await confirmDelete(page);
-  await expect(page.locator('#toast')).toHaveText('Не удалось удалить аккаунт. Проверьте соединение и попробуйте ещё раз.');
+  await expect(page.locator('#toast')).toHaveText(DELETE_ERROR);
   expect((await calls(page)).filter((c) => c.startsWith('rpc'))).toEqual(['rpc delete_my_account']);
   expect(await signedOut(page)).toBe(false);
 });

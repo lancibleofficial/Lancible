@@ -1125,14 +1125,25 @@ async function deleteAccount() {
   assetsPaused = true;
   const removedIds = [];
   let error = null;
+  // Отказ из-за картинок — своя причина, как на телефоне: человеку говорится,
+  // что аккаунт не удалён именно потому, что картинки стереть не вышло
+  // (account.delete_assets_error), а не общее «не удалось удалить». Это и
+  // ошибка самого стирания, и страж, который не пустил и после повтора.
+  let assetsFailed = false;
   try {
     // Загрузка, начатая до паузы, всё равно может успеть положить файл между
     // стиранием и удалением — тогда страж отвечает «account assets remain».
     // На это — один повтор, не больше.
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      await clearCloudAssets(uid, removedIds);
+      try {
+        await clearCloudAssets(uid, removedIds);
+      } catch (err) {
+        assetsFailed = true;
+        throw err;
+      }
       ({ error } = await sb.rpc('delete_my_account'));
-      if (!error || !/account assets remain/i.test(error.message || '')) break;
+      assetsFailed = !!error && /account assets remain/i.test(error.message || '');
+      if (!assetsFailed) break;
     }
   } catch (err) {
     error = err;
@@ -1140,7 +1151,7 @@ async function deleteAccount() {
   assetsPaused = false;
   if (error) {
     console.error('Не удалось удалить аккаунт:', error);
-    toast(t('account.delete_error'));
+    toast(t(assetsFailed ? 'account.delete_assets_error' : 'account.delete_error'));
     // Аккаунт остался, а папка в облаке уже стёрта целиком или частью: без
     // возврата картинки пропали бы на других устройствах. Те, что есть на
     // этом, снова встают в очередь и уходят в облако следующим flush.
