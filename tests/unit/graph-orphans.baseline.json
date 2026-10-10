@@ -626,16 +626,10 @@
       "at": "L235"
     },
     {
-      "id": "scripts_publish_release_loadenvfile",
-      "label": "loadEnvFile()",
-      "file": "scripts/publish-release.js",
-      "at": "L33"
-    },
-    {
       "id": "scripts_publish_release_main",
       "label": "main()",
       "file": "scripts/publish-release.js",
-      "at": "L115"
+      "at": "L208"
     },
     {
       "id": "scripts_publish_site_publishgraph",
