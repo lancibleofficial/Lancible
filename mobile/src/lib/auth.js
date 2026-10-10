@@ -146,31 +146,28 @@ async function clearCloudAssets(uid, removed) {
   }
 }
 
-/** Удаление аккаунта функцией delete_my_account в базе (supabase/legal.sql):
- *  она стирает того, кто её вызвал, остальное уходит каскадом. Картинки в
- *  облаке стираются заранее — см. clearCloudAssets. Копия на телефоне,
- *  вместе с картинками, остаётся. Пользователя на сервере после этого нет —
- *  выходим только локально. */
-export async function deleteAccount() {
-  let uid = null;
-  try {
-    const { data } = await sb.auth.getSession();
-    uid = data && data.session && data.session.user ? data.session.user.id : null;
-  } catch (err) {
-    console.error('Не удалось прочитать сессию:', err);
+/** Все картинки своей папки в облаке — id, страницами по 1000. Бросает на
+ *  ошибке хранилища. */
+async function listCloudAssets(uid) {
+  const bucket = sb.storage.from(ASSET_BUCKET);
+  const PAGE = 1000;
+  const names = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await bucket.list(uid, { limit: PAGE, offset });
+    if (error) throw error;
+    const page = data || [];
+    names.push(...page.filter((o) => o.id).map((o) => o.name));
+    if (page.length < PAGE) return names;
   }
-  if (!uid) return { ok: false };
+}
 
+/** Прежний путь, без серверной функции: папка стирается отсюда, потом
+ *  delete_my_account в базе (supabase/legal.sql). Нужен, пока функции нет
+ *  или до неё не достучаться. { error, assetsFailed, removed }. */
+async function deleteViaRpc(uid) {
   const removed = [];
   let error = null;
-  // Пока папка стирается, картинки в облако не уходят (useEditorAuth отдаёт
-  // null): иначе файл из очереди доехал бы в уже пустую папку, и страж не
-  // дал бы удалить аккаунт. Пауза снимается в любом исходе.
-  // Отказ из-за картинок — отдельная причина: человеку говорится, что
-  // аккаунт не удалён именно потому, что картинки стереть не вышло
-  // (account.delete_assets_error), а не общее «не удалось удалить».
   let assetsFailed = false;
-  useAppStore.getState().setAssetsPaused(true);
   try {
     // Загрузка, начатая до паузы, всё равно может успеть положить файл между
     // стиранием и удалением — тогда страж отвечает «account assets remain».
@@ -188,23 +185,96 @@ export async function deleteAccount() {
     }
   } catch (err) {
     error = err;
-  } finally {
-    useAppStore.getState().setAssetsPaused(false);
   }
+  return { error, assetsFailed, removed };
+}
 
-  if (error) {
-    console.error('Не удалось удалить аккаунт:', error);
-    // Аккаунт остался, а папка стёрта целиком или частью: без возврата
-    // картинки пропали бы на других устройствах. Те, что есть на этом
-    // телефоне, снова встанут в очередь при следующем открытии редактора
-    // (EditorScreen → DocEditor) и уйдут в облако.
-    if (removed.length) useAppStore.getState().queueAssetRequeue(removed);
-    return { ok: false, reason: assetsFailed ? 'assets' : 'delete' };
+/** Код ответа функции; null — до неё не достучались (сеть). */
+function functionStatus(error) {
+  if (error && error.name === 'FunctionsFetchError') return null;
+  const ctx = error && error.context;
+  return ctx && typeof ctx.status === 'number' ? ctx.status : -1;
+}
+
+/** Удаление аккаунта серверной функцией delete-account
+ *  (supabase/functions/delete-account): она стирает папку картинок и самого
+ *  пользователя, остальное уходит каскадом. Копия на телефоне, вместе с
+ *  картинками, остаётся. Пользователя на сервере после этого нет — выходим
+ *  только локально.
+ *
+ *  Ответы функции: 200 — удалён; 409 — картинки стереть не вышло, аккаунт
+ *  цел; 500 — картинки стёрты, аккаунт удалить не вышло; 404 или сеть —
+ *  функции нет, удаляем прежним путём (deleteViaRpc).
+ *
+ *  Что именно функция успела стереть, она не говорит. Поэтому перед вызовом
+ *  читаем свою папку сами: при 409 и 500 весь этот список встаёт на возврат.
+ *  Это надмножество стёртого, лишнее безвредно — выгрузка идёт с x-upsert, а
+ *  requeue пропускает картинки, которых на телефоне нет. Нечем страховаться
+ *  (список не прочитался) — функцию не зовём. */
+export async function deleteAccount() {
+  let uid = null;
+  try {
+    const { data } = await sb.auth.getSession();
+    uid = data && data.session && data.session.user ? data.session.user.id : null;
+  } catch (err) {
+    console.error('Не удалось прочитать сессию:', err);
   }
+  if (!uid) return { ok: false, reason: 'delete' };
+
+  const store = () => useAppStore.getState();
+  // Пока идёт удаление, картинки в облако не уходят (useEditorAuth отдаёт
+  // null): иначе файл из очереди доехал бы в уже пустую папку, и страж не
+  // дал бы удалить аккаунт. Пауза снимается в любом исходе.
+  store().setAssetsPaused(true);
+  let result;
+  try {
+    result = await deleteAccountPaused(uid);
+  } finally {
+    store().setAssetsPaused(false);
+  }
+  if (!result.ok) return result;
   // Аккаунта больше нет — возвращать в облако нечего и некуда.
-  useAppStore.getState().clearAssetRequeue();
+  store().clearAssetRequeue();
   try { await sb.auth.signOut({ scope: 'local' }); } catch (err) { console.error('Не удалось выйти:', err); }
   return { ok: true };
+}
+
+async function deleteAccountPaused(uid) {
+  const store = () => useAppStore.getState();
+  let listed;
+  try {
+    listed = await listCloudAssets(uid);
+  } catch (err) {
+    console.error('Не удалось прочитать картинки в облаке:', err);
+    return { ok: false, reason: 'delete' };
+  }
+
+  let error = null;
+  try {
+    ({ error } = await sb.functions.invoke('delete-account'));
+  } catch (err) {
+    error = err;
+  }
+  if (!error) return { ok: true };
+
+  const status = functionStatus(error);
+  if (status === 404 || status === null) {
+    // Функции нет или до неё не достучаться — прежний путь.
+    const old = await deleteViaRpc(uid);
+    if (!old.error) return { ok: true };
+    console.error('Не удалось удалить аккаунт:', old.error);
+    // Аккаунт остался, а папка стёрта целиком или частью: без возврата
+    // картинки пропали бы на других устройствах.
+    if (old.removed.length) store().queueAssetRequeue(old.removed);
+    return { ok: false, reason: old.assetsFailed ? 'assets' : 'delete' };
+  }
+
+  console.error('Не удалось удалить аккаунт:', status, error);
+  // 409 и 500: аккаунт цел, а папка, возможно, уже стёрта целиком или
+  // частью. Те картинки, что есть на этом телефоне, снова встанут в очередь
+  // при следующем открытии редактора (EditorScreen → DocEditor).
+  if ((status === 409 || status === 500) && listed.length) store().queueAssetRequeue(listed);
+  return { ok: false, reason: status === 409 ? 'assets' : 'delete' };
 }
 
 export async function updateProfileName(name) {
