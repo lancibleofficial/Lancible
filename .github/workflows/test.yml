@@ -109,4 +109,8 @@ jobs:
       # Отдельной работой, а не шагом в юнитах: эти тесты ходят в сеть, и
       # сбой на стороне Supabase не должен выглядеть как поломка кода.
       - run: npm ci --ignore-scripts
+      # Удаление аккаунта с картинками (account-assets.test.js) заводит
+      # настоящих пользователей — только по ручному запуску, не на каждый push.
       - run: npm run test:backend
+        env:
+          LANCIBLE_ACCOUNT_TEST: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
