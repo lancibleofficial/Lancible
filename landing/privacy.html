@@ -54,7 +54,7 @@
     <div class="wrap legal-layout">
       <div>
         <article class="legal-doc" data-lang="ru" lang="ru" data-title="Политика конфиденциальности — Lancible" data-heading="Политика конфиденциальности">
-          <p class="legal-meta">Редакция от <time datetime="2026-10-07">7 октября 2026 г.</time></p>
+          <p class="legal-meta">Редакция от <time datetime="2026-10-10">10 октября 2026 г.</time></p>
 
           <h2>1. О чём этот документ</h2>
           <p>Lancible — приложение для учёта задач, рабочего времени и заработка: для Windows, macOS, Android и в браузере (lancible.vercel.app/app). Здесь написано, какие данные мы получаем, зачем, где они хранятся и как ими управлять.</p>
@@ -66,12 +66,12 @@
             <li>Аккаунт нужен только для синхронизации между устройствами. Тогда данные хранятся в нашей базе, и видны они только вам.</li>
             <li>Мы не продаём данные, не показываем рекламу и не передаём данные рекламным сетям.</li>
             <li>Аналитики сейчас нет. Если она появится, сайт включит её только с вашего согласия.</li>
-            <li>Удалить аккаунт и все данные можно прямо в приложении: Настройки → Аккаунт → «Удалить аккаунт».</li>
+            <li>Удалить аккаунт и все данные можно прямо в приложении: на компьютере и в браузере — Настройки → Аккаунт → «Удалить аккаунт», на телефоне — Меню → карточка профиля → «Удалить аккаунт».</li>
           </ul>
 
           <h2>3. Какие данные и зачем</h2>
           <h3>Без аккаунта</h3>
-          <p>Проекты, задачи, заметки, записи времени, ставки и настройки хранятся только на устройстве: в папке данных приложения на компьютере, в памяти приложения на телефоне, в хранилище браузера в веб-версии. Доступа к ним у нас нет. Напоминания о сроках планируются на самом устройстве, без наших серверов.</p>
+          <p>Проекты, задачи, заметки с картинками, записи времени, ставки и настройки хранятся только на устройстве: в папке данных приложения на компьютере, в памяти приложения на телефоне, в хранилище браузера в веб-версии. Доступа к ним у нас нет. Напоминания о сроках планируются на самом устройстве, без наших серверов.</p>
           <h3>С аккаунтом</h3>
           <table class="legal-table">
             <thead><tr><th>Данные</th><th>Зачем</th><th>Основание</th></tr></thead>
@@ -81,11 +81,11 @@
               <tr><td>Имя — необязательно</td><td>Обращаться к вам в приложении</td><td>Исполнение договора</td></tr>
               <tr><td>Для чего вы используете Lancible — необязательно, вопрос можно пропустить</td><td>Понять, для кого развивать продукт</td><td>Ваше согласие</td></tr>
               <tr><td>Отметка о согласии: версия документов, время, подтверждение возраста</td><td>Подтвердить, что согласие получено</td><td>Юридическая обязанность</td></tr>
-              <tr><td>Проекты, задачи, заметки, записи времени, ставки, теги, статусы</td><td>Синхронизация между вашими устройствами</td><td>Исполнение договора</td></tr>
+              <tr><td>Проекты, задачи, заметки и картинки в них, записи времени, ставки, теги, статусы</td><td>Синхронизация между вашими устройствами</td><td>Исполнение договора</td></tr>
             </tbody>
           </table>
           <h3>Технические данные</h3>
-          <p>Когда вы открываете сайт или веб-версию, а приложение обращается к серверам, хостинг-провайдеры (раздел 5) автоматически видят IP-адрес, время запроса и тип браузера или устройства. Эти записи нужны, чтобы доставлять страницы, защищаться от атак и искать ошибки; составлять по ним ваш профиль мы не будем. Основание — законный интерес в безопасной работе сервиса.</p>
+          <p>Когда вы открываете сайт или веб-версию, а приложение обращается к серверам, хостинг-провайдеры (раздел 5) автоматически видят IP-адрес, время запроса и тип браузера или устройства. Эти записи нужны, чтобы доставлять страницы, защищаться от атак и искать ошибки; составлять по ним ваш профиль мы не будем. Служебная страница журнала работы (/logs) читает записи прямо из нашей базы, поэтому её посетителя так же видит Supabase. Основание — законный интерес в безопасной работе сервиса.</p>
           <p>Приложение для компьютера проверяет обновления в хранилище релизов, приложение для Android — по файлу с номером последней версии на GitHub. При этом передаются только обычные данные запроса: IP-адрес и версия приложения.</p>
 
           <h2>4. Чего мы не делаем</h2>
@@ -99,17 +99,17 @@
           <h2>5. Кто ещё обрабатывает данные</h2>
           <p>Только поставщики, без которых сервис не работает. Каждый обрабатывает данные по нашему поручению и в объёме, нужном для своей задачи:</p>
           <ul>
-            <li><strong>Supabase Inc.</strong> — база данных и вход в аккаунт. Где хранятся данные: <span data-biz="dataRegion">[не заполнено]</span>.</li>
+            <li><strong>Supabase Inc.</strong> — база данных, хранилище картинок из заметок и вход в аккаунт. Где хранятся данные: Япония, Токио (регион <span data-biz="dataRegion">[не заполнено]</span>).</li>
             <li><strong>Vercel Inc.</strong> — хостинг сайта и веб-версии.</li>
             <li><strong>GitHub, Inc.</strong> — раздача установщиков и сведений об обновлениях.</li>
             <li><strong>Google LLC</strong> — только если вы выбрали вход через Google.</li>
           </ul>
-          <p>Часть поставщиков находится в США. Данные передаются за пределы вашей страны на основании стандартных договорных условий или другого механизма, который допускает применимое право.</p>
+          <p>База данных и файлы хранятся в Японии (Токио), а Supabase, Vercel, GitHub и Google — компании из США. Поэтому данные передаются за пределы вашей страны: для жителей ЕС в Японию — на основании решения Европейской комиссии о достаточном уровне защиты данных в Японии, в США — на основании стандартных договорных условий; в остальных случаях — на основании механизма, который допускает применимое право.</p>
           <p>Государственным органам мы раскрываем данные только по законному требованию и в минимально необходимом объёме.</p>
 
           <h2>6. Сколько храним</h2>
           <ul>
-            <li>Данные аккаунта и синхронизации — пока существует аккаунт. После удаления аккаунта они стираются сразу, из резервных копий базы — в течение 30 дней.</li>
+            <li>Данные аккаунта и синхронизации, в том числе картинки из заметок, — пока существует аккаунт. После удаления аккаунта они стираются сразу, из резервных копий базы — в течение 30 дней.</li>
             <li>Технические журналы хостинга — по правилам поставщиков, обычно не дольше 30 дней.</li>
             <li>Данные без аккаунта — у вас на устройстве, пока вы сами их не удалите.</li>
           </ul>
@@ -142,7 +142,7 @@
           <p><span data-biz="name">[не заполнено]</span>, <span data-biz="address">[не заполнено]</span>. Почта: <span data-biz="email">[не заполнено]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="en" lang="en" hidden data-title="Privacy Policy — Lancible" data-heading="Privacy Policy">
-          <p class="legal-meta">Last updated <time datetime="2026-10-07">7 October 2026</time></p>
+          <p class="legal-meta">Last updated <time datetime="2026-10-10">10 October 2026</time></p>
 
           <h2>1. About this document</h2>
           <p>Lancible is an app for tracking tasks, working time and earnings, available for Windows, macOS, Android and in the browser (lancible.vercel.app/app). This policy explains what data we receive, why, where it is stored and how you can control it.</p>
@@ -154,12 +154,12 @@
             <li>An account is only needed to sync between devices. Your data is then stored in our database and visible only to you.</li>
             <li>We do not sell data, show ads or share data with ad networks.</li>
             <li>There is no analytics today. If we add it, the site will turn it on only with your consent.</li>
-            <li>You can delete your account and all its data right in the app: Settings → Account → “Delete account”.</li>
+            <li>You can delete your account and all its data right in the app: on a computer or in the browser — Settings → Account → “Delete account”; on a phone — Menu → profile card → “Delete account”.</li>
           </ul>
 
           <h2>3. What data and why</h2>
           <h3>Without an account</h3>
-          <p>Projects, tasks, notes, time entries, rates and settings are stored only on your device: in the app data folder on a computer, in app storage on a phone, and in browser storage in the web version. We have no access to them. Deadline reminders are scheduled on the device itself, without our servers.</p>
+          <p>Projects, tasks, notes with their images, time entries, rates and settings are stored only on your device: in the app data folder on a computer, in app storage on a phone, and in browser storage in the web version. We have no access to them. Deadline reminders are scheduled on the device itself, without our servers.</p>
           <h3>With an account</h3>
           <table class="legal-table">
             <thead><tr><th>Data</th><th>Purpose</th><th>Legal basis</th></tr></thead>
@@ -169,11 +169,11 @@
               <tr><td>Name — optional</td><td>Addressing you in the app</td><td>Performance of a contract</td></tr>
               <tr><td>What you use Lancible for — optional, you can skip the question</td><td>Understanding who to build the product for</td><td>Your consent</td></tr>
               <tr><td>Consent record: document version, time, age confirmation</td><td>Proving that consent was given</td><td>Legal obligation</td></tr>
-              <tr><td>Projects, tasks, notes, time entries, rates, tags, statuses</td><td>Syncing between your devices</td><td>Performance of a contract</td></tr>
+              <tr><td>Projects, tasks, notes and the images in them, time entries, rates, tags, statuses</td><td>Syncing between your devices</td><td>Performance of a contract</td></tr>
             </tbody>
           </table>
           <h3>Technical data</h3>
-          <p>When you open the site or the web version, or the app contacts our servers, the hosting providers (section 5) automatically see your IP address, the time of the request and the browser or device type. These records are needed to deliver pages, defend against attacks and find bugs; we will not use them to build a profile of you. Legal basis: legitimate interest in running the service securely.</p>
+          <p>When you open the site or the web version, or the app contacts our servers, the hosting providers (section 5) automatically see your IP address, the time of the request and the browser or device type. These records are needed to deliver pages, defend against attacks and find bugs; we will not use them to build a profile of you. The service page with our work log (/logs) reads its entries straight from our database, so Supabase sees its visitors in the same way. Legal basis: legitimate interest in running the service securely.</p>
           <p>The desktop app checks for updates in the release storage, and the Android app checks a file with the latest version number on GitHub. Only ordinary request data is sent: IP address and app version.</p>
 
           <h2>4. What we do not do</h2>
@@ -187,17 +187,17 @@
           <h2>5. Who else processes data</h2>
           <p>Only the providers the service cannot work without. Each one processes data on our behalf and only as far as its task requires:</p>
           <ul>
-            <li><strong>Supabase Inc.</strong> — database and sign-in. Where the data is stored: <span data-biz="dataRegion">[not provided yet]</span>.</li>
+            <li><strong>Supabase Inc.</strong> — database, storage for images in notes, and sign-in. Where the data is stored: Tokyo, Japan (region <span data-biz="dataRegion">[not provided yet]</span>).</li>
             <li><strong>Vercel Inc.</strong> — hosting of the website and the web version.</li>
             <li><strong>GitHub, Inc.</strong> — distribution of installers and update information.</li>
             <li><strong>Google LLC</strong> — only if you choose to sign in with Google.</li>
           </ul>
-          <p>Some providers are located in the USA. Data is transferred outside your country on the basis of Standard Contractual Clauses or another mechanism permitted by applicable law.</p>
+          <p>The database and files are stored in Japan (Tokyo), and Supabase, Vercel, GitHub and Google are US companies. Data is therefore transferred outside your country: for residents of the EU, to Japan on the basis of the European Commission’s decision that Japan ensures an adequate level of data protection, and to the USA on the basis of Standard Contractual Clauses; in other cases, on the basis of a mechanism permitted by applicable law.</p>
           <p>We disclose data to public authorities only when legally required and only to the minimum extent necessary.</p>
 
           <h2>6. How long we keep data</h2>
           <ul>
-            <li>Account and sync data — for as long as the account exists. When you delete the account, the data is erased immediately and from database backups within 30 days.</li>
+            <li>Account and sync data, including images in notes — for as long as the account exists. When you delete the account, the data is erased immediately and from database backups within 30 days.</li>
             <li>Hosting logs — according to the providers’ rules, usually no longer than 30 days.</li>
             <li>Data without an account — on your device until you delete it.</li>
           </ul>
@@ -230,7 +230,7 @@
           <p><span data-biz="name">[not provided yet]</span>, <span data-biz="address">[not provided yet]</span>. Email: <span data-biz="email">[not provided yet]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="uk" lang="uk" hidden data-title="Політика конфіденційності — Lancible" data-heading="Політика конфіденційності">
-          <p class="legal-meta">Редакція від <time datetime="2026-10-07">7 жовтня 2026 р.</time></p>
+          <p class="legal-meta">Редакція від <time datetime="2026-10-10">10 жовтня 2026 р.</time></p>
 
           <h2>1. Про що цей документ</h2>
           <p>Lancible — застосунок для обліку завдань, робочого часу та заробітку: для Windows, macOS, Android і в браузері (lancible.vercel.app/app). Тут написано, які дані ми отримуємо, навіщо, де вони зберігаються і як ними керувати.</p>
@@ -242,12 +242,12 @@
             <li>Акаунт потрібен лише для синхронізації між пристроями. Тоді дані зберігаються в нашій базі, і бачите їх лише ви.</li>
             <li>Ми не продаємо дані, не показуємо рекламу й не передаємо дані рекламним мережам.</li>
             <li>Аналітики зараз немає. Якщо вона з’явиться, сайт увімкне її лише з вашої згоди.</li>
-            <li>Видалити акаунт і всі дані можна просто в застосунку: Налаштування → Акаунт → «Видалити акаунт».</li>
+            <li>Видалити акаунт і всі дані можна просто в застосунку: на комп’ютері та в браузері — Налаштування → Акаунт → «Видалити акаунт», на телефоні — Меню → картка профілю → «Видалити акаунт».</li>
           </ul>
 
           <h2>3. Які дані та навіщо</h2>
           <h3>Без акаунта</h3>
-          <p>Проєкти, завдання, нотатки, записи часу, ставки й налаштування зберігаються лише на пристрої: у теці даних застосунку на комп’ютері, у пам’яті застосунку на телефоні, у сховищі браузера у веб-версії. Доступу до них у нас немає. Нагадування про терміни плануються на самому пристрої, без наших серверів.</p>
+          <p>Проєкти, завдання, нотатки із зображеннями, записи часу, ставки й налаштування зберігаються лише на пристрої: у теці даних застосунку на комп’ютері, у пам’яті застосунку на телефоні, у сховищі браузера у веб-версії. Доступу до них у нас немає. Нагадування про терміни плануються на самому пристрої, без наших серверів.</p>
           <h3>З акаунтом</h3>
           <table class="legal-table">
             <thead><tr><th>Дані</th><th>Навіщо</th><th>Підстава</th></tr></thead>
@@ -257,11 +257,11 @@
               <tr><td>Ім’я — необов’язково</td><td>Звертатися до вас у застосунку</td><td>Виконання договору</td></tr>
               <tr><td>Для чого ви використовуєте Lancible — необов’язково, питання можна пропустити</td><td>Зрозуміти, для кого розвивати продукт</td><td>Ваша згода</td></tr>
               <tr><td>Позначка про згоду: версія документів, час, підтвердження віку</td><td>Підтвердити, що згоду отримано</td><td>Юридичний обов’язок</td></tr>
-              <tr><td>Проєкти, завдання, нотатки, записи часу, ставки, теги, статуси</td><td>Синхронізація між вашими пристроями</td><td>Виконання договору</td></tr>
+              <tr><td>Проєкти, завдання, нотатки й зображення в них, записи часу, ставки, теги, статуси</td><td>Синхронізація між вашими пристроями</td><td>Виконання договору</td></tr>
             </tbody>
           </table>
           <h3>Технічні дані</h3>
-          <p>Коли ви відкриваєте сайт або веб-версію, а застосунок звертається до серверів, хостинг-провайдери (розділ 5) автоматично бачать IP-адресу, час запиту й тип браузера чи пристрою. Ці записи потрібні, щоб доставляти сторінки, захищатися від атак і шукати помилки; складати за ними ваш профіль ми не будемо. Підстава — законний інтерес у безпечній роботі сервісу.</p>
+          <p>Коли ви відкриваєте сайт або веб-версію, а застосунок звертається до серверів, хостинг-провайдери (розділ 5) автоматично бачать IP-адресу, час запиту й тип браузера чи пристрою. Ці записи потрібні, щоб доставляти сторінки, захищатися від атак і шукати помилки; складати за ними ваш профіль ми не будемо. Службова сторінка журналу роботи (/logs) читає записи просто з нашої бази, тож її відвідувача так само бачить Supabase. Підстава — законний інтерес у безпечній роботі сервісу.</p>
           <p>Застосунок для комп’ютера перевіряє оновлення у сховищі релізів, застосунок для Android — за файлом із номером останньої версії на GitHub. Передаються лише звичайні дані запиту: IP-адреса й версія застосунку.</p>
 
           <h2>4. Чого ми не робимо</h2>
@@ -275,17 +275,17 @@
           <h2>5. Хто ще обробляє дані</h2>
           <p>Лише постачальники, без яких сервіс не працює. Кожен обробляє дані за нашим дорученням і в обсязі, потрібному для свого завдання:</p>
           <ul>
-            <li><strong>Supabase Inc.</strong> — база даних і вхід в акаунт. Де зберігаються дані: <span data-biz="dataRegion">[не заповнено]</span>.</li>
+            <li><strong>Supabase Inc.</strong> — база даних, сховище зображень із нотаток і вхід в акаунт. Де зберігаються дані: Японія, Токіо (регіон <span data-biz="dataRegion">[не заповнено]</span>).</li>
             <li><strong>Vercel Inc.</strong> — хостинг сайту й веб-версії.</li>
             <li><strong>GitHub, Inc.</strong> — роздача інсталяторів і відомостей про оновлення.</li>
             <li><strong>Google LLC</strong> — лише якщо ви обрали вхід через Google.</li>
           </ul>
-          <p>Частина постачальників розташована у США. Дані передаються за межі вашої країни на підставі стандартних договірних умов або іншого механізму, який допускає застосовне право.</p>
+          <p>База даних і файли зберігаються в Японії (Токіо), а Supabase, Vercel, GitHub і Google — компанії зі США. Тому дані передаються за межі вашої країни: для мешканців ЄС до Японії — на підставі рішення Європейської комісії про належний рівень захисту даних у Японії, до США — на підставі стандартних договірних умов; в інших випадках — на підставі механізму, який допускає застосовне право.</p>
           <p>Державним органам ми розкриваємо дані лише на законну вимогу й у мінімально необхідному обсязі.</p>
 
           <h2>6. Скільки зберігаємо</h2>
           <ul>
-            <li>Дані акаунта й синхронізації — доки існує акаунт. Після видалення акаунта вони стираються одразу, з резервних копій бази — протягом 30 днів.</li>
+            <li>Дані акаунта й синхронізації, зокрема зображення з нотаток, — доки існує акаунт. Після видалення акаунта вони стираються одразу, з резервних копій бази — протягом 30 днів.</li>
             <li>Технічні журнали хостингу — за правилами постачальників, зазвичай не довше 30 днів.</li>
             <li>Дані без акаунта — на вашому пристрої, доки ви самі їх не видалите.</li>
           </ul>
@@ -318,7 +318,7 @@
           <p><span data-biz="name">[не заповнено]</span>, <span data-biz="address">[не заповнено]</span>. Пошта: <span data-biz="email">[не заповнено]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="kk" lang="kk" hidden data-title="Құпиялылық саясаты — Lancible" data-heading="Құпиялылық саясаты">
-          <p class="legal-meta">Редакция күні: <time datetime="2026-10-07">2026 жылғы 7 қазан</time></p>
+          <p class="legal-meta">Редакция күні: <time datetime="2026-10-10">2026 жылғы 10 қазан</time></p>
 
           <h2>1. Бұл құжат не туралы</h2>
           <p>Lancible — тапсырмаларды, жұмыс уақытын және табысты есепке алуға арналған қосымша: Windows, macOS, Android үшін және браузерде (lancible.vercel.app/app). Мұнда біз қандай деректер алатынымыз, не үшін, олар қайда сақталатыны және оларды қалай басқаруға болатыны жазылған.</p>
@@ -330,12 +330,12 @@
             <li>Аккаунт тек құрылғылар арасында синхрондау үшін керек. Сонда деректер біздің дерекқорда сақталады және оларды тек сіз көресіз.</li>
             <li>Біз деректерді сатпаймыз, жарнама көрсетпейміз және деректерді жарнама желілеріне бермейміз.</li>
             <li>Қазір аналитика жоқ. Ол пайда болса, сайт оны тек сіздің келісіміңізбен қосады.</li>
-            <li>Аккаунтты және барлық деректерді тікелей қосымшада жоюға болады: Баптаулар → Аккаунт → «Аккаунтты жою».</li>
+            <li>Аккаунтты және барлық деректерді тікелей қосымшада жоюға болады: компьютерде және браузерде — Параметрлер → Аккаунт → «Аккаунтты жою», телефонда — Мәзір → профиль карточкасы → «Аккаунтты жою».</li>
           </ul>
 
           <h2>3. Қандай деректер және не үшін</h2>
           <h3>Аккаунтсыз</h3>
-          <p>Жобалар, тапсырмалар, жазбалар, уақыт жазбалары, мөлшерлемелер мен баптаулар тек құрылғыда сақталады: компьютерде қосымшаның деректер қалтасында, телефонда қосымша жадында, веб-нұсқада браузер қоймасында. Оларға біздің қолжетімділігіміз жоқ. Мерзімдер туралы еске салғыштар біздің серверлерсіз, құрылғының өзінде жоспарланады.</p>
+          <p>Жобалар, тапсырмалар, суреттері бар жазбалар, уақыт жазбалары, мөлшерлемелер мен баптаулар тек құрылғыда сақталады: компьютерде қосымшаның деректер қалтасында, телефонда қосымша жадында, веб-нұсқада браузер қоймасында. Оларға біздің қолжетімділігіміз жоқ. Мерзімдер туралы еске салғыштар біздің серверлерсіз, құрылғының өзінде жоспарланады.</p>
           <h3>Аккаунтпен</h3>
           <table class="legal-table">
             <thead><tr><th>Деректер</th><th>Не үшін</th><th>Негіз</th></tr></thead>
@@ -345,11 +345,11 @@
               <tr><td>Аты — міндетті емес</td><td>Қосымшада сізге есіміңізбен жүгіну</td><td>Шартты орындау</td></tr>
               <tr><td>Lancible-ді не үшін қолданатыныңыз — міндетті емес, сұрақты өткізіп жіберуге болады</td><td>Өнімді кім үшін дамыту керегін түсіну</td><td>Сіздің келісіміңіз</td></tr>
               <tr><td>Келісім белгісі: құжаттар нұсқасы, уақыты, жасты растау</td><td>Келісім алынғанын растау</td><td>Заңды міндет</td></tr>
-              <tr><td>Жобалар, тапсырмалар, жазбалар, уақыт жазбалары, мөлшерлемелер, тегтер, мәртебелер</td><td>Құрылғыларыңыз арасында синхрондау</td><td>Шартты орындау</td></tr>
+              <tr><td>Жобалар, тапсырмалар, жазбалар және олардағы суреттер, уақыт жазбалары, мөлшерлемелер, тегтер, мәртебелер</td><td>Құрылғыларыңыз арасында синхрондау</td><td>Шартты орындау</td></tr>
             </tbody>
           </table>
           <h3>Техникалық деректер</h3>
-          <p>Сіз сайтты немесе веб-нұсқаны ашқанда, ал қосымша серверлерге жүгінгенде, хостинг провайдерлері (5-бөлім) IP мекенжайын, сұрау уақытын және браузер не құрылғы түрін автоматты түрде көреді. Бұл жазбалар беттерді жеткізу, шабуылдардан қорғану және қателерді іздеу үшін керек; олар бойынша сіздің профиліңізді құрмаймыз. Негіз — қызметтің қауіпсіз жұмысына деген заңды мүдде.</p>
+          <p>Сіз сайтты немесе веб-нұсқаны ашқанда, ал қосымша серверлерге жүгінгенде, хостинг провайдерлері (5-бөлім) IP мекенжайын, сұрау уақытын және браузер не құрылғы түрін автоматты түрде көреді. Бұл жазбалар беттерді жеткізу, шабуылдардан қорғану және қателерді іздеу үшін керек; олар бойынша сіздің профиліңізді құрмаймыз. Жұмыс журналының қызметтік беті (/logs) жазбаларды тікелей біздің дерекқордан оқиды, сондықтан оның келушісін Supabase та осылай көреді. Негіз — қызметтің қауіпсіз жұмысына деген заңды мүдде.</p>
           <p>Компьютерге арналған қосымша жаңартуларды релиздер қоймасынан, Android қосымшасы GitHub-тағы соңғы нұсқа нөмірі бар файлдан тексереді. Тек қарапайым сұрау деректері беріледі: IP мекенжайы және қосымша нұсқасы.</p>
 
           <h2>4. Біз не істемейміз</h2>
@@ -363,17 +363,17 @@
           <h2>5. Деректерді тағы кім өңдейді</h2>
           <p>Тек қызмет оларсыз жұмыс істей алмайтын жеткізушілер. Әрқайсысы деректерді біздің тапсырмамыз бойынша және өз міндетіне қажетті көлемде ғана өңдейді:</p>
           <ul>
-            <li><strong>Supabase Inc.</strong> — дерекқор және аккаунтқа кіру. Деректер сақталатын орын: <span data-biz="dataRegion">[толтырылмаған]</span>.</li>
+            <li><strong>Supabase Inc.</strong> — дерекқор, жазбалардағы суреттер қоймасы және аккаунтқа кіру. Деректер сақталатын орын: Жапония, Токио (<span data-biz="dataRegion">[толтырылмаған]</span> өңірі).</li>
             <li><strong>Vercel Inc.</strong> — сайт пен веб-нұсқаның хостингі.</li>
             <li><strong>GitHub, Inc.</strong> — орнатқыштарды және жаңартулар туралы мәліметтерді тарату.</li>
             <li><strong>Google LLC</strong> — тек Google арқылы кіруді таңдасаңыз.</li>
           </ul>
-          <p>Жеткізушілердің бір бөлігі АҚШ-та орналасқан. Деректер еліңізден тыс стандартты шарттық талаптар немесе қолданылатын құқық рұқсат ететін басқа тетік негізінде беріледі.</p>
+          <p>Дерекқор мен файлдар Жапонияда (Токио) сақталады, ал Supabase, Vercel, GitHub және Google — АҚШ компаниялары. Сондықтан деректер еліңізден тыс беріледі: ЕО тұрғындары үшін Жапонияға — Еуропалық комиссияның Жапониядағы деректерді қорғаудың тиісті деңгейі туралы шешімі негізінде, АҚШ-қа — стандартты шарттық талаптар негізінде; басқа жағдайларда — қолданылатын құқық рұқсат ететін тетік негізінде.</p>
           <p>Мемлекеттік органдарға деректерді тек заңды талап бойынша және ең аз қажетті көлемде ашамыз.</p>
 
           <h2>6. Қанша уақыт сақтаймыз</h2>
           <ul>
-            <li>Аккаунт пен синхрондау деректері — аккаунт бар болғанша. Аккаунт жойылғаннан кейін олар бірден, ал дерекқордың сақтық көшірмелерінен 30 күн ішінде өшіріледі.</li>
+            <li>Аккаунт пен синхрондау деректері, оның ішінде жазбалардағы суреттер, — аккаунт бар болғанша. Аккаунт жойылғаннан кейін олар бірден, ал дерекқордың сақтық көшірмелерінен 30 күн ішінде өшіріледі.</li>
             <li>Хостингтің техникалық журналдары — жеткізушілердің ережелері бойынша, әдетте 30 күннен аспайды.</li>
             <li>Аккаунтсыз деректер — өзіңіз жойғанша құрылғыңызда.</li>
           </ul>

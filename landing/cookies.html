@@ -54,10 +54,10 @@
     <div class="wrap legal-layout">
       <div>
         <article class="legal-doc" data-lang="ru" lang="ru" data-title="Политика cookie — Lancible" data-heading="Политика cookie">
-          <p class="legal-meta">Редакция от <time datetime="2026-10-07">7 октября 2026 г.</time></p>
+          <p class="legal-meta">Редакция от <time datetime="2026-10-10">10 октября 2026 г.</time></p>
 
           <h2>Что это</h2>
-          <p>Cookie — небольшие файлы, которые сайт сохраняет в браузере. Похоже работает и localStorage — хранилище браузера. Эта Политика описывает и то и другое; для простоты дальше всё вместе называется «cookie».</p>
+          <p>Cookie — небольшие файлы, которые сайт сохраняет в браузере. Похоже работают и хранилища браузера — localStorage и IndexedDB. Эта Политика описывает и то и другое; для простоты дальше всё вместе называется «cookie».</p>
 
           <h2>Что использует Lancible</h2>
 
@@ -67,16 +67,18 @@
               <tr><td><code>lancible:consent</code></td><td>сайт</td><td>помнит ваш выбор в баннере cookie</td><td>пока вы его не смените или не очистите браузер</td></tr>
               <tr><td><code>lancible:lang</code></td><td>сайт</td><td>язык сайта: документов, блога и остальных страниц</td><td>пока вы его не смените или не очистите браузер</td></tr>
               <tr><td><code>lancible:data</code></td><td>веб-версия (/app)</td><td>ваши проекты и задачи: без аккаунта это единственное место, где они хранятся</td><td>пока вы их не удалите</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-версия (/app)</td><td>картинки, вставленные в заметки</td><td>пока вы не очистите данные сайта</td></tr>
+              <tr><td><code>lancible.theme</code></td><td>веб-версия (/app)</td><td>тема оформления: светлая, тёмная или как в системе</td><td>пока вы её не смените или не очистите браузер</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>веб-версия, только после входа</td><td>держит вас в аккаунте</td><td>до выхода из аккаунта</td></tr>
             </tbody>
           </table>
-          <p>Всё это — необходимые хранилища: без них сайт и веб-версия не работают так, как вы ожидаете, поэтому согласия на них закон не требует. Никуда, кроме вашего браузера, они не попадают — кроме ключа входа, которым веб-версия подтверждает вход нашей базе при синхронизации.</p>
+          <p>Всё это — необходимые хранилища: без них сайт и веб-версия не работают так, как вы ожидаете, поэтому согласия на них закон не требует. Сами по себе они никуда не отправляются. Если вы вошли в аккаунт и синхронизация включена, веб-версия отправляет в нашу базу содержимое <code>lancible:data</code> и <code>lancible-assets</code> — ваши проекты, задачи, заметки и картинки — и подтверждает вход ключом из <code>sb-…-auth-token</code>; подробнее — в <a href="privacy.html">Политике конфиденциальности</a>.</p>
 
           <h2>Аналитика</h2>
           <p>Сейчас аналитики на сайте нет. Если мы её подключим, она будет включаться только после того, как вы нажмёте «Принять все» или отметите «Аналитику» в настройках, — до этого её скрипт не загрузится вовсе. До подключения мы впишем сюда, какой сервис используется и какие cookie он ставит.</p>
 
           <h2>Реклама и сторонние трекеры</h2>
-          <p>Рекламных cookie и трекеров нет. Шрифты сайта лежат на наших серверах, поэтому сторонние сервисы о вашем визите не узнают. Внешние ресурсы открываются, только когда вы сами переходите по ссылке — например, на GitHub за установщиком.</p>
+          <p>Рекламных cookie и трекеров нет. Шрифты сайта лежат на наших серверах, поэтому сторонние сервисы о вашем визите не узнают. Внешние ресурсы открываются, только когда вы сами переходите по ссылке — например, на GitHub за установщиком. Одно исключение — служебная страница журнала работы (/logs): она читает записи из нашей базы у Supabase, нашего поставщика, и тот видит IP-адрес запроса. Cookie эта страница не ставит.</p>
 
           <h2>Как поменять выбор</h2>
           <p>Нажмите кнопку ниже — или «Настройки cookie» внизу любой страницы сайта: согласие отзывается так же быстро, как даётся. Ещё можно удалить cookie и данные сайта в настройках браузера — тогда баннер спросит снова. Учтите: так удалится и всё, что веб-версия хранит без аккаунта.</p>
@@ -86,10 +88,10 @@
           <p><span data-biz="name">[не заполнено]</span>. Почта: <span data-biz="email">[не заполнено]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="en" lang="en" hidden data-title="Cookie Policy — Lancible" data-heading="Cookie Policy">
-          <p class="legal-meta">Last updated <time datetime="2026-10-07">7 October 2026</time></p>
+          <p class="legal-meta">Last updated <time datetime="2026-10-10">10 October 2026</time></p>
 
           <h2>What this is</h2>
-          <p>Cookies are small files a website saves in your browser. localStorage — the browser’s built-in storage — works in a similar way. This Policy covers both; for simplicity, we call them all “cookies” below.</p>
+          <p>Cookies are small files a website saves in your browser. The browser’s built-in storage — localStorage and IndexedDB — works in a similar way. This Policy covers both; for simplicity, we call them all “cookies” below.</p>
 
           <h2>What Lancible uses</h2>
 
@@ -99,16 +101,18 @@
               <tr><td><code>lancible:consent</code></td><td>website</td><td>remembers your choice in the cookie banner</td><td>until you change it or clear your browser</td></tr>
               <tr><td><code>lancible:lang</code></td><td>website</td><td>site language: documents, blog and the other pages</td><td>until you change it or clear your browser</td></tr>
               <tr><td><code>lancible:data</code></td><td>web version (/app)</td><td>your projects and tasks: without an account this is the only place they are stored</td><td>until you delete them</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>web version (/app)</td><td>images you insert into notes</td><td>until you clear the site data</td></tr>
+              <tr><td><code>lancible.theme</code></td><td>web version (/app)</td><td>appearance: light, dark or system theme</td><td>until you change it or clear your browser</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>web version, only after signing in</td><td>keeps you signed in</td><td>until you sign out</td></tr>
             </tbody>
           </table>
-          <p>All of these are strictly necessary: without them the website and the web version would not work as you expect, so the law does not require consent for them. They never leave your browser — except the sign-in token, which the web version uses to prove to our database that you are signed in when syncing.</p>
+          <p>All of these are strictly necessary: without them the website and the web version would not work as you expect, so the law does not require consent for them. On their own they are not sent anywhere. If you are signed in and sync is on, the web version sends the contents of <code>lancible:data</code> and <code>lancible-assets</code> — your projects, tasks, notes and images — to our database and proves that you are signed in with the token from <code>sb-…-auth-token</code>; see the <a href="privacy.html">Privacy Policy</a> for details.</p>
 
           <h2>Analytics</h2>
           <p>There is no analytics on the site today. If we add it, it will only switch on after you click “Accept all” or tick “Analytics” in the settings — until then its script will not load at all. Before adding it, we will list here which service is used and which cookies it sets.</p>
 
           <h2>Advertising and third-party trackers</h2>
-          <p>There are no advertising cookies or trackers. The site’s fonts are served from our own servers, so third-party services do not learn about your visit. External resources only open when you follow a link yourself — for example, to GitHub to download an installer.</p>
+          <p>There are no advertising cookies or trackers. The site’s fonts are served from our own servers, so third-party services do not learn about your visit. External resources only open when you follow a link yourself — for example, to GitHub to download an installer. One exception is the service page with our work log (/logs): it reads entries from our database at Supabase, our provider, which sees the IP address of the request. This page sets no cookies.</p>
 
           <h2>How to change your choice</h2>
           <p>Use the button below — or the “Настройки cookie” (Cookie settings) link at the bottom of every page: you can withdraw consent as quickly as you gave it. You can also delete cookies and site data in your browser settings — the banner will then ask again. Note that this also deletes everything the web version stores without an account.</p>
@@ -118,10 +122,10 @@
           <p><span data-biz="name">[not provided yet]</span>. Email: <span data-biz="email">[not provided yet]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="uk" lang="uk" hidden data-title="Політика cookie — Lancible" data-heading="Політика cookie">
-          <p class="legal-meta">Редакція від <time datetime="2026-10-07">7 жовтня 2026 р.</time></p>
+          <p class="legal-meta">Редакція від <time datetime="2026-10-10">10 жовтня 2026 р.</time></p>
 
           <h2>Що це</h2>
-          <p>Cookie — невеликі файли, які сайт зберігає в браузері. Схоже працює й localStorage — сховище браузера. Ця Політика описує і те, і інше; для простоти далі все разом називається «cookie».</p>
+          <p>Cookie — невеликі файли, які сайт зберігає в браузері. Схоже працюють і сховища браузера — localStorage та IndexedDB. Ця Політика описує і те, і інше; для простоти далі все разом називається «cookie».</p>
 
           <h2>Що використовує Lancible</h2>
 
@@ -131,16 +135,18 @@
               <tr><td><code>lancible:consent</code></td><td>сайт</td><td>пам’ятає ваш вибір у банері cookie</td><td>доки ви його не зміните або не очистите браузер</td></tr>
               <tr><td><code>lancible:lang</code></td><td>сайт</td><td>мова сайту: документів, блогу та інших сторінок</td><td>доки ви її не зміните або не очистите браузер</td></tr>
               <tr><td><code>lancible:data</code></td><td>веб-версія (/app)</td><td>ваші проєкти й завдання: без акаунта це єдине місце, де вони зберігаються</td><td>доки ви їх не видалите</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-версія (/app)</td><td>зображення, вставлені в нотатки</td><td>доки ви не очистите дані сайту</td></tr>
+              <tr><td><code>lancible.theme</code></td><td>веб-версія (/app)</td><td>тема оформлення: світла, темна або як у системі</td><td>доки ви її не зміните або не очистите браузер</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>веб-версія, лише після входу</td><td>тримає вас в акаунті</td><td>до виходу з акаунта</td></tr>
             </tbody>
           </table>
-          <p>Усе це — необхідні сховища: без них сайт і веб-версія не працюють так, як ви очікуєте, тому згоди на них закон не вимагає. Нікуди, крім вашого браузера, вони не потрапляють — окрім ключа входу, яким веб-версія підтверджує вхід нашій базі під час синхронізації.</p>
+          <p>Усе це — необхідні сховища: без них сайт і веб-версія не працюють так, як ви очікуєте, тому згоди на них закон не вимагає. Самі по собі вони нікуди не надсилаються. Якщо ви ввійшли в акаунт і синхронізацію ввімкнено, веб-версія надсилає до нашої бази вміст <code>lancible:data</code> і <code>lancible-assets</code> — ваші проєкти, завдання, нотатки й зображення — і підтверджує вхід ключем із <code>sb-…-auth-token</code>; докладніше — у <a href="privacy.html">Політиці конфіденційності</a>.</p>
 
           <h2>Аналітика</h2>
           <p>Зараз аналітики на сайті немає. Якщо ми її підключимо, вона вмикатиметься лише після того, як ви натиснете «Прийняти всі» або позначите «Аналітику» в налаштуваннях, — до того її скрипт не завантажиться взагалі. До підключення ми впишемо сюди, який сервіс використовується і які cookie він ставить.</p>
 
           <h2>Реклама та сторонні трекери</h2>
-          <p>Рекламних cookie й трекерів немає. Шрифти сайту лежать на наших серверах, тож сторонні сервіси про ваш візит не дізнаються. Зовнішні ресурси відкриваються, лише коли ви самі переходите за посиланням — наприклад, на GitHub по інсталятор.</p>
+          <p>Рекламних cookie й трекерів немає. Шрифти сайту лежать на наших серверах, тож сторонні сервіси про ваш візит не дізнаються. Зовнішні ресурси відкриваються, лише коли ви самі переходите за посиланням — наприклад, на GitHub по інсталятор. Один виняток — службова сторінка журналу роботи (/logs): вона читає записи з нашої бази в Supabase, нашого постачальника, і той бачить IP-адресу запиту. Cookie ця сторінка не ставить.</p>
 
           <h2>Як змінити вибір</h2>
           <p>Натисніть кнопку нижче — або «Настройки cookie» внизу будь-якої сторінки сайту: згоду відкликають так само швидко, як дають. Ще можна видалити cookie й дані сайту в налаштуваннях браузера — тоді банер запитає знову. Зважте: так видалиться й усе, що веб-версія зберігає без акаунта.</p>
@@ -150,10 +156,10 @@
           <p><span data-biz="name">[не заповнено]</span>. Пошта: <span data-biz="email">[не заповнено]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="kk" lang="kk" hidden data-title="Cookie саясаты — Lancible" data-heading="Cookie саясаты">
-          <p class="legal-meta">Редакция күні: <time datetime="2026-10-07">2026 жылғы 7 қазан</time></p>
+          <p class="legal-meta">Редакция күні: <time datetime="2026-10-10">2026 жылғы 10 қазан</time></p>
 
           <h2>Бұл не</h2>
-          <p>Cookie — сайт браузерде сақтайтын шағын файлдар. localStorage — браузер қоймасы да осыған ұқсас жұмыс істейді. Бұл Саясат екеуін де сипаттайды; қарапайым болу үшін әрі қарай бәрі бірге «cookie» деп аталады.</p>
+          <p>Cookie — сайт браузерде сақтайтын шағын файлдар. Браузер қоймалары — localStorage және IndexedDB — да осыған ұқсас жұмыс істейді. Бұл Саясат екеуін де сипаттайды; қарапайым болу үшін әрі қарай бәрі бірге «cookie» деп аталады.</p>
 
           <h2>Lancible не қолданады</h2>
 
@@ -163,16 +169,18 @@
               <tr><td><code>lancible:consent</code></td><td>сайт</td><td>cookie баннеріндегі таңдауыңызды есте сақтайды</td><td>өзгерткенше немесе браузерді тазалағанша</td></tr>
               <tr><td><code>lancible:lang</code></td><td>сайт</td><td>сайт тілі: құжаттар, блог және басқа беттер</td><td>өзгерткенше немесе браузерді тазалағанша</td></tr>
               <tr><td><code>lancible:data</code></td><td>веб-нұсқа (/app)</td><td>жобалар мен тапсырмаларыңыз: аккаунтсыз олар тек осында сақталады</td><td>өзіңіз жойғанша</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-нұсқа (/app)</td><td>жазбаларға қойылған суреттер</td><td>сайт деректерін тазалағанша</td></tr>
+              <tr><td><code>lancible.theme</code></td><td>веб-нұсқа (/app)</td><td>безендіру тақырыбы: ашық, қараңғы немесе жүйедегідей</td><td>өзгерткенше немесе браузерді тазалағанша</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>веб-нұсқа, тек кіргеннен кейін</td><td>аккаунтта ұстап тұрады</td><td>аккаунттан шыққанша</td></tr>
             </tbody>
           </table>
-          <p>Мұның бәрі — қажетті қоймалар: оларсыз сайт пен веб-нұсқа сіз күткендей жұмыс істемейді, сондықтан заң оларға келісім талап етпейді. Олар браузеріңізден басқа ешқайда жіберілмейді — синхрондау кезінде веб-нұсқа біздің дерекқорға кіруді растайтын кіру кілтінен басқа.</p>
+          <p>Мұның бәрі — қажетті қоймалар: оларсыз сайт пен веб-нұсқа сіз күткендей жұмыс істемейді, сондықтан заң оларға келісім талап етпейді. Олар өздігінен ешқайда жіберілмейді. Аккаунтқа кіріп, синхрондау қосулы болса, веб-нұсқа <code>lancible:data</code> және <code>lancible-assets</code> мазмұнын — жобаларыңызды, тапсырмаларыңызды, жазбалар мен суреттерді — біздің дерекқорға жібереді және кіруді <code>sb-…-auth-token</code> кілтімен растайды; толығырақ — <a href="privacy.html">Құпиялылық саясатында</a>.</p>
 
           <h2>Аналитика</h2>
           <p>Қазір сайтта аналитика жоқ. Оны қоссақ, ол тек сіз «Барлығын қабылдау» батырмасын басқаннан немесе баптауларда «Аналитиканы» белгілегеннен кейін ғана іске қосылады — оған дейін оның скрипті мүлдем жүктелмейді. Қоспас бұрын мұнда қандай қызмет қолданылатынын және ол қандай cookie қоятынын жазамыз.</p>
 
           <h2>Жарнама және бөгде трекерлер</h2>
-          <p>Жарнамалық cookie мен трекерлер жоқ. Сайттың қаріптері біздің серверлерде жатыр, сондықтан бөгде қызметтер сіздің кіргеніңізді білмейді. Сыртқы ресурстар тек сілтемемен өзіңіз өткенде ашылады — мысалы, орнатқыш үшін GitHub-қа.</p>
+          <p>Жарнамалық cookie мен трекерлер жоқ. Сайттың қаріптері біздің серверлерде жатыр, сондықтан бөгде қызметтер сіздің кіргеніңізді білмейді. Сыртқы ресурстар тек сілтемемен өзіңіз өткенде ашылады — мысалы, орнатқыш үшін GitHub-қа. Бір ғана ерекшелік — жұмыс журналының қызметтік беті (/logs): ол жазбаларды Supabase-тегі біздің дерекқордан оқиды, Supabase — біздің жеткізушіміз, ол сұраудың IP мекенжайын көреді. Бұл бет cookie орнатпайды.</p>
 
           <h2>Таңдауды қалай өзгертуге болады</h2>
           <p>Төмендегі батырманы немесе кез келген беттің төменгі жағындағы «Настройки cookie» сілтемесін басыңыз: келісімді берген сияқты жылдам кері қайтаруға болады. Сондай-ақ браузер баптауларында cookie мен сайт деректерін жоюға болады — сонда баннер қайта сұрайды. Ескеріңіз: бұл веб-нұсқа аккаунтсыз сақтайтын барлық деректерді де жояды.</p>

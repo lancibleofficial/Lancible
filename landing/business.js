@@ -26,12 +26,16 @@
     // Юридический адрес.
     address: '',
     // Почта для обращений: вопросы по данным, удаление, жалобы, поддержка.
-    email: '',
+    // Временный адрес (10 октября 2026), позже сменится на ящик проекта.
+    email: 'lancibleofficial@gmail.com',
     // Право какой страны применяется к Условиям.
     governingLaw: '',
-    // Где физически лежит база (регион проекта Supabase), например
-    // «ЕС (Франкфурт)». Смотреть: Supabase → Project Settings → General.
-    dataRegion: '',
+    // Регион проекта Supabase так, как его называет Supabase: Project
+    // Settings → General. Значение одно на все языки, поэтому здесь код
+    // региона, а страну и город документы пишут сами, на своём языке:
+    // Политика §5 и строка «Где хранятся данные» на /legal. Сменится регион —
+    // поправить и их.
+    dataRegion: 'ap-northeast-1',
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = LANCIBLE_BUSINESS;
