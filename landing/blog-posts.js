@@ -27,6 +27,25 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-10-10',
+    tag: 'release',
+    version: 'mobile 1.2.1',
+    title: {
+      ru: 'Телефон 1.2.1: обновление из приложения снова работает',
+      en: 'Phone 1.2.1: in-app updates work again',
+    },
+    body: {
+      ru: [
+        'В версиях 1.1.1 и 1.2.0 кнопка обновления в меню не скачивала новую версию, а уводила в браузер. В 1.2.1 загрузка снова идёт внутри приложения: файл сверяется по размеру, и недокачанный не попадает в установщик. Если что-то пойдёт не так, приложение покажет причину и предложит повторить или скачать в браузере.',
+        'Если у вас 1.1.1 или 1.2.0, поставьте 1.2.1 один раз вручную: скачайте APK на главной странице сайта. Дальше обновления снова будут приходить прямо в приложении.',
+      ],
+      en: [
+        'In versions 1.1.1 and 1.2.0 the update button in the menu did not download the new version and sent you to the browser instead. In 1.2.1 the download happens inside the app again: the file is checked against its expected size, and an incomplete one never reaches the installer. If something goes wrong, the app shows the reason and offers to retry or download in the browser.',
+        'If you are on 1.1.1 or 1.2.0, install 1.2.1 by hand once: download the APK from the home page of the site. After that, updates arrive in the app again.',
+      ],
+    },
+  },
+  {
     date: '2026-10-09',
     tag: 'improvement',
     title: {

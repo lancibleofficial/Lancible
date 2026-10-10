@@ -857,7 +857,7 @@
       "id": "scripts_publish_site_publishgraph",
       "label": "publishGraph()",
       "file": "scripts/publish-site.js",
-      "at": "L77"
+      "at": "L98"
     },
     {
       "id": "scripts_publish_site_rebuildgraph",
@@ -869,7 +869,13 @@
       "id": "scripts_publish_site_refreshnumbers",
       "label": "refreshNumbers()",
       "file": "scripts/publish-site.js",
-      "at": "L156"
+      "at": "L181"
+    },
+    {
+      "id": "scripts_setup_worktree_main",
+      "label": "main()",
+      "file": "scripts/setup-worktree.js",
+      "at": "L119"
     },
     {
       "id": "scripts_shot_capture",
@@ -884,6 +890,12 @@
       "at": "L9"
     },
     {
+      "id": "scripts_smoke_run",
+      "label": "run()",
+      "file": "scripts/smoke.js",
+      "at": "L100"
+    },
+    {
       "id": "scripts_watch_main",
       "label": "main()",
       "file": "scripts/watch.js",
@@ -893,7 +905,7 @@
       "id": "scripts_worklog_main",
       "label": "main()",
       "file": "scripts/worklog.js",
-      "at": "L146"
+      "at": "L192"
     },
     {
       "id": "scripts_xlsx_check_assert",
@@ -2288,6 +2300,12 @@
       "at": "L24"
     },
     {
+      "id": "tests_landing_footer_legal_spec_legallines",
+      "label": "legalLines()",
+      "file": "tests/landing/footer-legal.spec.js",
+      "at": "L23"
+    },
+    {
       "id": "tests_landing_i18n_spec_seen",
       "label": "seen()",
       "file": "tests/landing/i18n.spec.js",
@@ -2298,6 +2316,12 @@
       "label": "stored()",
       "file": "tests/landing/legal.spec.js",
       "at": "L12"
+    },
+    {
+      "id": "tests_serve_built_web_prepare",
+      "label": "prepare()",
+      "file": "tests/serve-built-web.js",
+      "at": "L49"
     },
     {
       "id": "tests_unit_agenda_test_at",
@@ -2414,6 +2438,24 @@
       "at": "L190"
     },
     {
+      "id": "tests_unit_landing_third_party_test_allowed",
+      "label": "ALLOWED",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L43"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_externalloads",
+      "label": "externalLoads()",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L62"
+    },
+    {
+      "id": "tests_unit_landing_third_party_test_read",
+      "label": "read()",
+      "file": "tests/unit/landing-third-party.test.js",
+      "at": "L27"
+    },
+    {
       "id": "tests_unit_legal_pages_test_articles",
       "label": "articles()",
       "file": "tests/unit/legal-pages.test.js",
@@ -2496,6 +2538,12 @@
       "label": "ses()",
       "file": "tests/unit/mobile-reports.test.js",
       "at": "L48"
+    },
+    {
+      "id": "tests_unit_ports_test_portlist",
+      "label": "portList()",
+      "file": "tests/unit/ports.test.js",
+      "at": "L23"
     },
     {
       "id": "tests_unit_project_views_test_ctx",
