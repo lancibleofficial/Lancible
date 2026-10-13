@@ -8,7 +8,7 @@
     "start": "electron .",
     "smoke": "electron scripts/smoke.js",
     "watch": "node scripts/watch.js",
-    "test": "npm run test:unit && npm run check:xlsx && npm run test:mobile && npm run check:mobile-build && npm run test:backend && npm run test:e2e && npm run test:landing && npm run test:visual",
+    "test": "npm run test:unit && npm run check:xlsx && npm run test:mobile && npm run check:mobile-build && npm run test:backend && npm run smoke && npm run test:e2e && npm run test:landing && npm run test:visual",
     "test:fast": "npm run test:unit && npm run check:xlsx",
     "test:unit": "node --test \"tests/unit/*.test.js\"",
     "test:mobile": "npm --prefix mobile test",

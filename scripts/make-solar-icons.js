@@ -7,11 +7,17 @@
 // генератор тоже обновляет сам: каждый <svg data-icon="имя"> в обоих
 // index.html и на страницах лендинга получает пути из словаря.
 //
+// Единственное исключение из Solar — лупа (search): пользователь прислал
+// свою, и она лежит в assets/icons/search.svg. Список таких иконок — OWN
+// ниже, и он должен оставаться короче пальцев одной руки: каждая «своя»
+// иконка выбивается из набора (tests/unit/icons.test.js держит число).
+//
 // Запуск:
 //   node scripts/make-solar-icons.js --solar <папка icons/SVG/Bold>
 //       пересобрать core/icons.js из Solar и обновить HTML;
 //   node scripts/make-solar-icons.js
-//       только обновить HTML по уже собранному core/icons.js.
+//       обновить собственные иконки (OWN) в уже собранном core/icons.js и
+//       HTML — Solar для этого не нужен.
 // Набор Solar: https://github.com/480-Design/Solar-Icon-Set (клонировать
 // куда угодно вне репозитория). После — node scripts/sync-mobile-core.js и
 // npx electron scripts/make-ios-icons.js (картинки для нативных панелей iOS).
@@ -43,6 +49,12 @@ const GLYPH = {
   'chevron-down': 'Arrows/Round Alt Arrow Down',
 };
 
+// Иконки не из Solar: «имя → файл в репозитории». Файл — те же правила, что у
+// Solar (один контур, без прозрачности и обводки), но заливка currentColor.
+const OWN = {
+  search: 'assets/icons/search.svg',
+};
+
 // Иконка целиком.
 const FULL = {
   // навигация
@@ -55,7 +67,7 @@ const FULL = {
   clock: 'Time/Clock Circle',
   settings: 'Settings, Fine Tuning/Settings',
   // действия и поля
-  search: 'Search/Magnifer',
+  search: OWN.search, // своя, не Solar
   play: 'Video, Audio, Sound/Play',
   pause: 'Video, Audio, Sound/Pause',
   stop: 'Video, Audio, Sound/Stop',
@@ -109,6 +121,20 @@ const FULL = {
   reply: 'Arrows Action/Undo Left',
   restart: 'Arrows/Restart',
   checklist: 'List/Checklist',
+  // Нативная панель редактора на телефоне (13 октября 2026). Своих значков
+  // списков, таблицы, сдвига и цитаты в Solar нет — взяты ближайшие:
+  // маркированный — планшет со строками-точками, таблица — окно с шапкой и
+  // столбцами, цитата — облачко реплики. Нумерованный в панели теперь «1.»
+  // буквами, сдвигов в ней нет, так что list-ordered, indent и outdent
+  // никем не рисуются; в словаре они остались, потому что отпечаток сборки
+  // редактора считается и по core/icons.js — убирать их вместе с
+  // npm run build:editor.
+  'list-bullet': 'Notes/Clipboard List',
+  'list-ordered': 'List/Sort From Top To Bottom',
+  table: 'Network, IT, Programming/Window Frame',
+  indent: 'Arrows/Double Alt Arrow Right',
+  outdent: 'Arrows/Double Alt Arrow Left',
+  quote: 'Messages, Conversation/Chat Square',
   callout: 'Messages, Conversation/Chat Line',
   image: 'Video, Audio, Sound/Gallery',
   'image-add': 'Video, Audio, Sound/Gallery Add',
@@ -150,10 +176,10 @@ const GLYPH_SIDE = 10;
 // Точности в сотую единицы из 24 хватает с запасом, а файл вдвое меньше.
 const squeeze = (d) => d.replace(/-?\d*\.\d+/g, (n) => String(+(+n).toFixed(2)));
 
-/** Пути файла Solar: [[d, evenodd]]. Всё, кроме чёрной заливки, — отказ. */
-function readSolar(dir, rel) {
-  const file = path.join(dir, `${rel}.svg`);
-  if (!fs.existsSync(file)) throw new Error(`нет файла Solar: ${rel}.svg`);
+/** Пути SVG-файла: [[d, evenodd]]. Всё, кроме заливки ink, — отказ (белая —
+ *  вырез, см. ниже). У Solar ink — black, у своих иконок — currentColor. */
+function readSvg(file, rel, ink) {
+  if (!fs.existsSync(file)) throw new Error(`нет файла иконки: ${rel}`);
   const src = fs.readFileSync(file, 'utf8');
   if (/opacity|<g[\s>]|stroke|<(rect|line|polygon|polyline)\b/.test(src)) {
     throw new Error(`${rel}: в иконке прозрачность, группы, обводка или фигуры — такие не берём`);
@@ -176,8 +202,8 @@ function readSolar(dir, rel) {
     const fill = (attrs.match(/\sfill="([^"]+)"/) || [])[1];
     if (!d) throw new Error(`${rel}: путь без d`);
     if (fill === 'white') holes.push(d);
-    else if (fill === 'black') paths.push([d, /fill-rule="evenodd"/.test(attrs) ? 1 : 0]);
-    else throw new Error(`${rel}: заливка ${fill} — берём только black и white`);
+    else if (fill === ink) paths.push([d, /fill-rule="evenodd"/.test(attrs) ? 1 : 0]);
+    else throw new Error(`${rel}: заливка ${fill} — берём только ${ink} и white`);
   }
   if (!paths.length) throw new Error(`${rel}: ни одного пути`);
   // Белое у Solar — нарисованный поверх вырез (стрелки часов). На цветном
@@ -188,6 +214,16 @@ function readSolar(dir, rel) {
     return [[[paths[0][0], ...holes].join(' '), 1]];
   }
   return paths;
+}
+
+/** Пути файла Solar. */
+const readSolar = (dir, rel) => readSvg(path.join(dir, `${rel}.svg`), `${rel}.svg`, 'black');
+
+/** Собственная иконка из репозитория: рамка — из её же viewBox. */
+function readOwn(rel) {
+  const file = path.join(ROOT, rel);
+  const vb = (fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '').match(/<svg[^>]*sviewBox="([^"]+)"/);
+  return { vb: vb ? vb[1] : '0 0 24 24', p: readSvg(file, rel, 'currentColor'), src: rel };
 }
 
 /** Числа абсолютного пути (M L H V C S Q T Z) → рамка. Относительных команд
@@ -232,10 +268,31 @@ function glyph(dir, rel) {
   return { vb, p: [[mark, 0]] };
 }
 
+/** Словарь из Solar и собственных файлов → core/icons.js. */
 function build(dir) {
   const icons = {};
   for (const [name, rel] of Object.entries(GLYPH)) icons[name] = Object.assign(glyph(dir, rel), { src: rel });
-  for (const [name, rel] of Object.entries(FULL)) icons[name] = { vb: '0 0 24 24', p: readSolar(dir, rel), src: rel };
+  for (const [name, rel] of Object.entries(FULL)) {
+    icons[name] = rel === OWN[name] ? readOwn(rel) : { vb: '0 0 24 24', p: readSolar(dir, rel), src: rel };
+  }
+  emit(icons);
+}
+
+/** Уже собранный core/icons.js: Solar-иконки остаются как есть, собственные
+ *  (OWN) перечитываются из своих файлов. Так лупу можно поменять, не имея под
+ *  рукой набор Solar. Порядок и пути остальных иконок не меняются. */
+function rebuildOwn() {
+  delete require.cache[OUT];
+  const { ICONS } = require(OUT);
+  const src = fs.readFileSync(OUT, 'utf8');
+  const from = Object.fromEntries([...src.matchAll(/\/\/ (.+)\n {4}"([^"]+)":/g)].map((m) => [m[2], m[1]]));
+  const icons = {};
+  for (const [name, ic] of Object.entries(ICONS)) icons[name] = { vb: ic.vb, p: ic.p, src: from[name] };
+  for (const [name, rel] of Object.entries(OWN)) icons[name] = readOwn(rel);
+  emit(icons);
+}
+
+function emit(icons) {
   const body = Object.entries(icons).map(([name, ic]) => {
     const p = ic.p.map(([d, e]) => `[${JSON.stringify(squeeze(d))}, ${e}]`).join(', ');
     return `    // ${ic.src}\n    ${JSON.stringify(name)}: { vb: ${JSON.stringify(ic.vb)}, p: [${p}] },`;
@@ -244,6 +301,9 @@ function build(dir) {
  * https://github.com/480-Design/Solar-Icon-Set). СОБРАНО
  * scripts/make-solar-icons.js — руками не править: поменять иконку значит
  * поменять словарь в генераторе и запустить его.
+ *
+ * Единственное исключение — лупа (search): своя, из assets/icons/search.svg.
+ * В комментарии над каждой иконкой — откуда она.
  *
  * Общий файл для всех поверхностей: десктоп и веб читают его <script>,
  * редактор — import, телефон — копией в mobile/src/core.
@@ -278,8 +338,9 @@ ${body}
   else Object.assign((global.Core = global.Core || {}), api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 `;
-  fs.writeFileSync(OUT, src);
-  console.log(`[make-solar-icons] ${Object.keys(icons).length} иконок → ${path.relative(ROOT, OUT)}`);
+  const same = fs.existsSync(OUT) && fs.readFileSync(OUT, 'utf8') === src;
+  if (!same) fs.writeFileSync(OUT, src);
+  console.log(`[make-solar-icons] ${Object.keys(icons).length} иконок → ${path.relative(ROOT, OUT)}${same ? ' (без изменений)' : ''}`);
 }
 
 // Атрибуты, которые иконке Solar не нужны или мешают: старая рамка, обводка
@@ -313,4 +374,5 @@ function applyHtml() {
 const at = process.argv.indexOf('--solar');
 if (at !== -1) build(path.resolve(process.argv[at + 1] || ''));
 else if (!fs.existsSync(OUT)) throw new Error('core/icons.js ещё не собран: запустите с --solar <папка Solar Bold>');
+else rebuildOwn();
 applyHtml();

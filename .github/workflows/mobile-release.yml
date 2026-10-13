@@ -4,6 +4,16 @@ name: Build Android APK
 # ассетом GitHub Release. Отдельно от .github/workflows/release.yml, потому
 # что там десктоп: другие раннеры, другой тег, другой цикл выпуска.
 #
+# Раздаёт APK (~96 МБ) Cloudflare R2, а не GitHub: у GitHub Releases скорость
+# скачивания ~19 КБ/с (замер 10 октября 2026), у Cloudflare ~18 МБ/с. Файл
+# заливается в бакет R2 по пути mobile-v<версия>/Lancible-<версия>.apk (тот же
+# <тег>/<файл>, что у десктопа), проверяется запросом HEAD, а в конце печатается
+# готовый блок "android" для latest.json репозитория lancible-updates — его
+# по-прежнему правят руками. GitHub Release остаётся архивом. Секреты те же,
+# что у release.yml: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+# R2_BUCKET, R2_PUBLIC_URL; пока их нет, выпуск идёт по-старому. Релиз,
+# вышедший без R2, переводит .github/workflows/mirror-release.yml.
+#
 # Почему именно EAS, а не gradle на раннере: подписывать APK надо ТЕМ ЖЕ
 # ключом, что и предыдущие версии, иначе Android откажется ставить новую
 # поверх старой и пользователю придётся сносить приложение с потерей данных.
@@ -29,6 +39,11 @@ jobs:
       contents: write
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # aws cli новых версий добавляет к запросам контрольные суммы, которых R2
+      # не понимает, — просим считать их только там, где без них нельзя.
+      AWS_DEFAULT_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -106,7 +121,56 @@ jobs:
           generate_release_notes: true
           files: ${{ env.APK_NAME }}
 
-      - name: Напомнить про манифест обновлений
+      # Куда раздавать APK. Секреты R2 в условиях шагов недоступны (contexts
+      # secrets там нет), поэтому наличие всех пяти проверяется здесь и
+      # результат читают следующие шаги.
+      - name: Проверить, заданы ли ключи Cloudflare R2
+        id: r2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          if [ -n "$R2_ACCOUNT_ID" ] && [ -n "$R2_ACCESS_KEY_ID" ] && [ -n "$R2_SECRET_ACCESS_KEY" ] && [ -n "$R2_BUCKET" ] && [ -n "$R2_PUBLIC_URL" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Секреты Cloudflare R2 заданы не полностью (нужны R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_URL) — APK лежит только на GitHub Releases, а он отдаёт ~19 КБ/с."
+          fi
+
+      # Путь в бакете — <тег>/<файл>, как у десктопа (scripts/publish-release.js,
+      # mobileRelease). Content-Type задан явно: браузер на телефоне по нему
+      # понимает, что это установочный пакет. Шаг падает, если загрузка не
+      # удалась, — проверка и подсказка про latest.json идут только после него.
+      - name: Выложить APK в Cloudflare R2
+        if: ${{ steps.r2.outputs.enabled == 'true' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          aws s3 cp "$APK_NAME" "s3://${R2_BUCKET}/${TAG}/${APK_NAME}" \
+            --content-type application/vnd.android.package-archive \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+      # HEAD по публичному адресу: файл отвечает 200 и ровно того размера, что
+      # собранный APK. Иначе подсказка ниже отправила бы установленные копии на
+      # ссылку, которая не открывается (например, если у бакета не включён
+      # публичный адрес r2.dev). Сам latest.json отсюда не правится.
+      - name: Проверить раздачу и вывести блок для latest.json
+        if: ${{ steps.r2.outputs.enabled == 'true' }}
+        env:
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: node scripts/publish-release.js --mobile-apk "$APK_NAME" --tag "$TAG" --public-url "$R2_PUBLIC_URL"
+
+      - name: Напомнить про манифест обновлений (APK только на GitHub)
+        if: ${{ steps.r2.outputs.enabled != 'true' }}
         run: |
           # size — размер файла в байтах: начиная с 1.2.1 приложение сверяет с
           # ним скачанное и недокачанный APK установщику не отдаёт.

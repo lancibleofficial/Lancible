@@ -41,9 +41,22 @@
 //                          в пустоту, если файлы не доехали или публичный адрес
 //                          бакета не включён.
 //   без ключей             залить всё из папки как есть, для своего хостинга.
+//   --mobile-apk <файл>    телефон, к фиду десктопа отношения не имеет (ключи
+//                          Supabase не нужны, манифесты не трогаются). APK
+//                          уже лежит в R2: с --tag mobile-v<версия> и
+//                          --public-url <R2_PUBLIC_URL> проверяется запросом
+//                          HEAD (отвечает 200 и ровно того размера, что файл на
+//                          диске) и печатается готовый блок "android" для
+//                          latest.json репозитория lancibleofficial/lancible-updates:
+//                          его правят руками (см. шапку mobile/src/lib/updateCheck.js).
+//
+// Телефон раздаётся оттуда же, откуда десктоп: APK (~96 МБ) с GitHub Releases
+// шёл бы с той же скоростью. Раскладка та же — <R2_PUBLIC_URL>/<тег>/<файл>,
+// то есть mobile-v<версия>/Lancible-<версия>.apk (mobileRelease ниже).
 //
 // Обычно запускается не руками, а .github/workflows/release.yml по тегу v* и
-// .github/workflows/mirror-release.yml (перевод уже вышедшего релиза на R2).
+// .github/workflows/mirror-release.yml (перевод уже вышедшего релиза на R2),
+// а APK проверяют mobile-release.yml по тегу mobile-v* и тот же mirror-release.yml.
 // Вручную — после npm run build:exe и/или npm run build:dmg:
 //   npm run publish:release      # всё из dist/ целиком, для своего хостинга
 //   node scripts/publish-release.js artifacts --release-base <URL> --check-urls
@@ -119,9 +132,13 @@ function manifestFiles(text) {
 }
 
 // Каждая ссылка из манифеста отвечает на HEAD кодом 2xx, а длина, если сервер
-// её назвал, совпадает с size. Несколько попыток: свежезалитый файл на CDN
-// иногда виден не с первого запроса, а r2.dev ещё и ограничивает частоту.
-async function checkUrls(files, { fetchImpl = fetch, attempts = 3, delayMs = 2000 } = {}) {
+// её назвал, совпадает с size (requireLength — сервер обязан её назвать). Несколько
+// попыток: свежезалитый файл на CDN иногда виден не с первого запроса, а r2.dev
+// ещё и ограничивает частоту.
+// log — куда печатать «доступен»: тесты зовут функцию в своём процессе, а на
+// Windows запись в канал асинхронная и рвала служебные сообщения тест-раннера
+// («Unable to deserialize cloned data»), поэтому там она молчит.
+async function checkUrls(files, { fetchImpl = fetch, attempts = 3, delayMs = 2000, requireLength = false, log = console.log } = {}) {
   for (const { url, size } of files) {
     let problem = '';
     for (let i = 0; i < attempts; i++) {
@@ -131,14 +148,48 @@ async function checkUrls(files, { fetchImpl = fetch, attempts = 3, delayMs = 200
         const len = res.headers.get('content-length');
         if (!res.ok) problem = `${url}: ${res.status}`;
         else if (size != null && len != null && Number(len) !== size) problem = `${url}: размер ${len}, а в манифесте ${size}`;
+        else if (size != null && len == null && requireLength) problem = `${url}: сервер не назвал размер, а ждали ${size}`;
         else { problem = ''; break; }
       } catch (err) {
         problem = `${url}: ${err.message}`;
       }
     }
     if (problem) throw new Error(`Ссылка из манифеста не открывается — ${problem}`);
-    console.log('доступен:', url);
+    log('доступен:', url);
   }
+}
+
+// Телефон. Тег mobile-v<версия> → версия, имя APK (его собирает
+// .github/workflows/mobile-release.yml) и путь в бакете: <тег>/<файл>, как у
+// десктопа. Не похоже на тег телефона (в том числе десктопный v0.4.3) — null.
+function mobileRelease(tag) {
+  const m = /^mobile-v(\d+(?:\.\d+)*)$/.exec(String(tag));
+  if (!m) return null;
+  const apkName = `Lancible-${m[1]}.apk`;
+  return { version: m[1], apkName, key: `${tag}/${apkName}` };
+}
+
+// Блок "android" для latest.json: приложение читает из него version, url и
+// apk (старые 1.1.1 и 1.2.0 при сбое встроенной загрузки открывают в браузере
+// url, поэтому он — тоже прямая ссылка на файл, а не страница релиза) и, с
+// 1.2.1, size: недокачанный APK установщику не отдаётся.
+function androidManifestBlock({ version, url, size }) {
+  return `"android": ${JSON.stringify({ version, url, apk: url, size }, null, 2)}`;
+}
+
+// APK уже в R2: отвечает ли он по публичному адресу ровно тем размером, что у
+// файла на диске, и какой блок положить в latest.json. Ничего не заливает и
+// фид десктопа не трогает.
+async function checkMobileApk(file, tag, publicUrl, checkOptions = {}) {
+  const rel = mobileRelease(tag);
+  if (!rel) throw new Error(`Тег «${tag}» не похож на тег телефона (mobile-v1.2.2)`);
+  if (path.basename(file) !== rel.apkName) {
+    throw new Error(`Для тега ${tag} ожидался файл ${rel.apkName}, а дан ${path.basename(file)}`);
+  }
+  const size = fs.statSync(file).size;
+  const url = `${publicUrl.replace(/\/+$/, '')}/${rel.key}`;
+  await checkUrls([{ url, size }], { requireLength: true, ...checkOptions });
+  return { url, size, block: androidManifestBlock({ version: rel.version, url, size }) };
 }
 
 async function upload(filePath, destName, body = fs.readFileSync(filePath)) {
@@ -221,7 +272,29 @@ async function main() {
   };
   const releaseBase = flagValue('--release-base');
   const stageDir = flagValue('--stage');
+  const mobileApk = flagValue('--mobile-apk');
+  const mobileTag = flagValue('--tag');
+  const publicUrl = flagValue('--public-url');
   const checkUrlsOn = args.includes('--check-urls');
+  if (mobileApk) {
+    if (releaseBase || stageDir || checkUrlsOn || !mobileTag || !publicUrl) {
+      console.error('--mobile-apk — отдельный вызов: нужны --tag и --public-url, остальные режимы не сочетаются');
+      process.exit(1);
+    }
+    const { url, size, block } = await checkMobileApk(path.resolve(mobileApk), mobileTag, publicUrl);
+    console.log(`доступен: ${url} (${size} байт)`);
+    const hint = 'В latest.json репозитория lancibleofficial/lancible-updates заменить блок "android" (блок "ios" не трогать):';
+    console.log(`${hint}\n\n${block}\n`);
+    // На раннере GitHub то же самое попадает на страницу выполнения задачи.
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${hint}\n\n\`\`\`json\n${block}\n\`\`\`\n`);
+    }
+    return;
+  }
+  if (mobileTag || publicUrl) {
+    console.error('--tag и --public-url нужны только режиму --mobile-apk');
+    process.exit(1);
+  }
   if (releaseBase && stageDir) {
     console.error('--stage и --release-base — отдельные вызовы: сначала разложить и залить файлы, потом манифесты');
     process.exit(1);
@@ -278,4 +351,4 @@ async function main() {
 
 if (require.main === module) main().catch((err) => { console.error(err); process.exit(1); });
 
-module.exports = { githubAssetName, rewriteManifest, manifestFiles, checkUrls };
+module.exports = { githubAssetName, rewriteManifest, manifestFiles, checkUrls, mobileRelease, androidManifestBlock, checkMobileApk };

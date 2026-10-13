@@ -15,20 +15,30 @@ name: Mirror release to R2
 # latest.yml на Supabase, файлы всё равно уезжают в R2 (старые блокмапы нужны
 # для дифференциальной загрузки), а манифесты не трогаются.
 #
+# То же умеет для APK телефона — тег mobile-v<версия>: ассет Lancible-<версия>.apk
+# уезжает в R2 по пути mobile-v<версия>/Lancible-<версия>.apk, проверяется
+# запросом HEAD, и печатается готовый блок "android" для latest.json репозитория
+# lancible-updates (его правят руками). Для телефона отдельная задача
+# mirror-mobile: у неё нет ни ключа Supabase, ни манифестов десктопа, так что
+# фид автообновления десктопа она тронуть не может в принципе.
+#
 # Запуск:
 #   gh workflow run mirror-release.yml -f tag=v0.4.2
+#   gh workflow run mirror-release.yml -f tag=mobile-v1.2.2
 # Секреты репозитория: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
 # R2_BUCKET, R2_PUBLIC_URL — те же, что у release.yml; SUPABASE_SERVICE_ROLE_KEY
-# нужен для фида (без него файлы зальются, а манифесты нет).
+# нужен для фида десктопа (без него файлы зальются, а манифесты нет).
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Тег вышедшего релиза (например v0.4.2)'
+        description: 'Тег вышедшего релиза (например v0.4.2 или mobile-v1.2.2)'
         required: true
 
 jobs:
   mirror:
+    # Десктоп — всё, что не тег телефона; незнакомый тег отсекает первый шаг.
+    if: ${{ !startsWith(inputs.tag, 'mobile-v') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,7 +68,7 @@ jobs:
           R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
         run: |
           if ! [[ "$TAG" =~ ^v[0-9][0-9A-Za-z._-]*$ ]]; then
-            echo "::error::Тег «$TAG» не похож на десктопный (v0.4.2): зеркалятся только релизы с тегом v*."
+            echo "::error::Тег «$TAG» не похож на десктопный (v0.4.2) и на тег телефона (mobile-v1.2.2): зеркалятся только релизы с тегом v* и mobile-v*."
             exit 1
           fi
           for name in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET R2_PUBLIC_URL; do
@@ -114,3 +124,75 @@ jobs:
       - name: Предупредить, если фид не переключён
         if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
         run: echo "::warning::Секрет SUPABASE_SERVICE_ROLE_KEY не задан — файлы $TAG в R2 лежат, но фид автообновления не переключён."
+
+  # Телефон. Намеренно без SUPABASE_*: фид десктопа (latest.yml, latest-mac.yml
+  # в Supabase Storage) этой задаче недоступен, а из релиза качается только .apk.
+  mirror-mobile:
+    if: ${{ startsWith(inputs.tag, 'mobile-v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # aws cli новых версий добавляет к запросам контрольные суммы, которых R2
+      # не понимает, — просим считать их только там, где без них нельзя.
+      AWS_DEFAULT_REGION: auto
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+      GH_TOKEN: ${{ github.token }}
+      # Тег идёт в оболочку через переменную, а не подстановкой в текст команды.
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Проверить тег и ключи R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          if ! [[ "$TAG" =~ ^mobile-v[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "::error::Тег «$TAG» не похож на тег телефона (mobile-v1.2.2)."
+            exit 1
+          fi
+          for name in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET R2_PUBLIC_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Не задан секрет $name — без ключей Cloudflare R2 зеркалить некуда. Нужны R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_URL."
+              exit 1
+            fi
+          done
+
+      # Имя ассета собирает mobile-release.yml: Lancible-<версия>.apk, версия — из тега.
+      - name: Скачать APK релиза
+        run: |
+          set -euo pipefail
+          apk="Lancible-${TAG#mobile-v}.apk"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir release-assets --pattern "$apk"
+          ls -l release-assets
+          [ -f "release-assets/$apk" ] || { echo "::error::В релизе $TAG нет ассета $apk"; exit 1; }
+          # Проверка, что это действительно APK: zip-архив начинается с PK.
+          head -c 2 "release-assets/$apk" | grep -q 'PK' || { echo "::error::$apk не похож на APK"; exit 1; }
+          echo "APK=release-assets/$apk" >> "$GITHUB_ENV"
+
+      - name: Выложить APK в Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          set -euo pipefail
+          aws s3 cp "$APK" "s3://${R2_BUCKET}/${TAG}/$(basename "$APK")" \
+            --content-type application/vnd.android.package-archive \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+      # HEAD по публичному адресу и готовый блок "android" для latest.json
+      # (его правят руками в репозитории lancible-updates, отсюда не трогается).
+      - name: Проверить раздачу и вывести блок для latest.json
+        env:
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: node scripts/publish-release.js --mobile-apk "$APK" --tag "$TAG" --public-url "$R2_PUBLIC_URL"

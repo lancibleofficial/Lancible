@@ -62,6 +62,33 @@ test('переводы одного документа устроены один
   }
 });
 
+test('/legal называет библиотеки, которые свои модули телефона тянут в Android', () => {
+  // mobile/modules/*/android/build.gradle — свои нативные модули: их
+  // зависимости уходят в APK мимо package.json, и лицензия у них не
+  // обязательно MIT. Новая — впишите её в /legal на четырёх языках и сюда.
+  const KNOWN = {
+    'com.google.android.material:material': { name: 'Material Components for Android (Google)', licence: 'Apache-2.0' },
+  };
+  const modules = path.join(__dirname, '..', '..', 'mobile', 'modules');
+  const deps = [];
+  for (const dir of fs.existsSync(modules) ? fs.readdirSync(modules) : []) {
+    const gradle = path.join(modules, dir, 'android', 'build.gradle');
+    if (!fs.existsSync(gradle)) continue;
+    const src = fs.readFileSync(gradle, 'utf8');
+    for (const m of src.matchAll(/^\s*(?:implementation|api)\s*\(?\s*["']([\w.-]+:[\w.-]+):[^"']+["']/gm)) deps.push(m[1]);
+  }
+  const arts = articles('legal.html');
+  for (const dep of deps) {
+    const lib = KNOWN[dep];
+    assert.ok(lib, `${dep}: новая зависимость Android — её нет ни в /legal, ни в этом списке`);
+    for (const a of arts) {
+      // Название и лицензия — в одном предложении.
+      const said = a.body.split(/(?<=\.)\s+/).find((s) => s.includes(lib.name));
+      assert.ok(said && said.includes(lib.licence), `legal.html ${a.lang}: нет ${lib.name} с лицензией ${lib.licence}`);
+    }
+  }
+});
+
 test('каждое поле реквизитов в документах есть в бланке business.js', () => {
   for (const page of DOCS) {
     for (const m of read(page).matchAll(/data-biz="(\w+)"/g)) {

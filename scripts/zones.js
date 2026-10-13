@@ -52,7 +52,7 @@ const ZONES = {
     check: 'иконки — только через scripts/make-solar-icons.js (сторож tests/unit/icons.test.js); PNG для iOS — make-ios-icons.js',
     paths: [
       'scripts/make-solar-icons.js', 'scripts/make-ios-icons.js', 'scripts/make-icon.js',
-      'scripts/make-mobile-icons.js', 'src/renderer/core/icons.js', 'mobile/assets/**', 'build/**', 'assets/**',
+      'scripts/make-mobile-icons.js', 'scripts/make-logo.js', 'src/renderer/core/icons.js', 'mobile/assets/**', 'build/**', 'assets/**',
       'landing/fonts/**',
     ],
   },

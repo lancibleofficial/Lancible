@@ -17,7 +17,7 @@ const demo = {
     { id: 'p1', name: 'Сайт клиента', color: '#5ec8f2', description: 'Лендинг + личный кабинет на React. Дедлайн — конец месяца.', createdAt: new Date(now - 22 * day).toISOString(), pinnedAt: new Date(now - 3 * day).toISOString() },
     { id: 'p2', name: 'Мобильное приложение', color: '#b98cf0', description: 'MVP для стартапа, Flutter.', createdAt: new Date(now - 40 * day).toISOString(), pinnedAt: null },
     { id: 'p3', name: 'Личное', color: '#f5c451', description: '', createdAt: new Date(now - 12 * day).toISOString(), pinnedAt: null },
-    { id: 'p4', name: 'Консультации', color: '#87ff65', description: 'Почасовые созвоны.', createdAt: new Date(now - 60 * day).toISOString(), pinnedAt: null },
+    { id: 'p4', name: 'Консультации', color: '#69d345', description: 'Почасовые созвоны.', createdAt: new Date(now - 60 * day).toISOString(), pinnedAt: null },
     { id: 'p5', name: 'Дизайн-система', color: '#f0736b', description: 'Библиотека компонентов.', createdAt: new Date(now - 15 * day).toISOString(), pinnedAt: null },
     { id: 'p6', name: 'Внутренний портал', color: '#f58cc0', description: '', createdAt: new Date(now - 8 * day).toISOString(), pinnedAt: null },
   ],

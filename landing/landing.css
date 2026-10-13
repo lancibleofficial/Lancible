@@ -33,9 +33,9 @@
   --panel-2:#2b2e37;
   --border:#383c46;
   --border-soft:#2f333c;
-  --accent:#87ff65;
-  --accent-deep:#57d637;
-  --accent-text:#0f1c08;
+  --accent:#69d345;
+  --accent-deep:#53c22e;
+  --accent-text:#0d1a07;
   --text:#f2f4ef;
   --text-dim:#9a9fac;
   --text-faint:#6a707d;
@@ -79,17 +79,18 @@ header{
 }
 .header-row{display:flex; align-items:center; justify-content:space-between; height:68px; gap:16px;}
 .brand{display:flex; align-items:center; gap:10px; font-family:'Unbounded'; font-weight:700; font-size:1.05rem;}
-.brand svg{width:26px; height:26px; flex:none;}
+/* Знак шире, чем высок: рамка в разметке впритык (4:3), цвет — токен акцента. */
+.brand svg{width:26px; height:19.5px; flex:none; color:var(--accent);}
 .status-pill{
   display:flex; align-items:center; gap:8px; font-size:.78rem; color:var(--text-dim);
   border:1px solid var(--border); border-radius:999px; padding:7px 14px 7px 10px;
   white-space:nowrap;
 }
-.status-dot{width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 0 rgba(135,255,101,.55); animation:pulse-dot 2.2s ease-out infinite;}
+.status-dot{width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 0 rgba(105,211,69,.55); animation:pulse-dot 2.2s ease-out infinite;}
 @keyframes pulse-dot{
-  0%{box-shadow:0 0 0 0 rgba(135,255,101,.55);}
-  70%{box-shadow:0 0 0 8px rgba(135,255,101,0);}
-  100%{box-shadow:0 0 0 0 rgba(135,255,101,0);}
+  0%{box-shadow:0 0 0 0 rgba(105,211,69,.55);}
+  70%{box-shadow:0 0 0 8px rgba(105,211,69,0);}
+  100%{box-shadow:0 0 0 0 rgba(105,211,69,0);}
 }
 .gh-link{display:flex; align-items:center; gap:7px; font-size:.85rem; color:var(--text-dim); border:1px solid var(--border); border-radius:999px; padding:7px 14px; transition:border-color .2s, color .2s;}
 .gh-link:hover{color:var(--text); border-color:var(--accent);}
@@ -108,7 +109,7 @@ header{
 footer{padding-block:44px; border-top:1px solid var(--border-soft); flex:none;}
 .footer-row{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;}
 .footer-brand{display:flex; align-items:center; gap:9px; color:var(--text-dim); font-size:.86rem;}
-.footer-brand svg{width:18px; height:18px;}
+.footer-brand svg{width:18px; height:13.5px; color:var(--accent);}
 .footer-links{display:flex; gap:22px; font-size:.86rem; color:var(--text-dim);}
 .footer-links a:hover{color:var(--accent);}
 /* Правовые документы — второй строкой, мельче основной. Кнопка «Настройки
@@ -220,7 +221,7 @@ h1.page-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-hei
   padding:4px 9px; border-radius:999px; border:1px solid transparent; margin-bottom:12px;
 }
 .blog-tag.release{background:var(--accent); color:var(--accent-text);}
-.blog-tag.feature{background:rgba(135,255,101,.1); color:var(--accent-deep); border-color:rgba(135,255,101,.32);}
+.blog-tag.feature{background:rgba(105,211,69,.1); color:var(--accent-deep); border-color:rgba(105,211,69,.32);}
 .blog-tag.improvement{background:var(--panel-2); color:var(--text-dim); border-color:var(--border);}
 .blog-text{margin-top:10px; display:flex; flex-direction:column; gap:10px;}
 .blog-empty{font-size:.9rem; color:var(--text-dim);}

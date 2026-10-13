@@ -283,18 +283,41 @@ test('на служебные страницы нет ссылок с сайта
   }
 });
 
+/** Кнопки скачивания на главной: версия из подписи над кнопкой и адрес, у
+ *  которого заданное расширение. */
+function downloadCards(ext) {
+  const html = read('index.html');
+  return [...html.matchAll(/<span>v(\d+\.\d+\.\d+)<\/span>[\s\S]*?<a class="platform-cta" href="([^"]+)"/g)]
+    .filter(([, , href]) => ext.test(href))
+    .map(([, version, href]) => ({ version, href }));
+}
+const R2_HOST = /^https:\/\/pub-[0-9a-f]+\.r2\.dev\//;
+
 test('кнопки скачивания десктопа ведут в R2, на версию из подписи', () => {
   // С 10 октября 2026 установщики раздаёт Cloudflare R2: с GitHub Releases
   // они шли у части людей ~19 КБ/с, и установщик в 82 МБ качался час.
   // Раскладка в бакете — v<версия>/<файл>, как кладёт .github/workflows/release.yml.
   // Подпись над кнопкой и адрес — одна версия, иначе кнопка обещает одно, а
   // отдаёт другое.
-  const html = read('index.html');
-  const cards = [...html.matchAll(/<span>v(\d+\.\d+\.\d+)<\/span>[\s\S]*?<a class="platform-cta" href="([^"]+)"/g)]
-    .filter(([, , href]) => /\.(exe|dmg)$/.test(href));
+  const cards = downloadCards(/\.(exe|dmg)$/);
   assert.equal(cards.length, 2, 'на главной две кнопки десктопа: .exe и .dmg');
-  for (const [, version, href] of cards) {
-    assert.match(href, /^https:\/\/pub-[0-9a-f]+\.r2\.dev\//, `${href}: установщик должен идти из R2, а не с GitHub`);
+  for (const { version, href } of cards) {
+    assert.match(href, R2_HOST, `${href}: установщик должен идти из R2, а не с GitHub`);
     assert.ok(href.includes(`/v${version}/`) && href.includes(version), `${href}: адрес не на версию v${version} из подписи`);
   }
+});
+
+test('кнопка APK ведёт в R2, на версию из подписи', () => {
+  // APK (~96 МБ) с GitHub Releases идёт с той же скоростью, что установщики, и
+  // раздаётся оттуда же: mobile-v<версия>/Lancible-<версия>.apk. Путь собирает
+  // mobileRelease — ту же функцию зовут mobile-release.yml и mirror-release.yml,
+  // так что кнопка не разойдётся с тем, куда файл реально кладётся.
+  // Сам файл в R2 появляется зеркалом (mirror-release.yml -f tag=mobile-v…) —
+  // до пуша лендинга.
+  const { mobileRelease } = require('../../scripts/publish-release.js');
+  const cards = downloadCards(/\.apk$/);
+  assert.equal(cards.length, 1, 'на главной одна кнопка APK');
+  const { version, href } = cards[0];
+  assert.match(href, R2_HOST, `${href}: APK должен идти из R2, а не с GitHub`);
+  assert.ok(href.endsWith(`/${mobileRelease(`mobile-v${version}`).key}`), `${href}: адрес не на mobile-v${version} из подписи`);
 });

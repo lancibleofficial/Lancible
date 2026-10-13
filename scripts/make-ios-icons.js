@@ -23,7 +23,7 @@ const ASSETS = path.join(__dirname, '..', 'mobile', 'assets');
 // иначе он отъехал бы от края дальше системного.
 const SETS = [
   { dir: 'tabs', w: 26, h: 26, names: ['folder', 'tasks', 'today', 'chart', 'menu'] },
-  { dir: 'header', w: 22, h: 22, names: ['search', 'bell', 'plus', 'calendar', 'panel', 'list', 'download', 'kebab', 'check'] },
+  { dir: 'header', w: 22, h: 22, names: ['search', 'bell', 'plus', 'calendar', 'panel', 'list', 'download', 'kebab', 'check', 'docs'] },
   { dir: 'header', w: 13, h: 24, names: ['chevron-left'], file: 'back' },
 ];
 const SCALES = [1, 2, 3];

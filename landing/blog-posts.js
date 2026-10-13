@@ -27,6 +27,33 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-10-13',
+    tag: 'release',
+    version: '0.4.4 · mobile 1.2.3',
+    title: {
+      ru: 'Время работы, напоминания списком и новый редактор на телефоне',
+      en: 'Work time, stacked reminders and a new editor on the phone',
+    },
+    body: {
+      ru: [
+        'У задачи появилось «Время работы» — отрезки, которые вы отводите под неё: один раз или по дням. Это отдельно от дедлайна: дедлайн говорит, когда задача должна быть закрыта, а время работы — когда вы над ней сидите. Отрезки видны в календаре на неделе, рядом с отработанным временем.',
+        'Повторение теперь одно на задачу и действует на все её отрезки, как у события в календаре. Повторяться может и задача без дедлайна: после отметки она остаётся выполненной до следующего раза и возвращается сама.',
+        'Напоминаний у задачи может быть несколько, трёх видов: за N минут, часов или дней до начала или до дедлайна; один раз в своё время; по расписанию — каждый день, по дням недели или раз в месяц.',
+        'На телефоне заметки задачи редактируются прямо на её странице: панель инструментов стоит над клавиатурой, списки, чеклисты и перо — в один тап. Все настройки задачи и проекта собраны по одной логике: строки со значениями, которые открывают именно то, что нужно изменить. Листы перестали дрожать и теперь поднимаются вместе с клавиатурой.',
+        'В браузере и на компьютере: свои ссылки у проектов и задач, обновление страницы оставляет на месте, дублирование проекта и задачи, пустые экраны с подсказками, новое окно экспорта на несколько проектов, панель задачи как на телефоне и новый ввод времени. Установщики и APK раздаются с серверов Cloudflare.',
+        'Для тех, кто уже обновился: напоминания и повторения, заданные раньше, переезжают сами, ничего настраивать заново не нужно.',
+      ],
+      en: [
+        'Tasks now have “Work time” — the slots you set aside for them, once or on chosen days. It is separate from the deadline: the deadline says when a task must be closed, work time says when you sit down to it. Slots show on the week view next to the time you actually tracked.',
+        'Repeat is now one rule per task and applies to all its slots, like a calendar event. A task without a deadline can repeat too: after you tick it, it stays done until the next time and comes back on its own.',
+        'A task can have several reminders of three kinds: N minutes, hours or days before the start or the deadline; once at a time of your choosing; on a schedule — daily, on weekdays or monthly.',
+        'On the phone, task notes are edited right on the task page: the toolbar sits above the keyboard, with lists, checklists and the pen one tap away. Every task and project setting follows one logic — rows with values that open exactly what you want to change. Sheets no longer jitter and now rise together with the keyboard.',
+        'In the browser and on the computer: projects and tasks have their own links, refreshing keeps you in place, projects and tasks can be duplicated, empty screens explain what to do, a new export window covers several projects, the task panel matches the phone and time entry is new. Installers and the APK are served from Cloudflare.',
+        'If you have updated already: reminders and repeats you set earlier move over on their own; nothing needs setting up again.',
+      ],
+    },
+  },
+  {
     date: '2026-10-10',
     tag: 'release',
     version: '0.4.3',
