@@ -12,6 +12,38 @@
 (function (global) {
   const isNode = typeof module !== 'undefined' && module.exports;
   const S = isNode ? require('./status.js') : global.Core;
+  const SL = isNode ? require('./slots.js') : global.Core;
+  const RM = isNode ? require('./reminders.js') : global.Core;
+
+  // Цвета, которые продукт сменил: был → стал. 11 октября 2026 акцент стал
+  // #69d345 вместо #87ff65 — и первый цвет палитры, и «Готово» по умолчанию
+  // уже новые, а сохранённые у проектов, статусов и тегов остались старыми.
+  // Перекрашивается ровно сохранённое значение (регистр и пробелы вокруг не
+  // важны): любой другой цвет — выбор пользователя, его не трогаем. Идемпотентно
+  // за счёт того, что новый цвет в таблицу не входит; заводить в неё цепочки
+  // А→Б, Б→В нельзя. Версии и документы своего поля цвета не имеют, а цвет
+  // текста внутри документа — содержимое, а не свойство записи.
+  const RETIRED_COLORS = { '#87ff65': '#69d345' };
+
+  /** Перекрашивает проекты, статусы и теги, у которых сохранён снятый цвет.
+   *  Зовётся и из migrate(), и платформой при приёме данных из облака, если
+   *  та не гоняет всю миграцию (телефон): старая версия приложения на другом
+   *  устройстве всё ещё шлёт старый цвет, и принимать его как есть нельзя.
+   *  Берёт любой объект с массивами projects/statuses/tags, меняет на месте. */
+  function renewColors(state) {
+    for (const key of ['projects', 'statuses', 'tags']) {
+      if (!Array.isArray(state[key])) continue;
+      for (const item of state[key]) {
+        if (!item || typeof item.color !== 'string') continue;
+        // Только собственные ключи таблицы: цвет «constructor», «toString» или
+        // «__proto__» из битых данных иначе нашёл бы в обычном объекте функцию
+        // из прототипа и подменил бы строку ею.
+        const old = item.color.trim().toLowerCase();
+        if (Object.prototype.hasOwnProperty.call(RETIRED_COLORS, old)) item.color = RETIRED_COLORS[old];
+      }
+    }
+    return state;
+  }
 
   /**
    * @param {object} state — состояние приложения, меняется на месте
@@ -42,6 +74,9 @@
         if (typeof d.title !== 'string') d.title = '';
       }
     }
+    // Снятые цвета — до всего остального: копии общих статусов, цвет «по
+    // умолчанию» и прочее ниже тогда берут уже обновлённое.
+    renewColors(state);
     if (!state.ui || typeof state.ui !== 'object') state.ui = {};
     if (!state.settings || typeof state.settings !== 'object') state.settings = {};
     if (!Number.isFinite(Number(state.settings.hourlyRate))) state.settings.hourlyRate = 0;
@@ -178,6 +213,37 @@
       if (task.repeat !== undefined && task.repeat !== null && typeof task.repeat !== 'object') task.repeat = null;
       if (task.repeat === undefined) task.repeat = null;
       task.cancelled = S.isClosedStatus(state.statuses, task.statusId) && !task.done;
+      // «Время работы» (с 11 октября 2026). Поля не заводятся, если их нет:
+      // читаются они только через slotsOf, а он отсутствие понимает. Битые
+      // отрезки выбрасываются, id выдаётся тем, у кого его нет, — один раз:
+      // при следующем прогоне id уже есть.
+      //
+      // Повтор у задачи один (с 12 октября 2026). Свой повтор у отрезка
+      // бывал только в данных разработки: первое такое правило достаётся
+      // задаче, если своего у неё нет, остальные отбрасываются, поле
+      // снимается со всех отрезков (foldSlotRepeat). До normalizeSlot —
+      // та снимает поле молча. Повторный прогон: поля уже нет — нечего
+      // переносить.
+      if (task.slots !== undefined) {
+        const folded = SL.foldSlotRepeat(task);
+        if (folded) Object.assign(task, folded);
+        task.slots = (Array.isArray(task.slots) ? task.slots : []).map(SL.normalizeSlot).filter(Boolean);
+        for (const slot of task.slots) if (!slot.id) slot.id = uid();
+      }
+      // Напоминания списком (с 11 октября 2026, core/reminders.js). Нет
+      // списка — он создаётся из старых полей; старые поля поменял старый
+      // клиент — правка ложится в список; смещения у отрезков (данные
+      // разработки) уходят в список «до начала» и с отрезков снимаются;
+      // старые поля пишутся зеркалом списка. id у выведенных напоминаний
+      // детерминированные — повторный прогон ничего не меняет.
+      const reminders = RM.reconcileReminders(task);
+      if (reminders) Object.assign(task, reminders);
+      // Дата возврата нужна только закрытой задаче, которая ждёт своего дня.
+      // У открытой (вернули руками, на другом устройстве) она лишняя.
+      if (task.reopenAt !== undefined && task.reopenAt !== null
+        && (!task.done || typeof task.reopenAt !== 'string' || !Number.isFinite(Date.parse(task.reopenAt)))) {
+        task.reopenAt = null;
+      }
     });
 
     if (state.projects.length === 0 && state.tasks.length > 0) {
@@ -201,7 +267,7 @@
     return state;
   }
 
-  const api = { migrate };
+  const api = { migrate, renewColors };
   if (isNode) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

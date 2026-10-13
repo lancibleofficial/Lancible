@@ -140,6 +140,23 @@ test('правила миграции у телефона не свои, а яд
   }
 });
 
+test('«время работы» на телефоне мигрирует правилами ядра: id раз, второй прогон ничего не меняет', () => {
+  const state = M.migrate({
+    projects: [{ id: 'p1', name: 'П', createdAt: '2026-06-10T12:00:00.000Z' }],
+    tasks: [{
+      id: 't1', projectId: 'p1', done: false, reopenAt: '2026-10-12T00:00:00.000Z',
+      slots: [{ start: '2026-10-12T09:00:00.000Z', end: '2026-10-12T10:00:00.000Z' }, { start: 'мусор' }],
+    }],
+  });
+  const [task] = state.tasks;
+  assert.equal(task.slots.length, 1);
+  assert.ok(task.slots[0].id, 'id выдан');
+  assert.equal(task.reopenAt, null, 'открытая задача ничего не ждёт');
+  const before = JSON.stringify(state);
+  M.migrate(state);
+  assert.equal(JSON.stringify(state), before);
+});
+
 test('битое время задачи чинится, а не роняет подсчёт', () => {
   // Это правило пришло с телефона: десктоп его не знал, и задача с
   // sessions: null роняла бы первый же подсчёт — sessionsOf зовёт .filter.

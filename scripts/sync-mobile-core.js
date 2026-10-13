@@ -22,7 +22,23 @@ const to = path.join(root, 'mobile', 'src', 'core');
 // Только то, что мобильному действительно нужно. Остальное (format, money,
 // tags, migrate) у него своё: там логика переписана под явную передачу языка
 // и валюты вместо глобального state.
-const FILES = ['repeat.js', 'versions.js', 'agenda.js', 'status.js', 'reports.js', 'tags.js', 'sync.js', 'format.js', 'money.js', 'due.js', 'lang.js', 'catalog.js', 'migrate.js', 'views.js', 'legal.js', 'doc.js', 'icons.js'];
+//
+// illustrations.js — сценки пустых экранов: формы без цвета, классами-ролями.
+// Телефон разбирает ту же разметку и рисует её react-native-svg, красит из
+// theme.js (components/ArtScene.js) — сценки на всех поверхностях одни.
+//
+// export.js — выбор выгрузки в Excel: период, проекты, сводка «будет
+// выгружено». Лист экспорта телефона (components/ExportPeriodSheet.js) —
+// то же окно, что на вебе, и сводка должна совпадать с файлом так же.
+//
+// slots.js — «время работы»: вхождения отрезков, перекат повтора без
+// дедлайна. Его зовут due.js, views.js и migrate.js, так что без копии не
+// собрался бы и бандл телефона.
+//
+// reminders.js — напоминания задачи списком: модель, зеркало старых полей
+// и движок (что пора показать, что запланировать). Его зовут due.js,
+// slots.js и migrate.js.
+const FILES = ['repeat.js', 'versions.js', 'agenda.js', 'status.js', 'reports.js', 'tags.js', 'sync.js', 'format.js', 'money.js', 'due.js', 'slots.js', 'reminders.js', 'lang.js', 'catalog.js', 'migrate.js', 'views.js', 'legal.js', 'doc.js', 'icons.js', 'illustrations.js', 'export.js'];
 
 fs.mkdirSync(to, { recursive: true });
 let changed = 0;

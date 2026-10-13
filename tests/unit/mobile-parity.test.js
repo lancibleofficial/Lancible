@@ -157,17 +157,23 @@ const mobileDue = loadMobile(
     t: (lang, key, params) => `${key}|${lang}|${params && params.n}`,
     fmtDateShort: (date, lang) => `дата|${lang}|${date.getDate()}`,
   },
-  ['REMIND_PRESETS', 'REMIND_LABEL', 'remindKey', 'reminderTime', 'dueState', 'dueShort', 'notificationFeed'],
+  ['dueState', 'dueShort', 'notificationFeed'],
 );
 
-test('сроки на телефоне — это функции ядра, а не их двойники', () => {
+test('сроки на телефоне — обёртки над ядром, а не их двойники', () => {
   // До этого переноса здесь лежали дословные копии четырёх правил, причём два
   // из них уже были в ядре — просто спрятаны в money.js, где их никто не искал.
-  for (const name of ['remindKey', 'reminderTime']) {
-    assert.equal(mobileDue[name], CoreDue[name], `${name} — не функция ядра`);
+  // Меню одного напоминания у дедлайна (REMIND_PRESETS, REMIND_LABEL, remindKey)
+  // с 11 октября 2026 ушло: напоминания — списком в core/reminders.js.
+  const code = fs.readFileSync(path.join(MOBILE, 'due.js'), 'utf8')
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('//'))
+    .join('\n');
+  assert.doesNotMatch(code, /REMIND_PRESETS|REMIND_LABEL|remindKey|reminderTime/, 'меню напоминания у дедлайна вернулось на телефон');
+  // И в ядре, откуда телефон его брал бы: меню ушло и оттуда.
+  for (const gone of ['DUE_REMIND_PRESETS', 'REMIND_LABEL', 'remindKey']) {
+    assert.ok(!(gone in CoreDue), `ядро снова отдаёт ${gone}`);
   }
-  assert.deepEqual(mobileDue.REMIND_PRESETS, CoreDue.REMIND_PRESETS);
-  assert.deepEqual(mobileDue.REMIND_LABEL, CoreDue.REMIND_LABEL);
 });
 
 test('обёртки сроков подставляют «сейчас» и язык, не меняя правила', () => {
@@ -254,7 +260,7 @@ test('палитра и валюты на телефоне — те же объ�
   const Catalog = require('../../src/renderer/core/catalog.js');
   const src = fs.readFileSync(path.join(MOBILE, 'migrate.js'), 'utf8');
   const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
-  assert.ok(!code.includes("'#87ff65', '#5ec8f2'"), 'палитра снова переписана на телефоне');
+  assert.ok(!code.includes("'#69d345', '#5ec8f2'"), 'палитра снова переписана на телефоне');
   assert.ok(!/KGS:\s*'сом'/.test(code), 'валюты снова переписаны на телефоне');
   assert.ok(code.includes('Catalog'), 'телефон должен брать справочники из ядра');
   assert.equal(Catalog.PALETTE.length, 16);

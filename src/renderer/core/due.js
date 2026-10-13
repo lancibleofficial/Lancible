@@ -10,7 +10,11 @@
  *   remindAt        ISO | null   — своё время напоминания, когда смещение снято
  *   notifiedAt      ISO | null   — уже уведомили, повторно не будем
  *
- * Почему это отдельный файл, а не часть money.js, где reminderTime и dueState
+ * С 11 октября 2026 напоминаний у задачи список — task.reminders
+ * (core/reminders.js), а три старых поля — его зеркало для десктопа 0.4.3 и
+ * телефона 1.2.2; как их читать, знает remindersOf.
+ *
+ * Почему это отдельный файл, а не часть money.js, где правила срока и dueState
  * жили раньше. Во-первых, к деньгам они отношения не имеют, и найти их там
  * нельзя. Во-вторых, именно из-за этого телефон их и не нашёл: в
  * mobile/src/lib/due.js лежали свои копии тех же трёх правил, хотя ядро
@@ -20,28 +24,8 @@
  * запуска, и проверить его в заданную минуту нельзя.
  */
 (function (global) {
+  const isNode = typeof module !== 'undefined' && module.exports;
   const DAY = 86400000;
-
-  /** Пресеты напоминаний в порядке показа. 'custom' — своё время. */
-  const REMIND_PRESETS = [null, 0, 15, 60, 180, 1440, 'custom'];
-  const REMIND_LABEL = {
-    null: 'remind.none', 0: 'remind.at', 15: 'remind.15m',
-    60: 'remind.1h', 180: 'remind.3h', 1440: 'remind.1d', custom: 'remind.custom',
-  };
-
-  /** Ключ текущего варианта: 'null' | 'custom' | число минут строкой. */
-  function remindKey(task) {
-    if ((task.remindOffsetMin === null || task.remindOffsetMin === undefined) && task.remindAt) return 'custom';
-    return String(task.remindOffsetMin === undefined ? null : task.remindOffsetMin);
-  }
-
-  /** Момент напоминания: либо смещение от срока, либо своё время. */
-  function reminderTime(task) {
-    if (task.remindOffsetMin !== null && task.remindOffsetMin !== undefined && task.dueAt) {
-      return new Date(new Date(task.dueAt).getTime() - task.remindOffsetMin * 60000);
-    }
-    return task.remindAt ? new Date(task.remindAt) : null;
-  }
 
   /** 'overdue' | 'soon' (в пределах суток) | 'later' | null. Выполненная
    *  задача срока не имеет — она уже не горит. */
@@ -80,29 +64,57 @@
    *  Непрочитанным считается то, чей момент наступил позже последнего
    *  открытия панели (seenAtIso). У «скоро» этот момент — не сам срок, а
    *  сутки до него: иначе задача со сроком через неделю считалась бы
-   *  непрочитанной всю неделю. */
+   *  непрочитанной всю неделю.
+   *
+   *  С 11 октября 2026 напоминания в ленту приходят из списка задачи
+   *  (core/reminders.js, reminderFeed), у каждой записи — key, уникальный в
+   *  ленте, им ленту и рисуют, и reminderId. Вида три:
+   *  • 'slot' — «до начала» вхождения «времени работы»: at — время
+   *    напоминания, due — начало вхождения, end — конец, slotId; висит, пока
+   *    вхождение не кончилось;
+   *  • 'reminder' от «до дедлайна» и «в своё время» — одна запись на задачу,
+   *    due — дедлайн или null; пока сам дедлайн в ленте (просрочен или в
+   *    пределах суток), её нет — как и раньше, дедлайн её заменяет;
+   *  • 'reminder' от «повторять» — последнее вхождение за сутки, due: null.
+   *  Выполненные и отменённые задачи не напоминают. Записи дедлайна
+   *  (просрочен, скоро) — те же, что и были, поле в поле. */
   function notificationFeed(tasks, seenAtIso, now) {
     const seen = seenAtIso ? new Date(seenAtIso).getTime() : 0;
     const out = [];
     for (const task of tasks) {
       if (task.done || !task.dueAt) continue;
       const due = new Date(task.dueAt).getTime();
-      const rt = reminderTime(task);
-      const fired = !!rt && rt.getTime() <= now;
       let kind = null;
       let at = due;
       if (due < now) kind = 'overdue';
       else if (due - now <= DAY) { kind = 'soon'; at = due - DAY; }
-      else if (fired) { kind = 'reminder'; at = rt.getTime(); }
       if (!kind) continue;
-      out.push({ task, kind, at, due, unread: at > seen });
+      out.push({ task, kind, at, due, unread: at > seen, key: `due-${task.id}` });
     }
-    return out.sort((a, b) => a.due - b.due);
+    // Список напоминаний — в reminders.js, а в браузере он грузится позже
+    // этого файла (due → slots → reminders). Поэтому берём его здесь, при
+    // вызове, а не при загрузке: к этому моменту все модули уже на месте.
+    const M = isNode ? require('./reminders.js') : global.Core;
+    for (const task of tasks) {
+      const due = task.dueAt ? new Date(task.dueAt).getTime() : NaN;
+      const deadlineShown = due < now || due - now <= DAY;
+      for (const r of M.reminderFeed(task, now)) {
+        const unread = r.at > seen;
+        if (r.kind === 'before' && r.anchor === 'start') {
+          out.push({ task, kind: 'slot', at: r.at, due: r.start, end: r.end, slotId: r.slotId, unread, key: r.key, reminderId: r.reminderId });
+        } else if (r.kind === 'repeat') {
+          out.push({ task, kind: 'reminder', at: r.at, due: null, unread, key: r.key, reminderId: r.reminderId });
+        } else if (!deadlineShown) {
+          out.push({ task, kind: 'reminder', at: r.at, due: Number.isFinite(due) ? due : null, unread, key: r.key, reminderId: r.reminderId });
+        }
+      }
+    }
+    const order = (n) => (n.due === null ? n.at : n.due);
+    return out.sort((a, b) => order(a) - order(b));
   }
 
   const api = {
-    REMIND_PRESETS, REMIND_LABEL,
-    remindKey, reminderTime, dueState, dueShort, notificationFeed,
+    dueState, dueShort, notificationFeed,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -199,3 +199,50 @@ test('keepHistory доезжает до вызывающего', () => {
   assert.equal(R.planRepeatRoll(on, '2026-06-10T09:00:00Z', now).keepHistory, true);
   assert.equal(R.planRepeatRoll(off, '2026-06-10T09:00:00Z', now).keepHistory, false);
 });
+
+// --- перекат задачи целиком (core/slots.js) ----------------------------------
+
+test('задача только с дедлайном катится ровно как раньше: planTaskRoll — это planRepeatRoll', () => {
+  // Свойство, а не пример: «время работы» добавило перекату два новых случая
+  // (без дедлайна), и старый не должен сдвинуться ни на минуту ни при каком
+  // правиле, сроке и моменте закрытия.
+  const L = require('../../src/renderer/core/slots.js');
+  const rules = [
+    { freq: 'day', every: 1 },
+    { freq: 'day', every: 3, from: 'done' },
+    { freq: 'week', every: 1, weekdays: [1, 4] },
+    { freq: 'week', every: 2, keepHistory: true },
+    { freq: 'month', every: 1 },
+    { freq: 'month', every: 2, monthMode: 'weekday' },
+    { freq: 'year', every: 1 },
+    { freq: 'day', every: 1, ends: { kind: 'after', count: 3 }, done: 0 },
+    { freq: 'day', every: 1, ends: { kind: 'after', count: 3 }, done: 2 },
+    { freq: 'day', every: 1, ends: { kind: 'after', count: 3 }, done: 3 },
+    { freq: 'week', every: 1, ends: { kind: 'on', at: '2026-06-20' } },
+    'мусор',
+  ];
+  const dues = ['2026-01-31T09:00:00Z', '2026-06-10T09:00:00Z', '2026-06-14T23:30:00Z'];
+  const nows = ['2026-01-30T12:00:00Z', '2026-06-10T20:00:00Z', '2026-07-01T08:00:00Z'].map(AT);
+  let checked = 0;
+  for (const rule of rules) {
+    for (const dueAt of dues) {
+      for (const now of nows) {
+        const tag = `${JSON.stringify(rule)} ${dueAt} ${new Date(now).toISOString()}`;
+        const roll = R.planRepeatRoll(rule, dueAt, now);
+        const plan = L.planTaskRoll({ id: 't', repeat: rule, dueAt }, now);
+        if (!roll || roll.finished) {
+          assert.deepEqual(plan, roll, tag);
+          continue;
+        }
+        assert.equal(plan.open, true, tag);
+        assert.equal(plan.nextDue, roll.nextDue, tag);
+        assert.equal(plan.patch.dueAt, new Date(roll.nextDue).toISOString(), tag);
+        assert.deepEqual(plan.patch.repeat, roll.repeat, tag);
+        assert.equal(plan.keepHistory, roll.keepHistory, tag);
+        assert.deepEqual(plan.patch.slots, [], tag);
+        checked += 1;
+      }
+    }
+  }
+  assert.ok(checked > 50, `сверено перекатов: ${checked}`);
+});

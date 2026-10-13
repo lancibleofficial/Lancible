@@ -16,7 +16,6 @@
  * Время суток берётся у исходного срока: правило задаёт день, а не час.
  */
 (function (global) {
-  const DAY = 86400000;
   const FREQS = ['day', 'week', 'month', 'year'];
   const MAX_EVERY = 99;
 
@@ -114,8 +113,11 @@
       if (!r.weekdays.length) {
         next = addDays(base, 7 * r.every);
       } else {
-        // Сначала ищем подходящий день внутри той же недели.
-        const weekEnd = mondayOf(base) + (7 * DAY);
+        // Сначала ищем подходящий день внутри той же недели. Конец недели —
+        // по календарю: в неделю перевода часов вперёд «понедельник + 7 суток»
+        // приходится на час ночи следующего понедельника, и он считался бы
+        // своим — «раз в две недели» срабатывало бы через одну.
+        const weekEnd = addDays(mondayOf(base), 7);
         let found = null;
         for (let d = addDays(startOfDay(base), 1); d < weekEnd; d = addDays(d, 1)) {
           if (r.weekdays.includes(new Date(d).getDay())) { found = d; break; }

@@ -20,6 +20,26 @@
     return x.getTime();
   };
 
+  /** Полночь дня через n календарных дней от d (n бывает отрицательным).
+   *
+   *  Не `d + n * DAY`: в стране с переводом часов сутки дважды в год длятся
+   *  23 или 25 часов, и такой сдвиг съезжает с полуночи на час. Дальше это
+   *  расползается по всему календарю: на неделе с переводом назад один день
+   *  повторяется, а соседний теряется, повторение «по понедельникам» берёт
+   *  понедельник следующей недели за свой, а нарезка записей по суткам в
+   *  25-часовой день не доходит до полуночи и встаёт в вечный цикл. */
+  function addDaysMs(d, n) {
+    const x = new Date(d);
+    return new Date(x.getFullYear(), x.getMonth(), x.getDate() + n).getTime();
+  }
+
+  /** Сколько календарных дней от дня a до дня b — номер столбца сетки.
+   *  Округлением, а не делением нацело: между полуночами по разные стороны
+   *  перевода часов не ровно n суток, а на час больше или меньше. */
+  function daysBetween(a, b) {
+    return Math.round((startOfDayMs(b) - startOfDayMs(a)) / DAY);
+  }
+
   /** Понедельник недели, в которую попала дата. Неделя начинается с
    *  понедельника — так же, как в остальном приложении. */
   function mondayOfMs(d) {
@@ -34,24 +54,25 @@
 
   /** Отрезок, который показывает сетка: [начало первого дня, конец последнего).
    *  Месяц округляется до целых недель, чтобы сетка была прямоугольной.
+   *  Обе границы — местные полуночи, считанные по календарю (addDaysMs).
    *  @param {string} mode — day | week | month | agenda */
   function agendaRange(mode, anchor) {
     const a = startOfDayMs(anchor);
     if (mode === 'week') {
       const from = mondayOfMs(a);
-      return { from, to: from + 7 * DAY, days: 7 };
+      return { from, to: addDaysMs(from, 7), days: 7 };
     }
     if (mode === 'month') {
       const d = new Date(a);
       const first = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
       const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime();
       const from = mondayOfMs(first);
-      const to = mondayOfMs(last) + 7 * DAY;
-      return { from, to, days: Math.round((to - from) / DAY) };
+      const to = addDaysMs(mondayOfMs(last), 7);
+      return { from, to, days: daysBetween(from, to) };
     }
-    if (mode === 'agenda') return { from: a, to: a + 30 * DAY, days: 30 };
+    if (mode === 'agenda') return { from: a, to: addDaysMs(a, 30), days: 30 };
     const days = MODE_DAYS[mode] || 1;
-    return { from: a, to: a + days * DAY, days };
+    return { from: a, to: addDaysMs(a, days), days };
   }
 
   /** Сдвиг на шаг вперёд или назад по тому же режиму. */
@@ -61,9 +82,9 @@
       const d = new Date(a);
       return new Date(d.getFullYear(), d.getMonth() + dir, 1).getTime();
     }
-    if (mode === 'week') return mondayOfMs(a) + dir * 7 * DAY;
-    if (mode === 'agenda') return a + dir * 30 * DAY;
-    return a + dir * (MODE_DAYS[mode] || 1) * DAY;
+    if (mode === 'week') return addDaysMs(mondayOfMs(a), dir * 7);
+    if (mode === 'agenda') return addDaysMs(a, dir * 30);
+    return addDaysMs(a, dir * (MODE_DAYS[mode] || 1));
   }
 
   /** Записи времени, нарезанные по дням отрезка.
@@ -71,6 +92,11 @@
    *  Запись, перешедшая за полночь, показывается куском в каждом дне: иначе
    *  ночная работа целиком приписывалась бы дню, в котором началась, и
    *  пропадала бы из следующего.
+   *
+   *  Сутки режутся по календарю: конец дня — следующая местная полночь, а не
+   *  начало плюс 24 часа. В 25-часовой день (перевод часов назад) «плюс 24
+   *  часа» — это 23:00, и запись после 23:00 не продвигала цикл ни на шаг:
+   *  экран, где окно накрывало такую запись, зависал намертво.
    *
    *  @returns [{taskId, index, dayIndex, start, end, ms, crossesDay}] */
   function sessionSegments(tasks, from, to) {
@@ -86,13 +112,17 @@
         let cur = Math.max(a, from);
         while (cur < Math.min(b, to)) {
           const dayStart = startOfDayMs(cur);
-          const dayEnd = dayStart + DAY;
+          const dayEnd = addDaysMs(dayStart, 1);
+          // Каждый шаг обязан продвигаться вперёд. По календарю следующая
+          // полночь всегда позже, но если граница всё же не впереди (дата за
+          // пределами Date, битая запись) — выходим, а не крутимся на месте.
+          if (!(dayEnd > cur)) break;
           const segEnd = Math.min(b, dayEnd, to);
           out.push({
             taskId: task.id,
             index: i,
             projectId: task.projectId,
-            dayIndex: Math.round((dayStart - from) / DAY),
+            dayIndex: daysBetween(from, dayStart),
             start: cur,
             end: segEnd,
             ms: segEnd - cur,
@@ -111,7 +141,7 @@
       .filter((t) => t.dueAt)
       .map((t) => ({ taskId: t.id, projectId: t.projectId, at: new Date(t.dueAt).getTime(), done: !!t.done }))
       .filter((d) => Number.isFinite(d.at) && d.at >= from && d.at < to)
-      .map((d) => ({ ...d, dayIndex: Math.round((startOfDayMs(d.at) - from) / DAY) }))
+      .map((d) => ({ ...d, dayIndex: daysBetween(from, d.at) }))
       .sort((a, b) => a.at - b.at);
   }
 
@@ -137,7 +167,7 @@
           projectId: task.projectId,
           at,
           ghost: true,
-          dayIndex: Math.round((startOfDayMs(at) - from) / DAY),
+          dayIndex: daysBetween(from, at),
         });
       }
     }
@@ -198,23 +228,38 @@
    *  нему день определился бы неверно. */
   function clampSpan(dayStart, start, end, minMin) {
     const day = startOfDayMs(dayStart);
+    const dayEnd = addDaysMs(day, 1);
     const min = Math.max(1, minMin || 5) * MIN;
-    let a = Math.max(day, Math.min(start, day + DAY - min));
-    let b = Math.min(day + DAY, Math.max(end, a + min));
+    let a = Math.max(day, Math.min(start, dayEnd - min));
+    let b = Math.min(dayEnd, Math.max(end, a + min));
     if (b - a < min) a = Math.max(day, b - min);
     return { start: a, end: b };
   }
 
   /** Доля суток, на которой стоит момент времени: 0 — полночь, 1 — конец дня.
-   *  По ней часовая сетка расставляет блоки по высоте. */
+   *  По ней часовая сетка расставляет блоки по высоте.
+   *
+   *  Считается по часам на циферблате, а не по прошедшим с полуночи
+   *  миллисекундам: подписи сетки — 24 часа, и в 25-часовой день 23:30
+   *  иначе уезжала бы под сетку, а в 23-часовой вставала бы на 22:30. */
   function dayFraction(ms) {
-    const day = startOfDayMs(ms);
-    return (ms - day) / DAY;
+    const d = new Date(ms);
+    return (((d.getHours() * 60 + d.getMinutes()) * 60 + d.getSeconds()) * 1000 + d.getMilliseconds()) / DAY;
+  }
+
+  /** Обратное к dayFraction: момент на доле frac суток того дня, где лежит
+   *  dayStart. 1 — следующая полночь. По нему сетка переводит высоту под
+   *  пальцем или курсором во время. */
+  function atDayFraction(dayStart, frac) {
+    const d = new Date(dayStart);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, Math.round(frac * DAY)).getTime();
   }
 
   const api = {
     DAY,
     startOfDayMs,
+    addDaysMs,
+    daysBetween,
     mondayOfMs,
     agendaRange,
     shiftAnchor,
@@ -225,6 +270,7 @@
     snapMinutes,
     clampSpan,
     dayFraction,
+    atDayFraction,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

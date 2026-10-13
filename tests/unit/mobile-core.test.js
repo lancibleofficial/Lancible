@@ -75,6 +75,42 @@ test('приглушённый цвет телефона — основной ц
   assert.deepEqual(bad, []);
 });
 
+test('акцент один на всех поверхностях: телефон, лендинг и ядро — те же значения, что в styles.css', () => {
+  // Акцент — бренд (DESIGN.md), и значения у поверхностей разные только по
+  // темам. 11 октября он сменился, и править пришлось пять мест руками: ничто
+  // не сверяло телефон с десктопом, а лендинг и справочники ядра — с тёмной
+  // темой.
+  const css = fs.readFileSync(path.join(ROOT, 'src', 'renderer', 'styles.css'), 'utf8');
+  const block = (head) => {
+    const open = css.indexOf('{', css.indexOf(head));
+    return css.slice(open, css.indexOf('\n}', open));
+  };
+  const tokenOf = (body, name) => ((body.match(new RegExp(`${name}:\\s*(#[0-9a-fA-F]{6})`)) || [])[1] || '').toLowerCase();
+  const phoneKeys = { '--accent': 'accent', '--accent-hover': 'accentHover', '--accent-text': 'accentText', '--accent-ink': 'accentInk' };
+  const palettes = mobilePalettes();
+  const bad = [];
+  for (const [theme, head] of [['dark', ':root {'], ['light', ':root[data-theme="light"] {']]) {
+    const body = block(head);
+    for (const [name, key] of Object.entries(phoneKeys)) {
+      const want = tokenOf(body, name);
+      if (!want || String(palettes[theme][key]).toLowerCase() !== want) bad.push(`${theme}.${key} = ${palettes[theme][key]}, а ${name} = ${want}`);
+    }
+  }
+  const dark = block(':root {');
+  const landing = fs.readFileSync(path.join(ROOT, 'landing', 'landing.css'), 'utf8');
+  for (const name of ['--accent', '--accent-text']) {
+    if (tokenOf(landing, name) !== tokenOf(dark, name)) bad.push(`landing.css ${name} = ${tokenOf(landing, name)}, а на тёмном десктопе ${tokenOf(dark, name)}`);
+  }
+  // Первый цвет палитры проектов и цвет статуса «Готово» — акцент тёмной темы.
+  const { PALETTE } = require(path.join(CORE, 'catalog.js'));
+  const { DEFAULT_STATUSES } = require(path.join(CORE, 'status.js'));
+  const accent = tokenOf(dark, '--accent');
+  if (PALETTE[0].toLowerCase() !== accent) bad.push(`PALETTE[0] = ${PALETTE[0]}, а --accent = ${accent}`);
+  const done = DEFAULT_STATUSES.find((s) => s.kind === 'done');
+  if (done.color.toLowerCase() !== accent) bad.push(`статус «Готово» = ${done.color}, а --accent = ${accent}`);
+  assert.deepEqual(bad, []);
+});
+
 test('светлая и тёмная палитры телефона объявляют один и тот же набор токенов', () => {
   // Добавил токен в одну тему и забыл во второй — приложение не падает, а
   // молча рисует undefined: в React Native это «цвета нет», то есть чёрный

@@ -9,7 +9,7 @@
 // без версии, повторения и дедлайна. Эти ветки закрыты здесь.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { taskRowView, deckTasks, deckPinTop } = require('../../src/renderer/core/views.js');
+const { taskRowView, deckTasks, deckPinTop, holdOrder } = require('../../src/renderer/core/views.js');
 
 const NOW = new Date(2026, 5, 10, 12).getTime();
 const HOUR = 3_600_000;
@@ -219,6 +219,33 @@ test('часовая сетка: пересекающиеся записи ра�
   assert.deepEqual(day.blocks.map((x) => x.col).sort(), [0, 1]);
 });
 
+test('плановые блоки: в своём дне, с названием и цветом, у закрытой задачи их нет', () => {
+  const slot = (day, h, extra) => ({
+    id: `s${day}`, start: new Date(at(day, h)).toISOString(), end: new Date(at(day, h + 2)).toISOString(),
+    remindOffsetMin: null, notifiedUpTo: null, ...extra,
+  });
+  // Правило повтора — у задачи, одно на все её отрезки (Пн и Ср).
+  const tasks = [
+    { id: 'w', projectId: 'p1', title: 'Вёрстка', sessions: [ses(10, 10)], repeat: { freq: 'week', every: 1, weekdays: [1, 3] }, slots: [slot(10, 9), slot(8, 14)] },
+    { id: 'x', projectId: 'p2', title: '', sessions: [], slots: [slot(11, 12)] },
+    { id: 'z', projectId: 'p1', title: 'Закрыта', done: true, sessions: [], slots: [slot(12, 9)] },
+  ];
+  const days = agendaDays(tasks, calCtx({ from: new Date(2026, 5, 8).getTime(), days: 7 }));
+  const show = (d) => d.planned.map((p) => [p.taskId, p.slotId, new Date(p.start).getHours(), p.title, p.color, p.recurring]);
+  // 8 июня — понедельник. Отрезок среды 9:00 до следующего понедельника в
+  // неделю не доходит.
+  assert.deepEqual(show(days[0]), [['w', 's8', 14, 'Вёрстка', '#87ff65', true]]);
+  assert.deepEqual(show(days[2]), [['w', 's10', 9, 'Вёрстка', '#87ff65', true], ['w', 's8', 14, 'Вёрстка', '#87ff65', true]]);
+  assert.deepEqual(show(days[3]), [['x', 's11', 12, 'task.no_name', '#5ec8f2', false]]);
+  assert.deepEqual(show(days[4]), [], 'закрытая задача плановых блоков не даёт');
+
+  const grid = agendaTimeView(tasks, calCtx({ from: new Date(2026, 5, 8).getTime(), days: 7 }));
+  const wed = grid.days[2];
+  assert.equal(wed.planned.length, 2, 'на сетке — отдельно от записей');
+  assert.equal(wed.blocks.length, 1);
+  assert.ok(!('col' in wed.planned[0]), 'плановые блоки в раскладку по колонкам не входят');
+});
+
 test('дни календаря не трогают задачи', () => {
   const tasks = [{ id: 'a', projectId: 'p1', title: 'А', sessions: [ses(10, 10)], dueAt: new Date(at(10, 18)).toISOString() }];
   const before = JSON.stringify(tasks);
@@ -248,4 +275,50 @@ test('карточка проекта: идущая держится перво�
   assert.equal(deckPinTop('a', null), null);
   assert.equal(deckPinTop('a', { taskId: 'b' }), null, 'запустили другую — наверх не прыгает никто');
   assert.equal(deckPinTop(null, { taskId: 'b' }), null);
+});
+
+// --- Замороженный порядок строк -----------------------------------------------
+// Запустили задачу — «недавние» поставили бы её первой. Пока таймер идёт,
+// список держит порядок, что был на экране (app.js: orderHold).
+
+test('заморозка: пока порядка нет — обычный, и это копия', () => {
+  const fresh = ['c', 'a', 'b'];
+  assert.deepEqual(holdOrder(null, fresh), ['c', 'a', 'b']);
+  assert.deepEqual(holdOrder([], fresh), ['c', 'a', 'b']);
+  assert.notEqual(holdOrder(null, fresh), fresh, 'вызвавший может менять результат, не трогая исходное');
+});
+
+test('заморозка: запущенная задача не выпрыгивает вверх', () => {
+  // На экране было a b c d; по свежим данным идущая c — первая.
+  assert.deepEqual(holdOrder(['a', 'b', 'c', 'd'], ['c', 'a', 'b', 'd']), ['a', 'b', 'c', 'd']);
+});
+
+test('заморозка: ушедшие строки пропадают, остальные не двигаются', () => {
+  assert.deepEqual(holdOrder(['a', 'b', 'c', 'd'], ['d', 'c', 'a']), ['a', 'c', 'd'], 'b выполнена или удалена');
+  assert.deepEqual(holdOrder(['a', 'b'], []), [], 'список опустел');
+});
+
+test('заморозка: новая строка встаёт по обычному правилу — после предшественницы по свежему порядку', () => {
+  // Новая n в обычном порядке первая — первой и встаёт, остальные держатся.
+  assert.deepEqual(holdOrder(['a', 'b', 'c'], ['n', 'c', 'a', 'b']), ['n', 'a', 'b', 'c']);
+  // Новая n обычно идёт после a — и встаёт после a.
+  assert.deepEqual(holdOrder(['a', 'b', 'c'], ['c', 'a', 'n', 'b']), ['a', 'n', 'b', 'c']);
+  // Две новые подряд сохраняют порядок между собой.
+  assert.deepEqual(holdOrder(['a', 'b'], ['x', 'y', 'b', 'a']), ['x', 'y', 'a', 'b']);
+  // Никого из прежних не осталось — порядок обычный.
+  assert.deepEqual(holdOrder(['a', 'b'], ['y', 'x']), ['y', 'x']);
+});
+
+test('заморозка: набор строк всегда как у обычного порядка', () => {
+  const fresh = ['e', 'a', 'x', 'c'];
+  const out = holdOrder(['c', 'a', 'z', 'b'], fresh);
+  assert.deepEqual([...out].sort(), [...fresh].sort());
+  assert.equal(new Set(out).size, out.length, 'повторов нет');
+});
+
+test('заморозка: перерисовка с теми же данными порядок не меняет', () => {
+  const held = ['a', 'b', 'c'];
+  const first = holdOrder(held, ['c', 'a', 'b']);
+  assert.deepEqual(holdOrder(first, ['c', 'a', 'b']), first);
+  assert.deepEqual(held, ['a', 'b', 'c'], 'исходный порядок не переставлен');
 });

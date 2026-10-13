@@ -29,7 +29,7 @@
     { key: 'todo', kind: 'todo', color: '#8a93a5' },
     { key: 'progress', kind: 'progress', color: '#f5c451' },
     { key: 'checking', kind: 'progress', color: '#5ec8f2' },
-    { key: 'done', kind: 'done', color: '#87ff65' },
+    { key: 'done', kind: 'done', color: '#69d345' },
     { key: 'cancelled', kind: 'cancelled', color: '#8a93a5' },
   ];
 

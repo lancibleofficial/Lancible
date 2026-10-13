@@ -29,6 +29,7 @@
   const A = isNode ? require('./agenda.js') : global.Core;
   const M = isNode ? require('./money.js') : global.Core;
   const T = isNode ? require('./tags.js') : global.Core;
+  const SL = isNode ? require('./slots.js') : global.Core;
 
   /**
    * Строка задачи в списке.
@@ -92,12 +93,16 @@
 
   /** Дни отрезка и что в каждом.
    *
-   *  «Сегодня» сравнивается по ключу дня, а не по началу суток в
-   *  миллисекундах: from + i·сутки на переходе на летнее время уезжает с
-   *  полуночи на час, а ключ дня считается по местной дате и не уезжает. */
+   *  Дни шагают по календарю (addDaysMs), а не прибавлением суток: на
+   *  переходе часов from + i·сутки уезжает с полуночи на час, и на неделе с
+   *  переводом назад один день повторялся бы, а соседний терялся. «Сегодня»
+   *  сравнивается по ключу дня — он считается по местной дате.
+   *
+   *  planned — плановые блоки «времени работы» (slots.js, slotItems): куски
+   *  вхождений отрезков открытых задач, уже нарезанные по полуночи. */
   function agendaDays(tasks, ctx) {
     const { from, days, now, t, projectColor } = ctx;
-    const to = from + days * A.DAY;
+    const to = A.addDaysMs(from, days);
     const byId = new Map(tasks.map((task) => [task.id, task]));
     const titleOf = (id) => {
       const task = byId.get(id);
@@ -105,10 +110,11 @@
     };
     const deadlines = A.deadlineItems(tasks, from, to).concat(A.repeatGhosts(tasks, from, to));
     const segments = A.sessionSegments(tasks, from, to);
+    const planned = SL.slotItems(tasks, from, to);
     const todayKey = F.dayKey(new Date(now));
 
     return Array.from({ length: days }, (_, i) => {
-      const start = from + i * A.DAY;
+      const start = A.addDaysMs(from, i);
       const date = new Date(start);
       return {
         index: i,
@@ -129,6 +135,9 @@
         segments: segments
           .filter((seg) => seg.dayIndex === i)
           .map((seg) => ({ ...seg, title: titleOf(seg.taskId), color: projectColor(seg.projectId) })),
+        planned: planned
+          .filter((p) => p.dayIndex === i)
+          .map((p) => ({ ...p, title: titleOf(p.taskId), color: projectColor(p.projectId) })),
       };
     });
   }
@@ -178,6 +187,9 @@
           tooltip: `${t('agenda.deadline')} · ${fmtTime(dl.at)}`,
         })),
         blocks: A.layoutOverlaps(d.segments),
+        // Плановые блоки — отдельно от записей: они лежат полосой во всю
+        // ширину под ними и в раскладку по колонкам не входят.
+        planned: d.planned,
       })),
       // Полночь не подписываем: её метка висела бы над первой линией и
       // читалась подписью ко всей сетке.
@@ -213,6 +225,46 @@
   function deckPinTop(pinTaskId, activeTimer) {
     if (!pinTaskId) return null;
     return activeTimer && activeTimer.taskId === pinTaskId ? pinTaskId : null;
+  }
+
+  /**
+   * Порядок строк, пока он заморожен. У идущей задачи последняя запись —
+   * «сейчас», и «недавние» ставят её первой: строка прыгала бы вверх сама,
+   * в момент нажатия. Пока таймер идёт, список держит тот порядок, что был
+   * на экране; остановили — заморозка снята, порядок обычный, и строки
+   * переезжают на новые места (FLIP в app.js).
+   *
+   * Что показать, решает обычное правило (fresh); заморозка только
+   * переставляет выбранное им. Набор строк всегда как у fresh: ушедшие
+   * (выполнена, удалена, выпала за предел) пропадают, новые встают по
+   * обычному правилу — после ближайшей предшественницы по fresh, а если её
+   * нет, в начало.
+   *
+   * @param {string[]|null} held — id в том порядке, в каком список видели в
+   *   момент заморозки; пусто или null — заморозки нет
+   * @param {string[]} fresh — id в обычном порядке по свежим данным
+   * @returns {string[]} те же id, что в fresh
+   */
+  function holdOrder(held, fresh) {
+    if (!held || !held.length) return fresh.slice();
+    const alive = new Set(fresh);
+    const seen = new Set();
+    const out = [];
+    for (const id of held) {
+      if (alive.has(id) && !seen.has(id)) { seen.add(id); out.push(id); }
+    }
+    fresh.forEach((id, i) => {
+      if (seen.has(id)) return;
+      // Все предшественницы по fresh уже на местах: свои или вставленные раньше.
+      let at = 0;
+      for (let j = i - 1; j >= 0; j -= 1) {
+        const k = out.indexOf(fresh[j]);
+        if (k >= 0) { at = k + 1; break; }
+      }
+      out.splice(at, 0, id);
+      seen.add(id);
+    });
+    return out;
   }
 
   // --- экран проекта --------------------------------------------------------
@@ -283,7 +335,7 @@
     return rows;
   }
 
-  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView, deckTasks, deckPinTop, projectListGroups, versionRows };
+  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView, deckTasks, deckPinTop, holdOrder, projectListGroups, versionRows };
 
   if (isNode) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);
