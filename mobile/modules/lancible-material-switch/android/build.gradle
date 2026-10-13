@@ -1,0 +1,25 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.lancible.materialswitch'
+version = '1.0.0'
+
+android {
+  namespace "com.lancible.materialswitch"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+  lint {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // MaterialSwitch появился в Material Components 1.9. Версия — та же, что
+  // тянет react-native-screens: одна копия библиотеки в APK, без подбора
+  // версий Gradle'ом.
+  implementation "com.google.android.material:material:1.13.0"
+}

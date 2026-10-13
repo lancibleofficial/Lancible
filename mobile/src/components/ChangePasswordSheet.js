@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Text from './AppText';
-import TextInput from './AppTextInput';
+import { Field } from './AppTextInput';
 import PrimaryButton from './PrimaryButton';
+import { Hint } from './RepeatControls';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
-import { setSheetFooter, closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+import { setSheetFooter, clearSheetFooter, closeSheet, useSheetHeader } from '../store/useSheetStore';
+import { spacing } from '../theme';
 import { t } from '../lib/i18n';
 
-export default function ChangePasswordSheet() {
-  const colors = useColors();
-  const styles = makeStyles(colors);
+/** Смена пароля: два поля и «Сохранить».
+ *  @param embedded страница листа профиля (ProfileSheet): без своего
+ *    заголовка — его и стрелку «назад» ставит профиль. */
+export default function ChangePasswordSheet({ embedded }) {
   const lang = useAppStore((s) => s.settings.lang);
   const showToast = useAppStore((s) => s.showToast);
   const changePassword = useAuthStore((s) => s.changePassword);
@@ -19,6 +20,7 @@ export default function ChangePasswordSheet() {
   const [pw2, setPw2] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  useSheetHeader(embedded ? null : t(lang, 'profile.change_password'));
 
   async function save() {
     if (pw.length < 6) { setError(t(lang, 'profile.password_too_short')); return; }
@@ -36,41 +38,31 @@ export default function ChangePasswordSheet() {
   }
 
   useEffect(() => {
-    setSheetFooter(<PrimaryButton title={t(lang, 'common.save')} onPress={save} loading={saving} />);
-    return () => setSheetFooter(null);
+    const footer = <PrimaryButton title={t(lang, 'common.save')} onPress={save} loading={saving} />;
+    setSheetFooter(footer);
+    return () => clearSheetFooter(footer);
   }, [pw, pw2, saving, lang]);
 
   return (
     <View style={styles.content}>
-      <Text style={styles.title}>{t(lang, 'profile.change_password')}</Text>
-      <TextInput
-        style={styles.input}
+      <Field
         value={pw}
         onChangeText={(v) => { setPw(v); setError(''); }}
         placeholder={t(lang, 'profile.new_password')}
-        placeholderTextColor={colors.textDim}
         secureTextEntry
         autoFocus
       />
-      <TextInput
-        style={styles.input}
+      <Field
         value={pw2}
         onChangeText={(v) => { setPw2(v); setError(''); }}
         placeholder={t(lang, 'profile.confirm_password')}
-        placeholderTextColor={colors.textDim}
         secureTextEntry
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Hint danger>{error}</Hint> : null}
     </View>
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const styles = StyleSheet.create({
   content: { gap: spacing.md },
-  title: { color: colors.text, ...typography.title },
-  input: {
-    backgroundColor: colors.inputBg, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
-  },
-  error: { color: colors.danger, fontSize: fontSize.sm },
 });

@@ -33,6 +33,7 @@ export const HEADER_ICONS = {
   download: require('../../assets/header/download.png'),
   kebab: require('../../assets/header/kebab.png'),
   check: require('../../assets/header/check.png'),
+  docs: require('../../assets/header/docs.png'),
 };
 
 /** Иконка нативной кнопки шапки. iOS красит картинку сам (tint). */

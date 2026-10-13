@@ -1,12 +1,19 @@
-// Пролистывание вкладок на iOS: содержимое и заголовок шапки доезжают на
-// место со стороны открытой вкладки (события — navigation/tabSlide.js).
-// Старую вкладку система уже убрала, поэтому новая въезжает не на всю
-// ширину, а на пятую часть, ease out. Без прозрачности: страница всегда
-// видна, она только сдвинута, — иначе при смене вкладки мелькал пустой
-// экран. Кнопки шапки нативные — их сменяет система вместе с вкладкой.
+// Пролистывание вкладок на iOS: содержимое доезжает на место со стороны
+// открытой вкладки (события — navigation/tabSlide.js). Старую вкладку
+// система уже убрала, поэтому новая въезжает не на всю ширину, а на пятую
+// часть, ease out. Без прозрачности: страница всегда видна, она только
+// сдвинута, — иначе при смене вкладки мелькал пустой экран.
 //
-// На Android вкладки пролистывает навигатор целиком, здесь ничего не
-// делается.
+// Шапка при смене вкладки не двигается и не гаснет — ни здесь, ни на Android:
+// меняется только то, что в ней, и жидко, коротко: название каплей, лишние
+// кнопки стекают, недостающие набухают (TabHeader.js, HeaderLiquid.js). У
+// нативной шапки iOS 26+ кнопки и заголовок сменяет система вместе с вкладкой.
+//
+// Скелетон вкладки (withTabPage) грузит только содержимое страницы: шапка и
+// панель вкладок готовы всегда и в нём не рисуются полосами (Skeleton.js).
+//
+// На Android вкладки пролистывает навигатор целиком, страница не двигается
+// сама; здесь только имя вкладки для шапки.
 import { createContext, useEffect, useState } from 'react';
 import { Platform, useWindowDimensions } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
@@ -15,10 +22,8 @@ import { subscribeTab, freshSide } from '../navigation/tabSlide';
 const MOVE = { duration: 320, easing: Easing.out(Easing.cubic) };
 /** Доля ширины экрана, с которой въезжает страница. */
 export const PAGE_SHIFT = 0.2;
-/** Сдвиг заголовка шапки, pt. */
-export const TITLE_SHIFT = 24;
 
-/** Имя вкладки для шапки: заголовок въезжает вместе со страницей. */
+/** Имя вкладки для шапки: по нему шапка знает, чьё содержимое показывать. */
 export const TabNameContext = createContext(null);
 
 function useSlideIn(tab, shift) {
@@ -47,9 +52,10 @@ function IosTabPage({ tab, children }) {
   );
 }
 
-/** Корень вкладки: на iOS въезжает со стороны вкладки, на Android — как есть. */
+/** Корень вкладки: на iOS въезжает со стороны вкладки, на Android — как есть;
+ *  имя вкладки отдаёт шапке на обеих. */
 export function TabPage({ tab, children }) {
-  if (Platform.OS !== 'ios') return children;
+  if (Platform.OS !== 'ios') return <TabNameContext.Provider value={tab}>{children}</TabNameContext.Provider>;
   return <IosTabPage tab={tab}>{children}</IosTabPage>;
 }
 
@@ -71,10 +77,4 @@ export function withTabPage(Screen, tab, Skeleton) {
   }
   Page.displayName = `TabPage(${tab})`;
   return Page;
-}
-
-/** Заголовок нативной шапки вкладки: въезжает вместе со страницей. */
-export function TabTitleSlide({ tab, children }) {
-  const style = useSlideIn(tab, TITLE_SHIFT);
-  return <Animated.View style={style}>{children}</Animated.View>;
 }

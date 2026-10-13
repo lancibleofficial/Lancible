@@ -1,10 +1,22 @@
-// Локальные уведомления о дедлайнах.
+// Локальные уведомления: список напоминаний задачи — «до начала», «до
+// дедлайна», «один раз» и «повторять».
 //
 // В отличие от десктопа/веба, где приложение само раз в полминуты проверяет,
 // не пора ли напомнить, здесь уведомление ПЛАНИРУЕТСЯ в системе заранее:
 // приложение большую часть времени выгружено из памяти, и опрашивать что-либо
-// изнутри просто некому. Поэтому на каждое изменение дедлайна мы отменяем
-// старое уведомление задачи и ставим новое.
+// изнутри просто некому. Поэтому расписание собирается заново целиком —
+// rescheduleAll: отменить всё, поставить то, что отдаёт ядро
+// (core/reminders.js, pendingReminders). Зовёт его lib/reminderSync.js: на
+// каждое изменение задач (в том числе приём из облака) и на возвращение в
+// приложение.
+//
+// Идентификаторы — ключи ядра: `rem-${taskId}-${reminderId}-${atMs}`. Система
+// держит до 64 запланированных уведомлений (iOS), поэтому ядру отдаётся
+// предел 48, горизонт «до начала» и «повторять» — 14 суток, не больше 14
+// вхождений каждого напоминания: ежедневное покрывает весь горизонт (до
+// 13 октября 2026 было 5, и оно замолкало на шестой день). Ближайшие
+// первыми, поэтому общий предел срезает самые дальние. Тексты —
+// lib/reminderText.js.
 //
 // Локальные уведомления работают в Expo Go (в отличие от push, которых там
 // нет с SDK 53) — дев-билд ради этого не нужен.
@@ -20,14 +32,14 @@ import { setNotificationHandler } from 'expo-notifications/build/NotificationsHa
 import { getPermissionsAsync, requestPermissionsAsync } from 'expo-notifications/build/NotificationPermissions';
 import { setNotificationChannelAsync } from 'expo-notifications/build/setNotificationChannelAsync';
 import { scheduleNotificationAsync } from 'expo-notifications/build/scheduleNotificationAsync';
-import { cancelScheduledNotificationAsync } from 'expo-notifications/build/cancelScheduledNotificationAsync';
 import { cancelAllScheduledNotificationsAsync } from 'expo-notifications/build/cancelAllScheduledNotificationsAsync';
 import { AndroidImportance } from 'expo-notifications/build/NotificationChannelManager.types';
 import { SchedulableTriggerInputTypes } from 'expo-notifications/build/Notifications.types';
 import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
-import { reminderTime } from './due';
+import Reminders from '../core/reminders.js';
 import { t } from './i18n';
+import { notificationContent } from './reminderText';
 
 setNotificationHandler({
   handleNotification: async () => ({
@@ -38,8 +50,8 @@ setNotificationHandler({
   }),
 });
 
-/** Идентификатор уведомления привязан к задаче, чтобы отменять точечно. */
-const idFor = (taskId) => `due-${taskId}`;
+/** Пределы расписания: iOS держит 64 уведомления, берём с запасом. */
+export const REMINDER_LIMITS = { horizonMs: 14 * 86400000, perReminder: 14, max: 48 };
 
 let permissionChecked = false;
 
@@ -92,51 +104,46 @@ export async function prepareAndroidChannel(langCode) {
   }
 }
 
-export async function cancelTaskReminder(taskId) {
-  try {
-    await cancelScheduledNotificationAsync(idFor(taskId));
-  } catch {
-    // Уведомления с таким id могло и не быть — это нормальный путь, а не сбой.
-  }
-}
+/** Одно расписание за раз: два перепланирования подряд не должны
+ *  переплестись (одно отменит то, что только что поставило другое). */
+let chain = Promise.resolve();
 
-/** Переставляет уведомление задачи. Возвращает true, если оно запланировано. */
-export async function scheduleTaskReminder(task, langCode, enabled) {
-  await cancelTaskReminder(task.id);
-  if (!enabled || task.done) return false;
-  const at = reminderTime(task);
-  if (!at || at.getTime() <= Date.now()) return false;
-  if (!permissionChecked) await ensurePermission();
-  const status = await permissionStatus();
-  if (status !== 'granted') return false;
-  try {
-    await scheduleNotificationAsync({
-      identifier: idFor(task.id),
-      content: {
-        title: t(langCode, 'notif.reminder'),
-        body: task.title || t(langCode, 'task.no_name'),
-        ...(Platform.OS === 'android' && androidChannelReady ? { channelId: 'deadlines' } : null),
-      },
-      trigger: { type: SchedulableTriggerInputTypes.DATE, date: at },
-    });
-    return true;
-  } catch (err) {
-    console.warn('Не удалось запланировать уведомление:', err);
-    return false;
-  }
-}
-
-/** Полная пересборка расписания — на старте и при переключении тумблера:
- *  система хранит своё расписание отдельно от нашего state, и после
- *  синхронизации с другого устройства оно может разойтись. */
-export async function rescheduleAll(tasks, langCode, enabled) {
+async function rebuild(tasks, langCode, enabled) {
   try {
     await cancelAllScheduledNotificationsAsync();
   } catch (err) {
     console.warn('Не удалось очистить расписание уведомлений:', err);
   }
   if (!enabled) return;
-  for (const task of tasks) {
-    if (task.dueAt) await scheduleTaskReminder(task, langCode, true);
+  const pending = Reminders.pendingReminders(tasks, Date.now(), REMINDER_LIMITS);
+  if (!pending.length) return;
+  if (!permissionChecked) await ensurePermission();
+  if ((await permissionStatus()) !== 'granted') return;
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  for (const entry of pending) {
+    const task = byId.get(entry.taskId);
+    if (!task) continue;
+    try {
+      await scheduleNotificationAsync({
+        identifier: entry.key,
+        content: {
+          ...notificationContent(entry, task, langCode),
+          ...(Platform.OS === 'android' && androidChannelReady ? { channelId: 'deadlines' } : null),
+        },
+        trigger: { type: SchedulableTriggerInputTypes.DATE, date: new Date(entry.at) },
+      });
+    } catch (err) {
+      console.warn('Не удалось запланировать уведомление:', err);
+    }
   }
+}
+
+/** Полная пересборка расписания: система хранит своё расписание отдельно от
+ *  нашего state, и после синхронизации с другого устройства, перевода часов
+ *  или просто со временем (горизонт отрезков едет вперёд) оно расходится.
+ *  Возвращает промис, который закончится, когда расписание собрано. */
+export function rescheduleAll(tasks, langCode, enabled) {
+  const run = chain.then(() => rebuild(tasks, langCode, enabled));
+  chain = run.catch(() => {});
+  return run;
 }

@@ -5,8 +5,9 @@
 // веба (renderStatusDialog/addStatus/deleteStatus) — те же действия и те же
 // запреты, только правила лежат в общем ядре, а не переписаны заново.
 import { useEffect, useRef, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from '../lib/keyboard';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
@@ -16,7 +17,7 @@ import { useAppStore } from '../store/useAppStore';
 import { orderedStatuses, planStatusDelete, STATUS_KINDS } from '../lib/statuses';
 import { openSheet } from '../store/useSheetStore';
 import { confirmSheet } from '../lib/dialogs';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, screenPadding, radius, fontSize } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function ProjectStatusesScreen({ route }) {
@@ -85,7 +86,9 @@ export default function ProjectStatusesScreen({ route }) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    // Поле названия в нижней строке не уходит под клавиатуру: прокрутка
+    // докручивает его над ней с тем же воздухом, что у листов.
+    <KeyboardAwareScrollView bottomOffset={spacing.md} style={styles.container} contentContainerStyle={styles.content}>
       {list.map((status, i) => (
         <StatusRow
           key={status.id}
@@ -108,7 +111,7 @@ export default function ProjectStatusesScreen({ route }) {
         <Icon name="plus" size={13} color={colors.textDim} />
         <Text style={styles.addText}>{t(lang, 'status.add')}</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
@@ -169,7 +172,7 @@ function StatusRow({
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: insets.bottom + spacing.xxl, gap: spacing.sm },
+  content: { paddingHorizontal: screenPadding, paddingTop: spacing.lg, paddingBottom: insets.bottom + spacing.xxl, gap: spacing.sm },
 
   row: {
     backgroundColor: colors.panel, borderRadius: radius.md,

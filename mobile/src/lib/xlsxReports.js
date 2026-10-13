@@ -34,16 +34,12 @@ export function buildTaskSheets(task, project, langCode, currencyCode, hourlyRat
   return reports(langCode, currencyCode, hourlyRate).buildTaskSheets(task, project);
 }
 
-/** @param range — {from, to}: Date. Отбирает СЕССИИ, а не задачи: в отчёт
- *  попадут все задачи проекта, но со временем и деньгами за период. */
-export function buildProjectSheets(project, tasks, langCode, currencyCode, hourlyRate, range) {
-  return reports(langCode, currencyCode, hourlyRate).buildProjectSheets(project, tasks, { range });
-}
-
 export function buildAllProjectsSheets(projects, tasksByProjectId, langCode, currencyCode, hourlyRate) {
   return reports(langCode, currencyCode, hourlyRate).buildAllProjectsSheets(projects, tasksByProjectId);
 }
 
+/** @param range — {from, to}: Date. Отбирает СЕССИИ, а не задачи: время и
+ *  деньги в листе — только за период. */
 export function buildPeriodSheets(tasks, getProjectById, langCode, currencyCode, hourlyRate, range) {
   return reports(langCode, currencyCode, hourlyRate).buildPeriodSheets(tasks, getProjectById, range);
 }

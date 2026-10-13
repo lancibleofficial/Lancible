@@ -8,11 +8,16 @@ import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
-import Island, { IslandHead, IslandRow, IslandEmpty } from '../components/Island';
+import Island, { IslandHead, IslandRow } from '../components/Island';
+import EmptyState from '../components/EmptyState';
 import { useAppStore, getProject } from '../store/useAppStore';
 import { notificationFeed, dueShort } from '../lib/due';
+import { fmtWhen } from '../lib/format';
+import { rangeText } from '../lib/slotText';
+import { reminderLabel } from '../lib/reminderText';
+import Reminders from '../core/reminders.js';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
-import { useColors, spacing, radius, fontSize, typography, gap } from '../theme';
+import { useColors, spacing, screenPadding, fontSize, gap } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function NotificationsScreen({ navigation }) {
@@ -53,22 +58,34 @@ export default function NotificationsScreen({ navigation }) {
               title={t(lang, 'notif.due_title')}
               note={overdue ? t(lang, 'home.overdue_n', { n: overdue }) : ''}
             />
-            {feed.length === 0 ? <IslandEmpty>{t(lang, 'notif.empty')}</IslandEmpty> : null}
+            {/* Лента пуста — без кнопки: срок ставят в задаче, а не здесь. */}
+            {feed.length === 0 ? <EmptyState art="bell" title={t(lang, 'notif.empty')} text={t(lang, 'empty.notif_text')} /> : null}
             {feed.map((n, i) => {
               const project = getProject(projects, n.task.projectId);
+              // Подпись под названием у напоминания — оно само словами («За 15
+              // мин до начала», «Каждый день в 09:00»), у дедлайна — «Просрочена»
+              // и «Скоро дедлайн». «Один раз» — просто «Напоминание»: его время
+              // и так справа.
+              const found = n.reminderId ? Reminders.remindersOf(n.task).find((r) => r.id === n.reminderId) : null;
+              const rem = found && found.kind !== 'at' ? found : null;
+              // Справа: у вхождения «времени работы» — его часы, у напоминания
+              // без дедлайна — когда сработало, у дедлайнов — срок, как и было.
+              const when = n.kind === 'slot' ? rangeText(n.due, n.end)
+                : n.due === null ? fmtWhen(new Date(n.at).toISOString(), lang)
+                  : dueShort(n.task, lang);
               return (
-                <IslandRow key={`${n.task.id}-${n.kind}`} first={i === 0} onPress={() => onOpen(n.task)}>
+                <IslandRow key={n.key} first={i === 0} onPress={() => onOpen(n.task)}>
                   <View style={styles.main}>
                     <Text style={styles.name} numberOfLines={1}>{n.task.title || t(lang, 'task.no_name')}</Text>
                     <View style={styles.subRow}>
                       <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
                       <Text style={styles.sub} numberOfLines={1}>
-                        {`${project ? project.name : ''} · ${t(lang, `notif.${n.kind}`)}`}
+                        {`${project ? project.name : ''} · ${rem ? reminderLabel(rem, lang) : t(lang, `notif.${n.kind}`)}`}
                       </Text>
                     </View>
                   </View>
                   <Text style={[styles.when, n.kind === 'overdue' && styles.whenOverdue, n.unread && styles.whenUnread]}>
-                    {dueShort(n.task, lang)}
+                    {when}
                   </Text>
                   <Icon name="chevron-right" size={13} color={colors.textFaint} />
                 </IslandRow>
@@ -83,9 +100,8 @@ export default function NotificationsScreen({ navigation }) {
 
 const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  pageHead: { paddingTop: insets.top + spacing.md, paddingHorizontal: spacing.lg + spacing.xs, paddingBottom: spacing.sm },
-  pageTitle: { ...typography.title, color: colors.text },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + clearance, gap },
+  // Сверху 4: шапка стека ниже шапки вкладки на столько (AppHeader — 48, вкладка — 52).
+  content: { paddingHorizontal: screenPadding, paddingTop: spacing.xs, paddingBottom: insets.bottom + clearance, gap },
   main: { flex: 1, minWidth: 0, gap: 2 },
   name: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -94,5 +110,4 @@ const makeStyles = (colors, insets, clearance) => StyleSheet.create({
   when: { color: colors.textDim, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },
   whenOverdue: { color: colors.danger },
   whenUnread: { fontWeight: '700' },
-  radiusFix: { borderRadius: radius.md },
 });

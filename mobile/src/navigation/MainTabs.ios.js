@@ -11,6 +11,7 @@ import AppHeader from '../components/AppHeader';
 import TimerMiniPlayer, { TimerAccessory, useRunningTask } from '../components/TimerMiniPlayer';
 import { DETAIL_ROUTES } from './detailScreens';
 import { tabFocused } from './tabSlide';
+import { rootHeaderLayout } from './rootHeaderLayout';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
 import { useColors, spacing } from '../theme';
@@ -64,24 +65,30 @@ function openTask(navigation, taskId) {
 }
 
 /** Фолбэк для iOS ниже 26: плашка абсолютом над таббаром. Прячется вместе
- *  с таббаром — признак тот же, что и у MainTabBar.js на Android. */
-function LegacyMiniPlayerLayout({ state, navigation, descriptors, children }) {
+ *  с таббаром — признак тот же, что и у MainTabBar.js на Android. Шапки
+ *  здесь свои, на JS, поэтому layout же держит и общую шапку вкладок: она
+ *  стоит на месте, пока страницы въезжают (rootHeaderLayout). На iOS 26+
+ *  шапка нативная, layout не нужен. */
+export function LegacyMiniPlayerLayout({ state, navigation, descriptors, children }) {
   const insets = useSafeAreaInsets();
   const focused = descriptors[state.routes[state.index].key];
   const barHidden = !!(focused && focused.options.tabBarStyle && focused.options.tabBarStyle.display === 'none');
-  return (
-    <View style={styles.host}>
-      {children}
-      {barHidden ? null : (
-        <View
-          style={[styles.legacy, { bottom: UIKIT_TAB_BAR_H + insets.bottom + spacing.sm }]}
-          pointerEvents="box-none"
-        >
-          <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />
-        </View>
-      )}
-    </View>
-  );
+  return rootHeaderLayout({
+    state,
+    children: (
+      <View style={styles.host}>
+        {children}
+        {barHidden ? null : (
+          <View
+            style={[styles.legacy, { bottom: UIKIT_TAB_BAR_H + insets.bottom + spacing.sm }]}
+            pointerEvents="box-none"
+          >
+            <TimerMiniPlayer onOpen={(taskId) => openTask(navigation, taskId)} />
+          </View>
+        )}
+      </View>
+    ),
+  });
 }
 
 export default function MainTabs() {

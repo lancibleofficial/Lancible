@@ -1,9 +1,10 @@
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
-import Icon from './Icon';
-import { GlassBg, hasLiquidGlass } from './Glass';
-import { useColors, spacing, fontSize, displayFamily } from '../theme';
+import BackButton from './BackButton';
+import { useAppStore } from '../store/useAppStore';
+import { t } from '../lib/i18n';
+import { useColors, spacing, screenPadding, displayFamily } from '../theme';
 
 // Единый JS-хедер для всех навигаторов (native-stack, табы на обеих
 // платформах) вместо трёх разных нативных: у нативного iOS-хедера
@@ -18,17 +19,23 @@ import { useColors, spacing, fontSize, displayFamily } from '../theme';
 // листа: он раскрывается ровно до нижней границы шапки.
 export const HEADER_CONTENT_HEIGHT = 48;
 
+/** Название страницы — одно на корневые вкладки (TabHeader) и экраны стека
+ *  (AppHeader, StackTitle): 22, фирменный жирный. Одна функция на всех, чтобы
+ *  «Проекты» и «Уведомления» не расходились ни размером, ни начертанием. */
+export const screenTitleStyle = (colors) => ({ color: colors.text, fontSize: 22, fontFamily: displayFamily.bold });
+
 /** Заголовок экрана стека — наш шрифт и размер. На iOS 26+ он стоит в
  *  нативной шапке слева, своим элементом без стеклянной подложки. */
 export function StackTitle({ text }) {
   const colors = useColors();
-  return <Text style={{ color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.regular, maxWidth: 260 }} numberOfLines={1}>{text}</Text>;
+  return <Text style={[screenTitleStyle(colors), { maxWidth: 260 }]} numberOfLines={1}>{text}</Text>;
 }
 
 export default function AppHeader({ navigation, route, options, back }) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
+  const lang = useAppStore((s) => s.settings.lang);
 
   const titleText = options.title !== undefined ? options.title : route.name;
   const title = typeof options.headerTitle === 'function'
@@ -38,13 +45,8 @@ export default function AppHeader({ navigation, route, options, back }) {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.row}>
-        {back ? (
-          <Pressable hitSlop={10} onPress={() => navigation.goBack()} style={hasLiquidGlass() ? styles.backGlass : styles.back}>
-            <GlassBg radius={18} />
-            <Icon name="chevron-left" size={22} color={colors.text} />
-          </Pressable>
-        ) : null}
+      <View style={styles.row} testID="app-header-row">
+        {back ? <BackButton onPress={() => navigation.goBack()} label={t(lang, 'common.back')} /> : null}
         <View style={styles.titleSlot}>
           {typeof title === 'string'
             ? <Text style={styles.title} numberOfLines={1}>{title}</Text>
@@ -58,14 +60,13 @@ export default function AppHeader({ navigation, route, options, back }) {
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   wrap: { backgroundColor: colors.bg, paddingTop: insets.top },
+  // Содержимое стоит на той же высоте, что в шапке вкладки (TabHeader: 8 сверху
+  // и кнопка 36 — центр на 26): верх строки 4, остальные 44 делятся пополам.
   row: {
-    height: HEADER_CONTENT_HEIGHT, flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.lg,
+    height: HEADER_CONTENT_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: screenPadding, paddingTop: 4,
   },
-  back: { paddingRight: spacing.sm, marginLeft: -4 },
-  // iOS 26+: «назад» — стеклянный круг, как кнопки системной шапки.
-  backGlass: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
   titleSlot: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  // Заголовок экрана — фирменная семья, как заголовки страниц на десктопе.
-  title: { color: colors.text, fontSize: fontSize.lg, fontFamily: displayFamily.regular },
+  // Заголовок страницы — как у вкладок (screenTitleStyle).
+  title: screenTitleStyle(colors),
 });

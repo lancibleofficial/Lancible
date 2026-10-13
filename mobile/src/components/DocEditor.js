@@ -1,8 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, Linking } from 'react-native';
+import { View, StyleSheet, Linking, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { EDITOR_CSS, EDITOR_JS } from '../editor/editorBundle';
+import { EDITOR_CSS, EDITOR_JS, EDITOR_VIEWPORT } from '../editor/editorBundle';
 import { editorCssVars, useColors, useThemeMode } from '../theme';
+import { createBridge, inline, parseMessage } from '../lib/editorBridge';
 
 // Редактор текста на телефоне — тот же, что на десктопе и в вебе
 // (src/editor/, ProseMirror), внутри WebView. Сборка лежит строкой в
@@ -10,42 +11,80 @@ import { editorCssVars, useColors, useThemeMode } from '../theme';
 // работает без интернета.
 //
 // Два режима:
-//  - полный (EditorScreen) — WebView на весь экран со своей прокруткой,
-//    панелью, рисованием пером; масштаб — щипком, как у картинки (до 4×):
-//    увеличивается вся страница вместе с пометками, они не съезжают с
-//    текста;
-//  - предпросмотр (preview) — только чтение, высота по содержимому, касание
-//    открывает полный. В заметках задачи WebView живёт внутри ScrollView
-//    экрана, и рисовать или выделять текст в таком месте неудобно: жест
-//    перехватывает прокрутка страницы.
+//  - живой (live) — заметки прямо на странице задачи (12 октября 2026):
+//    касание ставит курсор, клавиатура, пишем на месте. Высота WebView — по
+//    содержимому (редактор присылает height, autoHeight), но не ниже
+//    minHeight: поле заметок тянется до низа видимой страницы (13 октября
+//    2026), и касание пустого места под текстом ставит курсор в конец (это
+//    делает сам редактор, src/editor/index.js: onBlankDown). Прокручивает
+//    экран задачи; курсор над клавиатурой держит экран по сообщению caret;
+//  - полный (EditorScreen, документы) — WebView на весь экран со своей
+//    прокруткой.
+// Панель нативная (components/EditorToolbar.js): веб-панели и панели пера в
+// странице нет (nativeToolbar), команды и состояние идут через мост
+// (lib/editorBridge.js, протокол — src/editor/host.js). Страница не
+// масштабируется (user-scalable=no), и масштаба текста нет: с 13 октября
+// 2026 щипок убран — он мешал писать.
 //
 // baseUrl — настоящий адрес, а не about:blank: у страницы без адреса нет
 // своего хранилища, и картинки (IndexedDB, см. src/editor/assets.js) жили бы
 // только до закрытия экрана.
-const BASE_URL = 'https://lancible.vercel.app/app/';
-const MIN_PREVIEW = 96;
+export const EDITOR_BASE_URL = 'https://lancible.vercel.app/app/';
+const BASE_URL = EDITOR_BASE_URL;
+const EDITOR_ORIGIN = 'https://lancible.vercel.app';
+const MIN_HEIGHT = 96;
 
-/** JSON внутрь <script>: «</» разорвал бы тег. */
-const inline = (v) => JSON.stringify(v).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+// Окно закрыто (13 октября 2026). Страница — своя, строкой из сборки, и
+// уходить с неё WebView незачем: ссылка из документа (http, https, mailto) —
+// в браузер системы, прочее (javascript:, file:, intent:, data:) — никуда.
+// Сообщения принимаются только от своей страницы: адрес у них разный по
+// платформам — iOS даёт адрес кадра (baseUrl), Android с WebMessageListener —
+// источник без пути, а старый Android (WebView без него) — getUrl() страницы,
+// загруженной строкой, то есть about:blank: там отличить кадр нельзя, и
+// about:blank свой.
+
+/** Можно ли WebView грузить этот адрес. Ссылку наружу (переход всей
+ *  страницы, не кадра в ней) открывает браузер системы. */
+export function allowEditorLoad(req) {
+  const url = String((req && req.url) || '');
+  if (url === 'about:blank' || url === 'about:srcdoc' || url.startsWith(EDITOR_BASE_URL)) return true;
+  if (req && req.isTopFrame !== false && /^(https?:|mailto:)/i.test(url)) {
+    try {
+      const p = Linking.openURL(url);
+      if (p && p.catch) p.catch(() => {});
+    } catch { /* открыть нечем — остаёмся на странице */ }
+  }
+  return false;
+}
+
+/** Сообщение пришло от страницы редактора. */
+export function fromEditor(url, os = Platform.OS) {
+  const u = String(url || '');
+  if (u === EDITOR_ORIGIN || u.startsWith(`${EDITOR_ORIGIN}/`)) return true;
+  return os === 'android' && u === 'about:blank';
+}
+
+/** Живой редактор: высота по содержимому — страница не прокручивается сама,
+ *  её высоту меряет редактор (autoHeight) и подставляет телефон. Поля по
+ *  бокам — у страницы задачи свои (screenPadding), у текста только воздух.
+ *  WebView бывает выше текста (minHeight) — пустое место под редактором
+ *  тогда занимает сам #host: касание по нему ловит редактор и ставит курсор
+ *  в конец. Высота самого редактора (.led) от этого не растёт. */
+const LIVE_CSS = `html,body,#host{height:auto;overflow:hidden;}
+#host{min-height:100vh;}
+#host .led .led-page-wrap{padding:8px 4px 16px;}`;
 
 function buildHtml(init, mode) {
-  const preview = init.preview;
   return `<!DOCTYPE html><html><head>
 <meta charset="utf-8">
-<meta name="viewport" content="${preview ? 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' : 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=4, user-scalable=yes'}, viewport-fit=cover">
+<meta name="viewport" content="${EDITOR_VIEWPORT}">
 <style>${editorCssVars(mode)}
 ${EDITOR_CSS}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);-webkit-text-size-adjust:100%;}
 html,body,#host{height:100%;}
 #host{display:flex;flex-direction:column;}
-${preview ? `html,body,#host{height:auto;overflow:hidden;}
-.led{height:auto;}
-.led .led-scroll{overflow:visible;}
-.led .led-page-wrap{padding:8px 4px 8px;}
-.led .led-toolbar,.led .led-status,.led .led-tablebar{display:none;}
-.led-pm .led-empty::before,.led-pm .led-empty-line::before{display:none;}
-#tap{position:fixed;inset:0;z-index:1000;}` : ''}
-</style></head><body><div id="host"></div>${preview ? '<div id="tap"></div>' : ''}
+${init.live ? LIVE_CSS : ''}
+</style></head><body><div id="host"></div>
 <script>${EDITOR_JS}</script>
 <script>
 (function(){
@@ -56,6 +95,11 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
     content: S.content,
     mobile: true,
     inApp: true,
+    // Протокол хозяина (src/editor/host.js, DESIGN.md «Редактор на
+    // телефоне: протокол»): панель снаружи, высота по тексту, сообщения — post.
+    nativeToolbar: true,
+    autoHeight: !!S.live,
+    post: post,
     placeholder: S.placeholder || undefined,
     lang: function(){ return S.lang; },
     user: function(){ return S.user; },
@@ -64,26 +108,19 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
     assets: LancibleEditor.createAssetStore({ remote: function(){ return S.auth; } }),
     onChange: function(c){ post({ type: 'change', content: c }); },
     toast: function(m){ post({ type: 'toast', message: m }); },
-    openUrl: function(href){ post({ type: 'open', href: href }); },
-    onDrawingActive: function(on){ post({ type: 'drawing', on: on }); }
+    openUrl: function(href){ post({ type: 'open', href: href }); }
   });
   window.__ed = ed;
-  if (S.readOnly) ed.setEditable(false);
   if (S.auth) ed.assets.flush();
-  function height(){ post({ type: 'height', height: Math.ceil(document.querySelector('.led-page').getBoundingClientRect().height + 20) }); }
-  if (S.preview) {
-    new ResizeObserver(height).observe(document.querySelector('.led-page'));
-    height();
-    document.getElementById('tap').addEventListener('click', function(){ post({ type: 'tap' }); });
-  }
   function onMessage(e){
     var m; try { m = JSON.parse(e.data); } catch (err) { return; }
-    if (m.type === 'setContent') ed.setContent(m.content);
-    else if (m.type === 'auth') { S.auth = m.auth; if (m.auth) ed.assets.flush(); }
+    if (!m || typeof m !== 'object') return;
+    // Протокол редактора: exec, setContent, focus, blur,
+    // insertImage, setLink, getState. Остальное — страницы.
+    if (ed.receive(m)) return;
+    if (m.type === 'auth') { S.auth = m.auth; if (m.auth) ed.assets.flush(); }
     else if (m.type === 'lang') { S.lang = m.lang; }
-    else if (m.type === 'exec') ed.exec(m.name, m.arg);
     else if (m.type === 'flush') ed.flush();
-    else if (m.type === 'focus') ed.focus();
     else if (m.type === 'requeue') {
       // Картинки снова в очереди на выгрузку: удаление аккаунта стёрло их из
       // облака, а аккаунт остался. Выгрузит их flush — сейчас, если вход есть,
@@ -107,31 +144,39 @@ ${preview ? `html,body,#host{height:auto;overflow:hidden;}
  *  onChange(container); lang; user — { id, name } для комментариев;
  *  settings / onSettings — вид и перо (state.settings.editor);
  *  auth — { url, anonKey, accessToken, userId } для облака картинок или null;
- *  preview — режим предпросмотра; onOpen — касание в предпросмотре;
+ *  live — живой редактор на странице (высота по содержимому);
+ *  minHeight — живой: не ниже стольких точек (до низа видимой страницы);
+ *  onFormat(state), onCaret({ top, bottom }), onInk({ on, tool, color, size }),
+ *  onHeight(px), onImagePick({ purpose }), onLink({ href, needText }),
+ *  onExport({ kind, name, mime, text }), onReady() — сообщения моста
+ *  (lib/editorBridge.js);
  *  onToast(message);
  *  requeue — id картинок, которые надо снова выгрузить в облако
  *  (стор: assetRequeue); onRequeued(ids) — редактор поставил их в очередь.
+ * ref: send(msg), flush() и команды моста (createBridge) — exec, setContent, focus, blur, getState, insertImage, setLink, ink, inkTool,
+ *  inkColor, inkSize.
  */
 const DocEditor = forwardRef(function DocEditor(props, ref) {
-  const { content, onChange, lang, user, settings, onSettings, auth, preview, onOpen, onToast, placeholder, requeue, onRequeued } = props;
+  const {
+    content, onChange, lang, user, settings, onSettings, auth, live, minHeight = 0, onToast, placeholder, requeue, onRequeued,
+    onFormat, onCaret, onInk, onHeight, onImagePick, onLink, onExport, onReady,
+  } = props;
   const colors = useColors();
   const mode = useThemeMode();
   const webRef = useRef(null);
-  const [height, setHeight] = useState(MIN_PREVIEW);
-  const initRef = useRef({ content, lang, user, settings, auth, preview: !!preview, readOnly: !!preview, placeholder });
-  // Предпросмотр перечитывает содержимое при каждом изменении — его правят в
-  // полном редакторе, и он должен показать свежее, вернувшись на экран.
-  if (preview) initRef.current = { ...initRef.current, content };
+  const [height, setHeight] = useState(MIN_HEIGHT);
+  const initRef = useRef({
+    content, lang, user, settings, auth, placeholder,
+    live: !!live,
+  });
 
-  const html = useMemo(
-    () => buildHtml(initRef.current, mode),
-    // Пересобирается на смену темы, а в предпросмотре — и на смену текста.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, preview ? JSON.stringify(content) : null],
-  );
+  // Пересобирается на смену темы — с последним текстом (см. change ниже).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const html = useMemo(() => buildHtml(initRef.current, mode), [mode]);
 
   const send = (msg) => webRef.current?.postMessage(JSON.stringify(msg));
-  useImperativeHandle(ref, () => ({ send, flush: () => send({ type: 'flush' }) }));
+  const bridge = useMemo(() => createBridge(send), []);
+  useImperativeHandle(ref, () => ({ send, flush: () => send({ type: 'flush' }), ...bridge }));
 
   // Сообщение, посланное до «ready», страница не получит: WebView ещё грузит
   // её. Поэтому всё, что может поменяться после первого рендера, страница
@@ -154,33 +199,56 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
   useEffect(sendRequeue, [requeueKey]);
 
   function onMessage(e) {
-    let msg;
-    try { msg = JSON.parse(e.nativeEvent.data); } catch { return; }
-    if (msg.type === 'change') onChange && onChange(msg.content);
-    else if (msg.type === 'settings') onSettings && onSettings(msg.patch);
-    else if (msg.type === 'height') setHeight(Math.max(MIN_PREVIEW, msg.height));
-    else if (msg.type === 'tap') onOpen && onOpen();
-    else if (msg.type === 'toast') onToast && onToast(msg.message);
-    else if (msg.type === 'open' && /^(https?:|mailto:)/i.test(msg.href)) Linking.openURL(msg.href);
-    else if (msg.type === 'ready') {
-      ready.current = true;
-      send({ type: 'auth', auth: latest.current.auth || null });
-      send({ type: 'lang', lang: latest.current.lang });
-      sendRequeue();
+    if (!fromEditor(e.nativeEvent.url)) return;
+    const msg = parseMessage(e.nativeEvent.data);
+    if (!msg) return;
+    switch (msg.type) {
+      case 'change':
+        // Пересборка страницы (смена темы) поднимет последнее, а не то, с
+        // чем экран открывался.
+        initRef.current = { ...initRef.current, content: msg.content };
+        if (onChange) onChange(msg.content);
+        break;
+      case 'settings':
+        if (onSettings) onSettings(msg.patch);
+        break;
+      case 'height':
+        setHeight(Math.max(MIN_HEIGHT, msg.px));
+        if (onHeight) onHeight(msg.px);
+        break;
+      case 'toast': if (onToast) onToast(msg.message); break;
+      case 'open': if (/^(https?:|mailto:)/i.test(msg.href)) Linking.openURL(msg.href); break;
+      case 'format': if (onFormat) onFormat(msg.state); break;
+      case 'caret': if (onCaret) onCaret(msg); break;
+      case 'ink': if (onInk) onInk(msg); break;
+      case 'image-pick': if (onImagePick) onImagePick(msg); break;
+      case 'link': if (onLink) onLink(msg); break;
+      case 'export': if (onExport) onExport(msg); break;
+      case 'ready':
+        ready.current = true;
+        send({ type: 'auth', auth: latest.current.auth || null });
+        send({ type: 'lang', lang: latest.current.lang });
+        sendRequeue();
+        // Панели — всё заново: что под курсором и какое перо.
+        bridge.getState();
+        if (onReady) onReady();
+        break;
+      case 'requeued': if (onRequeued) onRequeued(msg.ids); break;
+      case 'error': console.error('[editor]', msg.message); break;
+      default: break;
     }
-    else if (msg.type === 'requeued') onRequeued && onRequeued(msg.ids);
-    else if (msg.type === 'error') console.error('[editor]', msg.message);
   }
 
   return (
-    <View style={preview ? { height } : styles.full}>
+    <View collapsable={false} style={live ? { height: Math.max(height, Math.round(minHeight) || 0) } : styles.full} testID="doc-editor">
       <WebView
         ref={webRef}
         originWhitelist={['*']}
         source={{ html, baseUrl: BASE_URL }}
         onMessage={onMessage}
+        onShouldStartLoadWithRequest={allowEditorLoad}
         style={[styles.web, { backgroundColor: colors.bg }]}
-        scrollEnabled={!preview}
+        scrollEnabled={!live}
         nestedScrollEnabled={false}
         overScrollMode="never"
         bounces={false}
@@ -189,6 +257,7 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         setSupportMultipleWindows={false}
+        setBuiltInZoomControls={false}
         allowFileAccess={false}
         domStorageEnabled
         javaScriptEnabled

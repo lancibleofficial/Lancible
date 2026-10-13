@@ -4,27 +4,32 @@
 // с любого из этих экранов видно, что время считается.
 import { Children, Fragment, isValidElement, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
+import Animated, { useSharedValue } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from './AppText';
 import Icon from './Icon';
 import Tap from './Tap';
+import BackButton from './BackButton';
+import { LiquidPress } from './HeaderLiquid';
 import Pulse from './Pulse';
+import { useLiquidEnabled, useLiquidPresence, useMorphStyles } from './Liquid';
 import { GlassBg, headerButtonRadius } from './Glass';
 import { IOS_NATIVE_HEADER, useNativeOptions, nativeItems, elementSignature, leftElementItems } from '../navigation/nativeHeader';
 import { fmtClock } from '../lib/format';
 import { useTicker } from '../hooks/useTicker';
-import { useColors, spacing, radius, displayFamily } from '../theme';
+import { useColors, spacing, screenPadding, radius, displayFamily } from '../theme';
 
-/** Квадратная кнопка шапки 36×36; on — залита акцентом. */
+/** Квадратная кнопка шапки 36×36; on — залита акцентом. Нажатие — жидкое
+ *  (LiquidPress), как у «назад» и кнопок шапки вкладки. */
 export function DetailButton({ icon, on, onPress, label }) {
   const colors = useColors();
   const styles = makeStyles(colors, { top: 0 });
   return (
-    <Tap scale={0.9} hitSlop={6} onPress={onPress} style={[styles.btn, { borderRadius: headerButtonRadius(36, radius.md) }]} accessibilityRole="button" accessibilityLabel={label}>
+    <LiquidPress hitSlop={6} onPress={onPress} style={[styles.btn, { borderRadius: headerButtonRadius(36, radius.md) }]} accessibilityRole="button" accessibilityLabel={label}>
       <GlassBg radius={headerButtonRadius(36, radius.md)} backgroundColor={on ? colors.accent : colors.panel} tint={on ? colors.accent : undefined} />
       <Icon name={icon} size={17} color={on ? colors.accentText : colors.textDim} />
-    </Tap>
+    </LiquidPress>
   );
 }
 
@@ -48,17 +53,57 @@ function RunClock({ since, style }) {
   return <Text style={style}>{fmtClock(Math.max(0, Date.now() - (since || Date.now())))}</Text>;
 }
 
-/** Крошка «● проект › что открыто» и плашка идущего таймера. */
-function Crumb({ color, title, sub, onTitle, running, runSince, styles, flex }) {
+// Высота плашки таймера и её последняя ширина: ширину меряет сама плашка,
+// а до замера (первая отрисовка экрана) берётся прошлая — крошка не прыгает.
+const BADGE_H = 28;
+let badgeWidth = 92;
+/** Зазор между частями крошки. */
+const CRUMB_GAP = 7;
+
+/**
+ * Плашка идущего таймера: пульсирующая точка и часы. Появляется и уходит
+ * жидко: капля набухает у края и вытягивается в плашку, крошка отъезжает
+ * за ней; при остановке плашка стягивается в каплю и исчезает
+ * (components/Liquid.js). В нативной шапке iOS 26+ (liquid=false) и при
+ * «уменьшении движения» — как была: есть или нет, сразу.
+ */
+function RunBadge({ running, runSince, styles, liquid }) {
   const colors = useColors();
+  const enabled = useLiquidEnabled() && liquid;
+  const shown = useLiquidPresence(running, enabled);
+  const width = useSharedValue(badgeWidth);
+  const morph = useMorphStyles(shown.p, width, BADGE_H, BADGE_H / 2, { gap: CRUMB_GAP });
+  // Уходя, часы стоят на последнем значении, а не сбрасываются в ноль.
+  const since = useRef(runSince);
+  if (runSince) since.current = runSince;
+  const inner = (
+    <>
+      <Pulse color={colors.accentInk} />
+      <RunClock since={since.current} style={styles.pillClock} />
+    </>
+  );
+  if (!enabled) {
+    return running ? <View style={[styles.pill, styles.pillBg]} accessibilityLiveRegion="polite">{inner}</View> : null;
+  }
+  if (!shown.mounted) return null;
+  return (
+    <Animated.View style={[styles.badgeSlot, morph.slot]} accessibilityLiveRegion="polite" testID="run-badge">
+      <Animated.View style={[styles.badgePlate, morph.plate]} testID="run-badge-plate" />
+      <Animated.View
+        style={[styles.pill, styles.pillFloat, morph.content]}
+        onLayout={(e) => { badgeWidth = e.nativeEvent.layout.width; width.value = badgeWidth; }}
+      >
+        {inner}
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+/** Крошка «● проект › что открыто» и плашка идущего таймера. */
+function Crumb({ color, title, sub, onTitle, running, runSince, styles, flex, liquid = true }) {
   return (
     <Tap style={[styles.crumb, !flex && styles.crumbNative]} onPress={onTitle} disabled={!onTitle} hitSlop={6} accessibilityRole={onTitle ? 'button' : undefined}>
-      {running ? (
-        <View style={styles.pill} accessibilityLiveRegion="polite">
-          <Pulse color={colors.accentInk} />
-          <RunClock since={runSince} style={styles.pillClock} />
-        </View>
-      ) : null}
+      <RunBadge running={!!running} runSince={runSince} styles={styles} liquid={liquid} />
       {color ? <View style={[styles.dot, { backgroundColor: color }]} /> : null}
       <Text style={styles.crumbText} numberOfLines={1}>{title || ''}</Text>
       {sub ? <Text style={styles.crumbFaint} numberOfLines={1}>› {sub}</Text> : null}
@@ -87,7 +132,7 @@ function NativeDetailHeader({ color, title, sub, onTitle, running, runSince, rig
     headerTitle: '',
     headerBackVisible: true,
     unstable_headerLeftItems: () => leftElementItems(
-      <Crumb color={color} title={title} sub={sub} running={running} runSince={runSince} styles={styles}
+      <Crumb color={color} title={title} sub={sub} running={running} runSince={runSince} styles={styles} liquid={false}
         onTitle={onTitle ? () => onTitleRef.current && onTitleRef.current() : undefined} />,
     ),
     unstable_headerRightItems: () => nativeItems(latest, toItem),
@@ -101,10 +146,7 @@ function JsDetailHeader({ onBack, backLabel, color, title, sub, onTitle, running
   const styles = makeStyles(colors, insets);
   return (
     <View style={styles.head}>
-      <Tap scale={0.9} hitSlop={8} onPress={onBack} style={[styles.btn, { borderRadius: headerButtonRadius(36, radius.md) }]} accessibilityRole="button" accessibilityLabel={backLabel}>
-        <GlassBg radius={headerButtonRadius(36, radius.md)} backgroundColor={colors.panel} />
-        <Icon name="chevron-left" size={18} color={colors.text} />
-      </Tap>
+      <BackButton onPress={onBack} label={backLabel} />
       <Crumb flex color={color} title={title} sub={sub} onTitle={onTitle} running={running} runSince={runSince} styles={styles} />
       {right}
     </View>
@@ -112,15 +154,22 @@ function JsDetailHeader({ onBack, backLabel, color, title, sub, onTitle, running
 }
 
 const makeStyles = (colors, insets) => StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: 6 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: insets.top + spacing.sm, paddingHorizontal: screenPadding, paddingBottom: 6 },
   // Подложку даёт GlassBg: стекло на iOS 26+, заливка panel/accent ниже.
   btn: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  crumb: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  crumb: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: CRUMB_GAP },
   // В нативной шапке у заголовка нет ширины родителя — тянуть нечего.
   crumbNative: { flex: 0, maxWidth: 260 },
   crumbText: { color: colors.textDim, fontSize: 13, flexShrink: 1 },
   crumbFaint: { color: colors.textFaint, fontSize: 13, flexShrink: 1 },
   dot: { width: 8, height: 8, borderRadius: 3 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, paddingHorizontal: 10, borderRadius: 999, backgroundColor: colors.accentMuted },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: BADGE_H, paddingHorizontal: 10 },
+  pillBg: { borderRadius: 999, backgroundColor: colors.accentMuted },
+  // Жидкая плашка: место в крошке (ширина — за каплей), подложка-капля и
+  // содержимое поверх. Место — строкой: так содержимое меряется в свою
+  // ширину, а не в ширину места.
+  badgeSlot: { flexDirection: 'row', height: BADGE_H },
+  badgePlate: { position: 'absolute', left: 0, backgroundColor: colors.accentMuted },
+  pillFloat: { position: 'absolute', left: 0, top: 0 },
   pillClock: { color: colors.accentInk, fontSize: 13, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
 });

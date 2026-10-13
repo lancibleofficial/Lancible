@@ -58,10 +58,12 @@ test('каждый <svg data-icon> в HTML — из словаря и с его 
 
 test('в разметке приложения нет иконок мимо словаря', () => {
   // Исключения — знаки брендов: логотип Lancible (и фавикон data:-адресом)
-  // и цветная «G» Google.
+  // и цветная «G» Google. Иллюстрации пустых экранов (data-art) — свой
+  // словарь, core/illustrations.js: в разметке они пустые, формы вписывает
+  // код (сторожит tests/unit/illustrations.test.js).
   for (const rel of APP_HTML) {
     for (const { attrs, inner } of svgsOf(read(rel))) {
-      if (/data-icon=|tb-logo-mark|%22/.test(attrs) || /fill="#[0-9A-Fa-f]{3,6}"/.test(inner)) continue;
+      if (/data-icon=|data-art=|tb-logo-mark|%22/.test(attrs) || /fill="#[0-9A-Fa-f]{3,6}"/.test(inner)) continue;
       assert.fail(`${rel}: <svg${attrs.slice(0, 60)}…> без data-icon — возьмите иконку из словаря`);
     }
   }
@@ -134,4 +136,31 @@ test('лицензия Solar (CC BY 4.0) названа на странице р
   const docs = [...read('landing/legal.html').matchAll(/<article class="legal-doc" data-lang="(\w+)"[^>]*>([\s\S]*?)<\/article>/g)];
   assert.ok(docs.length >= 4);
   for (const [, lang, body] of docs) assert.match(body, /Solar Icon Set[\s\S]*CC BY 4\.0/, `/legal (${lang}): нет атрибуции Solar`);
+});
+
+test('исключение из Solar одно — лупа из assets/icons/search.svg, остальное — Solar', () => {
+  // 11 октября 2026 пользователь прислал свою лупу (поиск в шапке и в
+  // списке документов). Это единственная иконка не из Solar: каждая «своя»
+  // выбивается из набора, и новая должна появляться только по просьбе.
+  const gen = read('scripts/make-solar-icons.js');
+  const own = [...gen.match(/const OWN = \{([^}]*)\}/)[1].matchAll(/^\s*([a-z-]+): '([^']+)'/gm)].map((m) => [m[1], m[2]]);
+  assert.deepEqual(own, [['search', 'assets/icons/search.svg']], 'в генераторе исключение одно');
+
+  // В собранном файле над каждой иконкой — откуда она: путь Solar («Папка/
+  // Имя») или файл репозитория.
+  const built = read('src/renderer/core/icons.js');
+  const from = Object.fromEntries([...built.matchAll(/\/\/ (.+)\n {4}"([^"]+)":/g)].map((m) => [m[2], m[1]]));
+  assert.equal(Object.keys(from).length, Object.keys(ICONS).length, 'у каждой иконки есть пометка «откуда»');
+  const notSolar = Object.entries(from).filter(([, rel]) => !/^[A-Za-z, &]+\/[A-Za-z0-9 ]+$/.test(rel));
+  assert.deepEqual(notSolar, [['search', 'assets/icons/search.svg']], 'не из Solar — только лупа');
+
+  // Путь в словаре — это путь из файла (с точностью словаря: сотые доли), а
+  // заливка в файле — currentColor, как у всех иконок набора.
+  const svg = read('assets/icons/search.svg');
+  assert.match(svg, /<path\b[^>]*\sfill="currentColor"/, 'в search.svg заливка currentColor');
+  assert.doesNotMatch(svg, /fill="black"/, 'в search.svg осталась чёрная заливка');
+  const d = svg.match(/<path\b[^>]*\sd="([^"]+)"/)[1];
+  const squeeze = (s) => s.replace(/-?\d*\.\d+/g, (n) => String(+(+n).toFixed(2)));
+  assert.deepEqual(ICONS.search.p, [[squeeze(d), 0]], 'словарь устарел — node scripts/make-solar-icons.js');
+  assert.equal(ICONS.search.vb, svg.match(/viewBox="([^"]+)"/)[1]);
 });

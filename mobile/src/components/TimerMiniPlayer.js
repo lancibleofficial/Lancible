@@ -10,10 +10,11 @@
 // MainTabs.ios.js) — там стеклянную капсулу рисует система, и плашка своя,
 // TimerAccessory: без фона и рамки, заполняет капсулу, как системные
 // плееры. Везде ещё — полоса над таббаром (MainTabBar.js) со своей подложкой.
-import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useRef } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
 import Tap from './Tap';
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue } from 'react-native-reanimated';
+import { useLiquidEnabled, useLiquidPresence, useMorphStyles } from './Liquid';
 import Text from './AppText';
 import Icon from './Icon';
 import Pulse from './Pulse';
@@ -21,11 +22,12 @@ import { useAppStore, getTask, getProject } from '../store/useAppStore';
 import { useRates, currencyOf } from '../hooks/useRates';
 import { useTicker } from '../hooks/useTicker';
 import { fmtClock, fmtMoney, earnedOf, earnedShown } from '../lib/format';
-import { useColors, spacing, radius, fontSize, displayFamily, tabBarClearance } from '../theme';
+import { useColors, spacing, screenPadding, radius, fontSize, displayFamily, tabBarClearance, taskControlRadius } from '../theme';
 import { t } from '../lib/i18n';
 
 export const MINI_PLAYER_HEIGHT = 56;
-const FADE_MS = 200;
+/** Скругление плашки в покое (капля — круглая). */
+const PLATE_RADIUS = 18;
 
 /** Идёт ли таймер по задаче, которая ещё существует. Задачу могли удалить —
  *  тогда плашки быть не должно, а не должно быть падения. */
@@ -39,10 +41,17 @@ export function useRunningTask() {
 /** Нижний отступ для прокручиваемого содержимого корневых экранов: запас
  *  под таббар плюс, пока идёт таймер, ещё и под плашку над ним — чтобы
  *  последнюю строку можно было докрутить выше плашки. Только для прокрутки:
- *  сама плашка лежит поверх страницы, и раскладку экрана двигать нельзя. */
+ *  сама плашка лежит поверх страницы, и раскладку экрана двигать нельзя.
+ *
+ *  Запас под таббар — только там, где он плавает над страницей (iOS: системная
+ *  панель, страница идёт под неё, `tabBarClearance`). На Android панель
+ *  (MainTabBar) стоит в раскладке под страницей и закрывать нечего: те же 108
+ *  оставляли под последней строкой пустое поле высотой в панель — «Меню»
+ *  докручивалось до пустоты. Там остаётся обычный нижний отступ страницы. */
 export function useBottomClearance() {
   const task = useRunningTask();
-  return tabBarClearance + (task ? MINI_PLAYER_HEIGHT + spacing.sm : 0);
+  const bar = Platform.OS === 'ios' ? tabBarClearance : spacing.lg;
+  return bar + (task ? MINI_PLAYER_HEIGHT + spacing.sm : 0);
 }
 
 /** Что показывает плашка: задача, проект, сколько набежало, подпись. */
@@ -95,60 +104,87 @@ export function TimerAccessory({ placement = 'regular', onOpen }) {
   );
 }
 
-export default function TimerMiniPlayer({ onOpen }) {
+/**
+ * Плашка над панелью вкладок (Android, iOS ниже 26). Появляется и уходит
+ * жидко: из края у «стопа» набухает капля и вытягивается в плашку, при
+ * остановке плашка стягивается обратно в каплю и исчезает (components/Liquid.js).
+ * @param presence есть ли плашка — от того, кто держит под неё место
+ *                 (MainTabBar: отступ над панелью живёт, пока плашка уходит);
+ *                 без него плашка решает сама
+ */
+export default function TimerMiniPlayer({ onOpen, presence }) {
   const colors = useColors();
   const styles = makeStyles(colors);
-  const { task, project, elapsed, sub, lang, stopTimer } = useRunningInfo();
+  const info = useRunningInfo();
+  const enabled = useLiquidEnabled();
+  // Своя — только без presence сверху; иначе молчит.
+  const own = useLiquidPresence(presence ? false : !!info.task, enabled && !presence);
+  const shown = presence || own;
+  // Уходя, плашка дорисовывает последнее, что показывала: задачи в сторе уже нет.
+  const last = useRef(null);
+  if (info.task) last.current = info;
+  const width = useSharedValue(0);
+  const morph = useMorphStyles(shown.p, width, MINI_PLAYER_HEIGHT, PLATE_RADIUS, { fill: true });
 
-  const opacity = useSharedValue(0);
-  const shift = useSharedValue(8);
-  useEffect(() => {
-    const show = !!task;
-    opacity.value = withTiming(show ? 1 : 0, { duration: FADE_MS });
-    shift.value = withTiming(show ? 0 : 8, { duration: FADE_MS });
-  }, [task]);
-  const anim = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ translateY: shift.value }] }));
-
-  if (!task) return null;
+  if (!shown.mounted || !last.current) return null;
+  const { task, project, elapsed, sub, lang, stopTimer } = last.current;
+  const leaving = !info.task;
 
   return (
-    <Animated.View style={[styles.wrap, anim]} pointerEvents="box-none">
-      <Tap style={styles.pill} onPress={() => onOpen(task.id)} accessibilityRole="button" accessibilityLabel={task.title || t(lang, 'task.no_name')}>
-        <Tap
-          onPress={stopTimer}
-          hitSlop={8}
-          style={styles.stop}
-          accessibilityRole="button"
-          accessibilityLabel={t(lang, 'timer.stop')}
-        >
-          <Icon name="stop" size={15} color={colors.accentText} />
-        </Tap>
-        <View style={styles.main}>
-          <Text style={styles.title} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
-          <View style={styles.subRow}>
-            <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
-            <Text style={styles.sub} numberOfLines={1}>{sub}</Text>
+    <View style={styles.wrap} pointerEvents="box-none">
+      <Tap
+        style={styles.pill}
+        onLayout={(e) => { width.value = e.nativeEvent.layout.width; }}
+        onPress={() => onOpen(task.id)}
+        pointerEvents={leaving ? 'none' : 'auto'}
+        accessibilityRole="button"
+        accessibilityLabel={task.title || t(lang, 'task.no_name')}
+      >
+        <Animated.View style={[styles.plate, morph.plate]} testID="mini-player-plate" />
+        <Animated.View style={[styles.row, morph.content]}>
+          <Tap
+            onPress={stopTimer}
+            hitSlop={8}
+            style={styles.stop}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, 'timer.stop')}
+          >
+            <Icon name="stop" size={15} color={colors.accentText} />
+          </Tap>
+          <View style={styles.main}>
+            <Text style={styles.title} numberOfLines={1}>{task.title || t(lang, 'task.no_name')}</Text>
+            <View style={styles.subRow}>
+              <View style={[styles.dot, { backgroundColor: project ? project.color : colors.accent }]} />
+              <Text style={styles.sub} numberOfLines={1}>{sub}</Text>
+            </View>
           </View>
-        </View>
-        <Text style={styles.clock}>{fmtClock(elapsed)}</Text>
+          <Text style={styles.clock}>{fmtClock(elapsed)}</Text>
+        </Animated.View>
       </Tap>
-    </Animated.View>
+    </View>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  wrap: { paddingHorizontal: spacing.md },
-  pill: {
-    height: MINI_PLAYER_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2,
-    paddingLeft: spacing.sm, paddingRight: spacing.md,
-    // Лежит поверх страницы: своя поверхность (белая на светлой) и мягкая
-    // тень вместо серой заливки с рамкой. Тень — boxShadow, равномерно
-    // размытая со всех сторон: системная тень Android (elevation) темнела к
-    // середине нижнего края и выглядела грязно.
-    backgroundColor: colors.floating, borderRadius: 18,
+  wrap: { paddingHorizontal: screenPadding },
+  // Нажимается вся плашка; подложка и содержимое — слоями внутри: подложка
+  // тянется каплей, содержимое проявляется поверх.
+  pill: { justifyContent: 'center' },
+  // Лежит поверх страницы: своя поверхность (белая на светлой) и мягкая
+  // тень вместо серой заливки с рамкой. Тень — boxShadow, равномерно
+  // размытая со всех сторон: системная тень Android (elevation) темнела к
+  // середине нижнего края и выглядела грязно. Размер и скругление — от
+  // капли (useMorphStyles), в покое — во всю ширину, высота плашки.
+  plate: {
+    position: 'absolute', left: 0,
+    backgroundColor: colors.floating,
     boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 18, spreadDistance: 0, color: colors.shadow }],
   },
-  stop: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  row: {
+    height: MINI_PLAYER_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2,
+    paddingLeft: spacing.sm, paddingRight: spacing.md,
+  },
+  stop: { width: 38, height: 38, borderRadius: taskControlRadius, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   main: { flex: 1, minWidth: 0 },
   title: { color: colors.text, fontSize: 13.5, fontWeight: '600' },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 },

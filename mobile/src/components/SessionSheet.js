@@ -1,34 +1,49 @@
 // Запись времени вручную: дата, начало, конец — одним листом, как окно
 // «Добавить запись» на десктопе. Конец раньше начала — через полночь
 // (lib/sessions.js, spanFromParts). Короче минуты не сохраняется, и об этом
-// говорит подпись длительности.
+// говорит сводка длительности.
+//
+// Собран из общих кирпичей (12 октября 2026): строка задачи — SettingRow на
+// острове; дата, начало и конец — строки острова с выбором под строкой
+// (ExpandRow), как в «Времени работы»; длительность — сводка InfoRow.
+// Удаление спрашивает подтверждение страницей этого же листа, а не листом
+// поверх.
 import { useEffect, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import Text from './AppText';
-import Icon from './Icon';
+import { View, StyleSheet } from 'react-native';
 import PrimaryButton from './PrimaryButton';
 import MiniDatePicker from './MiniDatePicker';
-import { TimeRange } from './TimeField';
+import TimeColumns from './TimeField';
+import ActionSheetContent from './ActionSheetContent';
+import SheetPage, { usePageMotion } from './SheetPage';
+import { RowGroup, SettingRow, ExpandRow } from './Island';
+import { InfoRow } from './RepeatControls';
 import { useAppStore } from '../store/useAppStore';
 import { dayKey, keyToDate } from '../lib/calendarMath';
-import { fmtClock } from '../lib/format';
+import { fmtClock, capFirst } from '../lib/format';
 import { spanFromParts, hm, MIN_SESSION_MS } from '../lib/sessions';
-import { confirmSheet } from '../lib/dialogs';
-import { closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+import { closeSheet, setSheetFooter, clearSheetFooter, useSheetHeader } from '../store/useSheetStore';
+import { spacing } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 /** @param task — чья запись; @param index — правим запись по индексу,
- *  null — новая. @param initial — { start, end } (Date или мс) для новой. */
+ *  null — новая. @param initial — { start, end } (Date или мс) для новой.
+ *  @param onOpenTask — открыть задачу (с «Сегодня» и сетки); со страницы
+ *    самой задачи его нет, и строка задачи — без шеврона и не нажимается. */
 export default function SessionSheet({ task, index = null, initial, onSaved, onOpenTask }) {
-  const colors = useColors();
-  const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
   const saveSession = useAppStore((s) => s.saveSession);
   const deleteSession = useAppStore((s) => s.deleteSession);
   const showToast = useAppStore((s) => s.showToast);
+  const project = useAppStore((s) => s.projects.find((p) => p.id === task.projectId)) || null;
 
   const existing = index != null ? (task.sessions || [])[index] : null;
+  // Страница: 'main' — форма, 'confirm' — подтверждение удаления.
+  const [page, setPage] = useState('main');
+  const motion = usePageMotion(page === 'confirm' ? 1 : 0);
+  useSheetHeader(
+    t(lang, page === 'confirm' ? 'confirm.are_you_sure' : existing ? 'sdlg.edit_title' : 'sdlg.add_title'),
+    page === 'confirm' ? () => setPage('main') : null,
+  );
   const startAt = existing ? new Date(existing.start)
     : initial && initial.start ? new Date(initial.start) : new Date(Date.now() - 3_600_000);
   const endAt = existing ? (existing.end ? new Date(existing.end) : new Date())
@@ -37,7 +52,9 @@ export default function SessionSheet({ task, index = null, initial, onSaved, onO
   const [date, setDate] = useState(dayKey(startAt));
   const [start, setStart] = useState(hm(startAt));
   const [end, setEnd] = useState(hm(endAt));
-  const [pickingDate, setPickingDate] = useState(false);
+  // Раскрытая строка: 'date', 'start' или 'end'; открыта одна.
+  const [open, setOpen] = useState(null);
+  const toggle = (which) => setOpen((o) => (o === which ? null : which));
 
   const span = spanFromParts(date, start, end);
   const valid = !!span && span.ms >= MIN_SESSION_MS;
@@ -49,69 +66,80 @@ export default function SessionSheet({ task, index = null, initial, onSaved, onO
     if (onSaved) onSaved();
   }
 
-  function remove() {
-    confirmSheet({
-      title: t(lang, 'confirm.are_you_sure'),
-      message: t(lang, 'session.delete_title'),
-      actions: [
-        { label: t(lang, 'common.delete'), destructive: true, onPress: () => deleteSession(task.id, index) },
-        { label: t(lang, 'common.cancel'), cancel: true },
-      ],
-    });
-  }
-
+  // Внизу две кнопки: «Сохранить» и, у существующей записи, «Удалить
+  // запись». «Отмены» нет — лист закрывают крестик в шапке и свайп вниз;
+  // «Открыть задачу» — строка задачи под заголовком. У страницы
+  // подтверждения подвал свой.
   useEffect(() => {
-    setSheetFooter(
+    if (page !== 'main') return undefined;
+    const footer = (
       <>
         <PrimaryButton title={t(lang, 'common.save')} onPress={save} disabled={!valid} />
-        {existing ? <PrimaryButton title={t(lang, 'session.delete_title')} variant="danger" onPress={remove} /> : null}
-        {onOpenTask ? <PrimaryButton title={t(lang, 'agenda.open_task')} variant="ghost" onPress={() => { closeSheet(); onOpenTask(task.id); }} /> : null}
-        <PrimaryButton title={t(lang, 'common.cancel')} variant="ghost" onPress={closeSheet} />
-      </>,
+        {existing ? <PrimaryButton title={t(lang, 'session.delete_title')} variant="danger" onPress={() => setPage('confirm')} /> : null}
+      </>
     );
-    return () => setSheetFooter(null);
-  }, [date, start, end, valid, lang, onOpenTask]);
+    setSheetFooter(footer);
+    return () => clearSheetFooter(footer);
+  }, [page, date, start, end, valid, lang]);
 
-  const dateLabel = keyToDate(date).toLocaleDateString(LOCALE_MAP[lang] || 'ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
+  if (page === 'confirm') {
+    return (
+      <SheetPage key="confirm" motion={motion}>
+        <ActionSheetContent
+          embedded
+          message={t(lang, 'session.delete_title')}
+          onCancel={() => setPage('main')}
+          actions={[
+            { label: t(lang, 'common.delete'), destructive: true, onPress: () => deleteSession(task.id, index) },
+            { label: t(lang, 'common.cancel'), cancel: true },
+          ]}
+        />
+      </SheetPage>
+    );
+  }
+
+  const dateLabel = capFirst(keyToDate(date).toLocaleDateString(LOCALE_MAP[lang] || 'ru-RU', { weekday: 'short', day: 'numeric', month: 'long' }));
+  const taskTitle = task.title || t(lang, 'task.no_name');
+  const openTask = onOpenTask ? () => { closeSheet(); onOpenTask(task.id); } : null;
 
   return (
-    <View style={{ gap: spacing.md }}>
-      <Text style={styles.title}>{t(lang, existing ? 'sdlg.edit_title' : 'sdlg.add_title')}</Text>
-      {task.title ? <Text style={styles.task} numberOfLines={1}>{task.title}</Text> : null}
+    <SheetPage key="main" motion={motion} style={styles.content}>
+      {/* Строка задачи: точка цвета проекта, название, справа проект; шеврон
+          и нажатие — открыть задачу (если лист открыт не с её страницы). */}
+      <RowGroup>
+        <SettingRow
+          lead={project ? <View style={[styles.dot, { backgroundColor: project.color }]} /> : null}
+          label={taskTitle}
+          value={project ? project.name : null}
+          onPress={openTask || undefined}
+          accessibilityLabel={openTask ? `${t(lang, 'agenda.open_task')}: ${taskTitle}` : undefined}
+          testID="session-task"
+        />
+      </RowGroup>
 
-      <Pressable style={[styles.dateBtn, pickingDate && styles.dateBtnOpen]} onPress={() => setPickingDate((v) => !v)}>
-        <Icon name="calendar" size={14} color={colors.textDim} />
-        <Text style={styles.dateLabel}>{t(lang, 'sdlg.date_label')}</Text>
-        <Text style={styles.dateValue}>{dateLabel}</Text>
-      </Pressable>
-      {pickingDate ? <MiniDatePicker lang={lang} valueKey={date} onPick={(key) => { setDate(key); setPickingDate(false); }} /> : null}
+      <RowGroup testID="session-rows">
+        <ExpandRow icon="calendar" label={t(lang, 'sdlg.date_label')} value={dateLabel} open={open === 'date'} onToggle={() => toggle('date')} testID="session-date">
+          <MiniDatePicker lang={lang} valueKey={date} onPick={(key) => { setDate(key); setOpen(null); }} />
+        </ExpandRow>
+        <ExpandRow icon="clock" label={t(lang, 'sdlg.start_label')} value={start} open={open === 'start'} onToggle={() => toggle('start')} testID="session-start">
+          <TimeColumns value={start} onChange={setStart} />
+        </ExpandRow>
+        <ExpandRow icon="clock" label={t(lang, 'sdlg.end_label')} value={end} open={open === 'end'} onToggle={() => toggle('end')} testID="session-end">
+          <TimeColumns value={end} onChange={setEnd} />
+        </ExpandRow>
+      </RowGroup>
 
-      <TimeRange
-        startLabel={t(lang, 'sdlg.start_label')}
-        endLabel={t(lang, 'sdlg.end_label')}
-        start={start}
-        end={end}
-        onStart={setStart}
-        onEnd={setEnd}
+      <InfoRow
+        icon="stopwatch"
+        danger={!valid}
+        text={span ? t(lang, 'sdlg.duration', { time: fmtClock(span.ms) }) : t(lang, 'sdlg.check_datetime')}
+        testID="session-duration"
       />
-
-      <Text style={[styles.duration, !valid && styles.durationBad]}>
-        {span ? t(lang, 'sdlg.duration', { time: fmtClock(span.ms) }) : t(lang, 'sdlg.check_datetime')}
-      </Text>
-    </View>
+    </SheetPage>
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, ...typography.title },
-  task: { color: colors.textDim, fontSize: fontSize.sm, marginTop: -spacing.sm },
-  dateBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.panel2, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-  },
-  dateBtnOpen: { backgroundColor: colors.accentMuted },
-  dateLabel: { color: colors.textDim, fontSize: fontSize.sm },
-  dateValue: { flex: 1, textAlign: 'right', color: colors.text, fontSize: fontSize.md, fontWeight: '700' },
-  duration: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center' },
-  durationBad: { color: colors.danger },
+const styles = StyleSheet.create({
+  content: { gap: spacing.md },
+  dot: { width: 10, height: 10, borderRadius: 3 },
 });

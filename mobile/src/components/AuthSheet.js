@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import Text from './AppText';
-import TextInput from './AppTextInput';
+import { Field } from './AppTextInput';
 import PrimaryButton from './PrimaryButton';
+import ChoiceList from './ChoiceList';
+import { Block, Hint } from './RepeatControls';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 import { setSheetFooter, closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+import { useColors, spacing, fontSize, buttonHeight, buttonRadius } from '../theme';
 import { t } from '../lib/i18n';
 
 // Тот же четырёхцветный логотип, что в src/renderer/index.html — своя
@@ -24,9 +26,14 @@ function GoogleIcon() {
   );
 }
 
-// Вход и регистрация в одном листе — переключаются табом сверху, а не двумя
-// отдельными экранами/шитами: общий email+пароль, меняется только
-// поведение onSubmit и подпись единственной акцентной кнопки внизу.
+const TABS = ['signin', 'signup'];
+const TAB_KEY = { signin: 'auth.sign_in', signup: 'auth.create_account' };
+
+// Вход и регистрация в одном листе: общий email+пароль, меняется только
+// поведение onSubmit и подпись единственной акцентной кнопки внизу. Режим —
+// две строки с галочкой (общий ChoiceList, 12 октября 2026; были сегменты —
+// в листах их нет), как выбор вида в остальных листах. Подписи полей — общий
+// Block. «Войти через Google» — серая, как вторичная кнопка подвала.
 export default function AuthSheet({ initialTab = 'signin' }) {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
@@ -82,7 +89,7 @@ export default function AuthSheet({ initialTab = 'signin' }) {
 
   return (
     <View style={{ gap: spacing.md }}>
-      <Pressable style={styles.googleBtn} onPress={onGooglePress} disabled={googleLoading}>
+      <Pressable testID="google-button" style={styles.googleBtn} onPress={onGooglePress} disabled={googleLoading}>
         <GoogleIcon />
         <Text style={styles.googleBtnText}>{t(lang, 'auth.google_btn')}</Text>
       </Pressable>
@@ -93,71 +100,47 @@ export default function AuthSheet({ initialTab = 'signin' }) {
         <View style={styles.dividerLine} />
       </View>
 
-      <View style={styles.tabRow}>
-        <Pressable style={[styles.tab, tab === 'signin' && styles.tabActive]} onPress={() => switchTab('signin')}>
-          <Text style={[styles.tabText, tab === 'signin' && styles.tabTextActive]}>{t(lang, 'auth.sign_in')}</Text>
-        </Pressable>
-        <Pressable style={[styles.tab, tab === 'signup' && styles.tabActive]} onPress={() => switchTab('signup')}>
-          <Text style={[styles.tabText, tab === 'signup' && styles.tabTextActive]}>{t(lang, 'auth.create_account')}</Text>
-        </Pressable>
-      </View>
+      <ChoiceList
+        options={TABS.map((value) => ({ value, label: t(lang, TAB_KEY[value]), testID: `auth-mode-${value}` }))}
+        value={tab}
+        onSelect={switchTab}
+        testID="auth-mode"
+      />
 
-      <View style={styles.field}>
-        <Text style={styles.label}>{t(lang, 'auth.email_label')}</Text>
-        <TextInput
-          style={styles.input}
+      <Block label={t(lang, 'auth.email_label')}>
+        <Field
           value={email}
           onChangeText={(v) => { setEmail(v); clearAuthError(); }}
           autoCapitalize="none"
           keyboardType="email-address"
           textContentType="emailAddress"
           placeholder="you@example.com"
-          placeholderTextColor={colors.textDim}
         />
-      </View>
+      </Block>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>{t(lang, 'auth.password_label')}</Text>
-        <TextInput
-          style={styles.input}
+      <Block label={t(lang, 'auth.password_label')}>
+        <Field
           value={password}
           onChangeText={(v) => { setPassword(v); clearAuthError(); }}
           secureTextEntry
           textContentType={tab === 'signin' ? 'password' : 'newPassword'}
-          placeholderTextColor={colors.textDim}
         />
-      </View>
+      </Block>
 
-      {authError ? <Text style={styles.error}>{t(lang, authError)}</Text> : null}
-      {offerSignup ? <Text style={styles.hint}>{t(lang, 'auth.no_account')}</Text> : null}
+      {authError ? <Hint danger>{t(lang, authError)}</Hint> : null}
+      {offerSignup ? <Hint>{t(lang, 'auth.no_account')}</Hint> : null}
     </View>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, ...typography.title },
-  subtitle: { color: colors.textDim, fontSize: fontSize.sm },
   googleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    minHeight: 48, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.panel,
+    // Вторичная кнопка листа — как ghost у PrimaryButton: серая подложка, без рамки.
+    minHeight: buttonHeight, borderRadius: buttonRadius, backgroundColor: colors.panel2,
   },
   googleBtnText: { color: colors.text, fontSize: fontSize.md, fontWeight: '600' },
   divider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
-  dividerText: { color: colors.textDim, fontSize: fontSize.xs, textTransform: 'uppercase' },
-  tabRow: { flexDirection: 'row', backgroundColor: colors.panel2, borderRadius: radius.md, padding: 4 },
-  tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.sm },
-  tabActive: { backgroundColor: colors.tabActiveBg },
-  tabText: { color: colors.textDim, fontSize: fontSize.sm, fontWeight: '600' },
-  // См. комментарий у modeTextOn в TimeScreen.js — тот же принцип.
-  tabTextActive: { color: colors.text },
-  field: { gap: spacing.xs },
-  label: { color: colors.textDim, fontSize: fontSize.xs },
-  input: {
-    backgroundColor: colors.inputBg, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
-  },
-  error: { color: colors.danger, fontSize: fontSize.sm },
-  hint: { color: colors.textDim, fontSize: fontSize.sm },
+  dividerText: { color: colors.textDim, fontSize: fontSize.xs },
 });

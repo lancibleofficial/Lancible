@@ -4,58 +4,50 @@
 // кнопки и одна из них главная. Здесь пунктов полдюжины и главного среди них
 // нет, поэтому одинаковые акцентные кнопки только мешали бы выбирать.
 //
-// Разрушительный пункт отделён чертой и покрашен: «Удалить» в общем ряду
-// слишком легко нажать, целясь в соседнее.
-import { View, Pressable, StyleSheet } from 'react-native';
-import Text from './AppText';
-import Icon from './Icon';
-import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+// Строки — общие SettingRow на островах (12 октября 2026), те же, что в
+// «Меню» приложения и настройках: значок, название, без шеврона (пункт — это
+// действие, а не настройка). Разрушительный пункт отделён — своим островом —
+// и покрашен: «Удалить» в общем ряду слишком легко нажать, целясь в соседнее.
+import { View, StyleSheet } from 'react-native';
+import { RowGroup, SettingRow } from './Island';
+import { closeSheet, useSheetHeader } from '../store/useSheetStore';
+import { spacing } from '../theme';
 
 /**
- * @param {string} [title] — шапка листа.
- * @param {Array<{key, label, icon?, danger?, separated?, onPress}>} items
+ * @param {string} [title] — заголовок в общей шапке листа.
+ * @param {Array<{key, label, icon?, danger?, separated?, onPress}>} items —
+ *   separated начинает новый остров.
  */
 export default function MenuSheet({ title, items }) {
-  const colors = useColors();
-  const styles = makeStyles(colors);
+  useSheetHeader(title);
+  const groups = [];
+  items.forEach((item, i) => {
+    if (i === 0 || item.separated) groups.push([]);
+    groups[groups.length - 1].push(item);
+  });
+  // Своего нижнего отступа у меню нет: воздух под последним пунктом — общий
+  // у всех листов (BottomSheet, SHEET_BOTTOM_GAP).
   return (
-    <View style={styles.wrap}>
-      {title ? <Text style={styles.title} numberOfLines={1}>{title}</Text> : null}
-      {items.map((item) => (
-        <View key={item.key}>
-          {item.separated ? <View style={styles.separator} /> : null}
-          <Pressable
-            style={styles.row}
-            onPress={() => { closeSheet(); item.onPress(); }}
-          >
-            {item.icon ? (
-              <Icon name={item.icon} size={16} color={item.danger ? colors.danger : colors.textDim} />
-            ) : null}
-            <Text style={[styles.label, item.danger && styles.labelDanger]} numberOfLines={1}>
-              {item.label}
-            </Text>
-          </Pressable>
-        </View>
+    <View style={styles.content}>
+      {groups.map((group) => (
+        <RowGroup key={group[0].key}>
+          {group.map((item) => (
+            <SettingRow
+              key={item.key}
+              icon={item.icon}
+              label={item.label}
+              danger={item.danger}
+              chevron={false}
+              onPress={() => { closeSheet(); item.onPress(); }}
+              testID={`menu-${item.key}`}
+            />
+          ))}
+        </RowGroup>
       ))}
     </View>
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
-  wrap: { paddingBottom: spacing.lg },
-  title: { color: colors.text, ...typography.title, marginBottom: spacing.sm },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    // 52 — не «покрупнее»: пункты идут подряд, и соседний не должен ловить
-    // палец, нацеленный сюда.
-    minHeight: 52, paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-  },
-  label: { flex: 1, color: colors.text, fontSize: fontSize.md },
-  labelDanger: { color: colors.danger },
-  separator: {
-    height: StyleSheet.hairlineWidth, backgroundColor: colors.border,
-    marginVertical: spacing.sm, marginHorizontal: spacing.md,
-  },
+const styles = StyleSheet.create({
+  content: { gap: spacing.md },
 });

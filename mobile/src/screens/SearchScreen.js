@@ -8,10 +8,11 @@ import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
 import { GlassBg } from '../components/Glass';
+import EmptyState from '../components/EmptyState';
 import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import { useAppStore, recentTasks, getProject, tasksOf } from '../store/useAppStore';
 import { getStatus } from '../lib/statuses';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, screenPadding, radius, fontSize } from '../theme';
 import { t, pluralForm } from '../lib/i18n';
 
 export default function SearchScreen({ navigation }) {
@@ -43,7 +44,11 @@ export default function SearchScreen({ navigation }) {
     if (foundTasks.length) rows.push({ key: 'h-t', head: t(lang, 'search.tasks_group') });
     for (const task of foundTasks) rows.push({ key: 't-' + task.id, task });
   }
+  // Пусто бывает дважды: запрос ничего не нашёл — или запроса ещё нет, а
+  // недавних задач тоже нет (новый человек). В обоих — сценка поиска без
+  // кнопки; стоит повыше, над клавиатурой.
   const empty = q && !rows.length;
+  const blank = !q && !rows.length;
 
   // Клавиатура — сразу. autoFocus срабатывает не всегда: пока экран въезжает,
   // поле может быть ещё не в окне, — поэтому ещё раз, когда переход кончился.
@@ -108,8 +113,13 @@ export default function SearchScreen({ navigation }) {
         </View>
       </View>}
 
-      {empty ? (
-        <Text style={styles.empty}>{t(lang, 'search.nothing_found')}</Text>
+      {empty || blank ? (
+        <EmptyState
+          art="search"
+          title={empty ? t(lang, 'search.nothing_found') : t(lang, 'empty.search_start')}
+          text={empty ? t(lang, 'empty.search_text') : t(lang, 'empty.search_start_text')}
+          style={styles.emptyState}
+        />
       ) : (
         <FlatList
           data={rows}
@@ -151,10 +161,10 @@ export default function SearchScreen({ navigation }) {
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: insets.top + spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingTop: insets.top + spacing.sm, paddingHorizontal: screenPadding, paddingBottom: spacing.sm },
   back: { width: 36, height: 36, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   field: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 40, paddingHorizontal: spacing.md, borderRadius: radius.md },  input: { flex: 1, color: colors.text, fontSize: fontSize.sm, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
-  content: { paddingHorizontal: spacing.md, paddingBottom: insets.bottom + spacing.xl },
+  content: { paddingHorizontal: screenPadding, paddingBottom: insets.bottom + spacing.xl },
   sectionTitle: { color: colors.textFaint, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, paddingVertical: spacing.sm, paddingHorizontal: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.panel, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, minHeight: 52 },
   dot: { width: 9, height: 9, borderRadius: 3 },
@@ -162,5 +172,5 @@ const makeStyles = (colors, insets) => StyleSheet.create({
   title: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },
   sub: { color: colors.textFaint, fontSize: fontSize.xs },
   count: { color: colors.textFaint, fontSize: fontSize.xs },
-  empty: { color: colors.textDim, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.xxl },
+  emptyState: { marginTop: spacing.lg },
 });

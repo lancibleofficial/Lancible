@@ -9,8 +9,13 @@
 // ровно один на всю сетку, а ряды лежат внутри него друг под другом:
 // синхронность получается сама, синхронизировать нечего.
 //
-// Из этого же следует, где живут «липкие» части. Шапка статусов стоит над
-// вертикальной прокруткой (иначе уехала бы вверх) и сдвигается по X на
+// Своей вертикальной прокрутки у доски нет (с 11 октября 2026): она лежит
+// в странице проекта, а та прокручивается целиком — название, цифры,
+// вкладки и доска едут вместе. Вложенная вертикальная прокрутка спорила бы
+// со страничной за один и тот же жест; горизонтальная внутри вертикальной —
+// нет: каждая ловит свою ось.
+//
+// Шапка статусов стоит над горизонтальной прокруткой и сдвигается по X на
 // минус прокрутку. Заголовок ряда стоит внутри ряда и сдвигается на плюс
 // прокрутку — так он остаётся у левого края экрана.
 //
@@ -19,7 +24,7 @@
 // долгое нажатие открывает лист со статусами — то же действие, но без
 // борьбы с пальцем.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withTiming,
 } from 'react-native-reanimated';
@@ -33,11 +38,11 @@ import { useAppStore } from '../store/useAppStore';
 import { orderedStatuses } from '../lib/statuses';
 import Versions from '../core/versions.js';
 import { openSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { useColors, spacing, screenPadding, radius, fontSize } from '../theme';
 import { t } from '../lib/i18n';
 
 // Отступ от края экрана — общий с остальными экранами.
-const GUTTER = spacing.lg;
+const GUTTER = screenPadding;
 // Зазор между столбцами.
 const COL_GAP = spacing.sm;
 // Сколько остаётся на край следующего столбца: по нему и видно, что доска
@@ -46,8 +51,8 @@ const PEEK = 56;
 const COLLAPSE_MS = 200;
 
 /** @param projectId — чья доска; @param versionFilter — 'all' | id | 'none';
- *  @param onOpenTask(taskId); @param bottomPadding — запас под кнопку. */
-export default function BoardView({ projectId, versionFilter = 'all', onOpenTask, bottomPadding = 0 }) {
+ *  @param onOpenTask(taskId). */
+export default function BoardView({ projectId, versionFilter = 'all', onOpenTask }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
 
@@ -55,8 +60,8 @@ export default function BoardView({ projectId, versionFilter = 'all', onOpenTask
   const snap = columnWidth + COL_GAP;
   const laneWidth = width - GUTTER * 2;
   const styles = useMemo(
-    () => makeStyles(colors, columnWidth, laneWidth, bottomPadding),
-    [colors, columnWidth, laneWidth, bottomPadding],
+    () => makeStyles(colors, columnWidth, laneWidth),
+    [colors, columnWidth, laneWidth],
   );
 
   const tasks = useAppStore((s) => s.tasks);
@@ -147,8 +152,8 @@ export default function BoardView({ projectId, versionFilter = 'all', onOpenTask
   if (!columns.length) return <Text style={styles.emptyText}>{t(lang, 'board.empty')}</Text>;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.stickyHead}>
+    <View>
+      <View style={styles.head}>
         <Animated.View style={[styles.headInner, headStyle]}>
           {columns.map((status) => (
             <View key={status.id} style={styles.headCell}>
@@ -162,44 +167,37 @@ export default function BoardView({ projectId, versionFilter = 'all', onOpenTask
         </Animated.View>
       </View>
 
-      <ScrollView
-        style={styles.vertical}
-        contentContainerStyle={styles.verticalContent}
+      <Animated.ScrollView
+        horizontal
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         // Жест, начатый по одной оси, по другой уже не поедет: без этого
-        // доска ползёт по диагонали и «липкие» части дрожат.
+        // доска ползёт по диагонали вместе со страницей и шапка дрожит.
         directionalLockEnabled
-        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        snapToOffsets={offsets}
+        decelerationRate="fast"
+        contentContainerStyle={styles.horizontalContent}
       >
-        <Animated.ScrollView
-          horizontal
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          directionalLockEnabled
-          showsHorizontalScrollIndicator={false}
-          snapToOffsets={offsets}
-          decelerationRate="fast"
-          contentContainerStyle={styles.horizontalContent}
-        >
-          <View>
-            {lanes
-              ? lanes.map((lane) => (
-                <Lane
-                  key={lane.version ? lane.version.id : 'none'}
-                  lane={lane}
-                  lang={lang}
-                  styles={styles}
-                  colors={colors}
-                  scrollX={scrollX}
-                  collapsed={((boardCollapsed && boardCollapsed[projectId]) || [])
-                    .includes(lane.version ? lane.version.id : 'none')}
-                  onToggle={() => toggleBoardLane(projectId, lane.version ? lane.version.id : 'none')}
-                  renderRow={renderRow}
-                />
-              ))
-              : renderRow(shown, plainVersionId)}
-          </View>
-        </Animated.ScrollView>
-      </ScrollView>
+        <View>
+          {lanes
+            ? lanes.map((lane) => (
+              <Lane
+                key={lane.version ? lane.version.id : 'none'}
+                lane={lane}
+                lang={lang}
+                styles={styles}
+                colors={colors}
+                scrollX={scrollX}
+                collapsed={((boardCollapsed && boardCollapsed[projectId]) || [])
+                  .includes(lane.version ? lane.version.id : 'none')}
+                onToggle={() => toggleBoardLane(projectId, lane.version ? lane.version.id : 'none')}
+                renderRow={renderRow}
+              />
+            ))
+            : renderRow(shown, plainVersionId)}
+        </View>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -245,11 +243,10 @@ function Lane({ lane, lang, styles, colors, scrollX, collapsed, onToggle, render
   );
 }
 
-const makeStyles = (colors, columnWidth, laneWidth, bottomPadding) => StyleSheet.create({
-  container: { flex: 1 },
-  // Шапка статусов стоит над прокруткой, поэтому вертикально не уезжает;
-  // лишнее по бокам режется, чтобы сдвинутая строка не вылезала за экран.
-  stickyHead: { overflow: 'hidden', paddingTop: spacing.sm, paddingBottom: spacing.xs },
+const makeStyles = (colors, columnWidth, laneWidth) => StyleSheet.create({
+  // Шапка статусов едет по X вместе со столбцами; лишнее по бокам режется,
+  // чтобы сдвинутая строка не вылезала за экран.
+  head: { overflow: 'hidden', paddingTop: spacing.xs, paddingBottom: spacing.xs },
   headInner: { flexDirection: 'row', paddingLeft: GUTTER },
   headCell: {
     width: columnWidth, marginRight: COL_GAP,
@@ -260,8 +257,6 @@ const makeStyles = (colors, columnWidth, laneWidth, bottomPadding) => StyleSheet
   headName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '700' },
   headCount: { color: colors.textFaint, fontSize: fontSize.xs },
 
-  vertical: { flex: 1 },
-  verticalContent: { paddingBottom: bottomPadding + spacing.xl },
   horizontalContent: { paddingLeft: GUTTER, paddingRight: PEEK },
 
   lane: { marginBottom: spacing.lg },

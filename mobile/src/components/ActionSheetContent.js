@@ -1,42 +1,49 @@
 import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Text from './AppText';
 import PrimaryButton from './PrimaryButton';
-import { closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, fontSize, typography } from '../theme';
+import { closeSheet, setSheetFooter, clearSheetFooter, useSheetHeader } from '../store/useSheetStore';
+import { useColors, fontSize } from '../theme';
 
 // Содержимое нижнего листа для меню/подтверждений — замена Alert.alert(...)
 // (см. lib/dialogs.js). actions: [{label, onPress, destructive?, cancel?}].
-export default function ActionSheetContent({ title, message, actions }) {
+// Заголовок уходит в общую шапку листа, в содержимом остаётся пояснение.
+//
+// embedded (12 октября 2026) — подтверждение страницей внутри другого листа
+// («Удалить запись?», «Удалить аккаунт?»): из листа другой лист не
+// открывается, иначе он закрыл бы собой этот. Заголовок и «назад» ставит
+// тот, кто держит страницу; «Отмена» возвращает к нему (onCancel), а не
+// закрывает лист. Кнопки — тот же подвал: главная, danger, серая «Отмена».
+export default function ActionSheetContent({ title, message, actions, embedded, onCancel }) {
   const colors = useColors();
   const styles = makeStyles(colors);
+  useSheetHeader(embedded ? null : title);
 
   useEffect(() => {
-    setSheetFooter(
+    const footer = (
       <>
         {actions.map((a, i) => (
           <PrimaryButton
             key={i}
             title={a.label}
             variant={a.destructive ? 'danger' : a.cancel ? 'ghost' : 'primary'}
-            onPress={() => { closeSheet(); if (a.onPress) a.onPress(); }}
+            onPress={() => {
+              if (a.cancel && embedded) { if (onCancel) onCancel(); return; }
+              closeSheet();
+              if (a.onPress) a.onPress();
+            }}
           />
         ))}
-      </>,
+      </>
     );
-    return () => setSheetFooter(null);
+    setSheetFooter(footer);
+    return () => clearSheetFooter(footer);
   }, [actions]);
 
-  if (!title && !message) return null;
-  return (
-    <View style={{ gap: spacing.sm }}>
-      {title ? <Text style={styles.title}>{title}</Text> : null}
-      {message ? <Text style={styles.message}>{message}</Text> : null}
-    </View>
-  );
+  if (!message) return null;
+  return <Text style={styles.message}>{message}</Text>;
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  title: { color: colors.text, ...typography.title },
   message: { color: colors.textDim, fontSize: fontSize.sm },
 });

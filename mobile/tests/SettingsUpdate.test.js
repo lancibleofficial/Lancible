@@ -7,6 +7,7 @@
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 import SettingsScreen from '../src/screens/SettingsScreen';
+import BottomSheet from '../src/components/BottomSheet';
 import { useAppStore } from '../src/store/useAppStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSheetStore } from '../src/store/useSheetStore';
@@ -19,7 +20,8 @@ const UPDATE = { available: true, version: '1.2.1', url: 'https://example.com/re
 beforeEach(() => {
   useAppStore.setState({ settings: { ...useAppStore.getState().settings, lang: 'ru' } });
   useAuthStore.setState({ status: 'signedOut', user: null });
-  useSheetStore.setState({ content: null, footer: null });
+  useSheetStore.setState({ content: null, header: null, footer: null });
+  shown = null;
   checkForUpdate.mockResolvedValue(UPDATE);
   downloadAndInstall.mockReset();
   // Linking.openURL в моках RN — уже jest.fn: spyOn вернёт его же, а
@@ -36,12 +38,14 @@ async function pressUpdate() {
   await act(async () => { fireEvent.press(screen.getByText('Обновить')); });
   return screen;
 }
-/** Открытый лист: текст и кнопки. Кнопки содержимое кладёт в подвал своим
- *  эффектом, поэтому подвал рендерится вторым — как в BottomSheet. */
+/** Открытый лист целиком — шапка с заголовком, содержимое и подвал с
+ *  кнопками, как их складывает BottomSheet. Прежний лист снимаем: два
+ *  BottomSheet на один стор показывали бы одно и то же дважды. */
+let shown = null;
 async function sheet() {
-  const content = await render(useSheetStore.getState().content);
-  const footer = await render(useSheetStore.getState().footer);
-  return { getByText: (text) => content.queryByText(text) || footer.getByText(text) };
+  if (shown) shown.unmount();
+  shown = await render(<BottomSheet />);
+  return shown;
 }
 
 test('отказ — лист с причиной и выбором, а не молчаливый браузер', async () => {

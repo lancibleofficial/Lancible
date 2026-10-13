@@ -4,13 +4,13 @@
 // Отдельный лист, а не PickerSheet, по двум причинам: у статусов есть цвет,
 // и он тут не украшение — по нему колонки и узнают; и рядом с выбором стоит
 // действие таймера, которого у выбора одного из списка быть не может.
-import { View, Pressable, StyleSheet } from 'react-native';
-import Text from './AppText';
-import Icon from './Icon';
+import { View, StyleSheet } from 'react-native';
+import ChoiceList from './ChoiceList';
+import { Block } from './RepeatControls';
 import { useAppStore } from '../store/useAppStore';
 import { orderedStatuses } from '../lib/statuses';
-import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+import { closeSheet, useSheetHeader } from '../store/useSheetStore';
+import { useColors, spacing } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function TaskMoveSheet({ taskId }) {
@@ -23,6 +23,8 @@ export default function TaskMoveSheet({ taskId }) {
   const setTaskStatus = useAppStore((s) => s.setTaskStatus);
   const startTimer = useAppStore((s) => s.startTimer);
   const stopTimer = useAppStore((s) => s.stopTimer);
+  // Название задачи — заголовок в общей шапке листа (в одну строку).
+  useSheetHeader(task ? (task.title || t(lang, 'task.no_name')) : '');
 
   // Задачу могли удалить с другого устройства, пока лист открыт.
   if (!task) return null;
@@ -32,52 +34,32 @@ export default function TaskMoveSheet({ taskId }) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.title} numberOfLines={2}>{task.title || t(lang, 'task.no_name')}</Text>
+      <Block label={t(lang, 'board.move_to')}>
+        <ChoiceList
+          options={columns.map((st) => ({ value: st.id, label: st.name, color: st.color }))}
+          value={task.statusId}
+          onSelect={(id) => { setTaskStatus(task.id, id); closeSheet(); }}
+          testID="move-list"
+        />
+      </Block>
 
-      <Text style={styles.section}>{t(lang, 'board.move_to')}</Text>
-      {columns.map((st) => {
-        const active = st.id === task.statusId;
-        return (
-          <Pressable
-            key={st.id}
-            style={[styles.row, active && styles.rowActive]}
-            onPress={() => { setTaskStatus(task.id, st.id); closeSheet(); }}
-          >
-            <View style={[styles.dot, { backgroundColor: st.color }]} />
-            <Text style={[styles.rowText, active && styles.rowTextActive]} numberOfLines={1}>{st.name}</Text>
-            {active ? <Icon name="check" size={14} color={colors.accentInk} /> : null}
-          </Pressable>
-        );
-      })}
-
-      <Pressable
-        style={styles.timerRow}
-        onPress={() => { if (running) stopTimer(); else startTimer(task.id); closeSheet(); }}
-      >
-        <Icon name={running ? 'pause' : 'play'} size={15} color={running ? colors.danger : colors.accentInk} />
-        <Text style={styles.rowText}>{t(lang, running ? 'timer.stop' : 'timer.start')}</Text>
-      </Pressable>
+      {/* Таймер — действие, а не выбор: своим списком из одной строки ниже. */}
+      <ChoiceList
+        options={[{
+          value: 'timer',
+          label: t(lang, running ? 'timer.stop' : 'timer.start'),
+          icon: running ? 'pause' : 'play',
+          iconColor: running ? colors.danger : colors.accentInk,
+        }]}
+        onSelect={() => { if (running) stopTimer(); else startTimer(task.id); closeSheet(); }}
+        style={styles.timer}
+        testID="move-timer"
+      />
     </View>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  wrap: { gap: spacing.sm, paddingBottom: spacing.lg },
-  title: { color: colors.text, ...typography.title },
-  section: { color: colors.textDim, fontSize: fontSize.xs, textTransform: 'uppercase', marginTop: spacing.sm },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.panel2, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-  },
-  rowActive: { backgroundColor: colors.accentMuted },
-  rowText: { flex: 1, color: colors.text, fontSize: fontSize.md },
-  rowTextActive: { fontWeight: '700' },
-  dot: { width: 10, height: 10, borderRadius: 3 },
-  timerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    marginTop: spacing.sm,
-    backgroundColor: colors.panel2, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-  },
+  wrap: { gap: spacing.sm },
+  timer: { marginTop: spacing.sm },
 });

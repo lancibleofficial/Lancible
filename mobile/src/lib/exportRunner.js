@@ -33,3 +33,22 @@ export async function runExport(defaultName, sheets, langCode, showToast) {
     showToast(t(langCode, 'toast.export_failed'));
   }
 }
+
+/** Текст документа файлом — тот же лист «Поделиться», что у Excel: заметка
+ *  или документ из редактора в Markdown (кнопка «Экспорт» панели редактора) и
+ *  то, что редактор отдаёт сам (сообщение export, lib/editorBridge.js). */
+export async function shareTextFile(name, mime, text, langCode, showToast) {
+  const title = t(langCode, 'editor.share_title');
+  try {
+    const file = new File(Paths.cache, sanitizeFileName(name));
+    if (file.exists) file.delete();
+    file.create();
+    file.write(text || '');
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(file.uri, { mimeType: mime || 'text/plain', dialogTitle: title });
+    }
+  } catch (err) {
+    console.error('Не удалось отдать файл:', err);
+    if (showToast) showToast(t(langCode, 'toast.export_failed'));
+  }
+}

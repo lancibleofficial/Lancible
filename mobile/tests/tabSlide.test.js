@@ -3,11 +3,14 @@
 //
 // Android: навигатор вкладок сам двигает страницы — forSlide, во всю
 // ширину. iOS: вкладки нативные и переключаются мгновенно, поэтому
-// содержимое и заголовок шапки въезжают со стороны открытой вкладки.
-import { Animated, Text } from 'react-native';
+// содержимое въезжает со стороны открытой вкладки. Шапка не двигается и не
+// гаснет нигде: заголовок нативной шапки iOS 26 меняется вместе со вкладкой,
+// сразу, без растворения.
+import { Animated, StyleSheet, Text } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { TAB_ORDER, slideSide, forSlide, tabFocused, freshSide, subscribeTab, resetTabSlide } from '../src/navigation/tabSlide';
-import { withTabPage, TabTitleSlide } from '../src/components/TabSlide';
+import * as TabSlide from '../src/components/TabSlide';
+import { withTabPage } from '../src/components/TabSlide';
 import TabHeader from '../src/components/TabHeader';
 
 jest.mock('../src/navigation/nativeHeader', () => ({
@@ -75,11 +78,11 @@ test('iOS: вкладка, открытая впервые, узнаёт сто�
   expect(freshSide('Menu', 2100)).toBe(0);
 });
 
-test('iOS 26: корень вкладки отдаёт её имя шапке, заголовок въезжает вместе со страницей', async () => {
+test('iOS 26: корень вкладки отдаёт нативной шапке заголовок и число, а сам ничего не рисует', async () => {
   function Screen({ label }) {
     return (
       <>
-        <TabHeader title="Задачи" />
+        <TabHeader title="Задачи" count={3} />
         <Text>{label}</Text>
       </>
     );
@@ -88,7 +91,27 @@ test('iOS 26: корень вкладки отдаёт её имя шапке, �
   const { getByText } = await render(<Page label="список" />);
   getByText('список');
   const options = mockNavigation.setOptions.mock.calls.at(-1)[0];
+  expect(options.title).toBe('Задачи');
   const [title] = options.unstable_headerLeftItems();
-  expect(title.element.type).toBe(TabTitleSlide);
-  expect(title.element.props.tab).toBe('Tasks');
+  // Заголовок — строка с названием и числом, без обёртки, которая его проявляла бы.
+  const row = await render(title.element);
+  row.getByText('Задачи');
+  row.getByText('3');
+});
+
+test('iOS 26: заголовок нативной шапки меняется вместе с вкладкой сразу — без растворения и сдвига', async () => {
+  tabFocused('Projects');
+  tabFocused('Stats');
+  // Растворения в коде больше нет: ни обёртки заголовка, ни длительности.
+  expect(TabSlide.TabTitleFade).toBeUndefined();
+  expect(TabSlide.HEADER_FADE).toBeUndefined();
+  // Только что открытая вкладка: заголовок виден сразу и стоит на месте.
+  function Screen() { return <TabHeader title="Время" />; }
+  const Page = withTabPage(Screen, 'Stats');
+  await render(<Page />);
+  const options = mockNavigation.setOptions.mock.calls.at(-1)[0];
+  const [title] = options.unstable_headerLeftItems();
+  const row = StyleSheet.flatten((await render(title.element)).toJSON().props.style);
+  expect(row.opacity).toBeUndefined();
+  expect(row.transform).toBeUndefined();
 });

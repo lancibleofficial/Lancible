@@ -1,6 +1,7 @@
 // Порт математики календаря из src/renderer/app.js:698-701,751-777,1722-1727 —
 // чистые функции над списком задач, без обращений к DOM/состоянию.
 import { sessionMoney } from './format';
+import Agenda from '../core/agenda.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -19,6 +20,14 @@ export function mondayOf(d) {
   x.setHours(0, 0, 0, 0);
   x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
   return x;
+}
+
+/** Полночь дня через n календарных дней от d (n бывает отрицательным). Не
+ *  `d.getTime() + n * 86400000`: сутки в день перевода часов длятся 23 или 25
+ *  часов, и такой сдвиг повторяет один день и теряет соседний. Правило одно
+ *  на все поверхности — addDaysMs ядра; здесь только обёртка в Date. */
+export function addDays(d, n) {
+  return new Date(Agenda.addDaysMs(d, n));
 }
 
 export function allSessionPairs(tasks) {

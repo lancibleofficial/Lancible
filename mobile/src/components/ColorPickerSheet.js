@@ -5,23 +5,27 @@
 // ради него целую форму было бы странно. Выбор сразу закрывает лист — как в
 // PickerSheet, отдельного «Готово» не нужно.
 import { View, Pressable, StyleSheet } from 'react-native';
-import Text from './AppText';
 import { PALETTE } from '../lib/migrate';
-import { closeSheet } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+import { closeSheet, useSheetHeader } from '../store/useSheetStore';
+import { useColors, spacing, radius } from '../theme';
 
-export default function ColorPickerSheet({ title, value, onSelect }) {
+/** @param embedded страница внутри другого листа (настройки проекта): без
+ *  своего заголовка и не закрывает лист — выбор отдаётся наверх. */
+export default function ColorPickerSheet({ title, value, onSelect, embedded }) {
   const colors = useColors();
   const styles = makeStyles(colors);
+  useSheetHeader(embedded ? null : title);
   return (
     <View style={styles.wrap}>
-      {title ? <Text style={styles.title}>{title}</Text> : null}
-      <View style={styles.grid}>
+      <View style={styles.grid} testID="color-grid">
         {PALETTE.map((c) => (
           <Pressable
             key={c}
-            onPress={() => { onSelect(c); closeSheet(); }}
+            onPress={() => { onSelect(c); if (!embedded) closeSheet(); }}
             style={[styles.ring, value === c && styles.ringSel]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: value === c }}
+            testID={`color-${c}`}
           >
             <View style={[styles.swatch, { backgroundColor: c }]} />
           </Pressable>
@@ -32,8 +36,7 @@ export default function ColorPickerSheet({ title, value, onSelect }) {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  wrap: { gap: spacing.md, paddingBottom: spacing.lg },
-  title: { color: colors.text, ...typography.title },
+  wrap: { gap: spacing.md },
   // Сетка, а не лента: цветов шестнадцать, и в строку они не помещаются —
   // а искать нужный горизонтальной прокруткой дольше, чем взглядом.
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

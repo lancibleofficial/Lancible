@@ -1,11 +1,11 @@
-// Список документов — строки одного вида для раздела «Документы» и для
-// вкладки «Документы» на странице проекта. Открытие — полноэкранный
-// редактор (EditorScreen), долгое нажатие и ⋮ — меню.
+// Список документов — строки раздела «Документы»: и всех документов, и
+// документов одного проекта (кнопка «Документы» в шапке страницы проекта
+// открывает тот же экран с отбором). Открытие — полноэкранный редактор
+// (EditorScreen), долгое нажатие и ⋮ — меню.
 import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import Icon from './Icon';
 import MenuSheet from './MenuSheet';
-import { IslandRow } from './Island';
 import { openSheet } from '../store/useSheetStore';
 import { confirmSheet } from '../lib/dialogs';
 import { useAppStore } from '../store/useAppStore';
@@ -18,7 +18,7 @@ export function docTitle(d, lang) {
 }
 
 /** @param documents — уже отобранные и отсортированные; @param onOpen(id). */
-export default function DocumentList({ documents, onOpen, flat = false }) {
+export default function DocumentList({ documents, onOpen }) {
   const colors = useColors();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
@@ -55,19 +55,19 @@ export default function DocumentList({ documents, onOpen, flat = false }) {
   };
 
   return (
-    <View style={flat ? null : styles.list}>
-      {documents.map((d, i) => {
+    <View style={styles.list}>
+      {documents.map((d) => {
         const p = d.projectId ? projects.find((x) => x.id === d.projectId) : null;
         const words = DocCore.docStats(DocCore.readNotes(d.body).doc).words;
-        const body = (
-          <>
+        return (
+          <Pressable key={d.id} style={styles.row} onPress={() => onOpen(d.id)} onLongPress={() => onMore(d)}>
             <Icon name="doc" size={18} color={colors.textDim} />
             <View style={styles.rowMain}>
               <Text style={styles.rowTitle} numberOfLines={1}>{docTitle(d, lang)}</Text>
               <View style={styles.rowMeta}>
-                {p && !flat ? <View style={[styles.dot, { backgroundColor: p.color }]} /> : null}
+                {p ? <View style={[styles.dot, { backgroundColor: p.color }]} /> : null}
                 <Text style={styles.rowMetaText} numberOfLines={1}>
-                  {p && !flat ? `${p.name} · ` : ''}{t(lang, 'docs.words_n', { n: words })} · {when(d.updatedAt)}
+                  {p ? `${p.name} · ` : ''}{t(lang, 'docs.words_n', { n: words })} · {when(d.updatedAt)}
                 </Text>
               </View>
             </View>
@@ -75,12 +75,7 @@ export default function DocumentList({ documents, onOpen, flat = false }) {
             <Pressable hitSlop={10} onPress={() => onMore(d)} style={styles.more} accessibilityLabel={t(lang, 'project.opts')}>
               <Icon name="kebab" size={16} color={colors.textDim} />
             </Pressable>
-          </>
-        );
-        return flat ? (
-          <IslandRow key={d.id} first={i === 0} onPress={() => onOpen(d.id)} onLongPress={() => onMore(d)}>{body}</IslandRow>
-        ) : (
-          <Pressable key={d.id} style={styles.row} onPress={() => onOpen(d.id)} onLongPress={() => onMore(d)}>{body}</Pressable>
+          </Pressable>
         );
       })}
     </View>

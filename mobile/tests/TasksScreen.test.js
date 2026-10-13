@@ -1,9 +1,10 @@
 // «Задачи» — инбокс (screens/TasksScreen.js). Запуск: npm run test:mobile
 //
-// Группы считает lib/inbox.js (закрыто inbox.test.js); здесь — что экран
-// их рисует и зовёт стор: заголовки групп, галочка «выполненные», строка
-// быстрого добавления в выбранный проект.
-import { render, fireEvent } from '@testing-library/react-native';
+// Разделы считает lib/inbox.js (закрыто inbox.test.js); здесь — что экран
+// их рисует и зовёт стор: заголовки разделов, выполненные внизу под подписью,
+// строка быстрого добавления в выбранный проект. Фильтры-чипы и переезд
+// отмеченной задачи — в TasksFilters.test.js.
+import { render, fireEvent, within } from '@testing-library/react-native';
 import TasksScreen from '../src/screens/TasksScreen';
 import { useAppStore } from '../src/store/useAppStore';
 import { t } from '../src/lib/i18n';
@@ -36,25 +37,44 @@ beforeEach(() => {
   });
 });
 
-test('группы «Сегодня», «Завтра», «Без срока»; выполненные спрятаны до галочки', async () => {
-  const { getByText, queryByText, getByRole } = await render(<TasksScreen navigation={nav()} />);
-  getByText(t('ru', 'tasks.today'));
-  getByText(t('ru', 'tasks.tomorrow'));
-  getByText(t('ru', 'tasks.nodue'));
-  getByText('Вёрстка');
-  expect(queryByText('Макет')).toBeNull();
-  expect(queryByText(t('ru', 'tasks.done_group'))).toBeNull();
-
-  await fireEvent.press(getByRole('switch'));
-  getByText(t('ru', 'tasks.done_group'));
+test('разделы «Закреплённые» и «Незакреплённые»; выполненные — всегда, последним разделом под подписью', async () => {
+  useAppStore.setState({ tasks: [...useAppStore.getState().tasks, task('t5', 'Релиз', { pinnedAt: new Date().toISOString() })] });
+  const { getByText, queryByText, queryByRole, getByTestId, getAllByText } = await render(<TasksScreen navigation={nav()} />);
+  // Заголовки — словом пользователя, а не срочностью.
+  expect(t('ru', 'home.pinned')).toBe('Закреплённые');
+  expect(t('ru', 'tasks.unpinned')).toBe('Незакреплённые');
+  expect(t('ru', 'tasks.done_group')).toBe('Выполнено');
+  getByText('Закреплённые');
+  getByText('Незакреплённые');
+  for (const gone of ['Завтра', 'На неделе', 'Позже']) expect(queryByText(gone)).toBeNull();
+  // Выполненная задача в ленте без всякой галочки «показывать»; самой галочки больше нет.
+  expect(queryByRole('switch')).toBeNull();
   getByText('Макет');
+  // Подпись раздела — по своему testID: у выполненной строки слово «Выполнено» может оказаться и в мете.
+  expect(within(getByTestId('tasks-group-done')).getByText('Выполнено')).toBeTruthy();
+  // Порядок: закреплённые, незакреплённые, а выполненные — после всех активных.
+  const seq = getAllByText(/^(Закреплённые|Незакреплённые|Релиз|Вёрстка|Правки|Логи|Макет)$/).map((n) => n.props.children);
+  expect(seq).toEqual(['Закреплённые', 'Релиз', 'Незакреплённые', 'Вёрстка', 'Правки', 'Логи', 'Макет']);
 });
 
-test('идущая задача уходит в группу «Сейчас»', async () => {
-  useAppStore.setState({ activeTimer: { taskId: 't4', startedAt: new Date().toISOString(), heartbeatAt: new Date().toISOString() } });
+test('нет закреплённых — нет и раздела «Закреплённые»', async () => {
   const { getByText, queryByText } = await render(<TasksScreen navigation={nav()} />);
+  getByText('Незакреплённые');
+  expect(queryByText('Закреплённые')).toBeNull();
+});
+
+test('в строке закреплённой задачи метки «закреплена» нет — раздел уже говорит', async () => {
+  useAppStore.setState({ tasks: [...useAppStore.getState().tasks, task('t5', 'Релиз', { pinnedAt: new Date().toISOString() })] });
+  const { getByText, queryByText } = await render(<TasksScreen navigation={nav()} />);
+  getByText('Релиз');
+  expect(queryByText(t('ru', 'tasks.pinned_mark'))).toBeNull();
+});
+
+test('идущая задача уходит в раздел «Сейчас»', async () => {
+  useAppStore.setState({ activeTimer: { taskId: 't4', startedAt: new Date().toISOString(), heartbeatAt: new Date().toISOString() } });
+  const { getByText } = await render(<TasksScreen navigation={nav()} />);
   getByText(t('ru', 'tasks.now'));
-  expect(queryByText(t('ru', 'tasks.nodue'))).toBeNull();
+  getByText('Незакреплённые'); // остальные открытые задачи остались в своём разделе
 });
 
 test('строка быстрого добавления заводит задачу в выбранный проект', async () => {

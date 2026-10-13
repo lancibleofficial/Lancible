@@ -38,7 +38,7 @@ function loadAdapter() {
     CURRENCY_SYMBOLS: { RUB: '₽', USD: '$' },
   };
   const names = Object.keys(stubs);
-  const body = `${src};return { buildTaskSheets, buildProjectSheets, buildAllProjectsSheets, buildPeriodSheets };`;
+  const body = `${src};return { buildTaskSheets, buildAllProjectsSheets, buildPeriodSheets };`;
   // eslint-disable-next-line no-new-func
   const api = new Function(...names, body)(...names.map((n) => stubs[n]));
   return { api, calls };
@@ -50,9 +50,9 @@ const mkTask = (title, sessions, extra) => ({
   title, sessions, totalMs: sessions.reduce((a, s) => a + s.ms, 0), ...extra,
 });
 
-test('обёртка отдаёт все четыре построителя', () => {
+test('обёртка отдаёт все три построителя', () => {
   const { api } = loadAdapter();
-  for (const name of ['buildTaskSheets', 'buildProjectSheets', 'buildAllProjectsSheets', 'buildPeriodSheets']) {
+  for (const name of ['buildTaskSheets', 'buildAllProjectsSheets', 'buildPeriodSheets']) {
     assert.equal(typeof api[name], 'function', `нет ${name}`);
   }
 });
@@ -96,17 +96,11 @@ test('период доходит до отбора сессий', () => {
   const { api } = loadAdapter();
   const task = mkTask('A', [ses('2026-06-10T10:00:00Z', 1), ses('2026-07-20T10:00:00Z', 4)]);
   const range = { from: new Date('2026-06-01T00:00:00Z'), to: new Date('2026-06-30T23:59:59Z') };
-  const [sheet] = api.buildProjectSheets({ name: 'П' }, [task], 'ru', 'RUB', 100, range);
+  const [sheet] = api.buildPeriodSheets([task], () => null, 'ru', 'RUB', 100, range);
 
-  assert.equal(sheet.rows[5][3], `clock(${HOUR})`, 'в отчёт попал только июньский час');
-});
-
-test('без периода берётся totalMs задачи', () => {
-  const { api } = loadAdapter();
-  const task = mkTask('A', [ses('2026-06-10T10:00:00Z', 1)]);
-  task.totalMs = 9 * HOUR;
-  const [sheet] = api.buildProjectSheets({ name: 'П' }, [task], 'ru', 'RUB', 100);
-  assert.equal(sheet.rows[5][3], `clock(${9 * HOUR})`);
+  // Заголовок, одна сессия (июньская), итоговая строка.
+  assert.equal(sheet.rows.length, 3, 'в отчёт попала одна сессия');
+  assert.equal(sheet.rows[1][6], `clock(${HOUR})`, 'в отчёт попал только июньский час');
 });
 
 test('сводка по проектам зовёт выборку задач по идентификатору', () => {

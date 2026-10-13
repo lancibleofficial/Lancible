@@ -40,5 +40,5 @@ test('новый документ из раздела проекта — в эт
   fireEvent.press(getByText('Новый документ'));
   const created = useAppStore.getState().documents.find((d) => !['d1', 'd2'].includes(d.id));
   expect(created.projectId).toBe('p1');
-  expect(navigation.navigate).toHaveBeenCalledWith('Editor', { kind: 'doc', id: created.id });
+  expect(navigation.navigate).toHaveBeenCalledWith('Editor', { id: created.id });
 });

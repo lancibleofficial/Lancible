@@ -10,20 +10,24 @@
 // и создавать нечего, пока поле пустое.
 //
 // Два режима, один компонент. С доски приходят готовые статус и версия
-// ячейки, и менять их незачем — карточка и так появится там, куда нажали. Из
-// шапки Главной ячейки нет: показывается строка выбора проекта, а статус
-// берётся первый «к выполнению», как у любой новой задачи.
+// ячейки, и менять их незачем — карточка и так появится там, куда нажали; где
+// она появится, говорит подпись над полем (Block). Из шапки Главной ячейки
+// нет: показывается строка «Проект ›», а статус берётся первый «к
+// выполнению», как у любой новой задачи. Выбор проекта — страница этого же
+// листа со стрелкой «назад» (12 октября 2026; раньше — лист поверх, и
+// набранное название приходилось переносить в заново открытый).
 import { useEffect, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
-import Text from './AppText';
-import TextInput from './AppTextInput';
+import { View, StyleSheet } from 'react-native';
+import { Field } from './AppTextInput';
 import PrimaryButton from './PrimaryButton';
-import Icon from './Icon';
 import PickerSheet from './PickerSheet';
+import SheetPage, { usePageMotion } from './SheetPage';
+import { RowGroup, SettingRow } from './Island';
+import { Block } from './RepeatControls';
 import { useAppStore } from '../store/useAppStore';
 import { defaultStatusId } from '../lib/statuses';
-import { openSheet, closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize } from '../theme';
+import { closeSheet, setSheetFooter, clearSheetFooter, useSheetHeader } from '../store/useSheetStore';
+import { useColors, spacing } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function QuickTaskSheet({
@@ -33,7 +37,6 @@ export default function QuickTaskSheet({
   pickProject = false, onOpenTask, initialTitle = '',
 }) {
   const colors = useColors();
-  const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
   const projects = useAppStore((s) => s.projects);
   const statuses = useAppStore((s) => s.statuses);
@@ -42,10 +45,14 @@ export default function QuickTaskSheet({
   const createTaskInStatus = useAppStore((s) => s.createTaskInStatus);
   const showToast = useAppStore((s) => s.showToast);
 
+  // Страница: 'main' — поле, 'project' — выбор проекта (только из шапки).
+  const [page, setPage] = useState('main');
+  const motion = usePageMotion(page === 'project' ? 1 : 0);
+  // У поля заголовка нет (подпись ячейки — над полем); у выбора — свой и «назад».
+  useSheetHeader(page === 'project' ? t(lang, 'board.pick_project') : null, page === 'project' ? () => setPage('main') : null);
+
   // Проект последней заведённой отсюда задачи, иначе первый: задачи подряд
-  // обычно летят в один и тот же проект.
-  // Своего состояния у выбора нет: он живёт в ui и переживает пересоздание
-  // листа, которым и делается смена проекта (см. onPickProject).
+  // обычно летят в один и тот же проект. Выбор живёт в ui и переживает лист.
   const remembered = projects.find((p) => p.id === quickAddProjectId);
   const chosenId = pickProject ? ((remembered || projects[0] || {}).id || null) : projectId;
   const chosen = projects.find((p) => p.id === chosenId);
@@ -76,79 +83,64 @@ export default function QuickTaskSheet({
     );
   }
 
-  // Лист в приложении один, поэтому выбор проекта закрывает собой это окно.
-  // Чтобы набранное название не пропало, по выбору открываем себя же заново
-  // с тем же текстом и новым проектом.
-  function onPickProject() {
-    const draft = latest.current.title;
-    openSheet(
-      <PickerSheet
-        title={t(lang, 'board.pick_project')}
-        value={chosenId || ''}
-        options={projects.map((p) => ({ value: p.id, label: p.name }))}
-        onSelect={(id) => {
-          setQuickAddProject(id);
-          openSheet(
-            <QuickTaskSheet pickProject onOpenTask={onOpenTask} initialTitle={draft} />,
-          );
-        }}
-      />,
-    );
-  }
-
   useEffect(() => {
-    setSheetFooter(
+    if (page !== 'main') return undefined;
+    const footer = (
       <>
         <PrimaryButton title={t(lang, 'board.create')} onPress={onCreate} disabled={!title.trim() || !chosenId} />
         <PrimaryButton title={t(lang, 'common.done')} variant="ghost" onPress={closeSheet} />
-      </>,
+      </>
     );
-    return () => setSheetFooter(null);
-  }, [lang, title, chosenId]);
+    setSheetFooter(footer);
+    return () => clearSheetFooter(footer);
+  }, [page, lang, title, chosenId]);
+
+  if (page === 'project') {
+    return (
+      <SheetPage key="project" motion={motion}>
+        <PickerSheet
+          embedded
+          value={chosenId || ''}
+          options={projects.map((p) => ({ value: p.id, label: p.name, color: p.color }))}
+          onSelect={(id) => { setQuickAddProject(id); setPage('main'); }}
+        />
+      </SheetPage>
+    );
+  }
+
+  const field = (
+    <Field
+      ref={inputRef}
+      value={title}
+      onChangeText={setTitle}
+      placeholder={t(lang, 'board.task_title_ph')}
+      autoFocus
+      returnKeyType="done"
+      onSubmitEditing={onCreate}
+      // Клавиатура не прячется между задачами: следующая вводится сразу.
+      blurOnSubmit={false}
+    />
+  );
 
   return (
-    <View style={styles.wrap}>
-      {contextLabel ? <Text style={styles.context} numberOfLines={1}>{contextLabel}</Text> : null}
-      <TextInput
-        ref={inputRef}
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
-        placeholder={t(lang, 'board.task_title_ph')}
-        placeholderTextColor={colors.textDim}
-        autoFocus
-        returnKeyType="done"
-        onSubmitEditing={onCreate}
-        // Клавиатура не прячется между задачами: следующая вводится сразу.
-        blurOnSubmit={false}
-      />
+    <SheetPage key="main" motion={motion} style={styles.wrap}>
+      {contextLabel ? <Block label={contextLabel}>{field}</Block> : field}
       {pickProject ? (
-        <Pressable style={styles.projectRow} onPress={onPickProject}>
-          <Text style={styles.projectLabel}>{t(lang, 'quick_add.project')}</Text>
-          <View style={[styles.dot, { backgroundColor: chosen ? chosen.color : colors.textFaint }]} />
-          <Text style={styles.projectName} numberOfLines={1}>{chosen ? chosen.name : ''}</Text>
-          <Icon name="chevron-right" size={12} color={colors.textDim} />
-        </Pressable>
+        <RowGroup>
+          <SettingRow
+            lead={<View style={[styles.dot, { backgroundColor: chosen ? chosen.color : colors.textFaint }]} />}
+            label={t(lang, 'quick_add.project')}
+            value={chosen ? chosen.name : ''}
+            onPress={() => setPage('project')}
+            testID="quick-project"
+          />
+        </RowGroup>
       ) : null}
-    </View>
+    </SheetPage>
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
-  wrap: { gap: spacing.sm, paddingBottom: spacing.sm },
-  context: { color: colors.textDim, fontSize: fontSize.sm },
-  input: {
-    backgroundColor: colors.inputBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    color: colors.text, fontSize: fontSize.md,
-  },
-  projectRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    backgroundColor: colors.panel2, borderRadius: radius.md,
-  },
-  projectLabel: { color: colors.textDim, fontSize: fontSize.sm },
-  dot: { width: 10, height: 10, borderRadius: 3, marginLeft: 'auto' },
-  projectName: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600', maxWidth: '55%' },
+const styles = StyleSheet.create({
+  wrap: { gap: spacing.md },
+  dot: { width: 10, height: 10, borderRadius: 3 },
 });

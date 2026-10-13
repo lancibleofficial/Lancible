@@ -16,7 +16,7 @@ import { deleteAccount } from '../src/lib/auth';
 import { FunctionsHttpError, FunctionsFetchError } from '@supabase/supabase-js';
 import { sb } from '../src/lib/supabaseClient';
 import { useEditorAuth } from '../src/hooks/useEditorAuth';
-import DocEditor from '../src/components/DocEditor';
+import DocEditor, { EDITOR_BASE_URL } from '../src/components/DocEditor';
 
 jest.mock('../src/lib/supabaseClient', () => {
   const bucket = { list: jest.fn(), remove: jest.fn() };
@@ -244,7 +244,7 @@ test('редактор получает список на возврат, ког
   // До «ready» страница сообщение потеряла бы — его и нет.
   expect(global.__posted.filter((m) => m.type === 'requeue')).toEqual([]);
 
-  const say = (m) => act(() => global.__web.onMessage({ nativeEvent: { data: JSON.stringify(m) } }));
+  const say = (m) => act(() => global.__web.onMessage({ nativeEvent: { url: EDITOR_BASE_URL, data: JSON.stringify(m) } }));
   say({ type: 'ready' });
   expect(global.__posted.filter((m) => m.type === 'requeue')).toEqual([{ type: 'requeue', ids: ['a', 'b'] }]);
 

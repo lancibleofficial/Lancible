@@ -4,7 +4,7 @@
 // Сами жесты в Node не прогнать — проверяются решения, которые они
 // принимают: сработает ли отпускание и на какую карточку вернётся колода.
 import { swipeFires, rubberBand, SWIPE_TRIGGER } from '../src/components/SwipeRow';
-import { deckTarget, dotsStart, dotsWidth, dotScale, PULL_TRIGGER, MAX_DOTS } from '../src/screens/ProjectsScreen';
+import { deckTarget, dotsStart, dotsWidth, dotScale, plusScale, PULL_TRIGGER, MAX_SLOTS } from '../src/screens/ProjectsScreen';
 
 test('свайп срабатывает только влево и только за порогом', () => {
   expect(swipeFires(-(SWIPE_TRIGGER - 1))).toBe(false);
@@ -37,32 +37,34 @@ test('колода встаёт на ближайшую карточку, но �
   expect(deckTarget(-4 * step - 200, -3000, step, 4, 5)).toBe(4);
 });
 
-test('точки пагинации: до шести — все и в полный рост, окно ровно по ним', () => {
-  for (let i = 0; i < 5; i += 1) expect(dotScale(i, dotsStart(2, 5), 5)).toBe(1);
-  expect(dotsStart(4, 5)).toBe(0);
-  // Пять точек: четыре круглые по 7 с зазором 6 и одна пилюля 22.
-  expect(dotsWidth(5)).toBe(4 * (7 + 6) + 22);
-  expect(dotsWidth(40)).toBe(dotsWidth(MAX_DOTS));
+test('точки пагинации: до четырёх проектов — ряд с «+» целиком и в полный рост, окно ровно по нему', () => {
+  for (let i = 0; i < 4; i += 1) expect(dotScale(i, dotsStart(2, 4), 4)).toBe(1);
+  expect(plusScale(dotsStart(3, 4), 4)).toBe(1);
+  expect(dotsStart(3, 4)).toBe(0);
+  // Четыре точки и «+»: пять позиций — четыре круглые по 7 с зазором 6 и одна пилюля 22.
+  expect(dotsWidth(4)).toBe(4 * (7 + 6) + 22);
+  expect(dotsWidth(40)).toBe(dotsWidth(MAX_SLOTS - 1));
 });
 
-test('точки пагинации: больше шести — окно из шести едет за текущей', () => {
+test('точки пагинации: больше четырёх — окно из пяти позиций (с «+») едет за текущей', () => {
   const n = 10;
-  // В начале: окно с нуля, первая в полный рост, шестая меньше, седьмой не видно.
+  // В начале: окно с «+», первая точка в полный рост, пятая позиция меньше, шестой не видно.
   expect(dotsStart(0, n)).toBe(0);
-  expect(dotsStart(2, n)).toBe(0);
+  expect(dotsStart(1, n)).toBe(0);
+  expect(plusScale(0, n)).toBe(1);
   expect(dotScale(0, 0, n)).toBe(1);
-  expect(dotScale(MAX_DOTS - 1, 0, n)).toBeLessThan(1);
-  expect(dotScale(MAX_DOTS, 0, n)).toBe(0);
-  // Текущая стоит третьей: с четвёртой окно сдвигается на одну.
-  expect(dotsStart(3, n)).toBe(1);
-  expect(dotsStart(5, n)).toBe(3);
-  // Пока окно едет (начало дробное), шестая растёт, седьмая появляется.
-  expect(dotScale(MAX_DOTS - 1, 0.5, n)).toBeGreaterThan(dotScale(MAX_DOTS - 1, 0, n));
-  expect(dotScale(MAX_DOTS, 0.5, n)).toBeGreaterThan(0);
-  // В конце: окно упирается в край, последняя в полный рост.
-  expect(dotsStart(n - 1, n)).toBe(n - MAX_DOTS);
-  expect(dotScale(n - 1, n - MAX_DOTS, n)).toBe(1);
-  expect(dotScale(n - MAX_DOTS, n - MAX_DOTS, n)).toBeLessThan(1);
+  expect(dotScale(MAX_SLOTS - 2, 0, n)).toBeLessThan(1);
+  expect(dotScale(MAX_SLOTS - 1, 0, n)).toBe(0);
+  // Текущая стоит по центру: с третьей окно сдвигается на одну позицию.
+  expect(dotsStart(2, n)).toBe(1);
+  expect(dotsStart(5, n)).toBe(4);
+  // Пока окно едет (начало дробное), пятая позиция растёт, шестая появляется.
+  expect(dotScale(MAX_SLOTS - 2, 0.5, n)).toBeGreaterThan(dotScale(MAX_SLOTS - 2, 0, n));
+  expect(dotScale(MAX_SLOTS - 1, 0.5, n)).toBeGreaterThan(0);
+  // В конце: окно упирается в край ряда, последняя в полный рост.
+  expect(dotsStart(n - 1, n)).toBe(n + 1 - MAX_SLOTS);
+  expect(dotScale(n - 1, n + 1 - MAX_SLOTS, n)).toBe(1);
+  expect(dotScale(n + 1 - MAX_SLOTS - 1, n + 1 - MAX_SLOTS, n)).toBeLessThan(1);
   // Текущая никогда не уменьшается краем окна.
   for (let a = 0; a < n; a += 1) expect(dotScale(a, dotsStart(a, n), n)).toBe(1);
 });

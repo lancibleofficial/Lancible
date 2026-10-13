@@ -23,7 +23,9 @@ export function spanFromParts(dateKey, startHm, endHm) {
   if (dparts.length !== 3 || sp.length < 2 || ep.length < 2 || dparts.some(Number.isNaN) || sp.some(Number.isNaN) || ep.some(Number.isNaN)) return null;
   const start = new Date(dparts[0], dparts[1] - 1, dparts[2], sp[0], sp[1]);
   let end = new Date(dparts[0], dparts[1] - 1, dparts[2], ep[0], ep[1]);
-  if (end <= start) end = new Date(end.getTime() + 24 * 3_600_000);
+  // Следующий день — по календарю: в день перевода часов «плюс 24 часа»
+  // промахивается на час, и запись 23:30–00:30 схлопывалась бы в ноль.
+  if (end <= start) end = new Date(dparts[0], dparts[1] - 1, dparts[2] + 1, ep[0], ep[1]);
   return { start, end, ms: end - start };
 }
 

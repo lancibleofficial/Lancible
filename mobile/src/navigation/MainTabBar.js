@@ -1,26 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Keyboard } from 'react-native';
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withSpring, withTiming, runOnJS, Easing } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS, Easing } from 'react-native-reanimated';
 import Tap from '../components/Tap';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
 import TimerMiniPlayer, { useRunningTask, MINI_PLAYER_HEIGHT } from '../components/TimerMiniPlayer';
+import { useLiquidEnabled, useLiquidGlide, useLiquidPresence } from '../components/Liquid';
+import { useReduceMotion } from '../hooks/useReduceMotion';
+import { LIQUID, TAB_POP_KICK } from '../lib/liquid';
 import { useColors, spacing } from '../theme';
 
 // Пять вкладок макета B2: Проекты · Задачи · Сегодня · Цифры · Меню.
 // Внутренние имена Home и Menu прежние — на них ссылаются переходы.
 const ICON_NAMES = { Projects: 'folder', Tasks: 'tasks', Home: 'today', Stats: 'chart', Menu: 'menu' };
 
-/** Иконка вкладки: став активной, подпрыгивает на пружине. */
-function TabIcon({ focused, name, color, styles }) {
-  const s = useSharedValue(1);
-  useEffect(() => {
-    if (focused) s.value = withSequence(withSpring(1.18, { damping: 9, stiffness: 340, mass: 0.7 }), withSpring(1, { damping: 14, stiffness: 260 }));
-  }, [focused]);
-  const anim = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
+// Место под иконку вкладки и плашка активной — одного размера.
+const SLOT_W = 46;
+const SLOT_H = 28;
+
+/** Иконка вкладки. Только что выбранная подпрыгивает толчком (pop общий —
+ *  его толкает панель, один раз на смену вкладки). */
+function TabIcon({ focused, name, color, styles, pop }) {
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: focused ? pop.value : 1 }] }));
   return (
-    <Animated.View style={[styles.iconSlot, focused && styles.iconSlotOn, anim]}>
+    <Animated.View style={[styles.iconSlot, anim]}>
       <Icon name={name} size={20} color={color} />
     </Animated.View>
   );
@@ -62,6 +66,45 @@ export default function MainTabBar({ state, navigation, descriptors }) {
   const running = !!useRunningTask();
   const hidden = keyboard || onDetails;
 
+  // Плашка идущей задачи появляется и уходит каплей. Держим её здесь: место
+  // над панелью (overPage) живёт, пока она стекает обратно, а не пропадает
+  // вместе с таймером.
+  const mini = useLiquidPresence(running, useLiquidEnabled());
+
+  // Плашка активной вкладки — одна на панель. При выборе вкладки она
+  // переезжает под новую жидко (вытягивается и догоняет хвост, упруго
+  // встаёт), а иконка подпрыгивает толчком — один раз на смену вкладки.
+  // Ни перерисовка, ни нажатие на открытую вкладку, ни первая отрисовка (и
+  // возврат панели с экрана деталей) ничего не играют.
+  //
+  // Раньше иконка подпрыгивала withSequence из двух пружин: вторая («назад
+  // к 1») ждала, пока первая успокоится по энергии, — ~1,4 с при видимых
+  // 0,5, и через секунду иконка сжималась второй раз. Плюс подскок на
+  // первой отрисовке. Теперь толчок — одна пружина (lib/liquid.js).
+  const reduced = useReduceMotion();
+  const glide = useLiquidGlide(!reduced);
+  const pop = useSharedValue(1);
+  const barW = useRef(0);
+  const shownIndex = useRef(state.index);
+  const slotOf = (i) => {
+    const w = barW.current / state.routes.length;
+    return { x: i * w + (w - SLOT_W) / 2, y: spacing.sm, w: SLOT_W, h: SLOT_H };
+  };
+  useEffect(() => {
+    if (shownIndex.current === state.index) return;
+    shownIndex.current = state.index;
+    if (!barW.current) return;
+    glide.to(slotOf(state.index), true);
+    if (!reduced) pop.value = withSpring(1, { ...LIQUID.pop, velocity: TAB_POP_KICK });
+  }, [state.index]);
+  const onBarLayout = (e) => {
+    const w = e.nativeEvent.layout.width;
+    if (Math.abs(w - barW.current) < 0.5) return;
+    barW.current = w;
+    // Ширина известна впервые или сменилась — плашка встаёт сразу.
+    glide.to(slotOf(shownIndex.current), false);
+  };
+
   // Сдвиг вниз; пока панель спрятана, он равен её высоте — так при
   // возврате она выезжает снизу без мигания на месте.
   const ty = useSharedValue(0);
@@ -87,14 +130,16 @@ export default function MainTabBar({ state, navigation, descriptors }) {
 
   return (
     <Animated.View
-      style={[styles.wrap, running ? styles.overPage : null, hidden ? styles.leaving : null, slide]}
+      style={[styles.wrap, mini.mounted ? styles.overPage : null, hidden ? styles.leaving : null, slide]}
       pointerEvents={hidden ? 'none' : 'box-none'}
       onLayout={(e) => { if (!hidden) height.current = e.nativeEvent.layout.height; }}
     >
       <TimerMiniPlayer
+        presence={mini}
         onOpen={(taskId) => navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } })}
       />
-      <View style={styles.bar}>
+      <View style={styles.bar} onLayout={onBarLayout} testID="tab-bar">
+        <Animated.View pointerEvents="none" style={[styles.plate, glide.style]} testID="tab-bar-plate" />
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
           const color = isFocused ? colors.accentInk : colors.textFaint;
@@ -109,7 +154,7 @@ export default function MainTabBar({ state, navigation, descriptors }) {
               accessibilityLabel={label}
               accessibilityState={isFocused ? { selected: true } : {}}
             >
-              <TabIcon focused={isFocused} name={ICON_NAMES[route.name]} color={color} styles={styles} />
+              <TabIcon focused={isFocused} name={ICON_NAMES[route.name]} color={color} styles={styles} pop={pop} />
               <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>{label}</Text>
             </Tap>
           );
@@ -133,7 +178,8 @@ const makeStyles = (colors, insets) => StyleSheet.create({
     paddingTop: spacing.sm, paddingBottom: spacing.sm + insets.bottom,
   },
   tabItem: { flex: 1, alignItems: 'center', gap: 3, paddingBottom: spacing.xs },
-  iconSlot: { width: 46, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  iconSlotOn: { backgroundColor: colors.accentMuted },
+  iconSlot: { width: SLOT_W, height: SLOT_H, alignItems: 'center', justifyContent: 'center' },
+  // Плашка активной вкладки — под иконками; место и путь — от useLiquidGlide.
+  plate: { position: 'absolute', left: 0, borderRadius: SLOT_H / 2, backgroundColor: colors.accentMuted },
   tabLabel: { fontSize: 10.5, fontWeight: '600' },
 });

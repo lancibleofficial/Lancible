@@ -6,7 +6,8 @@
 // задача сначала уходит анимацией и только потом отмечается; в шите задачи
 // «Выполнено» закреплено вне прокрутки; заголовок и число в шапке — рядом,
 // отдельными строками; вкладка показывает свой скелетон, пока строится;
-// редактор в полном режиме масштабируется щипком, а предпросмотр — нет.
+// страница редактора щипком не масштабируется (с 12 октября 2026 щипок
+// крупнит только текст).
 import { Text, View } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 import BottomSheet from '../src/components/BottomSheet';
@@ -20,7 +21,7 @@ import TaskDetailScreen from '../src/screens/TaskDetailScreen';
 import DocEditor from '../src/components/DocEditor';
 import { EDITOR_CSS } from '../src/editor/editorBundle';
 import { useAppStore } from '../src/store/useAppStore';
-import { useSheetStore, openSheet } from '../src/store/useSheetStore';
+import { useSheetStore, openSheet, useSheetHeader } from '../src/store/useSheetStore';
 import { t } from '../src/lib/i18n';
 
 jest.mock('react-native-webview', () => {
@@ -34,7 +35,7 @@ const task = (id, title, extra) => ({
 });
 
 beforeEach(() => {
-  useSheetStore.setState({ content: null, footer: null });
+  useSheetStore.setState({ content: null, header: null, footer: null });
   useAppStore.setState({
     settings: { ...useAppStore.getState().settings, lang: 'ru', currency: 'RUB', hourlyRate: 0 },
     projects: [{ id: 'p1', name: 'Сайт', color: '#87ff65', createdAt: '2026-10-01T00:00:00.000Z' }],
@@ -47,40 +48,60 @@ beforeEach(() => {
   });
 });
 
-test('п.16: у листа крестик справа сверху, он закрывает лист', async () => {
-  openSheet(<Text>содержимое</Text>);
+// 11 октября крестик остался только у листов с заголовком; безымянный лист
+// закрывают свайпом или нажатием на затемнение (tests/sheetHeader.test.js).
+function Titled() {
+  useSheetHeader('Заголовок листа');
+  return <Text>содержимое</Text>;
+}
+test('п.16: у листа с заголовком крестик справа сверху, он закрывает лист', async () => {
+  openSheet(<Titled />);
   const screen = await render(<BottomSheet />);
   screen.getByText('содержимое');
   await fireEvent.press(screen.getByLabelText(t('ru', 'common.close')));
   expect(useSheetStore.getState().content).toBeNull();
 });
 
+test('п.16: безымянный лист — без крестика, закрывается нажатием на затемнение', async () => {
+  openSheet(<Text>содержимое</Text>);
+  const screen = await render(<BottomSheet />);
+  screen.getByText('содержимое');
+  expect(screen.queryByLabelText(t('ru', 'common.close'))).toBeNull();
+  await fireEvent.press(screen.getByTestId('sheet-scrim'));
+  expect(useSheetStore.getState().content).toBeNull();
+});
+
 test('п.11: окно проекта — одна форма, разделы друг под другом, без вкладок', async () => {
   const screen = await render(<NewProjectSheet onCreated={() => {}} onCancel={() => {}} />);
-  // Поля обоих разделов видны сразу, переключать нечего.
-  screen.getByText(t('ru', 'pdlg.name_label'));
+  // Название и строки обоих разделов видны сразу, переключать нечего
+  // (12 октября 2026 разделы — строками, как в настройках проекта).
+  screen.getByPlaceholderText(t('ru', 'pdlg.name_ph'));
   screen.getByText(t('ru', 'pdlg.sec_money'));
-  screen.getByText(t('ru', 'pdlg.rate_label'));
+  screen.getByText(t('ru', 'pdlg.rate_row'));
   expect(screen.queryByRole('tab')).toBeNull();
 });
 
 test('п.10: валюта выбирается страницей внутри того же листа и возвращает к форме', async () => {
-  const screen = await render(<NewProjectSheet onCreated={() => {}} onCancel={() => {}} />);
-  await fireEvent.press(screen.getByText(t('ru', 'pdlg.currency_default', { cur: 'RUB' })));
-  // Страница: стрелка «назад» и список валют — в этом же листе, не поверх.
+  const form = <NewProjectSheet onCreated={() => {}} onCancel={() => {}} />;
+  openSheet(form);
+  const screen = await render(<BottomSheet />);
+  await fireEvent.press(screen.getByText(t('ru', 'pdlg.currency_inherit', { cur: 'RUB' })));
+  // Страница: стрелка «назад» (в шапке листа) и список валют — в этом же
+  // листе, не поверх: открытым остаётся тот же лист с формой.
   screen.getByLabelText(t('ru', 'common.back'));
-  expect(useSheetStore.getState().content).toBeNull();
+  expect(useSheetStore.getState().content).toBe(form);
   await fireEvent.press(screen.getByText('USD ($)'));
-  screen.getByText(t('ru', 'pdlg.name_label'));
+  screen.getByPlaceholderText(t('ru', 'pdlg.name_ph'));
   screen.getByText('USD ($)');
 });
 
 test('п.10: теги — тоже страницей внутри, «назад» возвращает к форме', async () => {
-  const screen = await render(<NewProjectSheet onCreated={() => {}} onCancel={() => {}} />);
-  await fireEvent.press(screen.getByText(t('ru', 'tag.pick')));
+  openSheet(<NewProjectSheet onCreated={() => {}} onCancel={() => {}} />);
+  const screen = await render(<BottomSheet />);
+  await fireEvent.press(screen.getByTestId('project-row-marks'));
   screen.getByPlaceholderText(t('ru', 'tag.search_ph'));
   await fireEvent.press(screen.getByLabelText(t('ru', 'common.back')));
-  screen.getByText(t('ru', 'pdlg.name_label'));
+  screen.getByPlaceholderText(t('ru', 'pdlg.name_ph'));
 });
 
 test('п.6: барабаны времени — все минуты, по кругу', async () => {
@@ -91,7 +112,8 @@ test('п.6: барабаны времени — все минуты, по кру
   await fireEvent.press(screen.getByText(t('ru', 'due.time')));
   // Минута 37 — не кратная пяти — есть и выбрана.
   expect(screen.getAllByText('37').length).toBeGreaterThan(0);
-  screen.getByText(/18:37/);
+  // Время — значением строки «Время ›» и в сводке под строками.
+  expect(screen.getByTestId('due-summary').props.children).toMatch(/18:37/);
 });
 
 test('п.5: «Выполнено» в шите задачи закреплено снизу, вне прокрутки', async () => {
@@ -122,11 +144,12 @@ test('п.13: вкладка сперва показывает свой скел�
   expect(app.toJSON()).toBeTruthy();
 });
 
-test('п.1–3: редактор масштабируется щипком, предпросмотр — нет; рисуя, подсказки ввода нет; поле не ниже экрана', async () => {
+test('п.1–3: страница редактора щипком не масштабируется; рисуя, подсказки ввода нет; поле не ниже экрана', async () => {
+  // С 13 октября 2026 масштаба на телефоне нет вовсе — ни страницы, ни
+  // текста: щипок мешал писать (tests/editorLive.test.js, «масштаба нет»).
   const full = await render(<DocEditor content={null} lang="ru" />);
-  expect(full.getByTestId('web').props.source.html).toMatch(/maximum-scale=4, user-scalable=yes/);
-  const preview = await render(<DocEditor preview content={null} lang="ru" />);
-  expect(preview.getByTestId('web').props.source.html).toMatch(/user-scalable=no/);
+  expect(full.getByTestId('web').props.source.html).toMatch(/user-scalable=no/);
+  expect(full.getByTestId('web').props.source.html).not.toMatch(/user-scalable=yes/);
   expect(EDITOR_CSS).toMatch(/\.led-annotating \.led-pm \.led-empty::before/);
   expect(EDITOR_CSS).toMatch(/\.led-mobile \.led-pm\s*\{\s*min-height:\s*calc\(100vh/);
 });

@@ -3,13 +3,14 @@
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Text from '../components/AppText';
-import Island, { IslandRow, IslandEmpty } from '../components/Island';
+import Island, { IslandRow } from '../components/Island';
+import EmptyState from '../components/EmptyState';
 import Icon from '../components/Icon';
 import TagEditSheet from '../components/TagEditSheet';
 import { useAppStore } from '../store/useAppStore';
 import { tagUsage, isGlobalTag } from '../lib/tags';
 import { openSheet } from '../store/useSheetStore';
-import { useColors, spacing, fontSize, gap } from '../theme';
+import { useColors, spacing, screenPadding, fontSize, gap } from '../theme';
 import { t } from '../lib/i18n';
 
 export default function TagsScreen() {
@@ -32,11 +33,28 @@ export default function TagsScreen() {
     return parts.length ? parts.join(' · ') : t(lang, 'tag.unused');
   }
 
+  // Общих тегов нет — пустой экран с подсказкой и «Новый тег»; строка «+
+  // Новый тег» под списком на это время не нужна, действие одно.
+  if (global.length === 0) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.emptyWrap} showsVerticalScrollIndicator={false}>
+        <EmptyState
+          art="tags"
+          title={t(lang, 'tag.none_yet')}
+          text={t(lang, 'tag.empty_hint')}
+          actionLabel={t(lang, 'tag.add')}
+          actionIcon="plus"
+          onAction={() => openSheet(<TagEditSheet />)}
+          primary
+        />
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Island>
         <Text style={styles.hint}>{t(lang, 'tag.empty_hint')}</Text>
-        {global.length === 0 ? <IslandEmpty>{t(lang, 'tag.none_yet')}</IslandEmpty> : null}
         {global.map((tag, i) => (
           <IslandRow key={tag.id} first={i === 0} onPress={() => openSheet(<TagEditSheet tag={tag} />)}>
             <View style={[styles.swatch, { backgroundColor: tag.color }]} />
@@ -47,7 +65,7 @@ export default function TagsScreen() {
             <Icon name="chevron-right" size={13} color={colors.textFaint} />
           </IslandRow>
         ))}
-        <IslandRow first={global.length === 0} onPress={() => openSheet(<TagEditSheet />)}>
+        <IslandRow onPress={() => openSheet(<TagEditSheet />)}>
           <Icon name="plus" size={14} color={colors.accentInk} />
           <Text style={[styles.name, { color: colors.accentInk }]}>{t(lang, 'tag.add')}</Text>
         </IslandRow>
@@ -58,7 +76,8 @@ export default function TagsScreen() {
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.md, paddingBottom: insets.bottom + spacing.xl, gap },
+  content: { paddingHorizontal: screenPadding, paddingTop: spacing.md, paddingBottom: insets.bottom + spacing.xl, gap },
+  emptyWrap: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg, paddingBottom: insets.bottom + spacing.xxl * 2 },
   hint: { color: colors.textFaint, fontSize: fontSize.xs, lineHeight: 17, paddingBottom: spacing.sm },
   swatch: { width: 14, height: 14, borderRadius: 5 },
   name: { color: colors.text, fontSize: fontSize.sm, fontWeight: '600' },

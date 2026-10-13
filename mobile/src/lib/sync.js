@@ -17,6 +17,9 @@ import { openSheet } from '../store/useSheetStore';
 import ActionSheetContent from '../components/ActionSheetContent';
 import { uid } from './migrate';
 import CoreSync from '../core/sync.js';
+import CoreMigrate from '../core/migrate.js';
+import Reminders from '../core/reminders.js';
+import Slots from '../core/slots.js';
 import { t } from './i18n';
 
 const SYNC_CLIENT_ID = uid(); // отличает собственные правки от чужих в realtime-подписке
@@ -74,7 +77,27 @@ function scheduleSyncRetry() {
 
 function applyRemoteData(data) {
   const projects = Array.isArray(data && data.projects) ? data.projects : [];
-  const tasks = Array.isArray(data && data.tasks) ? data.tasks : [];
+  // Напоминания приводятся к списку при приёме (core/reminders.js): облако
+  // могло прийти от десктопа 0.4.3 или телефона 1.2.2, которые знают только
+  // remindOffsetMin и remindAt, — их правка ложится в список, а у задач без
+  // списка он выводится из старых полей. Как и цвета ниже, до того как данные
+  // лягут в стор и в отпечаток: приём ничего не отправляет обратно.
+  // Тем же путём — повтор у отрезков из старых данных (до 12 октября 2026):
+  // правило переезжает к задаче (core/slots.js, foldSlotRepeat), и телефон,
+  // забравший такие данные из облака, не ждёт следующего запуска с миграцией.
+  const tasks = (Array.isArray(data && data.tasks) ? data.tasks : []).map((raw) => {
+    const folded = Slots.foldSlotRepeat(raw);
+    const task = folded ? { ...raw, ...folded } : raw;
+    const patch = Reminders.reconcileReminders(task);
+    return patch ? { ...task, ...patch } : task;
+  });
+  // Устройство со старой версией приложения всё ещё шлёт цвета, которые
+  // продукт сменил (core/migrate.js: renewColors). Всю миграцию при приёме
+  // телефон не гоняет, поэтому перекрашиваем здесь — до того, как данные
+  // лягут в стор и в отпечаток ниже. Отпечаток считается уже по новым цветам,
+  // так что приём ничего не отправляет обратно: облако поправится само при
+  // ближайшей настоящей правке, а до тех пор каждое устройство красит при приёме.
+  CoreMigrate.renewColors(data || {});
   useAppStore.setState((s) => {
     const knownProjectIds = new Set(projects.map((p) => p.id));
     const ui = s.ui.projectId && !knownProjectIds.has(s.ui.projectId) ? { view: 'home', projectId: null } : s.ui;

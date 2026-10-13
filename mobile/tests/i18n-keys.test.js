@@ -43,7 +43,9 @@ test('каждый ключ из исходников есть во всех ч�
 test('ключи, собранные из частей, тоже на месте', () => {
   const parts = {
     'filter.': ['all', 'active', 'done'],
-    'calendar.': ['day', 'week', 'month', 'today'],
+    // «День» ушёл 12 октября 2026: повтор и напоминание выбирают частоту
+    // строками «Каждый день / Каждую неделю / Каждый месяц» (repeat.*).
+    'calendar.': ['week', 'month', 'today'],
     'weekday.': ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
     'repeat.': ['daily', 'weekly', 'monthly', 'yearly', 'weekdays_preset', 'custom'],
     'notif.perm_': ['granted', 'denied', 'ask'],

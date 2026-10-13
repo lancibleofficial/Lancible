@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet } from 'react-native';
-import Text from './AppText';
-import TextInput from './AppTextInput';
+import { Field } from './AppTextInput';
 import PrimaryButton from './PrimaryButton';
+import ActionSheetContent from './ActionSheetContent';
+import SheetPage, { usePageMotion } from './SheetPage';
+import { Block, Hint } from './RepeatControls';
 import { useAppStore } from '../store/useAppStore';
 import { PALETTE } from '../lib/migrate';
 import { nameTaken, tagUsage } from '../lib/tags';
 import { t } from '../lib/i18n';
-import { confirmSheet } from '../lib/dialogs';
-import { closeSheet, setSheetFooter } from '../store/useSheetStore';
-import { useColors, spacing, radius, fontSize, typography } from '../theme';
+import { closeSheet, setSheetFooter, clearSheetFooter, useSheetHeader } from '../store/useSheetStore';
+import { useColors, spacing, radius } from '../theme';
 
 /** Создание и правка тега. Эмодзи-иконки здесь пока нет — она отложена, и
  *  когда появится, встанет в этот же лист третьим полем.
@@ -18,9 +19,14 @@ import { useColors, spacing, radius, fontSize, typography } from '../theme';
  *  @param {string} [projectId] — новый тег будет тегом этого проекта;
  *    без него — общий. Имя занято только в своей области видимости.
  *  @param {function} [onSaved] — что сделать с созданным тегом */
-/** @param embedded внутри другого листа (настройки проекта): без своего
- *  заголовка и низа листа, кнопки — в содержимом; по готовности — onDone,
- *  а удаление подтверждается вторым нажатием, а не листом поверх. */
+/** @param embedded страница внутри другого листа (настройки проекта, выбор
+ *  меток): без своего заголовка (его ставит тот, кто держит страницу); кнопки —
+ *  тем же подвалом, по готовности — onDone, а удаление подтверждается вторым
+ *  нажатием, а не страницей глубже.
+ *
+ *  Сам по себе лист подтверждает удаление страницей этого же листа со
+ *  стрелкой «назад» (12 октября 2026; раньше — лист поверх, и правка тега
+ *  пропадала вместе с ним). */
 export default function TagEditSheet({ tag, presetName, projectId, onSaved, embedded, onDone }) {
   const colors = useColors();
   const styles = makeStyles(colors);
@@ -36,6 +42,15 @@ export default function TagEditSheet({ tag, presetName, projectId, onSaved, embe
   const [color, setColor] = useState(tag ? tag.color : PALETTE[tags.length % PALETTE.length]);
   const [error, setError] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmPage = !embedded && confirmDelete;
+  const motion = usePageMotion(confirmPage ? 1 : 0);
+  // Фокус на имени — только при открытии, а не при возврате с подтверждения.
+  const focusName = useRef(true);
+  useEffect(() => { focusName.current = false; }, []);
+  useSheetHeader(
+    embedded ? null : t(lang, confirmPage ? 'common.delete_q' : tag ? 'tag.dialog_edit' : projectId ? 'tag.project_add' : 'tag.dialog_new'),
+    confirmPage ? () => setConfirmDelete(false) : null,
+  );
   const finish = () => (embedded ? onDone && onDone() : closeSheet());
 
   function onSave() {
@@ -69,78 +84,71 @@ export default function TagEditSheet({ tag, presetName, projectId, onSaved, embe
   }
 
   function onDelete() {
-    if (embedded) {
-      if (!confirmDelete) { setConfirmDelete(true); return; }
-      deleteTag(tag.id);
-      finish();
-      return;
-    }
-    confirmSheet({
-      title: t(lang, 'common.delete'),
-      message: deleteMessage(),
-      actions: [
-        { label: t(lang, 'common.delete'), destructive: true, onPress: () => { deleteTag(tag.id); closeSheet(); } },
-        { label: t(lang, 'common.cancel'), cancel: true },
-      ],
-    });
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    deleteTag(tag.id);
+    finish();
   }
 
+  // Подвал: «Сохранить», у существующего — «Удалить» (danger), у самостоятельного
+  // листа — серая «Отмена». У страницы подтверждения подвал свой.
   useEffect(() => {
-    if (embedded) return undefined;
-    setSheetFooter(
+    if (confirmPage) return undefined;
+    const footer = (
       <>
         <PrimaryButton title={t(lang, 'common.save')} onPress={onSave} disabled={!name.trim()} />
         {tag ? <PrimaryButton title={t(lang, 'common.delete')} variant="danger" onPress={onDelete} /> : null}
-        <PrimaryButton title={t(lang, 'common.cancel')} variant="ghost" onPress={closeSheet} />
-      </>,
+        {embedded ? null : <PrimaryButton title={t(lang, 'common.cancel')} variant="ghost" onPress={closeSheet} />}
+      </>
     );
-    return () => setSheetFooter(null);
-  }, [name, color, lang, tags]);
+    setSheetFooter(footer);
+    return () => clearSheetFooter(footer);
+  }, [name, color, lang, tags, confirmDelete]);
+
+  if (confirmPage) {
+    return (
+      <SheetPage key="confirm" motion={motion}>
+        <ActionSheetContent
+          embedded
+          message={deleteMessage()}
+          onCancel={() => setConfirmDelete(false)}
+          actions={[
+            { label: t(lang, 'common.delete'), destructive: true, onPress: () => deleteTag(tag.id) },
+            { label: t(lang, 'common.cancel'), cancel: true },
+          ]}
+        />
+      </SheetPage>
+    );
+  }
 
   return (
-    <View style={styles.content}>
-      {embedded ? null : <Text style={styles.title}>{t(lang, tag ? 'tag.dialog_edit' : projectId ? 'tag.project_add' : 'tag.dialog_new')}</Text>}
-
-      <TextInput
-        style={styles.input}
+    <SheetPage key="main" motion={motion} style={styles.content} testID={embedded ? 'tag-edit' : undefined}>
+      <Field
         value={name}
         onChangeText={(v) => { setName(v); setError(null); }}
         placeholder={t(lang, 'tag.name_ph')}
-        placeholderTextColor={colors.textDim}
-        autoFocus
+        invalid={!!error}
+        autoFocus={focusName.current}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Hint danger>{error}</Hint> : null}
 
-      <Text style={styles.label}>{t(lang, 'tag.color_label')}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.swatchRow}>
-        {PALETTE.map((c) => (
-          <Pressable key={c} onPress={() => setColor(c)} style={[styles.swatchRing, color === c && styles.swatchRingSel]}>
-            <View style={[styles.swatch, { backgroundColor: c }]} />
-          </Pressable>
-        ))}
-      </ScrollView>
+      <Block label={t(lang, 'tag.color_label')}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.swatchRow}>
+          {PALETTE.map((c) => (
+            <Pressable key={c} onPress={() => setColor(c)} style={[styles.swatchRing, color === c && styles.swatchRingSel]}>
+              <View style={[styles.swatch, { backgroundColor: c }]} />
+            </Pressable>
+          ))}
+        </ScrollView>
+      </Block>
 
-      {embedded ? (
-        <View style={styles.inlineActions}>
-          {confirmDelete ? <Text style={styles.error}>{deleteMessage()}</Text> : null}
-          <PrimaryButton title={t(lang, 'common.save')} onPress={onSave} disabled={!name.trim()} />
-          {tag ? <PrimaryButton title={t(lang, 'common.delete')} variant="danger" onPress={onDelete} /> : null}
-        </View>
-      ) : null}
-    </View>
+      {/* Встроенный: второе нажатие «Удалить» удаляет — объяснение над подвалом. */}
+      {embedded && confirmDelete ? <Hint danger testID="tag-delete-confirm">{deleteMessage()}</Hint> : null}
+    </SheetPage>
   );
 }
 
 const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
-  inlineActions: { gap: spacing.sm, marginTop: spacing.sm },
-  title: { color: colors.text, ...typography.title, marginBottom: spacing.sm },
-  label: { color: colors.textDim, fontSize: fontSize.sm, marginTop: spacing.xs },
-  input: {
-    backgroundColor: colors.inputBg, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, color: colors.text, fontSize: fontSize.md,
-  },
-  error: { color: colors.danger, fontSize: fontSize.sm, marginTop: -spacing.sm },
   swatchRow: { flexDirection: 'row', gap: spacing.xs / 2, paddingVertical: spacing.xs, paddingRight: spacing.md },
   swatchRing: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   swatchRingSel: { backgroundColor: colors.bg },

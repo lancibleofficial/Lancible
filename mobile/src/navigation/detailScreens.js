@@ -22,7 +22,9 @@ export const DETAIL_ROUTES = ['Project', 'TaskDetail', 'ProjectStatuses', 'Edito
  *  для заголовков, которые не ставит сам экран. */
 export function detailScreens(Stack, lang) {
   return [
-    <Stack.Screen key="Project" name="Project" component={ProjectScreen} />,
+    // Проект — без заголовка: название проекта стоит на самой странице, а в
+    // шапке только «назад» и кнопки справа (их ставит экран).
+    <Stack.Screen key="Project" name="Project" component={ProjectScreen} options={{ title: '', headerTitle: '' }} />,
     <Stack.Screen key="TaskDetail" name="TaskDetail" component={TaskDetailScreen} options={{ headerShown: IOS_NATIVE_HEADER, title: '' }} />,
     <Stack.Screen key="Documents" name="Documents" component={DocumentsScreen} options={leftTitleOptions(t(lang, 'docs.title'))} />,
     <Stack.Screen key="Editor" name="Editor" component={EditorScreen} options={{ headerShown: IOS_NATIVE_HEADER, title: '' }} />,

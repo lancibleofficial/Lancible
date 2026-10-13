@@ -12,15 +12,31 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emptyState, migrate, uid, PALETTE } from '../lib/migrate';
-import { scheduleTaskReminder, cancelTaskReminder, rescheduleAll } from '../lib/notifications';
+import { rescheduleAll } from '../lib/notifications';
 import { effectiveRate, earnedOf, taskElapsedMs } from '../lib/format';
 import { ratesOf } from '../lib/rates';
 import CoreMoney from '../core/money.js';
 import { seedProjectStatuses, defaultStatusId, getStatus, orderedStatuses, planStatusDelete, planTaskDone } from '../lib/statuses';
 import { t } from '../lib/i18n';
 import Repeat from '../core/repeat.js';
+import Slots from '../core/slots.js';
+import Reminders from '../core/reminders.js';
 import Versions from '../core/versions.js';
 import DocCore from '../core/doc.js';
+
+/** Отрезки задачи с id у каждого: пришедший из облака отрезок мог быть
+ *  записан без него, а править и удалять без id нечем. */
+function slotsWithIds(task) {
+  return Slots.slotsOf(task).map((sl) => (sl.id ? sl : { ...sl, id: uid() }));
+}
+
+/** Задача после правки списка напоминаний: edit получает список (как его
+ *  читает ядро) и отдаёт новый. Патч withReminders применяется целиком —
+ *  вместе с зеркалом старых полей (remindOffsetMin, remindAt), которые читают
+ *  десктоп 0.4.3 и телефон 1.2.2, и со снятой отметкой у изменённого. */
+function withReminderList(task, edit) {
+  return { ...task, ...Reminders.withReminders(task, edit(Reminders.remindersOf(task))), updatedAt: new Date().toISOString() };
+}
 
 export const useAppStore = create(
   persist(
@@ -43,6 +59,9 @@ export const useAppStore = create(
 
       _runMigration() {
         set((s) => migrate({ ...s }));
+        // Закрытые повторяющиеся задачи без дат ждут своего дня: пока
+        // приложение было выгружено, он мог наступить.
+        get().reopenDue();
         set({ hasHydrated: true });
       },
 
@@ -191,21 +210,54 @@ export const useAppStore = create(
           tasks: s.tasks.map((task) => (task.id === id ? { ...task, ...patch, updatedAt: new Date().toISOString() } : task)),
         }));
       },
-      /** Правка дедлайна/напоминания. notifiedAt сбрасывается, чтобы
-       *  перенесённая задача могла уведомить заново, и тут же
-       *  переставляется системное уведомление: приложение в фоне
-       *  выгружено и само проверить время не сможет. */
+      /** Правка дедлайна: patch — {dueAt}. Напоминаний он не касается — они
+       *  списком (addTaskReminder и другие ниже); «до дедлайна» едут за ним
+       *  сами. notifiedAt сбрасывается, чтобы перенесённая задача могла
+       *  уведомить заново. Системное уведомление переставит слежение за
+       *  расписанием (lib/reminderSync.js): приложение в фоне выгружено и само
+       *  проверить время не сможет. */
       setTaskDue(id, patch) {
-        let updated = null;
         set((s) => ({
-          tasks: s.tasks.map((task) => {
-            if (task.id !== id) return task;
-            updated = { ...task, ...patch, notifiedAt: null, updatedAt: new Date().toISOString() };
-            return updated;
-          }),
+          tasks: s.tasks.map((task) => (task.id === id
+            ? { ...task, ...patch, notifiedAt: null, updatedAt: new Date().toISOString() }
+            : task)),
         }));
-        const { lang, notifyEnabled } = get().settings;
-        if (updated) scheduleTaskReminder(updated, lang, notifyEnabled !== false);
+      },
+
+      // --- напоминания (core/reminders.js) ---
+      // Список правится только через withReminders: он выдаёт патч вместе с
+      // зеркалом старых полей и решает, у каких напоминаний отметка «уже
+      // напомнили» остаётся.
+
+      /** Новое напоминание: raw — {kind: 'before', anchor, offsetMin, unit},
+       *  {kind: 'at', at} или {kind: 'repeat', rule, time, start}. Возвращает
+       *  его id или null, если напоминание негодное (ничего не пишется). */
+      addTaskReminder(taskId, raw) {
+        const rem = Reminders.normalizeReminder({ ...raw, id: uid() });
+        if (!rem) return null;
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === taskId ? withReminderList(task, (list) => [...list, rem]) : task)),
+        }));
+        return rem.id;
+      },
+      /** Правка напоминания: raw — как у addTaskReminder, целиком или частью.
+       *  Другой вид заменяет напоминание, тот же — дополняет. Негодная правка
+       *  его не портит: false. */
+      updateTaskReminder(taskId, reminderId, raw) {
+        const task = get().tasks.find((x) => x.id === taskId);
+        const old = task ? Reminders.remindersOf(task).find((r) => r.id === reminderId) : null;
+        if (!old) return false;
+        const rem = Reminders.normalizeReminder({ ...((raw.kind || old.kind) === old.kind ? old : null), ...raw, id: old.id });
+        if (!rem) return false;
+        set((s) => ({
+          tasks: s.tasks.map((x) => (x.id === taskId ? withReminderList(x, (list) => list.map((r) => (r.id === old.id ? rem : r))) : x)),
+        }));
+        return true;
+      },
+      removeTaskReminder(taskId, reminderId) {
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === taskId ? withReminderList(task, (list) => list.filter((r) => r.id !== reminderId)) : task)),
+        }));
       },
       markNotifSeen() {
         set((s) => ({ ui: { ...s.ui, notifSeenAt: new Date().toISOString() } }));
@@ -231,6 +283,9 @@ export const useAppStore = create(
             done: st.kind === 'done',
             cancelled: st.kind === 'cancelled',
             doneAt: st.kind === 'done' ? (task.doneAt || now) : null,
+            // Открыли вручную — ждать «возвращения» больше нечего, и раз серии,
+            // засчитанный закрытием, снимается (core/slots.js, planUntick).
+            ...(st.kind !== 'done' ? Slots.planUntick(task) : null),
             updatedAt: now,
           } : task)),
         }));
@@ -250,7 +305,13 @@ export const useAppStore = create(
         const now = new Date().toISOString();
         set((s) => ({
           tasks: s.tasks.map((t2) => (t2.id === id
-            ? { ...t2, done: plan.setDone, doneAt: plan.setDone ? now : null, updatedAt: now }
+            ? {
+              ...t2,
+              done: plan.setDone,
+              doneAt: plan.setDone ? now : null,
+              ...(!plan.setDone ? Slots.planUntick(t2) : null),
+              updatedAt: now,
+            }
             : t2)),
         }));
         get()._afterTaskClosed(id, wasDone);
@@ -261,20 +322,29 @@ export const useAppStore = create(
         if (task) get().setTaskDone(id, !task.done);
       },
 
-      /** Задачу закрыли — если у неё есть правило, она возвращается со
-       *  следующим сроком. С «оставлять копии» прежняя остаётся в списке
-       *  выполненной, со своим временем. Порт afterTaskClosed/rollRepeat
-       *  из src/renderer/app.js. */
+      /** Вернуть в работу отменённую задачу: статус по умолчанию для открытой
+       *  (первый «к выполнению» проекта) — тот же, что у снятой галочки. Само
+       *  setTaskDone её не откроет: planTaskDone сверяет только «готово», а
+       *  отменённая и так «не готова». */
+      reopenTask(id) {
+        const task = get().tasks.find((t2) => t2.id === id);
+        if (!task) return;
+        const statusId = defaultStatusId(get().statuses, task.projectId, false);
+        if (statusId) get().setTaskStatus(id, statusId);
+      },
+
+      /** Задачу закрыли — если у неё есть правило, она возвращается: со
+       *  следующим сроком или, если у неё нет дат, в свой день. С «оставлять
+       *  копии» прежняя остаётся в списке выполненной, со своим временем.
+       *  Порт afterTaskClosed/rollRepeat из src/renderer/app.js. */
       _afterTaskClosed(id, wasDone) {
         const task = get().tasks.find((t2) => t2.id === id);
         if (task && !wasDone && task.done && task.repeat) get()._rollRepeat(id);
-        const fresh = get().tasks.find((t2) => t2.id === id);
-        const { lang, notifyEnabled } = get().settings;
-        if (fresh) scheduleTaskReminder(fresh, lang, notifyEnabled !== false);
       },
 
       /** Перекат закрытой повторяющейся задачи. Решение — в ядре
-       *  (core/repeat.js, planRepeatRoll), общее с десктопом; здесь только
+       *  (core/slots.js, planTaskRoll: есть дедлайн, есть разовое время
+       *  работы или нет ни того ни другого), общее с десктопом; здесь только
        *  применение к стору.
        *
        *  Раньше это была своя реализация, и она разошлась с десктопом по
@@ -286,53 +356,101 @@ export const useAppStore = create(
       _rollRepeat(id) {
         const task = get().tasks.find((t2) => t2.id === id);
         if (!task) return;
-        const plan = Repeat.planRepeatRoll(task.repeat, task.dueAt, Date.now());
-        if (!plan) return;
-        const now = new Date().toISOString();
-        // Серия кончилась — задача просто остаётся закрытой.
+        const plan = Slots.planTaskRoll(task, Date.now());
+        if (plan) get()._applyRoll(id, plan);
+      },
+
+      /** Применяет решение ядра к задаче: ответ planTaskRoll или строку
+       *  planReopen — формат у них один.
+       *   • серия кончилась — задача остаётся закрытой, растёт только счётчик;
+       *   • open: false — остаётся закрытой и ждёт своего дня (reopenAt);
+       *   • open: true — открывается сейчас: статус по умолчанию, без отметки
+       *     о закрытии и об уведомлении. С «оставлять копии» сначала
+       *     откладывается копия (с записями времени), потом они у задачи
+       *     очищаются. */
+      _applyRoll(id, plan, nowMs = Date.now()) {
+        const task = get().tasks.find((t2) => t2.id === id);
+        if (!task) return;
+        const now = new Date(nowMs).toISOString();
         if (plan.finished) {
           set((s) => ({ tasks: s.tasks.map((t2) => (t2.id === id ? { ...t2, repeat: plan.repeat, updatedAt: now } : t2)) }));
           return;
         }
-        const next = plan.nextDue;
+        if (!plan.open) {
+          set((s) => ({ tasks: s.tasks.map((t2) => (t2.id === id ? { ...t2, ...plan.patch, updatedAt: now } : t2)) }));
+          return;
+        }
+        const copy = plan.keepHistory ? Slots.historyCopy(task, uid(), nowMs) : null;
         const openStatus = defaultStatusId(get().statuses, task.projectId, false);
-        const copyId = uid();
-        set((s) => ({
-          tasks: s.tasks.flatMap((t2) => {
-            if (t2.id !== id) return [t2];
-            const reopened = {
-              ...t2,
-              repeat: plan.repeat,
-              done: false,
-              cancelled: false,
-              doneAt: null,
-              statusId: openStatus || t2.statusId,
-              dueAt: new Date(next).toISOString(),
-              notifiedAt: null,
-              updatedAt: now,
-            };
-            if (!plan.keepHistory) return [reopened];
-            // Копия — это история: своё время, своя запись, без правила.
-            const copy = {
-              ...t2,
-              id: copyId,
-              repeat: null,
-              done: true,
-              doneAt: t2.doneAt || now,
-              pinnedAt: null,
-              remindAt: null,
-              notifiedAt: null,
-              updatedAt: now,
-            };
-            return [{ ...reopened, totalMs: 0, sessions: [] }, copy];
-          }),
-        }));
+        const reopened = {
+          ...task,
+          ...plan.patch,
+          done: false,
+          cancelled: false,
+          doneAt: null,
+          statusId: openStatus || task.statusId,
+          notifiedAt: null,
+          updatedAt: now,
+          ...(plan.keepHistory ? { totalMs: 0, sessions: [] } : null),
+        };
+        set((s) => ({ tasks: s.tasks.flatMap((t2) => (t2.id !== id ? [t2] : copy ? [reopened, copy] : [reopened])) }));
+      },
+
+      /** Вернуть закрытые повторяющиеся задачи, чей день наступил. Зовётся
+       *  при загрузке данных и когда приложение вернули на экран. */
+      reopenDue() {
+        const now = Date.now();
+        for (const plan of Slots.planReopen(get().tasks, now)) get()._applyRoll(plan.taskId, plan, now);
       },
 
       setTaskRepeat(id, rule) {
+        const next = rule ? Repeat.normalizeRepeat(rule) : null;
         set((s) => ({
           tasks: s.tasks.map((task) => (task.id === id
-            ? { ...task, repeat: rule ? Repeat.normalizeRepeat(rule) : null, updatedAt: new Date().toISOString() }
+            ? {
+              ...task,
+              repeat: next,
+              // Правило сняли — возвращать задачу больше не к чему.
+              ...(task.reopenAt && !next ? { reopenAt: null } : null),
+              updatedAt: new Date().toISOString(),
+            }
+            : task)),
+        }));
+      },
+
+      // --- время работы (core/slots.js) ---
+      // Отрезок читается и пишется только через ядро: normalizeSlot бракует
+      // мусор (конец не позже начала) и оставляет неизвестные ключи.
+
+      /** Новый отрезок. Возвращает его id или null, если отрезок негодный. */
+      addTaskSlot(taskId, raw) {
+        const slot = Slots.normalizeSlot({ ...raw, id: uid() });
+        if (!slot) return null;
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === taskId
+            ? { ...task, slots: [...slotsWithIds(task), slot], updatedAt: new Date().toISOString() }
+            : task)),
+        }));
+        return slot.id;
+      },
+      /** Правка отрезка. Негодная (конец не позже начала) отрезок не портит.
+       *  Напоминаний у отрезка нет — «до начала» в списке задачи, и отметка
+       *  «уже напомнили» живёт там (core/reminders.js). */
+      updateTaskSlot(taskId, slotId, patch) {
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === taskId
+            ? {
+              ...task,
+              slots: slotsWithIds(task).map((sl) => (sl.id === slotId ? Slots.normalizeSlot({ ...sl, ...patch, id: sl.id }) || sl : sl)),
+              updatedAt: new Date().toISOString(),
+            }
+            : task)),
+        }));
+      },
+      removeTaskSlot(taskId, slotId) {
+        set((s) => ({
+          tasks: s.tasks.map((task) => (task.id === taskId
+            ? { ...task, slots: slotsWithIds(task).filter((sl) => sl.id !== slotId), updatedAt: new Date().toISOString() }
             : task)),
         }));
       },
@@ -388,7 +506,6 @@ export const useAppStore = create(
         }));
       },
       deleteTask(id) {
-        cancelTaskReminder(id);
         set((s) => ({
           tasks: s.tasks.filter((task) => task.id !== id),
           activeTimer: s.activeTimer && s.activeTimer.taskId === id ? null : s.activeTimer,

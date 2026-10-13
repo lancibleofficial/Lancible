@@ -1,47 +1,58 @@
-// «Цифры» (макет B2): вкладки День · Неделя · Месяц · Всё. У каждой сверху
-// свой выбор — день стрелками, неделя столбиками, месяц календарём, — а под
-// ним одна и та же итоговая карточка (часы и деньги за выбранное), плитки и
-// «По проектам». В месяце тап по дню показывает этот день, тап по второму
-// дню — период между ними, следующий тап начинает выбор заново. Фильтр по
-// проекту — чип в шапке, Excel — кнопка.
-import { useMemo, useState } from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+// «Цифры» (макет B2): вкладки Неделя · Месяц · Всё. У каждой сверху свой
+// выбор — неделя столбиками, месяц календарём, — а под ним одна и та же
+// итоговая карточка (часы и деньги за выбранное), плитки и «По проектам».
+// Отдельной вкладки «День» нет: на «Неделе» тап по столбику показывает этот
+// день (итог, число записей, проекты за день), повторный тап или другой
+// столбик переключает, выбранный день подсвечен. В месяце тап по дню
+// показывает этот день, тап по второму дню — период между ними, следующий
+// тап начинает выбор заново. Фильтр по проекту — чип в шапке, Excel — кнопка.
+// Неделя и месяц листаются стрелками ‹ › и свайпом по столбикам и по клеткам
+// месяца (PeriodSwipe): содержимое едет за пальцем, за порогом уезжает, и
+// новое въезжает с другой стороны.
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { View, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, runOnJS } from 'react-native-reanimated';
 import Tap from '../components/Tap';
 import Text from '../components/AppText';
 import Icon from '../components/Icon';
 import { GlassBg } from '../components/Glass';
-import Island, { IslandHead, IslandEmpty } from '../components/Island';
+import Island, { IslandHead } from '../components/Island';
+import EmptyState from '../components/EmptyState';
 import TabHeader, { HeaderButton } from '../components/TabHeader';
+import Segmented from '../components/Segmented';
+import ProgressBar, { LiquidColumn } from '../components/ProgressBar';
 import PickerSheet from '../components/PickerSheet';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
-import DatePickSheet from '../components/DatePickSheet';
 import { useAppStore, getProject, tasksOf } from '../store/useAppStore';
 import { useRates, useRatesMain, currencyOf } from '../hooks/useRates';
 import { fmtDur, fmtMoney, fmtShort, monthLabel, fmtDateShort, capFirst } from '../lib/format';
-import { dayKey, keyToDate, mondayOf, aggregateDays, rangeAgg, sessionsOfDay } from '../lib/calendarMath';
-import { buildPeriodSheets, buildAllProjectsSheets } from '../lib/xlsxReports';
-import { runExport } from '../lib/exportRunner';
+import { dayKey, keyToDate, mondayOf, addDays, aggregateDays, rangeAgg, sessionsOfDay } from '../lib/calendarMath';
 import { useTicker } from '../hooks/useTicker';
-import { openSheet, closeSheet } from '../store/useSheetStore';
+import { useReduceMotion } from '../hooks/useReduceMotion';
+import { openSheet } from '../store/useSheetStore';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
-import { useColors, spacing, radius, displayFamily, gap } from '../theme';
+import { useColors, spacing, screenPadding, radius, displayFamily, gap } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
-const DAY = 86400000;
-const MODES = ['day', 'week', 'month', 'all'];
-const MODE_KEY = { day: 'calendar.day', week: 'calendar.week', month: 'calendar.month', all: 'stats.all_time' };
+export const MODES = ['week', 'month', 'all'];
+const MODE_KEY = { week: 'calendar.week', month: 'calendar.month', all: 'stats.all_time' };
 const WEEKDAY_KEYS = ['weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat', 'weekday.sun'];
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 
-/** Клетки месяца по неделям с понедельника; дни соседних месяцев — off. */
+/** Клетки месяца по неделям с понедельника; дни соседних месяцев — off.
+ *  Каждый ряд — ровно семь клеток: у клетки flex: 1, и единственный день в
+ *  последнем ряду (ноябрь 2026) растягивался на всю ширину. Хвост ряда
+ *  дополняют днями следующего месяца — теми же off, что и в первом ряду. */
 export function monthCells(year, month) {
   const first = new Date(year, month, 1);
   const start = mondayOf(first);
   const out = [];
   for (let i = 0; i < 42; i += 1) {
-    const d = new Date(start.getTime() + i * DAY);
-    if (i >= 35 && d.getMonth() !== month) break;
+    const d = addDays(start, i);
+    // Обрываем только на границе ряда: сначала дописывается начатая неделя.
+    if (i >= 35 && i % 7 === 0 && d.getMonth() !== month) break;
     out.push({ key: dayKey(d), day: d.getDate(), off: d.getMonth() !== month });
   }
   const rows = [];
@@ -58,14 +69,15 @@ export function nextSelection(sel, key) {
   return { from: key, to: key };
 }
 
-/** Границы выбранного: [начало, конец] включительно. anchor — день для
- *  «Дня» и «Недели» и любой день месяца для «Месяца»; sel — выбор в
- *  календаре месяца (или null — весь месяц). */
+/** Границы выбранного: [начало, конец] включительно. anchor — любой день
+ *  недели для «Недели» и любой день месяца для «Месяца»; sel — выбор в
+ *  календаре месяца (или null — весь месяц). Режим 'day' — один день anchor:
+ *  так считается день, выбранный столбиком на «Неделе». */
 export function statsBounds(mode, anchor, sel) {
   if (mode === 'day') return [startOfDay(anchor), endOfDay(anchor)];
   if (mode === 'week') {
     const from = mondayOf(anchor);
-    return [from, endOfDay(new Date(from.getTime() + 6 * DAY))];
+    return [from, endOfDay(addDays(from, 6))];
   }
   if (mode === 'month') {
     if (sel) {
@@ -79,6 +91,92 @@ export function statsBounds(mode, anchor, sel) {
   return [new Date(2000, 0, 1), new Date(2100, 0, 1)];
 }
 
+/** Сколько протянуть пальцем, чтобы отпускание листнуло период. */
+export const PERIOD_SWIPE = 56;
+// Короткая, но быстрая отмашка тоже листает: от этого сдвига и этой скорости.
+const FLING_DX = 24;
+const FLING_V = 700;
+// Включение жеста: ушли по горизонтали на 16 — он наш, ушли по вертикали на
+// 12 раньше — сдаёмся, и экран прокручивается как обычно.
+const SLOP_X = 16;
+const SLOP_Y = 12;
+const BACK = { damping: 18, stiffness: 260, mass: 0.8 };
+const LEAVE = { duration: 130 };
+const ENTER = { duration: 190 };
+
+/** Куда листнёт отпускание: 1 — вперёд (палец ушёл влево), -1 — назад, 0 —
+ *  остаться. Больше уехавший по вертикали, чем по горизонтали, жест не листает. */
+export function periodSwipeDir(dx, dy, vx) {
+  'worklet';
+  if (Math.abs(dy) > Math.abs(dx)) return 0;
+  const far = Math.abs(dx) >= PERIOD_SWIPE;
+  const quick = Math.abs(dx) >= FLING_DX && Math.abs(vx) >= FLING_V;
+  if (!far && !quick) return 0;
+  return dx < 0 ? 1 : -1;
+}
+
+/** Свайп по периоду: содержимое едет за пальцем и тает; за порогом уезжает
+ *  совсем, период меняется (onShift(dir) — то же, что нажатие стрелки), и
+ *  новое въезжает с противоположной стороны. Не дотянули — пружиной на
+ *  место. При «уменьшении движения» ничего не едет: период меняется сразу. */
+function PeriodSwipe({ onShift, testID, children }) {
+  const still = useReduceMotion();
+  const { width } = useWindowDimensions();
+  // Дальше этого сдвига содержимое уже прозрачно.
+  const out = Math.max(1, width * 0.5);
+  const x = useSharedValue(0);
+  const startX = useSharedValue(0);
+  const leaving = useSharedValue(0);
+  const [turn, setTurn] = useState({ n: 0, dir: 0 });
+
+  const commit = useCallback((dir) => {
+    onShift(dir);
+    if (!still) setTurn((s) => ({ n: s.n + 1, dir }));
+  }, [onShift, still]);
+
+  // Въезд — после того, как отрисован новый период: до этого содержимое
+  // стоит за краем и прозрачно, прежнее не мигнёт.
+  useLayoutEffect(() => {
+    if (!turn.n) return;
+    leaving.value = 0;
+    x.value = turn.dir * out;
+    x.value = withTiming(0, ENTER);
+  }, [turn]);
+
+  const pan = Gesture.Pan()
+    .withTestId(testID)
+    .activeOffsetX([-SLOP_X, SLOP_X])
+    .failOffsetY([-SLOP_Y, SLOP_Y])
+    .onStart(() => { startX.value = x.value; leaving.value = 0; })
+    .onUpdate((e) => {
+      if (!still) x.value = Math.max(-out, Math.min(out, startX.value + e.translationX));
+    })
+    .onEnd((e) => {
+      const dir = periodSwipeDir(e.translationX, e.translationY, e.velocityX);
+      if (!dir) {
+        if (!still) x.value = withSpring(0, BACK);
+        return;
+      }
+      if (still) { runOnJS(commit)(dir); return; }
+      leaving.value = 1;
+      x.value = withTiming(-dir * out, LEAVE, (done) => { if (done) runOnJS(commit)(dir); });
+    })
+    .onFinalize((e, ok) => {
+      if (!ok && !leaving.value && !still) x.value = withSpring(0, BACK);
+    });
+
+  const slide = useAnimatedStyle(() => ({
+    opacity: 1 - Math.min(1, Math.abs(x.value) / out),
+    transform: [{ translateX: x.value }],
+  }));
+
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View style={slide} collapsable={false}>{children}</Animated.View>
+    </GestureDetector>
+  );
+}
+
 export default function StatsScreen({ navigation }) {
   const colors = useColors();
   const clearance = useBottomClearance();
@@ -87,7 +185,6 @@ export default function StatsScreen({ navigation }) {
   const tasks = useAppStore((s) => s.tasks);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const settings = useAppStore((s) => s.settings);
-  const showToast = useAppStore((s) => s.showToast);
   const lang = settings.lang;
   const locale = LOCALE_MAP[lang] || 'ru-RU';
   const rates = useRates();
@@ -98,6 +195,8 @@ export default function StatsScreen({ navigation }) {
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()));
   const [projectId, setProjectId] = useState('all');
   const [sel, setSel] = useState(null);
+  // День, выбранный столбиком на «Неделе» (ключ дня) или null — вся неделя.
+  const [pickedDay, setPickedDay] = useState(null);
 
   const project = projectId !== 'all' ? getProject(projects, projectId) : null;
   const shown = useMemo(() => (project ? tasksOf(tasks, project.id) : tasks), [tasks, project]);
@@ -109,7 +208,8 @@ export default function StatsScreen({ navigation }) {
   const todayKey = dayKey(new Date());
   const dayLabel = (d) => capFirst(d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'long' }));
 
-  const bounds = statsBounds(mode, anchor, sel);
+  const dayView = mode === 'week' && pickedDay ? keyToDate(pickedDay) : null;
+  const bounds = dayView ? statsBounds('day', dayView, null) : statsBounds(mode, anchor, sel);
   const from = bounds[0].getTime();
   const to = bounds[1].getTime();
   const total = useMemo(() => rangeAgg(shown, statsRates, bounds[0], bounds[1]), [shown, statsRates, from, to]);
@@ -120,7 +220,7 @@ export default function StatsScreen({ navigation }) {
   const doneInRange = shown.filter((task) => task.done && (task.doneAt ? new Date(task.doneAt).getTime() >= from && new Date(task.doneAt).getTime() <= to : mode === 'all')).length;
   const perDay = activeDays ? total.ms / activeDays : 0;
   const perHour = total.ms ? total.money / (total.ms / 3_600_000) : 0;
-  const records = mode === 'day' ? sessionsOfDay(shown, dayKey(anchor)).length : 0;
+  const records = dayView ? sessionsOfDay(shown, pickedDay).length : 0;
 
   const byProject = useMemo(() => (project ? [project] : projects).map((p) => {
     const agg = rangeAgg(tasksOf(shown, p.id), statsRates, bounds[0], bounds[1]);
@@ -128,14 +228,11 @@ export default function StatsScreen({ navigation }) {
   }).filter((x) => x.ms > 0).sort((a, b) => b.ms - a.ms), [projects, project, shown, statsRates, from, to]);
   const maxProjectMs = byProject.length ? byProject[0].ms : 1;
 
-  const shiftDay = (dir) => setAnchor(new Date(year, month, anchor.getDate() + dir));
-  const shiftWeek = (dir) => setAnchor(new Date(year, month, anchor.getDate() + dir * 7));
-  const shiftMonth = (dir) => setAnchor(new Date(year, month + dir, 1));
-  const openDay = (d) => { setAnchor(startOfDay(d)); setMode('day'); };
-
-  function pickDay() {
-    openSheet(<DatePickSheet title={t(lang, 'today.pick_day')} valueKey={dayKey(anchor)} onPick={(key) => setAnchor(keyToDate(key))} />);
-  }
+  // Другая неделя — выбранный день остаётся позади.
+  // Стрелки и свайп зовут одни и те же функции — правила у них общие.
+  const shiftWeek = (dir) => { setAnchor((a) => new Date(a.getFullYear(), a.getMonth(), a.getDate() + dir * 7)); setPickedDay(null); };
+  const shiftMonth = (dir) => setAnchor((a) => new Date(a.getFullYear(), a.getMonth() + dir, 1));
+  const pickMode = (m) => { setMode(m); setPickedDay(null); };
   function pickProject() {
     openSheet(
       <PickerSheet
@@ -146,26 +243,16 @@ export default function StatsScreen({ navigation }) {
       />,
     );
   }
+  // Лист экспорта сам выбирает период и проекты и сам собирает файл (как окно
+  // веба); выбранный здесь проект в нём предвыбран.
   function onExcel() {
-    openSheet(
-      <ExportPeriodSheet
-        lang={lang}
-        onCancel={closeSheet}
-        onConfirm={(r) => {
-          closeSheet();
-          const sheets = r
-            ? buildPeriodSheets(shown, (id) => getProject(projects, id), lang, currency, statsRates, r)
-            : buildAllProjectsSheets(project ? [project] : projects, (id) => tasksOf(shown, id), lang, currency, statsRates);
-          runExport(`Lancible — ${t(lang, 'export.all_projects')} — ${new Date().toISOString().slice(0, 10)}`, sheets, lang, showToast);
-        }}
-      />,
-    );
+    openSheet(<ExportPeriodSheet lang={lang} projectId={project ? project.id : undefined} />);
   }
 
   const cells = useMemo(() => monthCells(year, month), [year, month]);
   const weekFrom = mondayOf(anchor);
   const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekFrom.getTime() + i * DAY);
+    const d = addDays(weekFrom, i);
     const key = dayKey(d);
     return { key, d, ms: (dayAgg.get(key) || { ms: 0 }).ms };
   });
@@ -175,8 +262,8 @@ export default function StatsScreen({ navigation }) {
   let sumTitle;
   let sumNote;
   let onNote;
-  if (mode === 'day') {
-    sumTitle = t(lang, 'stats.for_day');
+  if (dayView) {
+    sumTitle = dayLabel(dayView);
     sumNote = t(lang, 'task.records_n', { n: records });
   } else if (mode === 'week') {
     sumTitle = t(lang, 'calendar.for_week');
@@ -197,13 +284,13 @@ export default function StatsScreen({ navigation }) {
     sumNote = t(lang, 'stats.active_days', { n: activeDays });
   }
 
-  const nav = (title, onPrev, onNext, onTitle) => (
+  const nav = (title, onPrev, onNext) => (
     <View style={styles.calHead}>
-      <Tap scale={0.9} onPress={onPrev} style={styles.arrow} accessibilityLabel={t(lang, 'common.back')}><Icon name="chevron-left" size={15} color={colors.text} /></Tap>
-      <Tap onPress={onTitle} disabled={!onTitle} style={styles.calTitleBtn} accessibilityRole={onTitle ? 'button' : undefined}>
-        <Text style={styles.calTitle} numberOfLines={1}>{title}</Text>
-      </Tap>
-      <Tap scale={0.9} onPress={onNext} style={styles.arrow}><Icon name="chevron-right" size={15} color={colors.text} /></Tap>
+      <Tap scale={0.9} onPress={onPrev} style={styles.arrow} accessibilityRole="button" accessibilityLabel={t(lang, 'stats.prev_period')} testID="stats-prev"><Icon name="chevron-left" size={15} color={colors.text} /></Tap>
+      <View style={styles.calTitleBtn}>
+        <Text style={styles.calTitle} numberOfLines={1} testID="stats-period">{title}</Text>
+      </View>
+      <Tap scale={0.9} onPress={onNext} style={styles.arrow} accessibilityRole="button" accessibilityLabel={t(lang, 'stats.next_period')} testID="stats-next"><Icon name="chevron-right" size={15} color={colors.text} /></Tap>
     </View>
   );
 
@@ -220,34 +307,48 @@ export default function StatsScreen({ navigation }) {
       </TabHeader>
 
       <View style={styles.segWrap}>
-        <View style={styles.seg}>
-          {MODES.map((m) => (
-            <Tap key={m} onPress={() => setMode(m)} style={[styles.segBtn, mode === m && styles.segOn]} accessibilityRole="tab" accessibilityState={{ selected: mode === m }}>
-              <Text style={[styles.segText, mode === m && styles.segTextOn]} numberOfLines={1}>{t(lang, MODE_KEY[m])}</Text>
-            </Tap>
-          ))}
-        </View>
+        <Segmented
+          items={MODES.map((m) => ({ key: m, label: t(lang, MODE_KEY[m]) }))}
+          value={mode}
+          onChange={pickMode}
+          testID="stats-modes"
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {mode === 'day' ? (
-          <Island style={styles.cal}>
-            {nav(dayKey(anchor) === todayKey ? t(lang, 'calendar.today') : dayLabel(anchor), () => shiftDay(-1), () => shiftDay(1), pickDay)}
-          </Island>
-        ) : null}
-
         {mode === 'week' ? (
           <Island style={styles.cal}>
-            {nav(`${fmtDateShort(weekFrom, lang)} – ${fmtDateShort(new Date(weekFrom.getTime() + 6 * DAY), lang)}`, () => shiftWeek(-1), () => shiftWeek(1))}
-            <View style={styles.bars}>
-              {weekDays.map((x) => (
-                <Tap key={x.key} onPress={() => openDay(x.d)} style={styles.bar} accessibilityRole="button" accessibilityLabel={dayLabel(x.d)}>
-                  <Text style={styles.barVal}>{x.ms ? fmtShort(x.ms, lang) : ''}</Text>
-                  <View style={[styles.barFill, { height: Math.max(4, Math.round((x.ms / maxWeekMs) * 60)) }, x.key === todayKey && styles.barFillOn]} />
-                  <Text style={[styles.barDay, x.key === todayKey && { color: colors.text }]}>{t(lang, WEEKDAY_KEYS[(x.d.getDay() + 6) % 7])}</Text>
-                </Tap>
-              ))}
-            </View>
+            {nav(`${fmtDateShort(weekFrom, lang)} – ${fmtDateShort(addDays(weekFrom, 6), lang)}`, () => shiftWeek(-1), () => shiftWeek(1))}
+            <PeriodSwipe onShift={shiftWeek} testID="stats-swipe">
+              <View style={styles.bars}>
+                {weekDays.map((x) => {
+                  const picked = x.key === pickedDay;
+                  const isToday = x.key === todayKey;
+                  // Акцентом залит один столбик: выбранный, а пока выбора нет — сегодняшний.
+                  const lit = pickedDay ? picked : isToday;
+                  return (
+                    <Tap
+                      key={x.key}
+                      onPress={() => setPickedDay((k) => (k === x.key ? null : x.key))}
+                      style={[styles.bar, picked && styles.barPicked]}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: picked }}
+                      accessibilityLabel={dayLabel(x.d)}
+                      testID={`stats-bar-${x.key}`}
+                    >
+                      <Text style={styles.barVal}>{x.ms ? fmtShort(x.ms, lang) : ''}</Text>
+                      {/* Столбик поднимается к своей высоте жидко (components/ProgressBar.js). */}
+                      <LiquidColumn height={Math.max(4, Math.round((x.ms / maxWeekMs) * 60))} style={[styles.barFill, lit && styles.barFillOn]} />
+                      <Text style={[styles.barDay, (lit || isToday) && { color: colors.text }]}>{t(lang, WEEKDAY_KEYS[(x.d.getDay() + 6) % 7])}</Text>
+                      {/* Число месяца; сегодняшнее — на акцентной подложке, выбранный день её не получает. */}
+                      <View style={[styles.barNum, isToday && styles.barNumToday]} testID={`stats-daynum-${x.key}`}>
+                        <Text style={[styles.barNumText, isToday && styles.barNumTextToday]}>{x.d.getDate()}</Text>
+                      </View>
+                    </Tap>
+                  );
+                })}
+              </View>
+            </PeriodSwipe>
           </Island>
         ) : null}
 
@@ -257,29 +358,32 @@ export default function StatsScreen({ navigation }) {
             <View style={styles.wdRow}>
               {WEEKDAY_KEYS.map((k) => <Text key={k} style={styles.wd}>{t(lang, k)}</Text>)}
             </View>
-            {cells.map((row, ri) => (
-              <View key={ri} style={styles.calRow}>
-                {row.map((c) => {
-                  const e = dayAgg.get(c.key);
-                  const d = keyToDate(c.key).getTime();
-                  const inSel = !!sel && d >= from && d <= to;
-                  const end = !!sel && (c.key === sel.from || c.key === sel.to);
-                  return (
-                    <Tap
-                      key={c.key}
-                      scale={0.9}
-                      onPress={() => setSel((s) => nextSelection(s, c.key))}
-                      style={[styles.cell, c.off && styles.cellOff, inSel && styles.cellIn, end && styles.cellEnd, c.key === todayKey && styles.cellToday]}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: inSel }}
-                    >
-                      <Text style={[styles.cellNum, c.off && styles.cellNumOff, end && styles.cellNumEnd]}>{c.day}</Text>
-                      {e && e.ms ? <Text style={[styles.cellMs, end && styles.cellNumEnd]}>{fmtShort(e.ms, lang)}</Text> : null}
-                    </Tap>
-                  );
-                })}
-              </View>
-            ))}
+            <PeriodSwipe onShift={shiftMonth} testID="stats-swipe">
+              {cells.map((row, ri) => (
+                <View key={ri} style={styles.calRow} testID={`stats-cal-row-${ri}`}>
+                  {row.map((c) => {
+                    const e = dayAgg.get(c.key);
+                    const d = keyToDate(c.key).getTime();
+                    const inSel = !!sel && d >= from && d <= to;
+                    const end = !!sel && (c.key === sel.from || c.key === sel.to);
+                    return (
+                      <Tap
+                        key={c.key}
+                        scale={0.9}
+                        onPress={() => setSel((s) => nextSelection(s, c.key))}
+                        style={[styles.cell, c.off && styles.cellOff, inSel && styles.cellIn, end && styles.cellEnd, c.key === todayKey && styles.cellToday]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: inSel }}
+                        testID={`stats-cell-${c.key}`}
+                      >
+                        <Text style={[styles.cellNum, c.off && styles.cellNumOff, end && styles.cellNumEnd]}>{c.day}</Text>
+                        {e && e.ms ? <Text style={[styles.cellMs, end && styles.cellNumEnd]}>{fmtShort(e.ms, lang)}</Text> : null}
+                      </Tap>
+                    );
+                  })}
+                </View>
+              ))}
+            </PeriodSwipe>
           </Island>
         ) : null}
 
@@ -293,13 +397,14 @@ export default function StatsScreen({ navigation }) {
 
         <View style={styles.tiles}>
           <View style={styles.tile}><Text style={styles.tileNum}>{doneInRange}<Text style={styles.tileOf}> / {shown.length}</Text></Text><Text style={styles.tileLabel}>{t(lang, 'stats.tasks_done_short')}</Text></View>
-          {mode === 'day' ? null : <View style={styles.tile}><Text style={styles.tileNum}>{fmtShort(perDay, lang)}</Text><Text style={styles.tileLabel}>{t(lang, 'stats.per_day')}</Text></View>}
+          {dayView ? null : <View style={styles.tile}><Text style={styles.tileNum}>{fmtShort(perDay, lang)}</Text><Text style={styles.tileLabel}>{t(lang, 'stats.per_day')}</Text></View>}
           <View style={styles.tile}><Text style={styles.tileNum}>{fmtMoney(Math.round(perHour), lang, currency)}</Text><Text style={styles.tileLabel}>{t(lang, 'stats.per_hour')}</Text></View>
         </View>
 
         <Island padded={false} style={{ paddingVertical: 4 }}>
           <Text style={styles.label}>{t(lang, 'stats.by_project_period')}</Text>
-          {byProject.length === 0 ? <View style={{ padding: spacing.md }}><IslandEmpty>{t(lang, 'stats.period_empty')}</IslandEmpty></View> : null}
+          {/* За период пусто — без кнопки: «Цифры» отчитываются, а не заводят. */}
+          {byProject.length === 0 ? <EmptyState size="sm" art="time" title={t(lang, 'stats.period_empty')} text={t(lang, 'empty.stats_text')} /> : null}
           {byProject.map((x, i) => (
             <Tap key={x.project.id} onPress={() => navigation.navigate('Project', { projectId: x.project.id })} style={[styles.pr, i > 0 && styles.prBorder]}>
               <View style={[styles.dot, { backgroundColor: x.project.color }]} />
@@ -308,7 +413,9 @@ export default function StatsScreen({ navigation }) {
                   <Text style={styles.prName} numberOfLines={1}>{x.project.name}</Text>
                   <Text style={styles.prNum}>{fmtDur(x.ms, lang)} · {fmtMoney(x.money, lang, currencyOf(x.project, settings))}</Text>
                 </View>
-                <View style={styles.prBar}><View style={[styles.prFill, { width: `${Math.round((x.ms / maxProjectMs) * 100)}%`, backgroundColor: x.project.color }]} /></View>
+                {/* Доля от самого большого проекта, а не «выполнено»: 100 % здесь
+                    значит «лидер», поэтому «попа» и брызг у этих шкал нет. */}
+                <ProgressBar value={x.ms / maxProjectMs} color={x.project.color} style={styles.prBar} celebrate={false} testID={`stats-pr-${x.project.id}`} />
               </View>
             </Tap>
           ))}
@@ -323,14 +430,11 @@ const makeStyles = (colors, clearance) => StyleSheet.create({
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 11, borderRadius: 999, maxWidth: 170 },
   chipText: { color: colors.text, fontSize: 13, fontWeight: '600', flexShrink: 1 },
   dot: { width: 8, height: 8, borderRadius: 3 },
-  segWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
-  seg: { flexDirection: 'row', gap: 2, padding: 3, borderRadius: radius.md, backgroundColor: colors.panel },
-  segBtn: { flex: 1, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
-  segOn: { backgroundColor: colors.raise },
-  segText: { color: colors.textDim, fontSize: 12.5, fontWeight: '500' },
-  segTextOn: { color: colors.text, fontWeight: '600' },
-  content: { paddingHorizontal: spacing.md, paddingBottom: clearance, gap },
-  cal: { paddingHorizontal: 10, paddingVertical: 10 },
+  // Режимы — общий Segmented (подложка выбранного переезжает жидко).
+  segWrap: { paddingHorizontal: screenPadding, paddingBottom: spacing.sm },
+  content: { paddingHorizontal: screenPadding, paddingBottom: clearance, gap },
+  // overflow: hidden — съезжающее при свайпе содержимое не выходит за остров.
+  cal: { paddingHorizontal: 10, paddingVertical: 10, overflow: 'hidden' },
   calHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   arrow: { width: 36, height: 32, borderRadius: 9, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   calTitleBtn: { flex: 1, alignItems: 'center' },
@@ -347,12 +451,21 @@ const makeStyles = (colors, clearance) => StyleSheet.create({
   cellNumOff: { color: colors.textFaint, fontWeight: '400' },
   cellNumEnd: { color: colors.accentText },
   cellMs: { color: colors.textFaint, fontSize: 10, fontVariant: ['tabular-nums'] },
-  bars: { flexDirection: 'row', gap: 6, height: 104, alignItems: 'flex-end', paddingTop: 10 },
-  bar: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'flex-end', gap: 5 },
+  // Под подписью дня — число месяца в круге 22: высота ряда выросла на него.
+  bars: { flexDirection: 'row', gap: 6, height: 144, alignItems: 'flex-end', paddingTop: 10 },
+  bar: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'flex-end', gap: 4, paddingVertical: 4, borderRadius: radius.md },
+  // Выбранный день — подложкой на ступень над островом.
+  barPicked: { backgroundColor: colors.panel2 },
   barVal: { color: colors.textFaint, fontSize: 10, fontVariant: ['tabular-nums'] },
   barFill: { width: '100%', maxWidth: 28, borderRadius: 6, backgroundColor: colors.raise },
   barFillOn: { backgroundColor: colors.accent },
   barDay: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
+  // Круг стоит у каждого дня (прозрачный), чтобы числа не прыгали; акцентом
+  // заливается только сегодняшний.
+  barNum: { minWidth: 22, height: 22, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  barNumToday: { backgroundColor: colors.accent },
+  barNumText: { color: colors.textDim, fontSize: 11.5, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  barNumTextToday: { color: colors.accentText },
   sum: { paddingVertical: spacing.md },
   sumRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, marginTop: 4 },
   big: { color: colors.text, fontSize: 24, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
@@ -367,6 +480,6 @@ const makeStyles = (colors, clearance) => StyleSheet.create({
   prHead: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   prName: { color: colors.text, fontSize: 13.5, fontWeight: '600', flexShrink: 1 },
   prNum: { color: colors.textDim, fontSize: 12.5, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
-  prBar: { height: 4, borderRadius: 2, backgroundColor: colors.panel2, overflow: 'hidden', marginTop: 5 },
-  prFill: { height: '100%', borderRadius: 2 },
+  // Полоса — общий ProgressBar (толщина 4, дорожка panel2); здесь только поле.
+  prBar: { marginTop: 5 },
 });

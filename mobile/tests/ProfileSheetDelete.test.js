@@ -24,9 +24,11 @@ async function deleteWith(result) {
   useAuthStore.setState({ status: 'signedIn', user: { id: 'u1', email: 'qa@example.com', name: 'QA' }, deleteAccount });
   const sheet = await render(<ProfileSheet />);
   await act(async () => { fireEvent.press(sheet.getByText(ru('account.delete'))); });
-  // Подтверждение — нижний лист: текст в content, кнопки — в подвале, который
-  // content кладёт своим эффектом (как в BottomSheet).
-  await render(useSheetStore.getState().content);
+  // Подтверждение — страница этого же листа (12 октября 2026; раньше — лист
+  // поверх): текст — в листе, кнопки — в подвале, который страница кладёт
+  // своим эффектом (как в BottomSheet).
+  sheet.getByText(ru('account.delete_confirm'));
+  expect(useSheetStore.getState().header).toMatchObject({ title: ru('account.delete_title') });
   const footer = await render(useSheetStore.getState().footer);
   await act(async () => { fireEvent.press(footer.getByText(ru('account.delete'))); });
   expect(deleteAccount).toHaveBeenCalledTimes(1);

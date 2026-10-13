@@ -10,6 +10,7 @@ import AppHeader from '../components/AppHeader';
 import MainTabBar from './MainTabBar';
 import { DETAIL_ROUTES } from './detailScreens';
 import { forSlide } from './tabSlide';
+import { rootHeaderLayout } from './rootHeaderLayout';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
 
@@ -20,7 +21,8 @@ const Tab = createBottomTabNavigator();
 // на них одинаково: вложенный стек сам по себе на родительский таббар не
 // влияет, единственный документированный способ — пересчитать tabBarStyle
 // родительского Tab.Screen по имени сфокусированного маршрута.
-// Смена вкладки — пролистывание: страницы едут во всю ширину, ease out.
+// Смена вкладки — пролистывание: страницы едут во всю ширину, ease out; шапка
+// остаётся на месте и меняет только содержимое, сразу.
 const SLIDE = { animation: 'timing', config: { duration: 300, easing: Easing.out(Easing.cubic) } };
 
 const hideOnDetails = (route) => (DETAIL_ROUTES.includes(getFocusedRouteNameFromRoute(route)) ? { display: 'none' } : undefined);
@@ -34,7 +36,9 @@ export default function MainTabs() {
     <Tab.Navigator
       tabBar={(props) => <MainTabBar {...props} />}
       // Шапка у корневых экранов своя (components/TabHeader.js), навигационная
-      // выключена целиком: двух шапок подряд быть не должно.
+      // выключена целиком: двух шапок подряд быть не должно. Она одна на все
+      // вкладки и при их пролистывании стоит на месте — см. rootHeaderLayout.
+      layout={rootHeaderLayout}
       screenOptions={{
         header: (props) => <AppHeader {...props} />,
         animation: 'shift',

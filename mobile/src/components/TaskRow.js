@@ -1,97 +1,153 @@
-// Строка задачи в колоде проектов и в ленте «Задачи» (макет B2): кружок
-// статуса (тап — выполнено), название, тихая мета (идёт · дедлайн · версия
-// · время), справа круглая кнопка плей/стоп. В ленте — ещё плашка проекта.
+// Строка задачи в колоде проектов, в ленте «Задачи» и на «Сегодня» (макет
+// B2): галочка (тап — выполнено), название, под ним тихая мета — только
+// статус и срок, справа кнопка плей/стоп. Галочка и кнопка — скруглённые
+// квадраты (taskCheckRadius и taskControlRadius). В ленте — ещё плашка
+// проекта. Запуск и остановка — жидко: акцент наливается в кнопку и стекает
+// (LiquidButton); отметка — так же в галочку, с «попом» и брызгами
+// (LiquidCheck). Закреплённая — с булавкой у названия (PinMark).
+//
+// 12 октября мета сжата до статуса и срока: «закреплена» стала булавкой, версия
+// и набранное время ушли на страницу задачи, а вместе с ними по ошибке ушло и
+// время идущей задачи («убрать лишний текст», а не сами часы). Часы вернулись:
+// пока таймер идёт, они стоят в мете НА МЕСТЕ статуса (RunningClock — свой
+// тикер, строка не перерисовывается), срок остаётся.
+//
+// Отмеченная задача (и та, что только что отмечена галочкой) показывает в мете
+// серое «выполнено» вместо цветного статуса (rowStatus в lib/statuses.js).
+//
+// Отменённая (вид статуса «отменено») — вместо галочки серый крестик того же
+// квадрата (LiquidCheck, cancelled): нажатие возвращает её в работу. В мете —
+// серое «Отменено», название серое, но не зачёркнутое (зачёркнуто только
+// выполненное), срока нет.
 import { View, StyleSheet } from 'react-native';
 import Tap from './Tap';
 import Text from './AppText';
-import Icon from './Icon';
+import { LiquidButton, LiquidCheck } from './Liquid';
+import PinMark from './PinMark';
+import RunningClock from './RunningClock';
 import { useAppStore, getProject } from '../store/useAppStore';
-import { useTicker } from '../hooks/useTicker';
-import { fmtShort, fmtClock, taskElapsedMs } from '../lib/format';
 import { dueShort, dueState } from '../lib/due';
-import { getStatus } from '../lib/statuses';
-import { badgeBg } from '../lib/tags';
-import { useColors, spacing, fontSize } from '../theme';
+import { rowStatus, isCancelled } from '../lib/statuses';
+import { badgeColors } from '../lib/tags';
+import { useColors, useThemeMode, spacing, taskControlRadius, taskCheckRadius } from '../theme';
 import { t } from '../lib/i18n';
 
 /**
- * @param onToggleDone своя обработка галочки (колода проектов сначала
- *                     уводит строку анимацией, потом отмечает задачу)
- * @param checked      показать галочку, пока задача ещё не отмечена в сторе
+ * Мета под названием: часы (идёт таймер) или статус, и срок, больше ничего.
+ * Срок красный — просрочен, акцентный — в пределах суток, тихий — дальше
+ * (тот же код, что у списка проекта и на десктопе). Часы — запись без текста
+ * ({ key: 'timer' }): их рисует RunningClock, потому что текст у них меняется
+ * каждую секунду.
+ * @param done    задача отмечена (в сторе или галочкой, до записи в стор):
+ *                статус — серое «выполнено», срока нет
+ * @param running по задаче идёт таймер
  */
-export default function TaskRow({ task, onPress, showProject = false, first = false, compact = false, onToggleDone, checked }) {
+export function taskRowMeta(task, { statuses, colors, lang, done = !!task.done, running = false }) {
+  const meta = [];
+  const status = running ? null : rowStatus(statuses, task, done, lang);
+  if (running) {
+    meta.push({ key: 'timer', color: colors.accentInk, bold: true });
+  } else if (status) {
+    meta.push({ key: 'status', text: status.name, color: status.done ? colors.textFaint : colors.textDim, dot: status.done ? colors.textFaint : status.color });
+  }
+  // Закрытая — выполненная или отменённая — срока не показывает.
+  const due = done || isCancelled(task, statuses) ? null : dueState(task);
+  if (due) meta.push({ key: 'due', text: dueShort(task, lang), color: due === 'overdue' ? colors.danger : due === 'soon' ? colors.accentInk : colors.textFaint, bold: due !== 'later' });
+  return meta;
+}
+
+/**
+ * @param onToggleDone своя обработка галочки: (task, change, closed) — change
+ *                     делает правку (отметить или вернуть в работу), closed —
+ *                     задача сейчас закрыта (выполнена или отменена), то есть
+ *                     нажатие её открывает. Экран решает, когда правка и
+ *                     двинется ли строка (useOrderHold: markNow / moveSoon)
+ * @param checked      показать галочку, пока в строку ещё приходит задача до
+ *                     отметки (экран держит строку на месте, пока налив играет)
+ * @param hidePinned   булавка не остаётся у названия, а только втыкается и
+ *                     гаснет (в ленте закреплённые — в своём разделе)
+ */
+export default function TaskRow({ task, onPress, showProject = false, first = false, compact = false, onToggleDone, checked, hidePinned = false }) {
   const colors = useColors();
+  const mode = useThemeMode();
   const styles = makeStyles(colors);
   const lang = useAppStore((s) => s.settings.lang);
   const projects = useAppStore((s) => s.projects);
-  const versions = useAppStore((s) => s.versions);
   const statuses = useAppStore((s) => s.statuses);
   const activeTimer = useAppStore((s) => s.activeTimer);
   const startTimer = useAppStore((s) => s.startTimer);
   const stopTimer = useAppStore((s) => s.stopTimer);
   const toggleTaskDone = useAppStore((s) => s.toggleTaskDone);
+  const reopenTask = useAppStore((s) => s.reopenTask);
 
   const running = !!activeTimer && activeTimer.taskId === task.id;
-  useTicker(running);
   const project = getProject(projects, task.projectId);
-  const version = task.versionId ? versions.find((v) => v.id === task.versionId) : null;
-  const elapsed = taskElapsedMs(task, activeTimer);
-  const due = task.done ? null : dueState(task);
   const done = !!task.done || !!checked;
-
-  const status = task.statusId ? getStatus(statuses, task.statusId) : null;
-  const meta = [];
-  if (status && !running) meta.push({ text: status.name, color: colors.textDim, dot: status.color });
-  if (running) meta.push({ text: `${t(lang, 'task.running_now')} ${fmtClock(elapsed)}`, color: colors.accentInk, bold: true });
-  if (task.pinnedAt && !running) meta.push({ text: t(lang, 'tasks.pinned_mark'), color: colors.textFaint });
-  if (due) meta.push({ text: dueShort(task, lang), color: due === 'overdue' ? colors.danger : due === 'soon' ? colors.warn : colors.textFaint, bold: due !== 'later' });
-  if (version) meta.push({ text: version.name, color: colors.textFaint });
-  if (!running && elapsed > 0) meta.push({ text: fmtShort(elapsed, lang), color: colors.textFaint });
+  const cancelled = isCancelled(task, statuses);
+  const meta = taskRowMeta(task, { statuses, colors, lang, done, running });
+  // Нажатие на галочку отмечает задачу, на крестик — возвращает в работу.
+  const onCheck = () => {
+    const change = () => (cancelled ? reopenTask(task.id) : toggleTaskDone(task.id));
+    if (onToggleDone) onToggleDone(task, change, !!task.done || cancelled);
+    else change();
+  };
+  // Плашка проекта красится как бейдж тега (lib/tags.js, badgeColors).
+  const badge = showProject && project ? badgeColors(project.color || colors.accent, colors.text, mode) : null;
 
   return (
     <Tap
       onPress={onPress}
       style={({ pressed }) => [styles.row, compact && styles.rowCompact, !first && styles.rowBorder, running && styles.rowRunning, pressed && styles.pressed]}
       accessibilityRole="button"
+      // Закреплённость — словами для чтения с экрана: на глаз её говорит булавка.
+      accessibilityValue={task.pinnedAt ? { text: t(lang, 'tasks.pinned_mark') } : undefined}
     >
-      <Tap
+      <LiquidCheck
+        checked={done}
+        cancelled={cancelled}
+        kickId={task.id}
         hitSlop={10}
-        onPress={() => (onToggleDone ? onToggleDone(task) : toggleTaskDone(task.id))}
-        style={[styles.circ, done && styles.circOn]}
+        onPress={onCheck}
+        style={styles.circ}
+        iconSize={11}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: done }}
-        accessibilityLabel={t(lang, 'task.mark_done')}
-      >
-        {done ? <Icon name="check" size={11} color={colors.accentText} /> : null}
-      </Tap>
+        accessibilityLabel={t(lang, cancelled ? 'task.reopen' : 'task.mark_done')}
+      />
       <View style={styles.mid}>
-        <Text style={[styles.title, done && styles.titleDone]} numberOfLines={2}>{task.title || t(lang, 'task.no_name')}</Text>
-        {(showProject && project) || meta.length ? (
-          <View style={styles.meta}>
-            {showProject && project ? (
-              <View style={[styles.tag, { backgroundColor: badgeBg(project.color, 0.16) }]}>
-                <Text style={[styles.tagText, { color: project.color }]} numberOfLines={1}>{project.name}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, done && styles.titleDone, cancelled && styles.titleCancelled]} numberOfLines={2}>{task.title || t(lang, 'task.no_name')}</Text>
+          <PinMark pinnedAt={task.pinnedAt} keep={!hidePinned} style={styles.pin} />
+        </View>
+        {badge || meta.length ? (
+          <View style={styles.meta} testID={`task-meta-${task.id}`}>
+            {badge ? (
+              <View style={[styles.tag, { backgroundColor: badge.bg }]} testID={`task-project-${task.id}`}>
+                <Text style={[styles.tagText, { color: badge.ink }]} numberOfLines={1}>{project.name}</Text>
               </View>
             ) : null}
             {meta.map((m, i) => (
-              <View key={i} style={styles.metaItem}>
-                {i > 0 || (showProject && project) ? <Text style={styles.metaSep}>·</Text> : null}
-                {m.dot ? <View style={[styles.metaDot, { backgroundColor: m.dot }]} /> : null}
-                <Text style={[styles.metaText, { color: m.color }, m.bold && styles.metaBold]} numberOfLines={1}>{m.text}</Text>
+              <View key={m.key} style={styles.metaItem}>
+                {i > 0 || badge ? <Text style={styles.metaSep}>·</Text> : null}
+                {m.dot ? <View style={[styles.metaDot, { backgroundColor: m.dot }]} testID={`task-dot-${task.id}`} /> : null}
+                {m.key === 'timer'
+                  ? <RunningClock task={task} activeTimer={activeTimer} style={[styles.metaText, styles.metaClock, { color: m.color }, m.bold && styles.metaBold]} testID={`task-clock-${task.id}`} />
+                  : <Text style={[styles.metaText, { color: m.color }, m.bold && styles.metaBold]} numberOfLines={1}>{m.text}</Text>}
               </View>
             ))}
           </View>
         ) : null}
       </View>
-      <Tap
+      <LiquidButton
+        on={running}
+        kickId={task.id}
         hitSlop={8}
         onPress={() => (running ? stopTimer() : startTimer(task.id))}
-        style={[styles.play, running && styles.playOn]}
+        style={styles.play}
+        iconSize={12}
         accessibilityRole="button"
         accessibilityLabel={t(lang, running ? 'timer.stop' : 'timer.start')}
-      >
-        <Icon name={running ? 'stop' : 'play'} size={12} color={running ? colors.accentText : colors.text} />
-      </Tap>
+      />
     </Tap>
   );
 }
@@ -102,19 +158,26 @@ const makeStyles = (colors) => StyleSheet.create({
   rowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   rowRunning: { backgroundColor: colors.accentMuted },
   pressed: { opacity: 0.75 },
-  circ: { width: 24, height: 24, borderRadius: 999, borderWidth: 2, borderColor: colors.textFaint, alignItems: 'center', justifyContent: 'center' },
-  circOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  // Не отмечена — рамка; отмеченную наливает акцентом LiquidCheck.
+  circ: { width: 24, height: 24, borderRadius: taskCheckRadius, borderWidth: 2, borderColor: colors.textFaint, alignItems: 'center', justifyContent: 'center' },
   mid: { flex: 1, minWidth: 0 },
-  title: { color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  // Булавка — сразу за названием, по первой строке.
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5 },
+  title: { flexShrink: 1, color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  pin: { marginTop: 4 },
   titleDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
+  // Отменённая — серое название без зачёркивания: так она не похожа на выполненную.
+  titleCancelled: { color: colors.textFaint },
   meta: { flexDirection: 'row', alignItems: 'center', columnGap: 5, rowGap: 3, marginTop: 4, flexWrap: 'wrap' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '100%' },
   metaSep: { color: colors.textFaint, fontSize: 12 },
   metaDot: { width: 7, height: 7, borderRadius: 3 },
   metaText: { fontSize: 12, flexShrink: 1 },
   metaBold: { fontWeight: '600' },
+  // Цифры одной ширины: часы тикают, и строка не должна подрагивать.
+  metaClock: { fontVariant: ['tabular-nums'] },
   tag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999, maxWidth: 140 },
   tagText: { fontSize: 11, fontWeight: '700' },
-  play: { width: 38, height: 38, borderRadius: 999, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
-  playOn: { backgroundColor: colors.accent },
+  // Стоит — panel2; идёт — налит акцентом (это рисует LiquidButton).
+  play: { width: 38, height: 38, borderRadius: taskControlRadius, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
 });

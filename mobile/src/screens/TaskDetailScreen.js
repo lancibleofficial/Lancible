@@ -1,49 +1,77 @@
-// Страница задачи (макет B2): сверху заголовок, теги и содержимое заметок
-// (тап — редактор на весь экран), снизу всегда виден шит с таймером и
-// заработком. Шит тянется вверх и показывает две вкладки: «Сведения»
-// (статус, версия, дедлайн, повторение, теги, проект, ставка) и «История»
-// (записи по дням, «Запись вручную», внизу закреплён «Экспорт истории»).
+// Страница задачи (макет B2): сверху заголовок, теги и заметки, снизу
+// всегда виден шит с таймером и заработком. Шит тянется вверх и показывает две вкладки: «Сведения» и
+// «История» (записи по дням, «Запись вручную», внизу закреплён «Экспорт
+// истории»).
 //
-// Заметки пишутся в полноэкранном редакторе (EditorScreen): там у
-// редактора вся высота, своя прокрутка и рисование пером без спора с
-// прокруткой страницы. Здесь — предпросмотр.
+// «Сведения» (12 октября 2026) — по трём правилам настроек телефона
+// (DESIGN.md, «Настройки на телефоне: одна логика»): быстрый выбор из
+// короткого списка — чипами на месте (статус, версия; теги — бейджами и
+// «+ теги»); всё, у чего свои параметры, — строкой «название · значение ›»
+// на острове, тап открывает лист этой настройки; строки сгруппированы по
+// вопросу: «Когда» (дедлайн, время работы, повторение), «Напоминания»,
+// «Ещё» (ставка).
+//
+// Заметки пишутся прямо здесь (12 октября 2026): живой редактор, касание —
+// курсор и клавиатура. Поле заметок тянется до низа видимой страницы
+// (notesMinHeight), длинный текст растит его дальше, прокручивает страница;
+// касание пустого места под текстом — курсор в конец. Курсор над клавиатурой
+// держит onCaret. Пока клавиатура открыта, шит с таймером уходит вниз, а над
+// клавиатурой — нативная панель редактора (EditorToolbar); закрылась — панель
+// уходит вниз под шит, и шит возвращается. Полноэкранного режима у заметок
+// нет с 13 октября 2026: всё — здесь. См. DESIGN.md, «Редактор на телефоне».
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Pressable, StyleSheet, ScrollView, Switch, useWindowDimensions } from 'react-native';
+import { View, Pressable, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import Tap from '../components/Tap';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS, interpolate } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withDelay, runOnJS, interpolate } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView, KEYBOARD_NATIVE, useReanimatedKeyboardAnimation } from '../lib/keyboard';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import DocEditor from '../components/DocEditor';
-import DocCore from '../core/doc.js';
+import EditorToolbar, { SavedDot, TOOLBAR_HEIGHT } from '../components/EditorToolbar';
+import { useEditorSession } from '../hooks/useEditorSession';
 import Icon from '../components/Icon';
 import DetailHeader, { DetailButton } from '../components/DetailHeader';
+import { LiquidButton } from '../components/Liquid';
+import Segmented from '../components/Segmented';
 import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import PrimaryButton from '../components/PrimaryButton';
+import EmptyState from '../components/EmptyState';
 import MenuSheet from '../components/MenuSheet';
 import DueSheet from '../components/DueSheet';
 import TagPickerSheet from '../components/TagPickerSheet';
 import RepeatSheet from '../components/RepeatSheet';
+import SlotSheet from '../components/SlotSheet';
+import SlotListSheet from '../components/SlotListSheet';
+import ReminderSheet from '../components/ReminderSheet';
+import RateSheet from '../components/RateSheet';
 import SessionSheet from '../components/SessionSheet';
+import Chip from '../components/Chip';
+import { SettingRow, RowGroup } from '../components/Island';
+import { Block } from '../components/RepeatControls';
 import { TagBadgeRow } from '../components/TagBadge';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
 import { useRates, currencyOf } from '../hooks/useRates';
-import { fmtClock, fmtMoney, fmtShort, fmtWhen, earnedOf, earnedShown, effectiveRate, parseNum, sessionMoney, capFirst, moneyFmt, CURRENCY_SYMBOLS } from '../lib/format';
+import { fmtClock, fmtMoney, fmtShort, fmtWhen, fmtDateShort, earnedOf, earnedShown, effectiveRate, sessionMoney, capFirst, moneyFmt, CURRENCY_SYMBOLS } from '../lib/format';
 import { buildTaskSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { confirmSheet } from '../lib/dialogs';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { orderedStatuses } from '../lib/statuses';
 import { tagsOf } from '../lib/tags';
-import { dueShort } from '../lib/due';
-import { presetRule, isPresetRule, REPEAT_PRESETS, hm } from '../lib/sessions';
+import { dueShort, dueState } from '../lib/due';
+import { isPresetRule, REPEAT_PRESETS, hm } from '../lib/sessions';
+import { slotsSummary } from '../lib/slotText';
+import { reminderLabel } from '../lib/reminderText';
 import { dayKey } from '../lib/calendarMath';
 import Repeat from '../core/repeat.js';
+import Slots from '../core/slots.js';
+import Reminders from '../core/reminders.js';
 import Versions from '../core/versions.js';
 import CoreMoney from '../core/money.js';
 import { useTicker } from '../hooks/useTicker';
-import { useColors, spacing, radius, fontSize, displayFamily, buttonHeight } from '../theme';
+import { useColors, spacing, screenPadding, radius, fontSize, displayFamily, buttonHeight, buttonRadius, taskControlRadius } from '../theme';
 import { t, LOCALE_MAP } from '../lib/i18n';
 
 const WEEKDAY_KEY = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat'];
@@ -51,6 +79,43 @@ const WEEKDAY_KEY = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed',
 // когда шит тянут вверх.
 const SHEET_COLLAPSED = 130;
 const SPRING = { damping: 19, stiffness: 230, mass: 0.9 };
+// Воздух между сфокусированным полем шита и верхом клавиатуры — тот же, что
+// у нижнего листа (FIELD_GAP в components/BottomSheet.js).
+export const PANEL_FIELD_GAP = spacing.md;
+// Воздух между курсором заметок и панелью редактора над клавиатурой.
+export const CARET_GAP = spacing.lg;
+
+/** На сколько докрутить страницу, чтобы курсор заметок встал между верхом
+ *  видимой части и панелью над клавиатурой: > 0 — вниз, < 0 — вверх, 0 —
+ *  курсор и так виден. Всё — в координатах окна: boxTop — верх WebView,
+ *  caret — курсор от верха страницы WebView, kbTop — верх клавиатуры,
+ *  viewTop — верх видимой части под шапкой. */
+export function caretShift({ boxTop, caret, kbTop, viewTop }) {
+  const below = boxTop + caret.bottom + CARET_GAP - (kbTop - TOOLBAR_HEIGHT);
+  if (below > 0) return below;
+  const above = viewTop - (boxTop + caret.top - CARET_GAP);
+  return above > 0 ? -above : 0;
+}
+
+/** Наименьшая высота поля заметок (13 октября 2026): от его верха до низа
+ *  видимой страницы — до панели над клавиатурой, пока она открыта; до
+ *  панели пера над системной панелью, пока рисуют; до свёрнутого шита с
+ *  таймером без них. Снизу ещё воздух spacing.lg — тот же запас, что у
+ *  страницы (paddingBottom), так что короткий текст страницу не листает.
+ *  viewH — высота прокрутки, top — верх поля в ней, sheetH — свёрнутый шит
+ *  с системной панелью, insetBottom — системная панель. */
+export function notesMinHeight({ viewH, top, kbHeight = 0, inkOn = false, sheetH = 0, insetBottom = 0 }) {
+  if (!viewH) return 0;
+  const below = kbHeight > 0 ? kbHeight + TOOLBAR_HEIGHT
+    : inkOn ? insetBottom + TOOLBAR_HEIGHT
+      : sheetH;
+  return Math.max(0, Math.floor(viewH - top - below - spacing.lg));
+}
+
+/** Шит возвращается после того, как панель ушла вниз с клавиатурой. Android
+ *  сообщает о закрытии в конце её хода (keyboardDidHide) — ждать незачем;
+ *  iOS — в начале (keyboardWillHide), и шит ждёт, пока клавиатура съедет. */
+export const SHEET_RETURN_DELAY = Platform.OS === 'ios' ? 250 : 0;
 
 export default function TaskDetailScreen({ route, navigation }) {
   const colors = useColors();
@@ -68,7 +133,6 @@ export default function TaskDetailScreen({ route, navigation }) {
   const setTaskDue = useAppStore((s) => s.setTaskDue);
   const setTaskTags = useAppStore((s) => s.setTaskTags);
   const setTaskDone = useAppStore((s) => s.setTaskDone);
-  const togglePinTask = useAppStore((s) => s.togglePinTask);
   const allTags = useAppStore((s) => s.tags);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const deleteSession = useAppStore((s) => s.deleteSession);
@@ -88,14 +152,28 @@ export default function TaskDetailScreen({ route, navigation }) {
   const taskTags = tagsOf(allTags, task ? task.tagIds : []);
   const own = task ? orderedStatuses(statuses, task.projectId) : [];
   const projectVersions = task ? Versions.versionsOf(versions, task.projectId) : [];
+  const dueTone = task ? dueState(task) : null;
   const isRunning = !!activeTimer && activeTimer.taskId === taskId;
   useTicker(isRunning);
 
   const [tab, setTab] = useState('details');
   const [title, setTitle] = useState(task ? task.title : '');
-  const [rateText, setRateText] = useState(task && task.rate != null ? String(task.rate) : '');
   const titleTimer = useRef(null);
-  useEffect(() => () => clearTimeout(titleTimer.current), []);
+  // Набранное название, ещё не ушедшее в задачу (таймер 400 мс).
+  const titlePending = useRef(null);
+  /** Название — в задачу сейчас, не дожидаясь таймера: уходя со страницы и
+   *  размонтируясь (раньше таймер на размонтировании просто гасился, и
+   *  набранное перед «назад» терялось). Удалённую задачу не трогает. */
+  const flushTitle = () => {
+    clearTimeout(titleTimer.current);
+    titleTimer.current = null;
+    const v = titlePending.current;
+    titlePending.current = null;
+    if (v == null) return;
+    const st = useAppStore.getState();
+    if (getTask(st.tasks, taskId)) st.updateTask(taskId, { title: v });
+  };
+  useEffect(() => flushTitle, []);
 
   // --- шит: два положения, тянется за верхнюю часть ---
   // С нативной шапкой (iOS 26+) экран начинается под ней: шит меряется от
@@ -123,14 +201,74 @@ export default function TaskDetailScreen({ route, navigation }) {
       y.value = withSpring(open ? 0 : collapsedY, SPRING);
       runOnJS(setExpanded)(open);
     }), [collapsedY]);
-  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+  // --- заметки: живой редактор (hooks/useEditorSession.js) ---
+  const scrollRef = useRef(null);
+  // Высота прокрутки и верх поля заметок в ней — для notesMinHeight.
+  const [viewH, setViewH] = useState(0);
+  const [notesTop, setNotesTop] = useState(0);
+  const scrollY = useRef(0);
+  const editorBox = useRef(null);
+  const lastCaret = useRef(null);
+  const session = useEditorSession('task', taskId, { onCaret: (c) => { lastCaret.current = c; keepCaret(); } });
+  const keyboard = session.keyboard;
+  const keyboardRef = useRef(keyboard);
+  keyboardRef.current = keyboard;
+
+  /** Курсор заметок над клавиатурой и панелью: страница докручивается, если
+   *  курсор ушёл под них или выше видимой части. Курсор приходит в пикселях
+   *  страницы WebView, клавиатура — верхом в координатах окна. */
+  function keepCaret() {
+    const c = lastCaret.current;
+    const kb = keyboardRef.current;
+    const box = editorBox.current;
+    if (!c || !kb.shown || kb.top == null || !box || !box.measureInWindow) return;
+    box.measureInWindow((_x, top) => {
+      const shift = caretShift({ boxTop: top, caret: c, kbTop: kb.top, viewTop: insets.top + 48 });
+      if (shift) scrollRef.current?.scrollTo({ y: Math.max(0, scrollY.current + shift), animated: true });
+    });
+  }
+  // Клавиатура встала (или сменила высоту) после того, как пришёл курсор.
+  useEffect(() => { if (keyboard.shown) keepCaret(); }, [keyboard.shown, keyboard.top]);
+
+  // Уходя со страницы — набранное сразу в задачу: заметки (и страницу просим
+  // отдать задержанное) и название. Экран, отрисованный вне навигатора
+  // (тесты, превью), событий не шлёт.
+  useEffect(() => (navigation.addListener
+    ? navigation.addListener('blur', () => { session.flush(); flushTitle(); })
+    : undefined), [navigation]);
+
+  // Клавиатура открыта (или включено перо) — шит с таймером уходит вниз и
+  // возвращается, когда она закрылась (решение 12 октября 2026): над
+  // клавиатурой встаёт панель редактора, и места под текст больше. С кадрами
+  // клавиатуры (lib/keyboard.js) шит уходит вместе с ней; без них — своим
+  // ходом по событию. Возвращается — после клавиатуры: пока она открыта
+  // (keyboard.shown), шит держится внизу, а панель редактора едет вниз с
+  // клавиатурой и уходит под шит — шит отрисован поверх неё (13 октября
+  // 2026; раньше панель стояла сверху и на миг закрывала таймер). Раскрытый
+  // шит не уходит: его поля — его дело.
+  const kbFrames = useReanimatedKeyboardAnimation();
+  const hideOn = !expanded && (keyboard.shown || session.inkOn);
+  const hide = useSharedValue(hideOn ? 1 : 0);
+  useEffect(() => {
+    hide.value = hideOn ? withTiming(1, { duration: 220 }) : withDelay(SHEET_RETURN_DELAY, withTiming(0, { duration: 220 }));
+  }, [hideOn]);
+  // Поле заметок — до низа видимой страницы; страница снизу оставляет место
+  // под свёрнутый шит, а пока шит внизу — только воздух.
+  const sheetCollapsedH = headH + insets.bottom;
+  const notesMin = notesMinHeight({
+    viewH, top: notesTop, kbHeight: keyboard.shown ? keyboard.height : 0, inkOn: session.inkOn, sheetH: sheetCollapsedH, insetBottom: insets.bottom,
+  });
+  const hideDist = headH + insets.bottom + spacing.lg;
+  const sheetStyle = useAnimatedStyle(() => {
+    const p = expanded ? 0 : Math.max(hide.value, KEYBOARD_NATIVE ? kbFrames.progress.value : 0);
+    return { transform: [{ translateY: y.value + p * hideDist }] };
+  }, [expanded, hideDist]);
   const scrimStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.value, [0, collapsedY], [0.5, 0]) }));
   const bodyStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.value, [0, collapsedY * 0.5, collapsedY], [1, 1, 0]) }));
   // Вкладки проявляются, как только шит начали тянуть вверх.
   const tabsStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.value, [collapsedY * 0.7, collapsedY], [1, 0], 'clamp') }));
   const openTab = (key) => { setTab(key); if (!expanded) snapTo(true); };
 
-  function openEditor() { navigation.navigate('Editor', { kind: 'task', id: taskId }); }
   function onExport() {
     if (!task) return;
     runExport(
@@ -173,12 +311,9 @@ export default function TaskDetailScreen({ route, navigation }) {
   }
   function onTitleChange(v) {
     setTitle(v);
+    titlePending.current = v;
     clearTimeout(titleTimer.current);
-    titleTimer.current = setTimeout(() => updateTask(taskId, { title: v }), 400);
-  }
-  function onRateChange(v) {
-    setRateText(v);
-    updateTask(taskId, { rate: v.trim() === '' ? null : parseNum(v) });
+    titleTimer.current = setTimeout(flushTitle, 400);
   }
   function onOpenDue() {
     openSheet(
@@ -186,22 +321,41 @@ export default function TaskDetailScreen({ route, navigation }) {
         task={task}
         lang={LANG}
         onApply={(patch) => { setTaskDue(taskId, patch); closeSheet(); }}
-        onClear={() => { setTaskDue(taskId, { dueAt: null, remindAt: null, remindOffsetMin: null }); closeSheet(); }}
+        onClear={() => { setTaskDue(taskId, { dueAt: null }); closeSheet(); }}
       />,
     );
   }
   function onOpenTags() {
     openSheet(<TagPickerSheet value={task.tagIds || []} projectId={task.projectId} onChange={(ids) => setTaskTags(taskId, ids)} />);
   }
-  function onCustomRepeat() {
-    if (!task.dueAt) { showToast(t(LANG, 'repeat.needs_due')); return; }
+  // Повтор не требует дедлайна: считать можно от дедлайна, от разового
+  // времени работы, а без них — от дня закрытия (core/slots.js, planTaskRoll).
+  function onOpenRepeat() {
     openSheet(
-      <RepeatSheet lang={LANG} dueAt={task.dueAt} rule={task.repeat} onApply={(rule) => setTaskRepeat(taskId, rule)} onClear={() => setTaskRepeat(taskId, null)} />,
+      <RepeatSheet lang={LANG} anchorAt={Slots.rollAnchor(task)} rule={task.repeat} onApply={(rule) => setTaskRepeat(taskId, rule)} onClear={() => setTaskRepeat(taskId, null)} />,
     );
   }
-  function onPreset(p) {
-    if (!task.dueAt) { showToast(t(LANG, 'repeat.needs_due')); return; }
-    setTaskRepeat(taskId, p ? presetRule(p.freq, p.weekdays) : null);
+  // Время работы: отрезков нет — сразу лист нового отрезка; есть — их список
+  // (там каждый правится и добавляется новый).
+  function onOpenSlots() {
+    if (Slots.slotsOf(task).length) openSheet(<SlotListSheet taskId={taskId} />);
+    else openSheet(<SlotSheet taskId={taskId} />);
+  }
+  // Ставка правится в своём листе (на панели — только значение словами):
+  // пустое поле — ставка не своя, серым — та, по которой считается.
+  function onOpenRate() {
+    openSheet(
+      <RateSheet
+        lang={LANG}
+        title={t(LANG, 'task.rate_label')}
+        initialValue={task.rate}
+        placeholder={String(CoreMoney.baseRate(task, rates) || 0)}
+        unit={`${CURRENCY_SYMBOLS[currency] || currency}${t(LANG, 'rate.per_hour')}`}
+        hint={t(LANG, 'task.rate_hint')}
+        nullable
+        onSave={(n) => updateTask(taskId, { rate: n })}
+      />,
+    );
   }
   function onDeleteSession(index) {
     confirmSheet({
@@ -222,13 +376,27 @@ export default function TaskDetailScreen({ route, navigation }) {
   const rateNow = effectiveRate(task, rates);
   const baseRate = CoreMoney.baseRate(task, rates);
   const sym = CURRENCY_SYMBOLS[currency] || currency;
-  const notesEmpty = DocCore.isDocEmpty(DocCore.readNotes(task.notes));
-  const rateSource = task.rate != null ? 'task.rate_own' : (project && project.rate != null && project.rate !== '') ? 'task.rate_by_project' : 'task.rate_default';
   const repeatDesc = Repeat.describeRepeat(task.repeat);
   const repeatText = repeatDesc
     ? capFirst(t(LANG, repeatDesc.key, { ...repeatDesc.vars, days: (repeatDesc.vars.days || []).map((d) => t(LANG, WEEKDAY_KEY[d])).join(', ') }))
     : '';
-  const isCustomRepeat = !!task.repeat && !REPEAT_PRESETS.some((p) => isPresetRule(task.repeat, p.freq, p.weekdays));
+  const repeatPreset = task.repeat ? REPEAT_PRESETS.find((p) => isPresetRule(task.repeat, p.freq, p.weekdays)) : null;
+  const slots = Slots.slotsOf(task);
+  const reminders = Reminders.remindersOf(task);
+  const anchorMissing = (r) => r.kind === 'before' && (r.anchor === 'start' ? !slots.length : !task.dueAt);
+
+  // Значения строк «Сведений» — словами, как в «Меню»: что настроено сейчас.
+  const perHour = (n) => `${fmtMoney(n, LANG, currency)}${t(LANG, 'rate.per_hour')}`;
+  const dueValue = task.dueAt ? `${dueShort(task, LANG)}, ${hm(task.dueAt)}` : t(LANG, 'due.none');
+  const slotsValue = slots.length ? slotsSummary(slots, LANG, Slots.slotRule(task)) : t(LANG, 'slot.none');
+  const repeatValue = !task.repeat ? t(LANG, 'repeat.none') : repeatPreset ? t(LANG, `repeat.${repeatPreset.key}`) : repeatText;
+  // Повторяющаяся задача без дат закрыта и ждёт своего дня — подстрокой.
+  const returnsText = task.done && task.repeat && task.reopenAt ? t(LANG, 'repeat.returns', { date: fmtDateShort(task.reopenAt, LANG) }) : '';
+  const hasValue = (v) => v !== null && v !== undefined && v !== '';
+  const rateValue = hasValue(task.rate) ? perHour(Number(task.rate))
+    : project && hasValue(project.rate) ? t(LANG, 'task.rate_project', { rate: perHour(baseRate) })
+      : baseRate ? t(LANG, 'rate.shared', { rate: perHour(baseRate) })
+        : t(LANG, 'rate.none');
 
   // История по дням, свежее сверху.
   const sessions = [...(task.sessions || [])].map((s, i) => ({ s, i })).sort((a, b) => new Date(b.s.start) - new Date(a.s.start));
@@ -243,14 +411,15 @@ export default function TaskDetailScreen({ route, navigation }) {
 
   const timerBlock = (
     <View style={styles.timerRow}>
-      <Tap
-        style={[styles.timerBtn, isRunning && styles.timerBtnOn]}
+      <LiquidButton
+        on={isRunning}
+        kickId={taskId}
+        style={styles.timerBtn}
+        iconSize={22}
         onPress={() => (isRunning ? stopTimer() : startTimer(taskId))}
         accessibilityRole="button"
         accessibilityLabel={t(LANG, isRunning ? 'timer.stop' : 'timer.start')}
-      >
-        <Icon name={isRunning ? 'stop' : 'play'} size={22} color={isRunning ? colors.accentText : colors.text} />
-      </Tap>
+      />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.clock}>{fmtClock(isRunning ? runMs : elapsedMs)}</Text>
         <View style={styles.earnRow}>
@@ -261,13 +430,6 @@ export default function TaskDetailScreen({ route, navigation }) {
         </View>
       </View>
     </View>
-  );
-
-  const chip = (label, on, onPress, dot) => (
-    <Tap key={label} onPress={onPress} style={[styles.chip, on && styles.chipOn]} accessibilityRole="button" accessibilityState={{ selected: !!on }}>
-      {dot ? <View style={[styles.dot, { backgroundColor: dot }]} /> : null}
-      <Text style={[styles.chipText, on && styles.chipTextOn]} numberOfLines={1}>{label}</Text>
-    </Tap>
   );
 
   return (
@@ -289,7 +451,21 @@ export default function TaskDetailScreen({ route, navigation }) {
         )}
       />
 
-      <ScrollView contentContainerStyle={[styles.body, { paddingBottom: headH + insets.bottom + spacing.lg }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      {/* Страница прокручивается вместе с заметками: снизу место под
+          клавиатуру и панель редактора (KeyboardAwareScrollView), а курсор над
+          ними держит keepCaret. С пером палец рисует, а не листает. */}
+      <KeyboardAwareScrollView
+        ref={scrollRef}
+        onLayout={(e) => setViewH(Math.round(e.nativeEvent.layout.height))}
+        contentContainerStyle={[styles.body, { paddingBottom: (hideOn ? 0 : sheetCollapsedH) + spacing.lg }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        extraKeyboardSpace={TOOLBAR_HEIGHT}
+        scrollEnabled={!session.inkOn}
+        scrollEventThrottle={16}
+        onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+        testID="task-scroll"
+      >
         <TextInput
           style={[styles.title, task.done && styles.titleDone]}
           value={title}
@@ -299,25 +475,29 @@ export default function TaskDetailScreen({ route, navigation }) {
           multiline
         />
         <View style={styles.tagsRow}>
-          {taskTags.length ? <TagBadgeRow tags={taskTags} onRemove={(tag) => setTaskTags(taskId, (task.tagIds || []).filter((x) => x !== tag.id))} /> : null}
+          {taskTags.length ? <TagBadgeRow tags={taskTags} onRemove={(tagId) => setTaskTags(taskId, (task.tagIds || []).filter((x) => x !== tagId))} /> : null}
           <Tap style={styles.tagAdd} onPress={onOpenTags} hitSlop={6} accessibilityLabel={t(LANG, 'tag.pick')}>
             <Icon name="plus" size={10} color={colors.textFaint} />
             <Text style={styles.tagAddText}>{t(LANG, 'tag.pick').toLowerCase()}</Text>
           </Tap>
+          {/* «Сохранено» — тихой точкой в конце строки тегов. */}
+          <SavedDot lang={LANG} saved={session.saved} style={styles.savedDot} />
         </View>
-        <Tap style={styles.notes} onPress={openEditor} accessibilityRole="button" accessibilityLabel={t(LANG, 'editor.open')}>
-          {notesEmpty
-            ? <Text style={styles.notesEmpty}>{t(LANG, 'editor.empty')}</Text>
-            : <DocEditor preview content={DocCore.readNotes(task.notes)} lang={LANG} onOpen={openEditor} />}
-          {notesEmpty ? null : <Text style={styles.tapHint}>{t(LANG, 'task.tap_to_edit')}</Text>}
-        </Tap>
-      </ScrollView>
+        <View ref={editorBox} collapsable={false} style={styles.notes} onLayout={(e) => setNotesTop(Math.round(e.nativeEvent.layout.y))} testID="task-notes">
+          <DocEditor {...session.editorProps} live minHeight={notesMin} placeholder={t(LANG, 'editor.empty')} />
+        </View>
+      </KeyboardAwareScrollView>
+
+      {/* Панель редактора — над клавиатурой. Отрисована до шита: шит поверх
+          неё, и, уезжая вниз с закрывающейся клавиатурой, панель уходит под
+          шит, а не закрывает таймер. */}
+      <EditorToolbar {...session.toolbarProps} />
 
       <Animated.View style={[styles.scrim, scrimStyle]} pointerEvents={expanded ? 'auto' : 'none'}>
         <Pressable style={StyleSheet.absoluteFill} onPress={() => snapTo(false)} accessibilityLabel={t(LANG, 'common.back')} />
       </Animated.View>
 
-      <Animated.View style={[styles.sheet, { height: sheetH }, sheetStyle]}>
+      <Animated.View style={[styles.sheet, { height: sheetH }, sheetStyle]} testID="task-sheet">
         <GestureDetector gesture={pan}>
           <View collapsable={false} style={styles.sheetHead} onLayout={(e) => setHeadH(Math.round(e.nativeEvent.layout.height))}>
             <View style={styles.handle} />
@@ -325,99 +505,106 @@ export default function TaskDetailScreen({ route, navigation }) {
           </View>
         </GestureDetector>
         {/* Вкладки — ниже свёрнутой части: пока шит свёрнут, их не видно. */}
-        <Animated.View style={[styles.seg, tabsStyle]}>
-          {[['details', t(LANG, 'task.details')], ['history', t(LANG, 'task.history_n', { n: sessions.length })]].map(([key, label]) => (
-            <Tap key={key} onPress={() => openTab(key)} style={[styles.segBtn, expanded && tab === key && styles.segOn]} accessibilityRole="tab" accessibilityState={{ selected: expanded && tab === key }}>
-              <Text style={[styles.segText, expanded && tab === key && styles.segTextOn]}>{label}</Text>
-            </Tap>
-          ))}
+        {/* Пока шит свёрнут, выбранной вкладки нет — нет и подложки. */}
+        <Animated.View style={[styles.segWrap, tabsStyle]}>
+          <Segmented
+            items={[{ key: 'details', label: t(LANG, 'task.details') }, { key: 'history', label: t(LANG, 'task.history_n', { n: sessions.length }) }]}
+            value={expanded ? tab : null}
+            onChange={openTab}
+            style={styles.seg}
+            textStyle={styles.segText}
+          />
         </Animated.View>
 
-        <Animated.ScrollView style={[{ flex: 1 }, bodyStyle]} contentContainerStyle={styles.sheetBody} scrollEnabled={expanded} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        {/* Клавиатура. Шит — не Modal, а вид в окне приложения, и окно под
+            клавиатуру не ужимается (edge-to-edge, KeyboardProvider в App.js):
+            поле «Ставка» внизу «Сведений» оставалось под ней. Прокрутка —
+            KeyboardAwareScrollView из react-native-keyboard-controller: снизу
+            она добавляет место на высоту клавиатуры и вместе с её ходом, кадр
+            за кадром, докручивает сфокусированное поле, чтобы оно стояло над
+            клавиатурой с воздухом PANEL_FIELD_GAP. Шит, его ручка и
+            положения не меняются; «Выполнено» под клавиатурой — как подвал
+            любой страницы. См. DESIGN.md, «Шит задачи и клавиатура». */}
+        <KeyboardAwareScrollView bottomOffset={PANEL_FIELD_GAP} style={[{ flex: 1 }, bodyStyle]} contentContainerStyle={styles.sheetBody} scrollEnabled={expanded} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} testID="task-sheet-scroll">
           {tab === 'details' ? (
-            <>
-              <Text style={styles.label}>{t(LANG, 'task.status_label')}</Text>
-              <View style={styles.chips}>{own.map((s) => chip(s.name, task.statusId === s.id, () => setTaskStatus(taskId, s.id), s.color))}</View>
+            <View style={styles.details} testID="task-details">
+              {/* Быстрый выбор из короткого списка — чипами на месте. */}
+              <Block label={t(LANG, 'task.status_label')}>
+                <View style={styles.chips} testID="task-statuses">
+                  {own.map((s) => <Chip key={s.id} label={s.name} dot={s.color} on={task.statusId === s.id} onPress={() => setTaskStatus(taskId, s.id)} />)}
+                </View>
+              </Block>
 
               {projectVersions.length ? (
-                <>
-                  <Text style={styles.label}>{t(LANG, 'version.label')}</Text>
-                  <View style={styles.chips}>
-                    {chip(t(LANG, 'version.none'), !task.versionId, () => setTaskVersion(taskId, null))}
-                    {projectVersions.map((v) => chip(v.name, task.versionId === v.id, () => setTaskVersion(taskId, v.id)))}
+                <Block label={t(LANG, 'version.label')}>
+                  <View style={styles.chips} testID="task-versions">
+                    <Chip label={t(LANG, 'version.none')} on={!task.versionId} onPress={() => setTaskVersion(taskId, null)} />
+                    {projectVersions.map((v) => <Chip key={v.id} label={v.name} on={task.versionId === v.id} onPress={() => setTaskVersion(taskId, v.id)} />)}
                   </View>
-                </>
+                </Block>
               ) : null}
 
-              <View style={styles.rows}>
-                <Tap style={[styles.row, styles.rowFirst]} onPress={onOpenDue} accessibilityRole="button">
-                  <Icon name="calendar" size={17} color={colors.textDim} />
-                  <Text style={styles.rowK}>{t(LANG, 'due.label')}</Text>
-                  <Text style={[styles.rowV, task.dueAt && styles.rowVWarn]} numberOfLines={1}>{task.dueAt ? `${dueShort(task, LANG)}, ${hm(task.dueAt)}` : t(LANG, 'due.none')}</Text>
-                  <Icon name="chevron-right" size={12} color={colors.textFaint} />
-                </Tap>
-                {task.dueAt ? (
-                  <View style={styles.row}>
-                    <Icon name="bell" size={17} color={colors.textDim} />
-                    <Text style={styles.rowK}>{t(LANG, 'task.remind_hour')}</Text>
-                    <Switch
-                      value={task.remindOffsetMin === 60}
-                      onValueChange={(v) => setTaskDue(taskId, { remindOffsetMin: v ? 60 : null })}
-                      trackColor={{ false: colors.raise, true: colors.accent }} ios_backgroundColor={colors.raise} thumbColor={colors.textOnColor}
-                      accessibilityLabel={t(LANG, 'task.remind_hour')}
-                    />
-                  </View>
-                ) : null}
-              </View>
-
-              <Text style={styles.label}>{t(LANG, 'repeat.label')}</Text>
-              <View style={styles.chips}>
-                {chip(t(LANG, 'repeat.none'), !task.repeat, () => onPreset(null))}
-                {REPEAT_PRESETS.map((p) => chip(t(LANG, `repeat.${p.key}`), isPresetRule(task.repeat, p.freq, p.weekdays), () => onPreset(p)))}
-                {chip(isCustomRepeat ? repeatText : t(LANG, 'repeat.custom'), isCustomRepeat, onCustomRepeat)}
-              </View>
-
-              <Text style={styles.label}>{t(LANG, 'tag.pick')}</Text>
-              <View style={styles.chips}>
-                {taskTags.length ? <TagBadgeRow tags={taskTags} onRemove={(tag) => setTaskTags(taskId, (task.tagIds || []).filter((x) => x !== tag.id))} /> : null}
-                <Tap style={styles.chip} onPress={onOpenTags}><Text style={styles.chipText}>+ {t(LANG, 'tag.pick').toLowerCase()}</Text></Tap>
-              </View>
-
-              <View style={styles.rows}>
-                <Tap style={[styles.row, styles.rowFirst]} onPress={onOpenProject} accessibilityRole="button">
-                  <Icon name="folder" size={17} color={colors.textDim} />
-                  <Text style={styles.rowK}>{t(LANG, 'board.pick_project')}</Text>
-                  {project ? <View style={[styles.dot, { backgroundColor: project.color }]} /> : null}
-                  <Text style={styles.rowV} numberOfLines={1}>{project ? project.name : ''}</Text>
-                  <Icon name="chevron-right" size={12} color={colors.textFaint} />
-                </Tap>
-                <View style={styles.row}>
-                  <Icon name="wallet" size={17} color={colors.textDim} />
-                  <Text style={styles.rowK}>{t(LANG, 'task.rate_label')}</Text>
-                  <TextInput
-                    style={styles.rateInput}
-                    value={rateText}
-                    onChangeText={onRateChange}
-                    keyboardType="decimal-pad"
-                    placeholder={String(baseRate || 0)}
-                    placeholderTextColor={colors.textFaint}
-                    accessibilityLabel={t(LANG, 'task.rate_label')}
-                  />
-                  <Text style={styles.rowV}>{sym}{t(LANG, 'rate.per_hour')} · {t(LANG, rateSource)}</Text>
+              {/* Теги — бейджами с крестиками и «+ теги», как под названием. */}
+              <Block label={t(LANG, 'tag.pick')}>
+                <View style={styles.chips} testID="task-tags">
+                  {taskTags.length ? <TagBadgeRow tags={taskTags} onRemove={(tagId) => setTaskTags(taskId, (task.tagIds || []).filter((x) => x !== tagId))} /> : null}
+                  <Chip label={`+ ${t(LANG, 'tag.pick').toLowerCase()}`} onPress={onOpenTags} accessibilityLabel={t(LANG, 'tag.pick')} testID="task-tag-add" />
                 </View>
-                <View style={styles.row}>
-                  <Icon name="pin" size={17} color={colors.textDim} />
-                  <Text style={styles.rowK}>{t(LANG, 'task.pin_top')}</Text>
-                  <Switch
-                    value={!!task.pinnedAt}
-                    onValueChange={() => togglePinTask(taskId)}
-                    trackColor={{ false: colors.raise, true: colors.accent }} ios_backgroundColor={colors.raise} thumbColor={colors.textOnColor}
-                    accessibilityLabel={t(LANG, 'task.pin_top')}
-                  />
-                </View>
-              </View>
+              </Block>
 
-            </>
+              {/* Всё, у чего свои параметры, — строкой «название · значение ›»;
+                  тап открывает лист этой настройки. Время работы — отдельное
+                  от дедлайна понятие: когда этим заниматься, отрезков может
+                  быть несколько (в строке — первый и «+N»). Срок дедлайна
+                  жирным и цветом своего состояния, как в строках задач:
+                  просрочен — danger, в пределах суток — accentInk. */}
+              <RowGroup label={t(LANG, 'task.group_when')} testID="task-when">
+                <SettingRow
+                  icon="calendar"
+                  label={t(LANG, 'due.label')}
+                  value={dueValue}
+                  valueStyle={task.dueAt ? [styles.dueSet, dueTone === 'overdue' && styles.dueOverdue, dueTone === 'soon' && styles.dueSoon] : null}
+                  onPress={onOpenDue}
+                  testID="task-due-row"
+                  valueTestID="task-due-value"
+                />
+                <SettingRow icon="clock" label={t(LANG, 'slot.label')} value={slotsValue} onPress={onOpenSlots} testID="task-slots" valueTestID="task-slots-value" />
+                <SettingRow
+                  icon="refresh"
+                  label={t(LANG, 'repeat.label')}
+                  value={repeatValue}
+                  sub={returnsText}
+                  onPress={onOpenRepeat}
+                  testID="task-repeat"
+                  valueTestID="task-repeat-value"
+                  subTestID="task-returns"
+                />
+              </RowGroup>
+
+              {/* Напоминания: строка на каждое — тап правит его. «До начала»
+                  срабатывает перед каждым вхождением времени работы, «до
+                  дедлайна» едет за дедлайном. Строка, чьего якоря у задачи уже
+                  нет, тише: она ждёт, пока якорь появится. */}
+              <RowGroup label={t(LANG, 'remind.label')} testID="task-reminders">
+                {reminders.map((r) => (
+                  <SettingRow
+                    key={r.id}
+                    icon="bell"
+                    label={reminderLabel(r, LANG)}
+                    dim={anchorMissing(r)}
+                    onPress={() => openSheet(<ReminderSheet taskId={taskId} reminderId={r.id} />)}
+                    testID={`task-reminder-${r.id}`}
+                  />
+                ))}
+                <SettingRow icon="plus" label={t(LANG, 'remind.add')} chevron={false} onPress={() => openSheet(<ReminderSheet taskId={taskId} />)} testID="task-reminder-add" />
+              </RowGroup>
+
+              {/* Ставка: на панели — значение словами; правится в листе. Не
+                  своя — «как у проекта — …» или «общая — …». */}
+              <RowGroup label={t(LANG, 'task.group_more')} testID="task-more">
+                <SettingRow icon="wallet" label={t(LANG, 'task.rate_label')} value={rateValue} onPress={onOpenRate} testID="task-rate-row" valueTestID="task-rate-value" />
+              </RowGroup>
+            </View>
           ) : (
             <>
               <View style={styles.histHead}>
@@ -432,6 +619,11 @@ export default function TaskDetailScreen({ route, navigation }) {
                   <Text style={styles.hNote} numberOfLines={1}>{t(LANG, 'task.running_since', { time: hm(activeTimer.startedAt) })}</Text>
                   <Text style={[styles.hDur, { color: colors.accentInk }]}>{fmtClock(runMs)}</Text>
                 </View>
+              ) : null}
+              {/* Записей нет — маленький пустой экран без кнопки: «Запись
+                  вручную» строкой прямо под ним, таймер — над вкладками. */}
+              {!sessions.length && !isRunning ? (
+                <EmptyState size="sm" art="timer" title={t(LANG, 'project.ps_empty')} text={t(LANG, 'empty.task_history_text')} />
               ) : null}
               {historyDays.map((g) => (
                 <View key={g.key}>
@@ -451,7 +643,7 @@ export default function TaskDetailScreen({ route, navigation }) {
               </Tap>
             </>
           )}
-        </Animated.ScrollView>
+        </KeyboardAwareScrollView>
 
         {/* Низ закреплён: прокручивается только содержимое вкладки. */}
         {expanded && tab === 'details' ? (
@@ -474,57 +666,56 @@ export default function TaskDetailScreen({ route, navigation }) {
 
 const makeStyles = (colors, insets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  dot: { width: 8, height: 8, borderRadius: 3 },
-  body: { paddingHorizontal: spacing.lg, paddingTop: 4 },
+  body: { paddingHorizontal: screenPadding, paddingTop: 4 },
   title: { color: colors.text, fontSize: 22, fontFamily: displayFamily.bold, backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 4, lineHeight: 28 },
   titleDone: { color: colors.textFaint, textDecorationLine: 'line-through' },
   tagsRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, paddingTop: 6, paddingBottom: 4 },
   tagAdd: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 26, paddingHorizontal: 9, borderRadius: 999, backgroundColor: colors.panel },
   tagAddText: { color: colors.textFaint, fontSize: 12, fontWeight: '600' },
-  notes: { paddingTop: 6 },
-  notesEmpty: { color: colors.textDim, fontSize: 15, lineHeight: 22 },
-  tapHint: { color: colors.textFaint, fontSize: 12.5, marginTop: spacing.sm },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.scrim },
+  // Точка «сохранено» — в конце строки тегов, справа.
+  savedDot: { marginLeft: 'auto' },
+  // Заметки: верх поля — его верх в прокрутке (onLayout), поэтому отступ —
+  // полем снаружи, а не внутри.
+  notes: { marginTop: spacing.sm },
+  scrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.scrim },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.panel, borderTopLeftRadius: 22, borderTopRightRadius: 22 },
   // Воздух: от ручки до таймера и от таймера до низа свёрнутого шита.
-  sheetHead: { paddingHorizontal: spacing.md, paddingTop: 8, paddingBottom: spacing.lg },
+  sheetHead: { paddingHorizontal: screenPadding, paddingTop: 8, paddingBottom: spacing.lg },
   handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.raise, alignSelf: 'center', marginBottom: spacing.lg },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  timerBtn: { width: 58, height: 58, borderRadius: 18, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
-  timerBtnOn: { backgroundColor: colors.accent },
+  // Стоит — panel2; идёт — налит акцентом (это рисует LiquidButton).
+  timerBtn: { width: 58, height: 58, borderRadius: taskControlRadius, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   clock: { color: colors.text, fontSize: 30, lineHeight: 34, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
   earnRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 },
   earned: { color: colors.text, fontSize: fontSize.sm, fontFamily: displayFamily.bold },
   earnSub: { color: colors.textFaint, fontSize: 12, flexShrink: 1 },
-  seg: { flexDirection: 'row', gap: 2, padding: 3, borderRadius: radius.md, backgroundColor: colors.panel2, marginHorizontal: spacing.md },
-  segBtn: { flex: 1, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm },
-  segOn: { backgroundColor: colors.raise },
-  segText: { color: colors.textFaint, fontSize: 12.5, fontWeight: '500' },
-  segTextOn: { color: colors.text, fontWeight: '600' },
-  sheetBody: { paddingHorizontal: spacing.md, paddingTop: 6, paddingBottom: spacing.lg },
+  // Вкладки шита — общий Segmented: дорожка panel2, подписи тише обычного.
+  segWrap: { marginHorizontal: screenPadding },
+  seg: { backgroundColor: colors.panel2 },
+  segText: { color: colors.textFaint },
+  sheetBody: { paddingHorizontal: screenPadding, paddingTop: 6, paddingBottom: spacing.lg },
+  // Подпись дня в «Истории».
   label: { color: colors.textFaint, fontSize: 10.5, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, paddingTop: 12, paddingBottom: 6 },
+  // «Сведения»: блоки с подписью (Block) друг под другом, как в листах.
+  details: { gap: spacing.md, paddingTop: spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 11, borderRadius: 999, backgroundColor: colors.panel2 },
-  chipOn: { backgroundColor: colors.raise },
-  chipText: { color: colors.textDim, fontSize: 13, fontWeight: '500', maxWidth: 200 },
-  chipTextOn: { color: colors.text, fontWeight: '600' },
-  rows: { marginTop: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44, paddingVertical: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  rowFirst: { borderTopWidth: 0 },
-  rowK: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
-  rowV: { color: colors.textDim, fontSize: 13, flexShrink: 1 },
-  rowVWarn: { color: colors.warn, fontWeight: '700' },
-  rateInput: { width: 84, textAlign: 'right', color: colors.text, fontSize: fontSize.sm, backgroundColor: colors.panel2, borderWidth: 0, borderRadius: radius.sm, paddingVertical: 6, paddingHorizontal: 8 },
+  // Срок в строке «Дедлайн» — жирным, цвет по состоянию, как в строках задач:
+  // просрочен — danger, в пределах суток — accentInk, дальше — textDim.
+  // Прежде здесь брался токен warn — в палитре его нет, и срок рисовался
+  // чёрным системным цветом.
+  dueSet: { color: colors.textDim, fontWeight: '700' },
+  dueOverdue: { color: colors.danger },
+  dueSoon: { color: colors.accentInk },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  deleteBtn: { width: buttonHeight, height: buttonHeight, borderRadius: radius.md, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
+  deleteBtn: { width: buttonHeight, height: buttonHeight, borderRadius: buttonRadius, backgroundColor: colors.panel2, alignItems: 'center', justifyContent: 'center' },
   histHead: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm, paddingTop: 10 },
   histCount: { color: colors.textDim, fontSize: 13 },
   histNum: { color: colors.text, fontSize: fontSize.sm, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
   hrow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 46, paddingVertical: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   hrowFirst: { borderTopWidth: 0 },
-  hrowRun: { backgroundColor: colors.accentMuted, marginHorizontal: -spacing.md, paddingHorizontal: spacing.md, borderTopWidth: 0, borderRadius: radius.sm, marginTop: 8 },
+  hrowRun: { backgroundColor: colors.accentMuted, marginHorizontal: -screenPadding, paddingHorizontal: screenPadding, borderTopWidth: 0, borderRadius: radius.sm, marginTop: 8 },
   hTime: { width: 96, color: colors.textDim, fontSize: 13, fontVariant: ['tabular-nums'] },
   hNote: { flex: 1, color: colors.textFaint, fontSize: 12 },
   hDur: { color: colors.text, fontSize: fontSize.sm, fontFamily: displayFamily.bold, fontVariant: ['tabular-nums'] },
-  sheetFoot: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: insets.bottom + spacing.md, backgroundColor: colors.panel },
+  sheetFoot: { paddingHorizontal: screenPadding, paddingTop: spacing.sm, paddingBottom: insets.bottom + spacing.md, backgroundColor: colors.panel },
 });

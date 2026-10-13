@@ -9,6 +9,12 @@
 // полосы, наполовину бледное, наполовину яркое — как на настоящем барабане.
 // Без анимации на каждое число: дёшево и при сотнях строк.
 //
+// Заливка полосы — на верхнем слое и непрозрачная: она закрывает бледное
+// число под собой. До 11 октября 2026 заливка лежала отдельным видом под
+// списком, верхний слой был прозрачным, и бледное мелкое число просвечивало
+// из-под крупного — выбранное значение двоилось («21 : 02» с тенью). Держит
+// mobile/tests/wheelPicker.test.js.
+//
 // По кругу — повторением списка: значение стоит в средней копии, после
 // остановки барабан незаметно возвращается в неё же.
 import { useEffect, useMemo, useRef } from 'react';
@@ -64,7 +70,6 @@ export default function WheelPicker({ values, value, onChange, format = String, 
 
   return (
     <View style={[styles.wrap, { width }]} accessibilityRole="adjustable" accessibilityLabel={accessibilityLabel} accessibilityValue={{ text: format(value) }}>
-      <View style={styles.band} pointerEvents="none" />
       <Animated.ScrollView
         ref={ref}
         onScroll={onScroll}
@@ -85,7 +90,7 @@ export default function WheelPicker({ values, value, onChange, format = String, 
           <View key={i} style={styles.row}><Text style={styles.faint}>{format(v)}</Text></View>
         ))}
       </Animated.ScrollView>
-      <View style={styles.window} pointerEvents="none">
+      <View style={styles.window} pointerEvents="none" testID="wheel-window">
         <Animated.View style={strip}>
           {rows.map((v, i) => (
             <View key={i} style={styles.row}><Text style={styles.strong}>{format(v)}</Text></View>
@@ -99,14 +104,10 @@ export default function WheelPicker({ values, value, onChange, format = String, 
 const makeStyles = (colors) => StyleSheet.create({
   wrap: { height: WHEEL_ITEM_H * VISIBLE },
   pad: { paddingVertical: WHEEL_ITEM_H * Math.floor(VISIBLE / 2) },
-  // Полоса выбора посередине.
-  band: {
-    position: 'absolute', left: 0, right: 0, top: WHEEL_ITEM_H * Math.floor(VISIBLE / 2), height: WHEEL_ITEM_H,
-    borderRadius: radius.md, backgroundColor: colors.panel2,
-  },
+  // Полоса выбора посередине: непрозрачная заливка закрывает бледный список.
   window: {
     position: 'absolute', left: 0, right: 0, top: WHEEL_ITEM_H * Math.floor(VISIBLE / 2), height: WHEEL_ITEM_H,
-    overflow: 'hidden',
+    overflow: 'hidden', borderRadius: radius.md, backgroundColor: colors.panel2,
   },
   row: { height: WHEEL_ITEM_H, alignItems: 'center', justifyContent: 'center' },
   faint: { color: colors.textFaint, fontSize: 18, fontVariant: ['tabular-nums'] },

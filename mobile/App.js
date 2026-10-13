@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from './src/lib/keyboard';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
@@ -12,7 +13,8 @@ import Toast from './src/components/Toast';
 import BottomSheet from './src/components/BottomSheet';
 import { useColors, useThemeMode } from './src/theme';
 import { useAppStore } from './src/store/useAppStore';
-import { prepareAndroidChannel, rescheduleAll } from './src/lib/notifications';
+import { prepareAndroidChannel } from './src/lib/notifications';
+import { startReminderSync } from './src/lib/reminderSync';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -34,13 +36,14 @@ export default function App() {
 
   // Система хранит расписание уведомлений отдельно от нашего state, и
   // после синхронизации с другого устройства они расходятся — поэтому на
-  // старте (когда данные уже подняты из хранилища) собираем его заново.
+  // старте (когда данные уже подняты из хранилища) собираем его заново, а
+  // дальше держим в ногу с данными (lib/reminderSync.js): правки задач,
+  // приём из облака, возвращение в приложение.
   const hydrated = useAppStore((s) => s.hasHydrated);
   useEffect(() => {
-    if (!hydrated) return;
-    const { tasks, settings } = useAppStore.getState();
-    prepareAndroidChannel(settings.lang);
-    rescheduleAll(tasks, settings.lang, settings.notifyEnabled !== false);
+    if (!hydrated) return undefined;
+    prepareAndroidChannel(useAppStore.getState().settings.lang);
+    return startReminderSync();
   }, [hydrated]);
 
   useEffect(() => {
@@ -65,16 +68,27 @@ export default function App() {
     colors: { ...base.colors, background: colors.bg, card: colors.panel, text: colors.text, border: colors.border, primary: colors.accent },
   };
 
+  // KeyboardProvider отдаёт высоту клавиатуры по кадрам — и для окна Modal:
+  // нижний лист на Android едет вместе с клавиатурой (components/BottomSheet.js).
+  // Берётся из lib/keyboard.js: там, где нативной части библиотеки нет (Expo
+  // Go на iOS), это просто обёртка, и приложение не падает на старте.
+  // Приложение рисуется под системными панелями (edge-to-edge), и провайдер не
+  // должен отбирать у него эти поля: без двух флагов там, где RN не сообщает
+  // edge-to-edge (Expo Go), он сдвигал корень под строку состояния и над
+  // панелью навигации — под таббаром появлялась полоса фона окна. Где RN
+  // edge-to-edge сообщает (сборка с targetSdk 35+), флаги и так включены.
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <NavigationContainer theme={navTheme}>
-          <RootNavigator />
-        </NavigationContainer>
-        <Toast />
-        <BottomSheet />
-        <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
-      </SafeAreaProvider>
+      <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+        <SafeAreaProvider>
+          <NavigationContainer theme={navTheme}>
+            <RootNavigator />
+          </NavigationContainer>
+          <Toast />
+          <BottomSheet />
+          <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

@@ -1,5 +1,8 @@
 // Часовая сетка «Времени»: день, четыре дня или неделя — записи времени
-// блоками, дедлайны полосой «весь день», красная черта «сейчас».
+// блоками, дедлайны полосой «весь день», красная черта «сейчас». Под блоками
+// записей — плановый слой: «время работы» открытых задач (core/slots.js) полосой
+// во всю ширину столбца, контуром цвета проекта. Полосы не таскаются (пока);
+// нажатие открывает задачу.
 //
 // Неделя сделана как в мобильном Google Calendar: семь столбцов помещаются
 // целиком, без горизонтальной прокрутки, ради этого узкая колонка времени
@@ -23,6 +26,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import Text from './AppText';
 import Agenda from '../core/agenda.js';
+import Slots from '../core/slots.js';
 import { useColors, spacing, radius, fontSize } from '../theme';
 import { t } from '../lib/i18n';
 
@@ -45,26 +49,33 @@ export const hmOf = (ms) => { const d = new Date(ms); return `${pad2(d.getHours(
 /**
  * @param tasks — уже отобранные фильтром; @param from/days — отрезок сетки;
  * @param enabled — жесты работают только на вкладке в фокусе;
- * @param onOpenDay(dayStartMs); @param onTapBlock(taskId, index);
+ * @param dayNames — шапка дней (буква и число); «Сегодня» показывает один
+ *   день под неделей, где день уже выбран, и шапку не рисует;
+ * @param onOpenDay(dayStartMs) — тап по дню в шапке; @param onTapBlock(taskId, index);
  * @param onTapDeadline(taskId); @param onCreate({start, end});
- * @param onMove(taskId, index, start, end).
+ * @param onMove(taskId, index, start, end);
+ * @param onTapPlanned(taskId) — нажатие по плановой полосе; без него — как
+ *   по дедлайну (открыть задачу).
  */
 export default function AgendaGrid({
-  tasks, projects, from, days, nowMs, lang, enabled = true, bottomPadding = 0,
-  onOpenDay, onTapBlock, onTapDeadline, onCreate, onMove,
+  tasks, projects, from, days, nowMs, lang, enabled = true, bottomPadding = 0, dayNames = true,
+  onOpenDay, onTapBlock, onTapDeadline, onTapPlanned, onCreate, onMove,
 }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const scrollRef = useRef(null);
   const openedRef = useRef(false);
-  const to = from + days * Agenda.DAY;
+  // Дни сетки — по календарю (addDaysMs), а не прибавлением суток: в день
+  // перевода часов сутки длятся 23 или 25 часов.
+  const to = Agenda.addDaysMs(from, days);
 
   const segments = useMemo(() => Agenda.sessionSegments(tasks, from, to), [tasks, from, to]);
   const deadlines = useMemo(
     () => Agenda.deadlineItems(tasks, from, to).concat(Agenda.repeatGhosts(tasks, from, to)),
     [tasks, from, to],
   );
+  const planned = useMemo(() => Slots.slotItems(tasks, from, to), [tasks, from, to]);
 
   const colorOf = (projectId) => {
     const p = projects.find((x) => x.id === projectId);
@@ -86,15 +97,15 @@ export default function AgendaGrid({
   }, []);
 
   const todayIndex = (() => {
-    const i = Math.round((Agenda.startOfDayMs(nowMs) - from) / Agenda.DAY);
+    const i = Agenda.daysBetween(from, nowMs);
     return i >= 0 && i < days ? i : -1;
   })();
 
   // Геометрия блоков — для проверки «что под пальцем» в жесте.
   const laidByDay = useMemo(() => Array.from({ length: days }, (_, i) => {
-    const dayStart = from + i * Agenda.DAY;
+    const dayStart = Agenda.addDaysMs(from, i);
     return Agenda.layoutOverlaps(segments.filter((s) => s.dayIndex === i)).map((seg) => {
-      const top = ((seg.start - dayStart) / Agenda.DAY) * GRID_H;
+      const top = Agenda.dayFraction(seg.start) * GRID_H;
       const height = Math.max(16, (seg.ms / Agenda.DAY) * GRID_H);
       const w = (colWidth - 2) / seg.cols;
       return { ...seg, dayStart, top, height, left: 1 + seg.col * w, width: w - 1 };
@@ -111,8 +122,8 @@ export default function AgendaGrid({
   const pointAt = (x, y) => {
     const dayIndex = Math.max(0, Math.min(days - 1, Math.floor(x / colWidth)));
     const frac = Math.max(0, Math.min(1, y / GRID_H));
-    const dayStart = from + dayIndex * Agenda.DAY;
-    return { dayIndex, dayStart, ms: dayStart + frac * Agenda.DAY };
+    const dayStart = Agenda.addDaysMs(from, dayIndex);
+    return { dayIndex, dayStart, ms: Agenda.atDayFraction(dayStart, frac) };
   };
 
   const hitBlock = (x, y) => {
@@ -164,13 +175,14 @@ export default function AgendaGrid({
       let next;
       if (d.kind === 'create') {
         const edge = Agenda.snapMinutes(point.ms, AG_SNAP_MIN);
-        const a = Math.min(d.dayStart + Agenda.DAY, Math.max(d.dayStart, Math.min(edge, d.anchor)));
-        const b = Math.min(d.dayStart + Agenda.DAY, Math.max(edge, d.anchor));
+        const dayEnd = Agenda.addDaysMs(d.dayStart, 1);
+        const a = Math.min(dayEnd, Math.max(d.dayStart, Math.min(edge, d.anchor)));
+        const b = Math.min(dayEnd, Math.max(edge, d.anchor));
         next = { ...d, start: a, end: b, moved: true };
       } else if (d.kind === 'resize') {
         // Растягивают в пределах своего дня: день берётся у блока, высота —
         // у пальца, даже если он уехал в соседний столбец.
-        const ms = d.dayStart + Math.max(0, Math.min(1, e.y / GRID_H)) * Agenda.DAY;
+        const ms = Agenda.atDayFraction(d.dayStart, Math.max(0, Math.min(1, e.y / GRID_H)));
         const span = Agenda.clampSpan(d.dayStart, d.start, Agenda.snapMinutes(ms, AG_SNAP_MIN), AG_MIN_MIN);
         next = { ...d, start: span.start, end: span.end, moved: true };
       } else {
@@ -201,12 +213,11 @@ export default function AgendaGrid({
   const scrolling = !drag;
 
   const ghost = drag ? (() => {
-    const dayIndex = Math.round((Agenda.startOfDayMs(drag.start) - from) / Agenda.DAY);
+    const dayIndex = Agenda.daysBetween(from, drag.start);
     if (dayIndex < 0 || dayIndex >= days) return null;
-    const dayStart = from + dayIndex * Agenda.DAY;
     return {
       left: dayIndex * colWidth + 1,
-      top: ((drag.start - dayStart) / Agenda.DAY) * GRID_H,
+      top: Agenda.dayFraction(drag.start) * GRID_H,
       height: Math.max(16, ((drag.end - drag.start) / Agenda.DAY) * GRID_H),
       width: colWidth - 2,
       label: `${hmOf(drag.start)}–${hmOf(drag.end)}`,
@@ -216,23 +227,25 @@ export default function AgendaGrid({
   return (
     <View style={styles.container}>
       {/* Шапка дней: буква и число. */}
-      <View style={styles.dayNames}>
-        <View style={{ width: GUTTER }} />
-        {Array.from({ length: days }, (_, i) => {
-          const d = new Date(from + i * Agenda.DAY);
-          const isToday = i === todayIndex;
-          return (
-            <Pressable key={i} style={[styles.dayName, { width: colWidth }]} onPress={() => onOpenDay(d.getTime())}>
-              <Text style={[styles.dow, isToday && styles.dowToday]}>
-                {t(lang, WEEKDAY_KEY[d.getDay()]).slice(0, dense ? 1 : 2)}
-              </Text>
-              <View style={[styles.dnum, isToday && styles.dnumToday]}>
-                <Text style={[styles.dnumText, isToday && styles.dnumTextToday]}>{d.getDate()}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+      {dayNames ? (
+        <View style={styles.dayNames} testID="agenda-day-names">
+          <View style={{ width: GUTTER }} />
+          {Array.from({ length: days }, (_, i) => {
+            const d = new Date(Agenda.addDaysMs(from, i));
+            const isToday = i === todayIndex;
+            return (
+              <Pressable key={i} style={[styles.dayName, { width: colWidth }]} onPress={() => onOpenDay?.(d.getTime())}>
+                <Text style={[styles.dow, isToday && styles.dowToday]}>
+                  {t(lang, WEEKDAY_KEY[d.getDay()]).slice(0, dense ? 1 : 2)}
+                </Text>
+                <View style={[styles.dnum, isToday && styles.dnumToday]}>
+                  <Text style={[styles.dnumText, isToday && styles.dnumTextToday]}>{d.getDate()}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       {deadlines.length ? (
         <View style={styles.allDay}>
@@ -280,6 +293,26 @@ export default function AgendaGrid({
                   в режиме дня она заливала бы всю сетку. */}
               {laidByDay.map((laid, i) => (
                 <View key={i} style={[styles.col, { width: colWidth }, days > 1 && i === todayIndex && styles.colToday]}>
+                  {/* Плановый слой — раньше блоков, а значит под ними. */}
+                  {planned.filter((p) => p.dayIndex === i).map((p) => {
+                    const tint = colorOf(p.projectId);
+                    const height = Math.max(16, ((p.end - p.start) / Agenda.DAY) * GRID_H);
+                    return (
+                      <Pressable
+                        key={`${p.taskId}-${p.slotId}-${p.start}`}
+                        testID={`agenda-plan-${p.taskId}-${p.slotId}-${p.start}`}
+                        onPress={() => (onTapPlanned || onTapDeadline)(p.taskId)}
+                        accessibilityLabel={`${t(lang, 'agenda.planned')}: ${titleOf(p.taskId)}`}
+                        style={[styles.plan, {
+                          top: Agenda.dayFraction(p.start) * GRID_H, height, borderColor: tint, backgroundColor: `${tint}14`,
+                        }]}
+                      >
+                        {!dense && height >= 24 ? (
+                          <Text style={styles.planName} numberOfLines={1}>{titleOf(p.taskId)}</Text>
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
                   {laid.map((seg) => {
                     const tint = colorOf(seg.projectId);
                     const dragging = drag && drag.kind !== 'create' && drag.taskId === seg.taskId && drag.index === seg.index;
@@ -313,7 +346,7 @@ export default function AgendaGrid({
                 <View
                   pointerEvents="none"
                   style={[styles.now, {
-                    top: ((nowMs - Agenda.startOfDayMs(nowMs)) / Agenda.DAY) * GRID_H,
+                    top: Agenda.dayFraction(nowMs) * GRID_H,
                     left: todayIndex * colWidth,
                     width: colWidth,
                   }]}
@@ -363,6 +396,11 @@ const makeStyles = (colors) => StyleSheet.create({
   lineHalf: { opacity: 0.5 },
   col: { height: GRID_H, borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: colors.borderSoft },
   colToday: { backgroundColor: colors.accentMuted },
+
+  // Плановая полоса: контур цвета проекта (цвет и заливка — на месте, из
+  // проекта), во всю ширину столбца, под блоками записей.
+  plan: { position: 'absolute', left: 1, right: 1, borderRadius: 5, borderWidth: 1.5, paddingHorizontal: 3, paddingTop: 1, overflow: 'hidden' },
+  planName: { color: colors.textDim, fontSize: 9, lineHeight: 11 },
 
   ev: {
     position: 'absolute', borderRadius: 5, borderLeftWidth: 2,

@@ -1,8 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
-import { useColors, spacing, radius } from '../theme';
+import MainTabBar from '../navigation/MainTabBar';
+import { PendingTabHeader, TAB_TITLES } from './TabHeader';
+import { useAppStore } from '../store/useAppStore';
+import { t } from '../lib/i18n';
+import { useColors, spacing, screenPadding, radius, taskControlRadius, taskCheckRadius } from '../theme';
 
 // Заглушки на время загрузки. Смысл не в украшении: приложение читает данные
 // из хранилища не мгновенно, а тяжёлая вкладка (171 строка задач, календарь
@@ -10,6 +13,12 @@ import { useColors, spacing, radius } from '../theme';
 // появится, и переход от него к готовому экрану выглядит как рывок.
 // Скелетон повторяет будущую раскладку, поэтому содержимое как бы
 // проявляется на своих местах.
+//
+// Грузится только содержимое страницы. Шапка (название вкладки и кнопки) и
+// нижняя панель вкладок у всех экранов одни и те же, уже готовы и не
+// пульсируют ни при запуске, ни при первом заходе на вкладку: заглушки
+// рисуют их настоящими — название в шапке (PendingTabHeader) и саму панель
+// (MainTabBar, ниже в AppSkeleton), а полосы и пульс — только в странице.
 //
 // У каждой вкладки свой — по её нынешней раскладке (колода, инбокс, неделя,
 // календарь, меню). AppSkeleton — запуск: «Проекты» и панель вкладок.
@@ -20,7 +29,7 @@ import { useColors, spacing, radius } from '../theme';
 // драйвер) и не отвлекает.
 const PULSE_MS = 900;
 
-export function Skeleton({ width, height = 14, radius: r = radius.sm, style }) {
+export function Skeleton({ width, height = 14, radius: r = radius.sm, style, testID = 'skeleton' }) {
   const colors = useColors();
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -37,6 +46,7 @@ export function Skeleton({ width, height = 14, radius: r = radius.sm, style }) {
 
   return (
     <Animated.View
+      testID={testID}
       style={[
         { width, height, borderRadius: r, backgroundColor: colors.panel2, opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] }) },
         style,
@@ -45,34 +55,29 @@ export function Skeleton({ width, height = 14, radius: r = radius.sm, style }) {
   );
 }
 
-/** Шапка вкладки: заголовок и круглые кнопки справа. На iOS 26 шапка
- *  нативная и уже стоит над экраном — своей не рисуем (кроме запуска). */
-function SkHeader({ buttons = 1, wide = false, force = false }) {
-  const insets = useSafeAreaInsets();
-  const s = useStyles();
+/** Шапка вкладки — настоящая, не заглушка: полос и пульса в ней нет. Под
+ *  общей шапкой вкладок (TabHeader.js) она стоит на месте и сразу показывает
+ *  название, кнопки приходят вместе с экраном; вне её (запуск) — то же
+ *  название шапкой в странице. На iOS 26 шапка нативная и уже стоит над
+ *  экраном — своей не рисуем (кроме запуска).
+ *  @param tab вкладка, чьё название стоит в шапке */
+function SkHeader({ tab, force = false }) {
   if (IOS_NATIVE_HEADER && !force) return null;
-  return (
-    <View style={[s.header, { paddingTop: insets.top + spacing.sm }]}>
-      <Skeleton width={128} height={24} />
-      <View style={s.row}>
-        {wide ? <Skeleton width={120} height={36} radius={18} /> : null}
-        {Array.from({ length: buttons }, (_, i) => <Skeleton key={i} width={36} height={36} radius={radius.md} />)}
-      </View>
-    </View>
-  );
+  return <PendingTabHeader tab={tab} />;
 }
 
-/** Строка задачи: кружок, две строки текста, круглая кнопка. */
+/** Строка задачи: галочка, две строки текста, кнопка старта — те же
+ *  скруглённые квадраты, что в настоящей строке (TaskRow). */
 function SkTaskRow({ first }) {
   const s = useStyles();
   return (
     <View style={[s.taskRow, !first && s.topLine]}>
-      <Skeleton width={26} height={26} radius={13} />
+      <Skeleton width={24} height={24} radius={taskCheckRadius} />
       <View style={s.taskText}>
         <Skeleton width="62%" height={15} />
         <Skeleton width="38%" height={11} />
       </View>
-      <Skeleton width={38} height={38} radius={19} />
+      <Skeleton width={38} height={38} radius={taskControlRadius} />
     </View>
   );
 }
@@ -98,10 +103,10 @@ function SkListIsland({ rows = 3 }) {
 export function ProjectsSkeleton({ forceHeader = false }) {
   const { width } = useWindowDimensions();
   const s = useStyles();
-  const cardW = width - spacing.lg - 40;
+  const cardW = width - screenPadding - 40;
   return (
     <View style={s.page}>
-      <SkHeader buttons={2} force={forceHeader} />
+      <SkHeader tab="Projects" force={forceHeader} />
       <View style={s.deck}>
         <View style={[s.card, { width: cardW }]}>
           <View style={s.cardHead}>
@@ -131,7 +136,7 @@ export function TasksSkeleton() {
   const s = useStyles();
   return (
     <View style={s.page}>
-      <SkHeader buttons={2} />
+      <SkHeader tab="Tasks" />
       <View style={s.gutter}>
         <View style={s.row}>
           {[52, 86, 72, 64].map((w, i) => <Skeleton key={i} width={w} height={34} radius={17} />)}
@@ -153,7 +158,7 @@ export function TodaySkeleton() {
   const s = useStyles();
   return (
     <View style={s.page}>
-      <SkHeader buttons={3} />
+      <SkHeader tab="Home" />
       <View style={s.gutter}>
         <View style={s.island}>
           <Skeleton width={110} height={14} />
@@ -184,7 +189,7 @@ export function StatsSkeleton() {
   const s = useStyles();
   return (
     <View style={s.page}>
-      <SkHeader buttons={1} wide />
+      <SkHeader tab="Stats" />
       <View style={s.gutter}>
         <Skeleton width="100%" height={42} radius={radius.md} />
         <View style={s.island}>
@@ -216,7 +221,7 @@ export function MenuSkeleton() {
   const s = useStyles();
   return (
     <View style={s.page}>
-      <SkHeader buttons={1} />
+      <SkHeader tab="Menu" />
       <View style={s.gutter}>
         <View style={s.island}>
           <View style={s.row}>
@@ -238,21 +243,33 @@ export function MenuSkeleton() {
   );
 }
 
-/** Запуск приложения: «Проекты» (первая вкладка) и панель вкладок. */
+const LAUNCH_ROUTES = Object.keys(TAB_TITLES).map((name) => ({ key: name, name }));
+
+/** Панель вкладок запуска — настоящая (MainTabBar), «Проекты» выбраны, как в
+ *  первый показ. Ничего не нажимается: навигатора ещё нет. Живёт по языку из
+ *  стора: до чтения хранилища это язык по умолчанию. */
+function LaunchTabBar() {
+  const lang = useAppStore((s) => s.settings.lang);
+  const props = useMemo(() => ({
+    state: { index: 0, routes: LAUNCH_ROUTES },
+    descriptors: Object.fromEntries(LAUNCH_ROUTES.map((r) => [r.key, { options: { tabBarLabel: t(lang, TAB_TITLES[r.name]) } }])),
+    navigation: { navigate() {} },
+  }), [lang]);
+  return (
+    <View pointerEvents="none" testID="skeleton-tab-bar">
+      <MainTabBar {...props} />
+    </View>
+  );
+}
+
+/** Запуск приложения: «Проекты» (первая вкладка) и панель вкладок. Шапка с
+ *  названием и панель — настоящие; полосы — только в содержимом страницы. */
 export function AppSkeleton() {
-  const insets = useSafeAreaInsets();
   const s = useStyles();
   return (
     <View style={s.page}>
       <ProjectsSkeleton forceHeader />
-      <View style={[s.tabBar, { paddingBottom: spacing.sm + insets.bottom }]}>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <View key={i} style={s.tabItem}>
-            <Skeleton width={24} height={22} radius={6} />
-            <Skeleton width={44} height={9} />
-          </View>
-        ))}
-      </View>
+      <LaunchTabBar />
     </View>
   );
 }
@@ -264,13 +281,12 @@ function useStyles() {
 
 const makeStyles = (colors) => StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  gutter: { paddingHorizontal: spacing.md, gap: spacing.md },
+  gutter: { paddingHorizontal: screenPadding, gap: spacing.md },
   island: { backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   islandFlat: { backgroundColor: colors.panel, borderRadius: radius.lg, overflow: 'hidden' },
   topLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  deck: { flex: 1, flexDirection: 'row', gap: spacing.sm, paddingLeft: spacing.lg - 2 },
+  deck: { flex: 1, flexDirection: 'row', gap: spacing.sm, paddingLeft: screenPadding },
   // Ширина — как у настоящей карточки (задана в разметке), высота — во всю колоду.
   card: { backgroundColor: colors.panel, borderRadius: radius.xl, overflow: 'hidden', gap: spacing.sm },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 9, padding: spacing.md, paddingBottom: 0 },
@@ -280,12 +296,10 @@ const makeStyles = (colors) => StyleSheet.create({
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 64, paddingHorizontal: spacing.md },
   taskText: { flex: 1, gap: 7 },
   groupLabel: { marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.xs },
-  listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52, paddingHorizontal: spacing.lg },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52, paddingHorizontal: screenPadding },
   bars: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 90 },
   barCol: { alignItems: 'center', gap: 6 },
   calRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  tabBar: { flexDirection: 'row', backgroundColor: colors.panel, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: spacing.sm },
-  tabItem: { flex: 1, alignItems: 'center', gap: 5 },
 });
 
 export default Skeleton;

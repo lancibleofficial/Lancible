@@ -1,22 +1,22 @@
 import { useLayoutEffect, useState } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
-import Text from '../components/AppText';
+import { View, FlatList, ScrollView, StyleSheet } from 'react-native';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
 import PrimaryButton from '../components/PrimaryButton';
+import EmptyState from '../components/EmptyState';
 import DocumentList from '../components/DocumentList';
 import { useAppStore } from '../store/useAppStore';
 import DocCore from '../core/doc.js';
-import { useColors, spacing, radius, typography } from '../theme';
+import { useColors, spacing, screenPadding, radius } from '../theme';
 import { t } from '../lib/i18n';
 import { leftTitleOptions } from '../navigation/nativeHeader';
 
 // Раздел «Документы» на телефоне: тексты отдельно от задач — те же, что на
 // десктопе и в вебе (state.documents, ездят в синхронизации). Список с
 // поиском; открытие — полноэкранный редактор (EditorScreen).
-// С projectId в параметрах (меню проекта, круг 5) — только документы этого
-// проекта, и новый документ сразу кладётся в него. Строки — общие
-// (components/DocumentList.js) с вкладкой «Документы» на странице проекта.
+// С projectId в параметрах (кнопка «Документы» в шапке страницы проекта) —
+// только документы этого проекта, и новый документ сразу кладётся в него.
+// Строки — components/DocumentList.js.
 export default function DocumentsScreen({ navigation, route }) {
   const colors = useColors();
   const styles = makeStyles(colors);
@@ -35,8 +35,29 @@ export default function DocumentsScreen({ navigation, route }) {
     navigation.setOptions(leftTitleOptions(project ? `${t(lang, 'docs.title')} · ${project.name}` : t(lang, 'docs.title')));
   }, [navigation, project, lang]);
 
-  function open(id) { navigation.navigate('Editor', { kind: 'doc', id }); }
+  function open(id) { navigation.navigate('Editor', { id }); }
   function onNew() { open(createDocument(projectId)); }
+
+  // Документов нет совсем (в разделе или в проекте) — пустой экран по
+  // центру с той же «Новый документ», а поиск и кнопка внизу на это время
+  // прячутся: искать нечего, а акцентная кнопка на экране одна.
+  if (!own.length) {
+    return (
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.emptyWrap} showsVerticalScrollIndicator={false}>
+          <EmptyState
+            art="docs"
+            title={project ? t(lang, 'empty.project_docs') : t(lang, 'docs.empty_list')}
+            text={project ? t(lang, 'empty.project_docs_text') : t(lang, 'docs.empty_hint')}
+            actionLabel={t(lang, 'docs.new')}
+            actionIcon="plus"
+            onAction={onNew}
+            primary
+          />
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -56,10 +77,7 @@ export default function DocumentsScreen({ navigation, route }) {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={null}
         renderItem={() => (list.length ? <DocumentList documents={list} onOpen={open} /> : (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{documents.length ? t(lang, 'docs.nothing_found') : t(lang, 'docs.empty_list')}</Text>
-            {documents.length ? null : <Text style={styles.emptyHint}>{t(lang, 'docs.empty_hint')}</Text>}
-          </View>
+          <EmptyState size="sm" art="search" title={t(lang, 'docs.nothing_found')} text={t(lang, 'empty.search_text')} />
         ))}
       />
       <View style={styles.footer}>
@@ -71,11 +89,9 @@ export default function DocumentsScreen({ navigation, route }) {
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: spacing.lg, marginTop: spacing.md, paddingHorizontal: spacing.md, height: 44, borderRadius: radius.md, backgroundColor: colors.panel },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginHorizontal: screenPadding, marginTop: spacing.md, paddingHorizontal: spacing.md, height: 44, borderRadius: radius.md, backgroundColor: colors.panel },
   search: { flex: 1, color: colors.text, backgroundColor: 'transparent', borderWidth: 0, paddingVertical: 0 },
-  listContent: { padding: spacing.lg, flexGrow: 1 },
-  empty: { alignItems: 'center', paddingTop: spacing.xxl, gap: spacing.sm, paddingHorizontal: spacing.lg },
-  emptyTitle: { ...typography.body, color: colors.textDim },
-  emptyHint: { ...typography.caption, color: colors.textFaint, textAlign: 'center' },
-  footer: { padding: spacing.lg, paddingTop: spacing.sm },
+  listContent: { paddingHorizontal: screenPadding, paddingVertical: spacing.lg, flexGrow: 1 },
+  emptyWrap: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg, paddingBottom: spacing.xxl * 2 },
+  footer: { paddingHorizontal: screenPadding, paddingBottom: spacing.lg, paddingTop: spacing.sm },
 });
