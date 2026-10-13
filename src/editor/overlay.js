@@ -47,7 +47,7 @@ export class InkOverlay {
       canDraw: () => this.on && (this.ctx.canEdit ? this.ctx.canEdit() : this.ctx.view.editable),
       // Отмена — общая с текстом: штрих лежит шагом в истории документа.
       history: { undo: () => this.ctx.undo(), redo: () => this.ctx.redo() },
-      onSelection: () => this.toolbar.render(),
+      onSelection: () => { this.toolbar.render(); if (ctx.onSelection) ctx.onSelection(); },
     });
 
     // Колесо и пальцы над холстом всё равно прокручивают текст.

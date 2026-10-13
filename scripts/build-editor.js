@@ -12,7 +12,8 @@
 //  - src/renderer/editor.js — для десктопа и веба (window.LancibleEditor);
 //    в web/ его кладёт sync-web-assets.js вместе с app.js;
 //  - mobile/src/editor/editorBundle.js — то же строкой плюс стили редактора
-//    для WebView телефона.
+//    для WebView телефона, его окно (EDITOR_VIEWPORT) и версия протокола
+//    нативной панели (EDITOR_PROTOCOL) — обе из src/editor/host.js.
 //
 // В шапке обоих файлов — отпечаток исходников. tests/unit/editor-bundle.test.js
 // сверяет его с исходниками и краснеет, если редактор поправили, а собрать
@@ -68,6 +69,16 @@ function editorCss() {
   return [frames.join('\n'), shared.join('\n'), section].join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\n{2,}/g, '\n');
 }
 
+/** Окно WebView и версия протокола телефона — из src/editor/host.js, чтобы
+ *  DocEditor брал их из сборки, а не держал свою копию строки. */
+function hostConstants() {
+  const src = read(path.join(SRC, 'host.js'));
+  const viewport = /export const VIEWPORT = '([^']+)'/.exec(src);
+  const protocol = /export const PROTOCOL = (\d+);/.exec(src);
+  if (!viewport || !protocol) throw new Error('в src/editor/host.js нет VIEWPORT или PROTOCOL');
+  return { viewport: viewport[1], protocol: +protocol[1] };
+}
+
 function hash() {
   const h = crypto.createHash('sha256');
   for (const f of sourceFiles()) h.update(read(f));
@@ -94,7 +105,10 @@ async function build() {
   fs.writeFileSync(OUT_RENDERER, head + js);
   fs.mkdirSync(path.dirname(OUT_MOBILE), { recursive: true });
   const css = editorCss();
-  fs.writeFileSync(OUT_MOBILE, `${head}export const EDITOR_HASH = ${JSON.stringify(stamp)};\nexport const EDITOR_CSS = ${JSON.stringify(css)};\nexport const EDITOR_JS = ${JSON.stringify(js)};\n`);
+  const hc = hostConstants();
+  fs.writeFileSync(OUT_MOBILE, `${head}export const EDITOR_HASH = ${JSON.stringify(stamp)};\n`
+    + `export const EDITOR_PROTOCOL = ${hc.protocol};\nexport const EDITOR_VIEWPORT = ${JSON.stringify(hc.viewport)};\n`
+    + `export const EDITOR_CSS = ${JSON.stringify(css)};\nexport const EDITOR_JS = ${JSON.stringify(js)};\n`);
   const kb = (n) => `${Math.round(n / 1024)} КБ`;
   console.log(`[build-editor] ${stamp}: editor.js ${kb(js.length)}, стили для телефона ${kb(css.length)}`);
 }
@@ -103,4 +117,4 @@ if (require.main === module) {
   build().catch((e) => { console.error(`[build-editor] ${e.message}`); process.exit(1); });
 }
 
-module.exports = { hash, editorCss, OUT_RENDERER, OUT_MOBILE };
+module.exports = { hash, editorCss, hostConstants, OUT_RENDERER, OUT_MOBILE };

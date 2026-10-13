@@ -2,17 +2,22 @@
 //
 //   const ed = LancibleEditor.create(el, {
 //     content,                 // контейнер { v, doc, comments, ink } (core/doc.js)
-//     onChange(container),     // после каждой правки (с задержкой 150 мс)
+//     onChange(container),     // после каждой правки (с задержкой 150 мс; с nativeToolbar — сразу)
 //     lang: () => 'ru',        // язык интерфейса
 //     user: () => ({ id, name }),
 //     settings: () => ({...}), onSettings(patch), // вид и рисование
 //     assets,                  // createAssetStore(...) — картинки
 //     placeholder, mobile, toast(msg),
+//     // телефон (host.js, DESIGN.md «Редактор на телефоне: протокол»):
+//     nativeToolbar,           // панель снаружи: веб-панели и панели пера нет
+//     autoHeight,              // высота по тексту, сообщение height
+//     post(msg),               // куда слать сообщения хозяину
+//     zoom,                    // масштаб текста 0.8–2
 //   });
 //
 // Всё, что меняет документ, — команды из commands.js; всё, что про
 // интерфейс, — здесь и в соседних файлах.
-import { EditorState, Plugin, PluginKey, TextSelection, NodeSelection } from 'prosemirror-state';
+import { EditorState, Plugin, PluginKey, Selection, TextSelection, NodeSelection } from 'prosemirror-state';
 import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
 import { DOMParser as PMDOMParser, DOMSerializer, Node as PMNode } from 'prosemirror-model';
 import { history, closeHistory } from 'prosemirror-history';
@@ -35,6 +40,10 @@ import { ChartView, editChart, defaultChart } from './chart.js';
 import { DrawingView } from './drawing.js';
 import { InkOverlay } from './overlay.js';
 import { TaskItemView, CodeBlockView } from './views.js';
+import {
+  HostBridge, commands, KEEP_FOCUS, toolbarState, clampZoom, normalizeHref, dataUrlToBlob, PROTOCOL, VIEWPORT, EXEC_NAMES, ZOOM_MIN, ZOOM_MAX,
+  changeDelay,
+} from './host.js';
 import { TableHandles } from './tablehandles.js';
 import { normalizeInkSettings, defaultInkSettings, clearInkColorCache } from './ink.js';
 import { createAssetStore } from './assets.js';
@@ -43,6 +52,10 @@ import { popup, menu, modal, closePopup } from './ui.js';
 import { translate } from './strings.js';
 
 const N = schema.nodes;
+
+/** Блоки, в конце которых можно писать дальше (focusEnd): после остальных
+ *  — таблицы, картинки, графика, линии — встаёт новый абзац. */
+const WRITE_ON = new Set(['paragraph', 'heading', 'code_block', 'blockquote', 'callout', 'bullet_list', 'ordered_list', 'task_list']);
 
 export const DEFAULT_SETTINGS = {
   // Во всю ширину окна редактора (круг 2, 7 октября 2026); узкая полоса
@@ -180,15 +193,25 @@ class Editor {
     this.opts = opts || {};
     this.mount = mount;
     this.isMobile = !!this.opts.mobile;
+    // Панель снаружи (телефон): кнопки — нативные, команды и состояние ходят
+    // сообщениями (host.js). Хозяин тогда же спрашивает адрес ссылки,
+    // выбирает фото и отдаёт файлы выгрузки.
+    this.host = !!this.opts.nativeToolbar;
+    const rn = typeof window !== 'undefined' && window.ReactNativeWebView;
+    const post = this.opts.post || (this.host && rn ? (m) => rn.postMessage(JSON.stringify(m)) : null);
+    this.bridge = new HostBridge(this, post);
+    this.zoom = clampZoom(this.opts.zoom == null ? 1 : this.opts.zoom);
     this.assets = this.opts.assets || createAssetStore({});
     this.comments = [];
     this.panel = null;
     this.annotating = false;
     this.fullscreen = false;
+    this.onFullscreenKey = (e) => this.escapeFullscreen(e);
     this.dragging = false;
     this.activeDrawing = null;
     this.t = (key, vars) => translate(this.lang(), key, vars);
-    this.emitChange = debounce(() => { if (this.opts.onChange) this.opts.onChange(this.getContent()); }, 150);
+    // Телефону правка — сразу, десктопу и вебу — через 150 мс (host.js: changeDelay).
+    this.emitChange = debounce(() => { if (this.opts.onChange) this.opts.onChange(this.getContent()); }, changeDelay(this.host));
 
     this.buildDom();
     const content = Core.normalizeContainer(this.opts.content);
@@ -215,6 +238,9 @@ class Editor {
       },
     });
     this.view.dispatch(this.view.state.tr.setMeta('led-init', true));
+    // Касание пустого места под текстом — писать дальше (onBlankDown).
+    this.onBlank = (e) => this.onBlankDown(e);
+    this.mount.addEventListener('mousedown', this.onBlank);
     this.overlay = new InkOverlay({
       root: this.root,
       t: this.t,
@@ -235,24 +261,43 @@ class Editor {
       mobile: this.isMobile,
       hidden: () => !!this.settings().inkHidden,
       hide: () => this.hideInk(),
+      // Лассо выделило штрихи — нативной строке пера показать «копия» и «удалить».
+      onSelection: () => { if (this.host) this.bridge.ink(); },
     });
     this.viewport.append(this.overlay.dom);
     // Телефон: панель пера встаёт на место панели редактора (та на время
     // пометок прячется). Плавающая снизу уезжала под нижнее меню приложения.
-    if (this.isMobile) this.toolbar.dom.after(this.overlay.toolbar.dom);
+    // С нативной панелью строка пера тоже нативная — здесь её нет.
+    if (this.host) this.overlay.toolbar.dom.remove();
+    else if (this.isMobile) this.toolbar.dom.after(this.overlay.toolbar.dom);
     else this.root.append(this.overlay.toolbar.dom);
     this.applySettings();
     this.updateUi();
     this.renderStatus();
+    // Строка панели — по ширине сразу, не дожидаясь кадра (toolbar.js).
+    this.toolbar.relayout();
     requestAnimationFrame(() => this.overlay.render());
     this.onThemeChange = () => { clearInkColorCache(); this.overlay.render(); };
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', this.onThemeChange);
+    // Высота по тексту: WebView на странице задачи растёт вместе с ним, а
+    // прокручивает экран вокруг. Высоту хозяин узнаёт сообщением «height».
+    if (this.opts.autoHeight && typeof ResizeObserver === 'function') {
+      this.heightRo = new ResizeObserver(() => this.bridge.height(this.contentHeight()));
+      this.heightRo.observe(this.root);
+      this.bridge.height(this.contentHeight());
+    }
+  }
+
+  /** Высота редактора по содержимому — в CSS px, для хозяина. */
+  contentHeight() {
+    return Math.ceil(this.root.getBoundingClientRect().height);
   }
 
   // --- разметка -------------------------------------------------------------
 
   buildDom() {
-    this.root = h('div', { class: `led${this.isMobile ? ' led-mobile' : ''}` });
+    const mode = `${this.isMobile ? ' led-mobile' : ''}${this.host ? ' led-native' : ''}${this.opts.autoHeight ? ' led-autoheight' : ''}`;
+    this.root = h('div', { class: `led${mode}` });
     this.toolbar = new Toolbar(this);
     this.find = new FindBar(this);
     this.commentsPanel = new CommentsPanel(this);
@@ -269,8 +314,10 @@ class Editor {
     this.toastEl = h('div', { class: 'led-toast', hidden: true, role: 'status' });
     this.slash = new SlashMenu(this);
     this.bubble = new BubbleMenu(this);
+    // С нативной панелью веб-строки нет совсем; объект панели остаётся —
+    // у него остров таблицы и меню, которые exec открывает у курсора.
+    if (!this.host) this.root.append(this.toolbar.dom);
     this.root.append(
-      this.toolbar.dom,
       this.find.dom,
       h('div', { class: 'led-body' }, this.outline, this.viewport, this.commentsPanel.dom),
       this.status,
@@ -283,7 +330,6 @@ class Editor {
       if (!this.toolbar.tableBar.hidden) this.placeTableBar();
     }, { passive: true });
     this.scroller.addEventListener('mouseleave', () => this.tableHandles.scheduleHide());
-    this.root.addEventListener('keydown', (e) => this.onRootKey(e));
     this.mount.append(this.root);
   }
 
@@ -442,6 +488,8 @@ class Editor {
     } else if (tr && tr.selectionSet) this.renderStatus();
     if (tr && tr.selectionSet && this.settings().typewriter) this.typewriterScroll();
     if (this.opts.onFormat) this.opts.onFormat(fs);
+    // Нативной панели — что включено и где курсор (с прореживанием).
+    if (this.host) this.bridge.schedule();
   }
 
   renderStatus() {
@@ -510,6 +558,34 @@ class Editor {
 
   focus() { this.view.focus(); }
 
+  /** Касание пустого места под текстом — писать дальше: курсор в конец,
+   *  фокус в текст (на телефоне — и клавиатура). Пустое место — сама
+   *  страница и её обёртки ниже текста, а не кнопки, меню и картинки на ней.
+   *  На странице задачи телефона поле заметок тянется до низа экрана, и
+   *  пустота под коротким текстом — тоже место для письма (13 октября 2026).
+   *  mousedown, а не click: фокус не успевает уйти из текста, и клавиатура
+   *  на телефоне не мигает. */
+  onBlankDown(e) {
+    if (e.button !== 0 || !this.textEditable()) return;
+    const blank = [this.mount, this.root, this.viewport, this.scroller, this.pageWrap, this.page];
+    if (!blank.includes(e.target) && !(e.target.classList && e.target.classList.contains('led-body'))) return;
+    if (e.clientY < this.view.dom.getBoundingClientRect().bottom) return;
+    e.preventDefault();
+    this.focusEnd();
+  }
+
+  /** Курсор в конец текста и фокус. Последний блок — не текст и не список
+   *  (таблица, картинка, график, линия) — под ним встаёт пустой абзац:
+   *  иначе писать пришлось бы в последнюю ячейку или вместо картинки. */
+  focusEnd() {
+    const { state } = this.view;
+    const last = state.doc.lastChild;
+    let tr = state.tr;
+    if (!last || !WRITE_ON.has(last.type.name)) tr = tr.insert(state.doc.content.size, N.paragraph.create());
+    this.view.dispatch(tr.setSelection(Selection.atEnd(tr.doc)).scrollIntoView());
+    this.view.focus();
+  }
+
   lang() { return (this.opts.lang && this.opts.lang()) || 'ru'; }
 
   user() {
@@ -531,6 +607,7 @@ class Editor {
   setInkSettings(patch) {
     const cur = this.settings().ink;
     this.setSettings({ ink: Object.assign({}, cur, patch) });
+    if (this.host) this.bridge.ink();
   }
 
   applySettings(before) {
@@ -539,6 +616,7 @@ class Editor {
     for (const w of ['narrow', 'normal', 'wide', 'full']) r.classList.toggle(`led-w-${w}`, s.width === w);
     for (const f of ['sans', 'serif', 'mono']) r.classList.toggle(`led-f-${f}`, s.font === f);
     r.style.setProperty('--led-size', `${s.size}px`);
+    r.style.setProperty('--led-zoom', String(this.zoom));
     r.classList.toggle('led-focus-mode', !!s.focus);
     if (this.view) {
       if (before && (before.smart !== s.smart || before.focus !== s.focus)) {
@@ -620,6 +698,21 @@ class Editor {
     if (this.annotating && !this.settings().ink) this.setInkSettings({});
     this.updateUi();
     if (this.opts.onDrawingActive) this.opts.onDrawingActive(this.annotating);
+    if (this.host) this.bridge.ink();
+  }
+
+  /** Масштаб текста (щипок на телефоне): растёт только текст — шрифт
+   *  страницы через --led-zoom, — а галочки, панели и меню остаются своего
+   *  размера. 0.8–2, лишнее обрезается. Возвращает поставленный масштаб. */
+  setZoom(z) {
+    const next = clampZoom(z);
+    if (next === this.zoom) return next;
+    this.zoom = next;
+    this.root.style.setProperty('--led-zoom', String(next));
+    // Пометки держатся за блоки, а блоки сдвинулись.
+    requestAnimationFrame(() => this.overlay.render());
+    if (this.host) this.bridge.schedule();
+    return next;
   }
 
   /** Размер выделенного текста — ступенями от размера текста в «Виде».
@@ -657,14 +750,38 @@ class Editor {
     this.fullscreen = force != null ? !!force : !this.fullscreen;
     this.root.classList.toggle('led-fullscreen', this.fullscreen);
     this.toolbar.syncFullscreen();
+    this.toolbar.relayout();
+    // Esc слушаем на документе и ДО ProseMirror, и только пока редактор
+    // развёрнут. После — нельзя: ProseMirror гасит Esc сам (captureKeyDown),
+    // и событие доходило бы уже отменённым. На корне — тоже: после щелчка по
+    // полю страницы фокус уходит на body и корень молчал бы.
+    document.removeEventListener('keydown', this.onFullscreenKey, true);
+    if (this.fullscreen) document.addEventListener('keydown', this.onFullscreenKey, true);
+    // Хозяину — знать, что поверхность под кнопками окна сменилась (у десктопа
+    // там подложка нативных кнопок, см. syncTitlebarOverlay в app.js).
+    if (this.opts.onFullscreen) this.opts.onFullscreen(this.fullscreen);
     requestAnimationFrame(() => this.overlay.render());
     this.view.focus();
   }
 
-  onRootKey(e) {
-    if (e.key === 'Escape' && this.fullscreen && !e.defaultPrevented && !document.querySelector('#ledmodal-backdrop')) {
-      this.toggleFullscreen(false);
-    }
+  /** Esc выходит из полного экрана — если он не нужен кому-то ближе. Таких
+   *  несколько, и все они видны заранее: открытое меню, окно или нижний лист
+   *  (закроются сами), меню «/», рисунок в правке, поле ввода (поиск,
+   *  комментарий, ссылка — у каждого свой Esc), а чужое окно приложения
+   *  держит фокус на своих кнопках — до него редактор не дотягивается.
+   *  Режим пометок отнимает Esc раньше нас и отменяет событие. */
+  escapeFullscreen(e) {
+    // Esc во время набора через IME (японский, китайский, корейский) отменяет
+    // подсказку набора, а не просит выйти: иначе человек, сбросивший
+    // кандидатов, оказывался бы вышедшим из полного экрана.
+    if (e.isComposing) return;
+    if (e.key !== 'Escape' || !this.fullscreen || e.defaultPrevented) return;
+    if (document.querySelector('.led-pop, #ledmodal-backdrop, .led-sheet-backdrop, .led-slash:not([hidden])')) return;
+    if (this.activeDrawing) return;
+    if (e.target instanceof Element && e.target.closest('input, textarea, select')) return;
+    const focus = document.activeElement;
+    if (focus && focus !== document.body && !this.root.contains(focus)) return;
+    this.toggleFullscreen(false);
   }
 
   /** Остров таблицы — под таблицей с курсором. Таблица выше экрана —
@@ -698,23 +815,36 @@ class Editor {
     setTimeout(() => { input.focus(); input.select(); }, 0);
   }
 
+  /** Прямоугольник курсора — якорь для меню, которые exec открывает без кнопки. */
+  caretAnchor() {
+    try {
+      const c = this.view.coordsAtPos(this.view.state.selection.from);
+      return { left: c.left, right: c.left, top: c.top, bottom: c.bottom, width: 0, height: c.bottom - c.top };
+    } catch {
+      const r = this.page.getBoundingClientRect();
+      return { left: r.left, right: r.left, top: r.top, bottom: r.top, width: 0, height: 0 };
+    }
+  }
+
   editLink(anchorEl) {
     const { view } = this;
     if (!view.editable) return;
     const { state } = view;
     const range = state.selection.empty ? C.markRange(state, schema.marks.link) : null;
     const href = C.formatState(state).link || '';
-    const coords = view.coordsAtPos(state.selection.from);
-    const anchor = anchorEl || { left: coords.left, right: coords.left, top: coords.top, bottom: coords.bottom, width: 0, height: coords.bottom - coords.top };
-    const url = h('input', { class: 'field-sm', value: href, placeholder: 'https://', 'aria-label': this.t('link.url') });
     const needText = state.selection.empty && !range;
+    // Телефон с нативной панелью: адрес спрашивает хозяин своим окном и
+    // отвечает сообщением setLink — поле в WebView прыгало бы под клавиатурой.
+    if (this.host) {
+      this.bridge.send({ type: 'link', href, needText });
+      return;
+    }
+    const anchor = anchorEl || this.caretAnchor();
+    const url = h('input', { class: 'field-sm', value: href, placeholder: 'https://', 'aria-label': this.t('link.url') });
     const text = needText ? h('input', { class: 'field-sm', placeholder: this.t('link.text'), 'aria-label': this.t('link.text') }) : null;
     const apply = () => {
-      let v = url.value.trim();
-      if (v && !/^[a-z][a-z0-9+.-]*:/i.test(v) && !v.startsWith('#') && !v.startsWith('/')) v = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? `mailto:${v}` : `https://${v}`;
       p.close();
-      C.setLink(v || null, text && text.value.trim())(view.state, view.dispatch);
-      view.focus();
+      this.applyLink(url.value, text && text.value);
     };
     const onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); apply(); } };
     url.addEventListener('keydown', onKey);
@@ -727,6 +857,15 @@ class Editor {
         h('div', { class: 'led-spacer' }),
         h('button', { type: 'button', class: 'btn-soft', onclick: apply }, this.t('common.apply')))));
     setTimeout(() => url.focus(), 0);
+  }
+
+  /** Поставить ссылку на выделение (или слово с курсором); пустой адрес —
+   *  снять. text — подпись, если выделения нет. */
+  applyLink(href, text) {
+    const { view } = this;
+    const v = normalizeHref(href);
+    C.setLink(v || null, text ? String(text).trim() : '')(view.state, view.dispatch);
+    view.focus();
   }
 
   openUrl(href) {
@@ -744,10 +883,51 @@ class Editor {
 
   // --- картинки --------------------------------------------------------------------
 
-  pickImage(cb) {
+  /** Выбрать картинку: окно выбора файла, а на телефоне с нативной панелью —
+   *  фото выбирает хозяин (сообщение image-pick) и присылает insertImage.
+   *  cb — картинка не вставляется, а отдаётся (замена, «ещё рядом»). */
+  pickImage(cb, opts) {
     this.pickCb = cb || null;
+    if (this.host && !(opts && opts.input)) {
+      this.bridge.send({ type: 'image-pick', purpose: cb ? 'replace' : 'insert' });
+      return;
+    }
     this.fileInput.value = '';
     this.fileInput.click();
+  }
+
+  /** exec('image'): без arg — выбрать; 'input' — окно выбора файла в самой
+   *  странице; адрес картинки (asset:…, https:, data:) — вставить его. */
+  imageCommand(arg) {
+    if (arg === undefined || arg === 'input') { this.pickImage(null, { input: arg === 'input' }); return; }
+    this.insertHostImage(/^data:/.test(arg) ? { dataUrl: arg } : { src: arg });
+  }
+
+  /** Ответ хозяина на image-pick: { dataUrl, name } — байты фото (кладутся в
+   *  хранилище картинок, asset:…), { src } — готовый адрес, { assetId } —
+   *  картинка, уже лежащая в хранилище, { cancel: true } — передумали. */
+  async insertHostImage(m) {
+    const cb = this.pickCb;
+    this.pickCb = null;
+    if (!m || m.cancel) return;
+    let src = m.src || (m.assetId ? (String(m.assetId).startsWith('asset:') ? String(m.assetId) : `asset:${m.assetId}`) : '');
+    if (!src && m.dataUrl) {
+      try {
+        const blob = dataUrlToBlob(m.dataUrl);
+        const file = new File([blob], m.name || 'photo', { type: blob.type || m.mime || 'image/jpeg' });
+        if (!cb) { await this.insertFiles([file]); return; }
+        src = await this.assets.put(file);
+      } catch (e) {
+        this.bridge.send({ type: 'error', message: `insertImage: ${e && e.message}` });
+        return;
+      }
+    }
+    if (!src) return;
+    if (cb) cb(src);
+    else {
+      C.insertImage({ src, alt: m.name ? String(m.name).replace(/\.[a-z0-9]+$/i, '') : '' })(this.view.state, this.view.dispatch);
+      this.view.focus();
+    }
   }
 
   async onFiles(e) {
@@ -880,6 +1060,15 @@ mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs
   }
 
   async exportAs(kind) {
+    // В WebView скачивания нет: файл отдаёт хозяин (поделиться, сохранить).
+    if (this.host) {
+      const md = kind === 'md';
+      this.bridge.send({
+        type: 'export', kind, name: this.fileName(md ? 'md' : 'html'), mime: md ? 'text/markdown' : 'text/html',
+        text: md ? Core.docToMarkdown(this.view.state.doc.toJSON()) : await this.exportHtml(),
+      });
+      return;
+    }
     if (kind === 'md') {
       downloadBlob(new Blob([Core.docToMarkdown(this.view.state.doc.toJSON())], { type: 'text/markdown' }), this.fileName('md'));
     } else {
@@ -888,6 +1077,11 @@ mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs
   }
 
   async copyMarkdown() {
+    // Буфер обмена из WebView без жеста не пишется — копирует хозяин.
+    if (this.host) {
+      this.bridge.send({ type: 'export', kind: 'copy', name: '', mime: 'text/plain', text: Core.docToMarkdown(this.view.state.doc.toJSON()) });
+      return;
+    }
     try {
       await navigator.clipboard.writeText(Core.docToMarkdown(this.view.state.doc.toJSON()));
       this.toast(this.t('export.copied'));
@@ -900,6 +1094,10 @@ mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs
    *  приложение вокруг документа. */
   async print() {
     const html = await this.exportHtml();
+    if (this.host) {
+      this.bridge.send({ type: 'export', kind: 'print', name: this.fileName('html'), mime: 'text/html', text: html });
+      return;
+    }
     const frame = h('iframe', { class: 'led-print-frame', 'aria-hidden': 'true' });
     document.body.append(frame);
     const doc = frame.contentDocument;
@@ -935,40 +1133,45 @@ mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs
 
   // --- для хозяина и тестов --------------------------------------------------------------
 
-  /** Команда по имени — для телефона (кнопки снаружи WebView) и тестов. */
+  /** Команда по имени — для телефона (кнопки снаружи WebView), меню и
+   *  тестов. Имена и arg — host.js: commands(); неизвестное имя — false. */
   exec(name, arg) {
-    const { view } = this;
-    const run = (cmd) => cmd(view.state, view.dispatch, view);
-    const table = {
-      bold: () => run(C.toggle('strong')), italic: () => run(C.toggle('em')), underline: () => run(C.toggle('underline')),
-      strike: () => run(C.toggle('strike')), code: () => run(C.toggle('code')), clear: () => run(C.clearFormatting),
-      heading: () => run(arg ? C.setHeading(arg) : C.setParagraph), paragraph: () => run(C.setParagraph),
-      bullet: () => run(C.toggleList('bullet_list')), ordered: () => run(C.toggleList('ordered_list')), tasks: () => run(C.toggleList('task_list')),
-      indent: () => run(C.indent), outdent: () => run(C.outdent), quote: () => run(C.toggleQuote), codeblock: () => run(C.toggleCodeBlock),
-      callout: () => run(C.toggleCallout(arg)), hr: () => run(C.insertRule), align: () => run(C.setAlign(arg || 'left')),
-      color: () => run(C.setColorMark('textColor', arg || null)), highlight: () => run(C.setColorMark('highlight', arg === undefined ? 'yellow' : arg)),
-      link: () => (arg === undefined ? this.editLink() : run(C.setLink(arg || null))),
-      table: () => run(C.insertTable((arg && arg.rows) || 3, (arg && arg.cols) || 3, !arg || arg.header !== false)),
-      image: () => this.pickImage(), chart: () => this.insertChart(), drawing: () => this.insertDrawing(),
-      comment: () => this.addComment(), annotate: () => this.setAnnotate(arg == null ? !this.annotating : arg),
-      find: () => this.find.open(!!arg), undo: () => run(C.undo), redo: () => run(C.redo),
-      outline: () => this.togglePanel('outline'), comments: () => this.togglePanel('comments'),
-      fullscreen: () => this.toggleFullscreen(arg),
-    };
-    const fn = table[name];
+    const fn = Object.prototype.hasOwnProperty.call(this.commands || (this.commands = commands(this)), name) ? this.commands[name] : null;
     if (!fn) return false;
-    const r = fn();
-    if (!this.view.hasFocus() && !['image', 'chart', 'drawing', 'find', 'annotate', 'outline', 'comments', 'link'].includes(name)) view.focus();
+    const r = fn(arg);
+    if (!this.view.hasFocus() && !KEEP_FOCUS.has(name) && this.textEditable()) this.view.focus();
     return r;
   }
 
+  /** Что включено под курсором — то же, что подсвечивает веб-панель, и
+   *  состояние редактора (фокус, пометки, масштаб). Для нативной панели. */
+  getToolbarState() { return toolbarState(this); }
+
+  /** Убрать фокус из текста — на телефоне это закрывает клавиатуру. */
+  blur() {
+    if (this.view.hasFocus()) this.view.dom.blur();
+  }
+
+  /** Сообщение хозяина (exec, setZoom, setContent, focus, blur,
+   *  insertImage, setLink, getState). true — разобрано. */
+  receive(msg) { return this.bridge.receive(msg); }
+
   destroy() {
     this.flush();
+    this.bridge.destroy();
+    if (this.heightRo) this.heightRo.disconnect();
+    this.mount.removeEventListener('mousedown', this.onBlank);
     closePopup();
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', this.onThemeChange);
     this.overlay.destroy();
+    this.toolbar.destroy();
     this.view.destroy();
     this.root.remove();
+    document.removeEventListener('keydown', this.onFullscreenKey, true);
+    if (this.fullscreen) {
+      this.fullscreen = false;
+      if (this.opts.onFullscreen) this.opts.onFullscreen(false);
+    }
   }
 }
 
@@ -979,4 +1182,5 @@ function DecorationSetFor(doc, start, node) {
 
 export function create(mount, opts) { return new Editor(mount, opts); }
 
-export { createAssetStore, schema, Core, isInTable, NodeSelection };
+// Протокол телефона (host.js): версия, окно WebView, имена команд, масштаб.
+export { createAssetStore, schema, Core, isInTable, NodeSelection, PROTOCOL, VIEWPORT, EXEC_NAMES, ZOOM_MIN, ZOOM_MAX };

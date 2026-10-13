@@ -139,6 +139,10 @@ export class SlashMenu {
 
 // --- панель над выделением ----------------------------------------------------------
 
+/** Сколько под строкой занимают ручки выделения на телефоне — под ними
+ *  панель встаёт, когда над выделением нет места. */
+const TOUCH_HANDLE = 24;
+
 export class BubbleMenu {
   constructor(ed) {
     this.ed = ed;
@@ -162,8 +166,14 @@ export class BubbleMenu {
       highlight: btn('highlight', `${t('fmt.highlight')} (${keyLabel('Mod-Shift-h')})`, () => this.colorMenu('hl', this.buttons.highlight)),
       comment: btn('comment', `${t('comments.add')} (${keyLabel('Mod-Alt-m')})`, () => ed.addComment()),
     };
-    this.dom = h('div', { class: 'led-bubble', role: 'toolbar', hidden: true }, ...Object.values(this.buttons));
+    // Телефон (12 октября 2026): четыре частых — Ж, К, ссылка, цвет; кнопки
+    // под палец, остальное — в панели над клавиатурой. Касание кнопки не
+    // снимает выделение и не уводит фокус из текста.
+    this.touch = !!ed.isMobile;
+    const shown = this.touch ? ['strong', 'em', 'link', 'color'].map((k) => this.buttons[k]) : Object.values(this.buttons);
+    this.dom = h('div', { class: `led-bubble${this.touch ? ' led-bubble-touch' : ''}`, role: 'toolbar', hidden: true }, ...shown);
     this.dom.addEventListener('mousedown', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
+    if (this.touch) this.dom.addEventListener('pointerdown', (e) => e.preventDefault());
   }
 
   colorMenu(kind, anchor) {
@@ -190,7 +200,7 @@ export class BubbleMenu {
   update(view, focused) {
     const { state } = view;
     const sel = state.selection;
-    const show = focused && view.editable && !sel.empty && sel instanceof TextSelection && !this.ed.isMobile
+    const show = focused && view.editable && !sel.empty && sel instanceof TextSelection
       && state.selection.$from.parent.type !== N.code_block && !this.ed.dragging;
     if (!show) { this.dom.hidden = true; return; }
     const fs = C.formatState(state);
@@ -206,6 +216,13 @@ export class BubbleMenu {
     this.dom.hidden = false;
     const a = view.coordsAtPos(sel.from);
     const b = view.coordsAtPos(sel.to);
+    if (this.touch) {
+      // Над началом выделения, левым краем к нему: не закрывает ни
+      // выделенное, ни ручки выделения под строкой. Сверху нет места —
+      // под выделением, ниже ручек (TOUCH_HANDLE).
+      placePopup(this.dom, a.left - 8, Math.min(a.top, b.top), { above: true, below: Math.max(a.bottom, b.bottom) + TOUCH_HANDLE });
+      return;
+    }
     const left = a.top === b.top ? (a.left + b.right) / 2 : a.left + 120;
     placePopup(this.dom, left, Math.min(a.top, b.top), { above: true, below: Math.max(a.bottom, b.bottom), center: true });
   }

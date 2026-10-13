@@ -250,10 +250,16 @@ export function splitItem(state, dispatch) {
   const t = currentItemType(state);
   if (!t) return false;
   // Enter в новом пункте чек-листа — пункт не отмечен, даже если прошлый был.
-  if (t === N.task_item) {
-    return splitListItem(N.task_item, { checked: false })(state, dispatch);
+  const split = t === N.task_item ? splitListItem(N.task_item, { checked: false }) : splitListItem(t);
+  if (split(state, dispatch)) return true;
+  // Enter в пустом пункте — выход из списка (из вложенного — на уровень
+  // выше), как в Notion и «Заметках». splitListItem такой случай отдаёт
+  // дальше, и без этой строки выход зависел бы от общего Enter.
+  const { $from, empty } = state.selection;
+  if (empty && $from.parent.content.size === 0 && $from.depth >= 2 && $from.node(-1).type === t) {
+    return liftListItem(t)(state, dispatch);
   }
-  return splitListItem(t)(state, dispatch);
+  return false;
 }
 
 export function setAlign(align) {

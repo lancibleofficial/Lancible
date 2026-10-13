@@ -10,10 +10,19 @@ export function closePopup() {
   if (openPopup) { const p = openPopup; openPopup = null; p.close(); }
 }
 
-/** Всплывающая панель у прямоугольника якоря. Одновременно — одна. */
+/** Якорь в фокусе с клавиатуры — значит, и панель открыли с клавиатуры. */
+function keyboardAnchor(anchor) {
+  if (!(anchor instanceof Element) || document.activeElement !== anchor) return false;
+  try { return anchor.matches(':focus-visible'); } catch { return true; }
+}
+
+/** Всплывающая панель у прямоугольника якоря. Одновременно — одна.
+ *  Открыли с клавиатуры (якорь в фокусе) — фокус переходит в панель, а при
+ *  закрытии возвращается на якорь: иначе он терялся бы на body. */
 export function popup(root, anchor, content, opts) {
   closePopup();
   const o = opts || {};
+  const kb = keyboardAnchor(anchor);
   const el = h('div', { class: `ctx-menu led-pop ${o.class || ''}`, role: o.role || 'dialog' }, content);
   root.append(el);
   const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor;
@@ -22,36 +31,68 @@ export function popup(root, anchor, content, opts) {
   let undo = null;
   const close = () => {
     if (undo) undo();
+    const back = anchor instanceof Element && el.contains(document.activeElement);
     el.remove();
     if (openPopup && openPopup.el === el) openPopup = null;
+    if (back && anchor.isConnected) anchor.focus({ preventScroll: true });
     if (o.onClose) o.onClose();
   };
   undo = dismissOnOutside(el, () => closePopup(), [anchor instanceof Element ? anchor : null]);
   openPopup = { el, close };
+  if (kb || o.focus) {
+    const first = el.querySelector('button:not([disabled]), input, [tabindex]:not([tabindex="-1"])');
+    if (first) first.focus({ preventScroll: true });
+  }
   return { el, close: () => closePopup() };
 }
 
-/** Меню из пунктов: { label, icon, kbd, active, danger, disabled, run } | 'sep'. */
+/** Меню из пунктов: { label, icon, kbd, active, danger, disabled, run } | 'sep'.
+ *  cmd и group — метки пункта (data-cmd, data-group): по ним панель и тесты
+ *  находят команду; sub — пункт открывает следующее меню (стрелка справа).
+ *  Пункт с active — переключатель: aria-checked, а не только цвет. Стрелки
+ *  вверх-вниз, Home и End ходят по пунктам, Esc и Tab закрывают. */
 export function menu(root, anchor, items, opts) {
   const list = h('div', { class: 'led-menu', role: 'menu' });
   let p = null;
   for (const it of items) {
     if (it === 'sep') { list.append(h('div', { class: 'ctx-sep' })); continue; }
     if (it.heading) { list.append(h('div', { class: 'led-menu-head' }, it.heading)); continue; }
+    // Пункт, открывающий подменю (цвет, группа), — не переключатель: его
+    // «включено» видно только цветом.
+    const checkable = typeof it.active === 'boolean' && !it.sub;
+    let tail = null;
+    if (it.kbd) tail = h('span', { class: 'led-kbd' }, keyLabel(it.kbd));
+    else if (it.sub) { tail = icon('chevronDown', 14); tail.classList.add('led-menu-sub'); }
+    else if (it.active) tail = h('span', { class: 'ctx-check' }, '✓');
     const b = h('button', {
       type: 'button',
       class: `ctx-item${it.active ? ' sel' : ''}${it.danger ? ' danger' : ''}`,
-      role: 'menuitem',
+      role: checkable ? 'menuitemcheckbox' : 'menuitem',
+      'aria-checked': checkable ? String(it.active) : null,
+      'aria-haspopup': it.sub ? 'menu' : null,
+      'data-cmd': it.cmd || null,
+      'data-group': it.group || null,
       disabled: it.disabled || null,
       onmousedown: (e) => e.preventDefault(),
       onclick: (e) => { e.preventDefault(); p.close(); it.run(); },
-    }, h('span', { class: 'ctx-main' }, it.icon ? icon(it.icon, 16) : null, h('span', { class: 'led-menu-label' }, it.label)),
-    it.kbd ? h('span', { class: 'led-kbd' }, keyLabel(it.kbd)) : (it.active ? h('span', { class: 'ctx-check' }, '✓') : null));
+    }, h('span', { class: 'ctx-main' }, it.icon ? icon(it.icon, 16) : null, h('span', { class: 'led-menu-label' }, it.label)), tail);
     list.append(b);
   }
+  list.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') { p.close(); return; }
+    const all = [...list.querySelectorAll('button.ctx-item:not([disabled])')];
+    const i = all.indexOf(document.activeElement);
+    const n = all.length;
+    let j = null;
+    if (e.key === 'ArrowDown') j = i < 0 ? 0 : (i + 1) % n;
+    else if (e.key === 'ArrowUp') j = i < 0 ? n - 1 : (i - 1 + n) % n;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = n - 1;
+    if (j == null || !n) return;
+    e.preventDefault();
+    all[j].focus();
+  });
   p = popup(root, anchor, list, Object.assign({ role: 'menu' }, opts || {}));
-  const first = list.querySelector('button:not([disabled])');
-  if (first && opts && opts.focus) first.focus();
   return p;
 }
 

@@ -127,6 +127,19 @@ const taskRule = new InputRule(/^\s*(?:[-*]\s)?\[( |x|X)?\]\s$/, (state, match, 
       return state.tr.delete(start, end).setNodeMarkup($start.before(d), null, { checked });
     }
   }
+  // «- [ ] » одним махом: «- » уже сделал список, и «[ ] » в его свежем
+  // (единственном) пункте превращает весь список в чек-лист — а не кладёт
+  // чек-лист внутрь пункта.
+  const d = $start.depth - 2;
+  if (d >= 0 && $start.node(d + 1).type === N.list_item && $start.node(d).type === N.bullet_list
+    && $start.node(d).childCount === 1 && $start.index(d + 1) === 0) {
+    const list = $start.node(d);
+    const listPos = $start.before(d);
+    const tr = state.tr.delete(start, end);
+    const item = tr.doc.nodeAt(listPos).firstChild;
+    tr.replaceWith(listPos, listPos + tr.doc.nodeAt(listPos).nodeSize, N.task_list.create({ bid: list.attrs.bid }, N.task_item.create({ checked }, item.content)));
+    return tr.setSelection(TextSelection.create(tr.doc, listPos + 3));
+  }
   const tr = state.tr.delete(start, end);
   const range = tr.doc.resolve(start).blockRange();
   const wrapping = range && findWrapping(range, N.task_list);
@@ -180,6 +193,23 @@ export function buildInputRules(opts) {
 
 // --- клавиши ------------------------------------------------------------------------
 
+/** «```» (и язык: «```js») одной строкой и Enter — блок кода. Сокращение
+ *  «``` » с пробелом — правило выше; на телефоне после ``` сразу жмут
+ *  Enter, и строка оставалась строкой. */
+export function fenceOnEnter(state, dispatch) {
+  const { $from, empty } = state.selection;
+  if (!empty || $from.parent.type !== N.paragraph || $from.parentOffset !== $from.parent.content.size) return false;
+  const m = /^```([a-z0-9+#-]*)$/i.exec($from.parent.textContent);
+  if (!m) return false;
+  if (!$from.node(-1).canReplaceWith($from.index(-1), $from.indexAfter(-1), N.code_block)) return false;
+  if (dispatch) {
+    const tr = state.tr.delete($from.start(), $from.end());
+    tr.setBlockType($from.start(), $from.start(), N.code_block, { language: (m[1] || '').toLowerCase() });
+    dispatch(tr.scrollIntoView());
+  }
+  return true;
+}
+
 export function buildKeymaps(actions) {
   const keys = {
     'Mod-z': C.undo,
@@ -221,7 +251,7 @@ export function buildKeymaps(actions) {
       if (d) d(s.tr.setNodeMarkup(item.pos, null, { checked: !item.node.attrs.checked }));
       return true;
     },
-    Enter: C.splitItem,
+    Enter: chainCommands(fenceOnEnter, C.splitItem),
     Tab: chainCommands(goToNextCell(1), (s, d, view) => {
       // Tab в последней ячейке — новая строка и курсор в неё, а не уход
       // фокуса из таблицы на кнопки.

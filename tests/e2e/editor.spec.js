@@ -6,6 +6,7 @@
 // старые заметки Quill читаются, markdown-сокращения, таблицы, графики,
 // комментарии, поиск, рисунок пером и пометки поверх текста.
 const { test, expect } = require('@playwright/test');
+const { reachable, tool } = require('./led-toolbar');
 
 async function openTask(page, notes) {
   await page.goto('/index.html');
@@ -56,9 +57,14 @@ const savedNotes = (page, id) => page.evaluate(async (taskId) => {
 
 test('панель инструментов собрана: оформление, списки, вставка, рисование', async ({ page }) => {
   await openTask(page);
-  const bar = page.locator('#editor-wrap .led-toolbar');
-  for (const title of ['Полужирный', 'Курсив', 'Маркированный список', 'Чек-лист', 'Таблица', 'Картинка', 'График', 'Рисунок', 'Комментарий', 'Пометки от руки поверх текста']) {
-    await expect(bar.locator(`button[title^="${title}"]`).first(), `нет кнопки «${title}»`).toBeVisible();
+  // С 11 октября панель — одна строка: что не влезло, лежит в меню групп
+  // (подробно — editor-toolbar.spec.js). Собрана — значит, всё достижимо.
+  const found = await reachable(page);
+  for (const cmd of ['bold', 'italic', 'bullet', 'tasks', 'table', 'image', 'chart', 'drawing', 'comment', 'annotate']) {
+    expect(found.has(cmd), `нет команды «${cmd}»`).toBe(true);
+  }
+  for (const title of ['Полужирный', 'Курсив']) {
+    await expect(page.locator(`#editor-wrap .led-toolbar button[title^="${title}"]`).first(), `нет кнопки «${title}» в строке`).toBeVisible();
   }
 });
 
@@ -247,7 +253,7 @@ test('поиск и замена', async ({ page }) => {
 test('рисунок: штрих мышью ложится в документ, ластик его стирает', async ({ page }) => {
   const id = await openTask(page);
   await pm(page).click();
-  await page.locator('#editor-wrap .led-toolbar button[title="Рисунок"]').click();
+  await tool(page, 'drawing');
   const area = page.locator('#editor-wrap .led-draw-area');
   await expect(area).toBeVisible();
   const box = await area.boundingBox();
@@ -275,7 +281,7 @@ test('пометки поверх текста держатся за свой а
   await page.keyboard.type('Первый абзац');
   await page.keyboard.press('Enter');
   await page.keyboard.type('Второй абзац');
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   const second = await pm(page).locator('p').nth(1).boundingBox();
   await page.mouse.move(second.x + 10, second.y + second.height - 2);
   await page.mouse.down();
@@ -291,7 +297,7 @@ test('пометки поверх текста держатся за свой а
 test('картинки в ряд: вторая встаёт рядом, ряд разбирается обратно', async ({ page }) => {
   const id = await openTask(page);
   await pm(page).click();
-  await pickImage(page, () => page.locator('#editor-wrap .led-toolbar button[title="Картинка"]').click());
+  await pickImage(page, () => tool(page, 'image'));
   const fig = pm(page).locator('.led-figure').first();
   await expect(fig.locator('img')).toHaveAttribute('src', /^blob:/);
   await fig.click();
@@ -315,7 +321,7 @@ test('картинки в ряд: вторая встаёт рядом, ряд �
 test('обтекание: текст идёт рядом с картинкой', async ({ page }) => {
   const id = await openTask(page);
   await pm(page).click();
-  await pickImage(page, () => page.locator('#editor-wrap .led-toolbar button[title="Картинка"]').click());
+  await pickImage(page, () => tool(page, 'image'));
   const fig = pm(page).locator('.led-figure').first();
   // Картинка вставляется, когда файл прочитан, — печатаем после неё.
   await expect(fig.locator('img')).toHaveAttribute('src', /^blob:/);
@@ -350,7 +356,7 @@ test('по умолчанию текст — во всю ширину окна �
 
 test('вид редактора — настройка устройства, не данные задачи', async ({ page }) => {
   const id = await openTask(page);
-  await page.locator('#editor-wrap .led-toolbar button[title="Вид"]').click();
+  await tool(page, 'view');
   await page.locator('.led-pop .ctx-item', { hasText: 'С засечками' }).click();
   expect(await page.evaluate(() => state.settings.editor.font)).toBe('serif');
   await expect(page.locator('#editor-wrap .led')).toHaveClass(/led-f-serif/);
@@ -380,7 +386,7 @@ test('пометки на десктопе: скрыть, стереть все 
   const id = await openTask(page);
   await pm(page).click();
   await page.keyboard.type('Абзац с пометкой');
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   const bar = page.locator('#editor-wrap .led-overlay-bar');
   await scribble(page, await pm(page).locator('p').first().boundingBox());
   expect(await page.evaluate(() => editor.ink.length)).toBe(1);
@@ -396,7 +402,7 @@ test('пометки на десктопе: скрыть, стереть все 
   expect(await page.evaluate(() => state.settings.editor.inkHidden)).toBe(true);
   const notes = await savedNotes(page, id);
   expect(notes.lancible.ink, 'скрытые пометки остаются в заметке').toHaveLength(1);
-  await page.locator('#editor-wrap .led-toolbar button[title="Вид"]').click();
+  await tool(page, 'view');
   await page.locator('.led-pop .ctx-item', { hasText: 'Показывать пометки от руки' }).click();
   expect(await page.evaluate(() => state.settings.editor.inkHidden)).toBe(false);
 });
@@ -405,7 +411,7 @@ test('прозрачность пера: ползунок рядом с толщ
   await openTask(page);
   await pm(page).click();
   await page.keyboard.type('Абзац');
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   await page.locator('#editor-wrap .led-overlay-bar .led-ink-size').click();
   const range = page.locator('.led-pop .led-setting', { hasText: 'Непрозрачность' }).locator('input[type=range]');
   await range.fill('0.5');
@@ -422,7 +428,7 @@ test.describe('телефон', () => {
   test('панель пера — сверху, на месте панели редактора, вся в экране', async ({ page }) => {
     await openTask(page);
     expect(await page.evaluate(() => editor.isMobile)).toBe(true);
-    await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+    await tool(page, 'annotate');
     const bar = page.locator('#editor-wrap .led-overlay-bar');
     await expect(bar).toBeVisible();
     await expect(page.locator('#editor-wrap .led-toolbar'), 'панель редактора уступает место').toBeHidden();
@@ -449,7 +455,7 @@ test.describe('телефон', () => {
 
   test('палец рисует или листает — переключатель в панели', async ({ page }) => {
     await openTask(page);
-    await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+    await tool(page, 'annotate');
     const finger = page.locator('#editor-wrap .led-overlay-bar .led-ink-finger');
     await expect(finger).toHaveAttribute('aria-pressed', 'true');
     await finger.click();
@@ -463,7 +469,7 @@ test.describe('телефон', () => {
     await openTask(page);
     await pm(page).click();
     await page.keyboard.type('Абзац');
-    await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+    await tool(page, 'annotate');
     const bar = page.locator('#editor-wrap .led-overlay-bar');
     await bar.locator('button[title="Цвет"]').click();
     await page.locator('.led-pop .ink-red').click();
@@ -506,7 +512,7 @@ test.describe('телефон: всплывашки пера', () => {
 
   test('толщина и прозрачность помещаются в экран целиком', async ({ page }) => {
     await openTask(page);
-    await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+    await tool(page, 'annotate');
     await page.locator('#editor-wrap .led-overlay-bar .led-ink-size').click();
     const geo = await page.locator('.led-pop').evaluate((p) => {
       p.getAnimations().forEach((a) => a.finish()); // появление с масштабом искажает размеры
@@ -523,7 +529,7 @@ test.describe('телефон: всплывашки пера', () => {
 
 test('палитра пера: квадраты своих цветов, а не все чёрные', async ({ page }) => {
   await openTask(page);
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   await page.locator('#editor-wrap .led-overlay-bar button[title="Цвет"]').click();
   const colors = await page.locator('.led-pop .led-ink-colors .led-swatch').evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor));
   expect(colors.length).toBe(10);
@@ -532,7 +538,7 @@ test('палитра пера: квадраты своих цветов, а не
 
 test('панель пера на десктопе: ни «null», ни других пустых значений', async ({ page }) => {
   await openTask(page);
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   const text = await page.locator('#editor-wrap .led-overlay-bar').innerText();
   expect(text).not.toMatch(/null|undefined/);
 });
@@ -541,7 +547,7 @@ test('пометки отменяются общей отменой: Ctrl+Z в �
   await openTask(page);
   await pm(page).click();
   await page.keyboard.type('Абзац');
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   const p = await pm(page).locator('p').first().boundingBox();
   await scribble(page, p, 4);
   await scribble(page, p, 14);
@@ -581,7 +587,7 @@ test('Ctrl+Shift+D переключает рисование и ввод тек�
 
 test('последние цвета: вместо быстрых перьев — три предыдущих цвета', async ({ page }) => {
   await openTask(page);
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   const bar = page.locator('#editor-wrap .led-overlay-bar');
   await bar.locator('button[title="Цвет"]').click();
   await page.locator('.led-pop .ink-purple').click();
@@ -594,7 +600,7 @@ test('последние цвета: вместо быстрых перьев �
 
 test('настройки рисования: подписи слева, переключатели справа', async ({ page }) => {
   await openTask(page);
-  await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+  await tool(page, 'annotate');
   await page.locator('#editor-wrap .led-overlay-bar button[title="Настройки рисования"]').click();
   const rows = page.locator('.led-pop .led-set-row.switch');
   await expect(rows).toHaveCount(3);
@@ -632,7 +638,7 @@ test('размер и шрифт выделенного текста — из п
   await pm(page).click();
   await page.keyboard.type('Большой заголовок');
   await page.keyboard.press('Shift+Home');
-  await page.locator('#editor-wrap .led-toolbar button[title="Размер текста"]').click();
+  await tool(page, 'fontSize');
   await page.locator('.ctx-menu .ctx-item', { hasText: 'Крупный' }).first().click();
   await expect(pm(page).locator('span.led-fs-l')).toHaveText('Большой заголовок');
   await page.keyboard.press('Shift+Home');
@@ -675,7 +681,7 @@ test.describe('телефон: настройки рисования', () => {
 
   test('открываются нижним листом и закрываются', async ({ page }) => {
     await openTask(page);
-    await page.locator('#editor-wrap .led-toolbar button[title^="Пометки от руки поверх текста"]').click();
+    await tool(page, 'annotate');
     await page.locator('#editor-wrap .led-overlay-bar button[title="Ещё"]').click();
     await page.locator('.ctx-menu .ctx-item', { hasText: 'Настройки рисования' }).click();
     const sheet = page.locator('.led-sheet');
@@ -733,4 +739,251 @@ test('заметка не открылась — задача и проект в
   await page.waitForTimeout(300);
   const after = await page.evaluate((id) => JSON.stringify(state.tasks.find((x) => x.id === id).notes), ids.id);
   expect(after, 'заметка осталась как была').toBe(ids.before);
+});
+
+// --- 12 октября: галочки, масштаб текста, нативная панель телефона ------------
+//
+// Телефон кладёт редактор в WebView и строит панель сам (React Native), а
+// редактор создаёт с nativeToolbar: true — протокол в DESIGN.md, «Редактор на
+// телефоне: протокол». Здесь тот же бандл поднят рядом с приложением в окне
+// шириной с телефон; сообщения хозяину копятся в window.__msgs.
+
+/** Редактор как на телефоне: своя коробка 375×640 поверх приложения. */
+async function phoneEditor(page, opts) {
+  await page.goto('/index.html');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.locator('#shell')).toBeVisible();
+  await page.evaluate((o) => {
+    const box = document.createElement('div');
+    box.id = 'phone-ed';
+    box.style.cssText = 'position:fixed;left:0;top:0;width:375px;height:640px;z-index:500;display:flex;flex-direction:column;background:var(--bg)';
+    document.body.append(box);
+    window.__msgs = [];
+    window.__ped = LancibleEditor.create(box, Object.assign({
+      mobile: true, inApp: true, nativeToolbar: true, content: null,
+      post: (m) => window.__msgs.push(JSON.parse(JSON.stringify(m))),
+    }, o || {}));
+  }, opts || {});
+  await page.locator('#phone-ed .led-pm').click();
+}
+
+const msgs = (page, type) => page.evaluate((t) => window.__msgs.filter((m) => m.type === t), type);
+const lastMsg = async (page, type) => (await msgs(page, type)).pop();
+
+// 13 октября 2026 квадрат — 24 (был 28): на телефоне 28 казался крупным.
+// Зона нажатия на телефоне — 44 (под палец). На десктопе и в вебе под мышью
+// и 24 крупно: там квадрат 22 в кнопке 36 (правило вне раздела «Редактор» в
+// styles.css — в сборку телефона оно не попадает); телефон — ниже, 24/44.
+test('галочка чек-листа на десктопе: квадрат 22, зона нажатия 36, строка не растёт', async ({ page }) => {
+  await openTask(page);
+  await pm(page).click();
+  await page.keyboard.type('[] дело');
+  const geo = await page.evaluate(() => {
+    const box = document.querySelector('#editor-wrap .led-task-box');
+    const li = box.closest('li');
+    const r = box.getBoundingClientRect();
+    const sq = getComputedStyle(box, '::before');
+    const p = li.querySelector('p').getBoundingClientRect();
+    return { w: r.width, h: r.height, sqW: sq.width, sqH: sq.height, sqTop: r.top + parseFloat(sq.top), sqH2: parseFloat(sq.height), row: li.getBoundingClientRect().height, lineMid: p.top + Math.min(p.height, parseFloat(getComputedStyle(li).lineHeight)) / 2, textLeft: p.left, boxRight: r.right };
+  });
+  expect(geo.w, 'зона нажатия — 36').toBeCloseTo(36, 0);
+  expect(geo.h).toBeCloseTo(36, 0);
+  expect(geo.sqW).toBe('22px');
+  expect(geo.sqH).toBe('22px');
+  expect(Math.abs(geo.sqTop + geo.sqH2 / 2 - geo.lineMid), 'квадрат — по центру первой строки').toBeLessThan(2);
+  expect(geo.row, 'строка не выросла до зоны нажатия').toBeLessThan(34);
+  expect(geo.boxRight, 'зона нажатия не заходит на текст').toBeLessThanOrEqual(geo.textLeft);
+});
+
+test('галочка: отметили — налив и штрих, текст бледнее и зачёркнут', async ({ page }) => {
+  await openTask(page);
+  await pm(page).click();
+  await page.keyboard.type('[] дело');
+  const before = await page.evaluate(() => getComputedStyle(document.querySelector('#editor-wrap .led-task-box'), '::before').backgroundSize);
+  expect(before).toBe('0% 0%');
+  await page.locator('#editor-wrap .led-task-box').click();
+  const li = pm(page).locator('li.led-task');
+  await expect(li).toHaveAttribute('data-checked', 'true');
+  await expect(li, 'анимация — у только что отмеченного').toHaveClass(/led-just-checked/);
+  const st = await page.evaluate(() => {
+    const box = document.querySelector('#editor-wrap .led-task-box');
+    const p = box.closest('li').querySelector('p');
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--text-faint)';
+    document.querySelector('#editor-wrap .led').append(probe);
+    const faint = getComputedStyle(probe).color;
+    probe.remove();
+    return { anim: getComputedStyle(box, '::after').animationName, deco: getComputedStyle(p).textDecorationLine, faint };
+  });
+  expect(st.anim).toBe('ledTaskTick');
+  expect(st.deco).toContain('line-through');
+  // Налив — переходом: дожидаемся конца.
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('#editor-wrap .led-task-box'), '::before').backgroundSize)).toBe('300% 300%');
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('#editor-wrap .led-pm li.led-task p')).color)).toBe(st.faint);
+  await expect(li).not.toHaveClass(/led-just-checked/, { timeout: 2000 });
+  // Открыли заметку заново — отмеченные не анимируются.
+  await page.evaluate(() => editor.setContent(editor.getContent()));
+  await expect(pm(page).locator('li.led-task')).toHaveAttribute('data-checked', 'true');
+  await expect(pm(page).locator('li.led-task')).not.toHaveClass(/led-just-checked/);
+});
+
+test('нативная панель: веб-панели и строки пера нет, команды — через exec', async ({ page }) => {
+  await phoneEditor(page);
+  await expect(page.locator('#phone-ed .led')).toHaveClass(/led-native/);
+  await expect(page.locator('#phone-ed .led-toolbar')).toHaveCount(0);
+  await expect(page.locator('#phone-ed .led-inkbar')).toHaveCount(0);
+  await page.keyboard.type('привет');
+  await page.evaluate(() => __ped.exec('block', 'h2'));
+  await expect(page.locator('#phone-ed .led-pm h2')).toHaveText('привет');
+  await page.evaluate(() => __ped.exec('annotate'));
+  expect(await lastMsg(page, 'ink')).toMatchObject({ type: 'ink', on: true, tool: 'pen' });
+  await expect(page.locator('#phone-ed .led-inkbar'), 'перо — тоже в нативной строке').toHaveCount(0);
+  await page.evaluate(() => __ped.exec('inkTool', 'marker'));
+  expect(await lastMsg(page, 'ink')).toMatchObject({ on: true, tool: 'marker' });
+  await page.evaluate(() => __ped.exec('inkDone'));
+  expect(await lastMsg(page, 'ink')).toMatchObject({ on: false });
+});
+
+test('нативная панель: format и caret приходят на каждую правку и курсор', async ({ page }) => {
+  await phoneEditor(page);
+  await page.keyboard.type('слово');
+  await expect.poll(async () => (await lastMsg(page, 'format') || {}).state).toMatchObject({ focused: true, strong: false, block: 'paragraph', canUndo: true });
+  const expected = await page.evaluate(() => { const c = __ped.view.coordsAtPos(__ped.view.state.selection.head); return Math.round(c.top + scrollY); });
+  await expect.poll(async () => (await lastMsg(page, 'caret') || {}).top, 'курсор в координатах страницы').toBe(expected);
+  const caret = await lastMsg(page, 'caret');
+  expect(caret.bottom).toBeGreaterThan(caret.top);
+  await page.keyboard.press('Shift+Home');
+  await page.evaluate(() => __ped.exec('bold'));
+  await expect.poll(async () => (await lastMsg(page, 'format')).state.strong).toBe(true);
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await lastMsg(page, 'caret')).top, 'курсор ушёл вниз — caret следом').toBeGreaterThan(caret.top);
+  // Хозяин просит состояние заново — приходит, даже если не менялось.
+  const n = (await msgs(page, 'format')).length;
+  await page.evaluate(() => __ped.receive({ type: 'getState' }));
+  expect((await msgs(page, 'format')).length).toBe(n + 1);
+});
+
+test('нативная панель: ссылку и фото спрашивает хозяин, ответ вставляется', async ({ page }) => {
+  await phoneEditor(page);
+  await page.evaluate(() => __ped.exec('link'));
+  expect(await lastMsg(page, 'link')).toEqual({ type: 'link', href: '', needText: true });
+  await expect(page.locator('#phone-ed .led-link-pop, .led-link-pop'), 'поля ссылки в WebView нет').toHaveCount(0);
+  await page.evaluate(() => __ped.receive({ type: 'setLink', href: 'example.com', text: 'сайт' }));
+  await expect(page.locator('#phone-ed .led-pm a')).toHaveText('сайт');
+  await expect(page.locator('#phone-ed .led-pm a')).toHaveAttribute('href', 'https://example.com');
+  await page.keyboard.press('Enter');
+  await page.evaluate(() => __ped.exec('image'));
+  expect(await lastMsg(page, 'image-pick')).toEqual({ type: 'image-pick', purpose: 'insert' });
+  await page.evaluate((b64) => __ped.receive({ type: 'insertImage', dataUrl: `data:image/png;base64,${b64}`, name: 'photo.png' }), PNG.toString('base64'));
+  await expect(page.locator('#phone-ed .led-pm img')).toHaveCount(1);
+  expect(await page.evaluate(() => __ped.getContent().doc.content.find((n) => n.type === 'image').attrs.src)).toMatch(/^asset:/);
+  await page.evaluate(() => __ped.exec('exportMd'));
+  expect(await lastMsg(page, 'export')).toMatchObject({ kind: 'md', mime: 'text/markdown', text: expect.stringContaining('[сайт](https://example.com)') });
+});
+
+// Телефон масштаба не шлёт с 13 октября 2026; setZoom остался у редактора.
+test('масштаб текста: растёт шрифт страницы, галочка остаётся 24', async ({ page }) => {
+  await phoneEditor(page);
+  await page.keyboard.type('[] дело');
+  const size = () => page.evaluate(() => ({
+    font: getComputedStyle(document.querySelector('#phone-ed .led-pm')).fontSize,
+    box: getComputedStyle(document.querySelector('#phone-ed .led-task-box'), '::before').width,
+  }));
+  expect(await size()).toEqual({ font: '16px', box: '24px' });
+  expect(await page.evaluate(() => __ped.setZoom(1.5))).toBe(1.5);
+  expect(await size()).toEqual({ font: '24px', box: '24px' });
+  expect(await page.evaluate(() => __ped.setZoom(9)), 'больше 2 — 2').toBe(2);
+  expect((await size()).font).toBe('32px');
+  await page.evaluate(() => __ped.receive({ type: 'setZoom', zoom: 0.1 }));
+  expect((await size()).font, 'меньше 0.8 — 0.8').toBe('12.8px');
+  await expect.poll(async () => (await lastMsg(page, 'format')).state.zoom).toBe(0.8);
+});
+
+test('панель над выделением на телефоне: четыре кнопки над началом выделения', async ({ page }) => {
+  await phoneEditor(page);
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Enter');
+  await page.keyboard.type('выделим слово');
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowLeft');
+  const bubble = page.locator('#phone-ed .led-bubble');
+  await expect(bubble).toBeVisible();
+  await expect(bubble).toHaveClass(/led-bubble-touch/);
+  await expect(bubble.locator('button')).toHaveCount(4);
+  const geo = await page.evaluate(() => {
+    // Место и размер — без масштаба появления (popIn): то, что поставил
+    // placePopup, и offset-размеры, а не getBoundingClientRect.
+    const el = document.querySelector('#phone-ed .led-bubble');
+    const a = __ped.view.coordsAtPos(__ped.view.state.selection.from);
+    const btn = document.querySelector('#phone-ed .led-bubble .led-btn').offsetHeight;
+    const top = parseFloat(el.style.top);
+    return { bottom: top + el.offsetHeight, left: parseFloat(el.style.left), selTop: a.top, selLeft: a.left, btn };
+  });
+  expect(geo.bottom, 'не закрывает выделение').toBeLessThanOrEqual(geo.selTop);
+  expect(Math.abs(geo.left - (geo.selLeft - 8)), 'над началом выделения').toBeLessThan(2);
+  expect(geo.btn, 'кнопки под палец').toBe(44);
+  await bubble.locator('button').first().click();
+  expect(await page.evaluate(() => __ped.getToolbarState().strong)).toBe(true);
+  await page.keyboard.press('End');
+  await expect(bubble).toBeHidden();
+});
+
+// 13 октября 2026: поле заметок на странице задачи телефона тянется до низа
+// экрана, а текст в нём короче. Касание пустого места под текстом — писать
+// дальше: фокус и курсор в конец (src/editor/index.js: onBlankDown).
+test('касание пустого места под текстом — фокус и курсор в конец', async ({ page }) => {
+  await phoneEditor(page, { autoHeight: true });
+  await page.keyboard.type('первая');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('вторая');
+  await page.keyboard.press('Control+Home');
+  await page.evaluate(() => document.activeElement.blur());
+  expect(await page.evaluate(() => __ped.view.hasFocus())).toBe(false);
+  // Коробка — 640 в высоту, редактор по тексту ниже: под ним пусто.
+  const y = await page.evaluate(() => document.querySelector('#phone-ed .led').getBoundingClientRect().bottom + 60);
+  expect(y).toBeLessThan(620);
+  await page.mouse.click(180, y);
+  const st = await page.evaluate(() => {
+    const s = __ped.view.state;
+    return { focus: __ped.view.hasFocus(), head: s.selection.head, empty: s.selection.empty, end: s.doc.content.size - 1 };
+  });
+  expect(st).toEqual({ focus: true, head: st.end, empty: true, end: st.end });
+  await page.keyboard.type('!');
+  await expect(page.locator('#phone-ed .led-pm p').last()).toHaveText('вторая!');
+  // Касание по самому тексту — как раньше: курсор туда, куда коснулись.
+  await page.locator('#phone-ed .led-pm p').first().click({ position: { x: 2, y: 5 } });
+  expect(await page.evaluate(() => __ped.view.state.selection.head)).toBeLessThan(5);
+});
+
+test('под таблицей касание пустого места — новый абзац, а не последняя ячейка', async ({ page }) => {
+  await phoneEditor(page, { autoHeight: true });
+  await page.keyboard.type('до таблицы');
+  await page.evaluate(() => __ped.exec('table'));
+  // Таблица — последним блоком: пустой абзац после неё, если он есть, убираем.
+  await page.evaluate(() => {
+    const c = __ped.getContent();
+    const last = c.doc.content[c.doc.content.length - 1];
+    if (last.type === 'paragraph' && !last.content) c.doc.content.pop();
+    __ped.setContent(c);
+    document.activeElement.blur();
+  });
+  expect(await page.evaluate(() => __ped.view.state.doc.lastChild.type.name)).toBe('table');
+  const y = await page.evaluate(() => document.querySelector('#phone-ed .led').getBoundingClientRect().bottom + 40);
+  await page.mouse.click(180, y);
+  const st = await page.evaluate(() => {
+    const s = __ped.view.state;
+    return { focus: __ped.view.hasFocus(), last: s.doc.lastChild.type.name, inLast: s.selection.$head.parent === s.doc.lastChild };
+  });
+  expect(st).toEqual({ focus: true, last: 'paragraph', inLast: true });
+});
+
+test('высота по тексту: сообщение height растёт вместе с текстом', async ({ page }) => {
+  await phoneEditor(page, { autoHeight: true });
+  const first = await lastMsg(page, 'height');
+  const root = await page.evaluate(() => Math.ceil(document.querySelector('#phone-ed .led').getBoundingClientRect().height));
+  expect(first.px).toBe(root);
+  expect(first.px, 'пустая заметка — не во весь экран').toBeLessThan(300);
+  for (let i = 0; i < 12; i++) { await page.keyboard.type(`строка ${i}`); await page.keyboard.press('Enter'); }
+  await expect.poll(async () => (await lastMsg(page, 'height')).px).toBeGreaterThan(first.px + 200);
 });

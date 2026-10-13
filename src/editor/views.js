@@ -2,7 +2,14 @@
 import { h } from './util.js';
 import { menu } from './ui.js';
 
-/** Пункт чек-листа: галочка сбоку, текст — обычное содержимое. */
+/** Пункт чек-листа: галочка сбоку, текст — обычное содержимое.
+ *
+ *  Галочка — квадрат 24 px (--led-task в styles.css; до 13 октября 2026 —
+ *  28) в кнопке 44 px (--led-task-hit): столько нужно пальцу, лишнее съедают
+ *  отрицательные поля, и строка не растёт.
+ *  Отметили — квадрат наливается акцентом снизу, а галочка дорисовывается
+ *  штрихом (12 октября 2026). Анимация — только у пункта, который отметили
+ *  сейчас (.led-just-checked), а не у всех отмеченных при открытии заметки. */
 export class TaskItemView {
   constructor(node, view, getPos) {
     this.node = node;
@@ -10,6 +17,7 @@ export class TaskItemView {
     this.getPos = getPos;
     this.box = h('button', {
       type: 'button', class: 'led-task-box', contenteditable: 'false', role: 'checkbox',
+      // Касание галочки не уводит фокус и не зовёт клавиатуру.
       onmousedown: (e) => e.preventDefault(),
       onclick: () => this.toggle(),
     });
@@ -30,12 +38,25 @@ export class TaskItemView {
     this.box.setAttribute('aria-checked', String(c));
   }
 
+  /** Налив и штрих галочки — заново и при быстром повторном касании. */
+  pour() {
+    this.dom.classList.remove('led-just-checked');
+    void this.dom.offsetWidth; // перезапуск анимации: класс снят и поставлен в разных кадрах стиля
+    this.dom.classList.add('led-just-checked');
+    clearTimeout(this.pourTimer);
+    this.pourTimer = setTimeout(() => this.dom.classList.remove('led-just-checked'), 800);
+  }
+
   update(node) {
     if (node.type !== this.node.type) return false;
+    const was = !!this.node.attrs.checked;
     this.node = node;
     this.paint();
+    if (!was && node.attrs.checked) this.pour();
     return true;
   }
+
+  destroy() { clearTimeout(this.pourTimer); }
 
   stopEvent(e) { return e.target === this.box; }
 

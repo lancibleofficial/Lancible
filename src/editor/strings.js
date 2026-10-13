@@ -6,7 +6,7 @@
 
 const ru = {
   editor: 'Текст', toolbar: 'Панель инструментов', placeholder: 'Пишите или нажмите «/», чтобы вставить блок…', placeholder_line: '«/» — вставить блок',
-  undo: 'Отменить', redo: 'Повторить', more: 'Ещё',
+  undo: 'Отменить', redo: 'Повторить', more: 'Ещё', 'toolbar.format': 'Формат', 'toolbar.lists': 'Списки',
   'common.apply': 'Применить', 'common.cancel': 'Отмена', 'common.close': 'Закрыть', 'common.ok': 'Готово', 'common.save': 'Сохранить',
 
   'fmt.bold': 'Полужирный', 'fmt.italic': 'Курсив', 'fmt.underline': 'Подчёркнутый', 'fmt.strike': 'Зачёркнутый',
@@ -148,7 +148,7 @@ const ru = {
 
 const en = {
   editor: 'Text', toolbar: 'Toolbar', placeholder: 'Write, or press “/” to insert a block…', placeholder_line: '“/” to insert a block',
-  undo: 'Undo', redo: 'Redo', more: 'More',
+  undo: 'Undo', redo: 'Redo', more: 'More', 'toolbar.format': 'Format', 'toolbar.lists': 'Lists',
   'common.apply': 'Apply', 'common.cancel': 'Cancel', 'common.close': 'Close', 'common.ok': 'Done', 'common.save': 'Save',
 
   'fmt.bold': 'Bold', 'fmt.italic': 'Italic', 'fmt.underline': 'Underline', 'fmt.strike': 'Strikethrough',
@@ -290,7 +290,7 @@ const en = {
 
 const uk = {
   editor: 'Текст', toolbar: 'Панель інструментів', placeholder: 'Пишіть або натисніть «/», щоб вставити блок…', placeholder_line: '«/» — вставити блок',
-  undo: 'Скасувати', redo: 'Повторити', more: 'Ще',
+  undo: 'Скасувати', redo: 'Повторити', more: 'Ще', 'toolbar.format': 'Формат', 'toolbar.lists': 'Списки',
   'common.apply': 'Застосувати', 'common.cancel': 'Скасувати', 'common.close': 'Закрити', 'common.ok': 'Готово', 'common.save': 'Зберегти',
 
   'fmt.bold': 'Жирний', 'fmt.italic': 'Курсив', 'fmt.underline': 'Підкреслений', 'fmt.strike': 'Закреслений',
@@ -432,7 +432,7 @@ const uk = {
 
 const kk = {
   editor: 'Мәтін', toolbar: 'Құралдар тақтасы', placeholder: 'Жазыңыз немесе блок қою үшін «/» басыңыз…', placeholder_line: '«/» — блок қою',
-  undo: 'Болдырмау', redo: 'Қайталау', more: 'Тағы',
+  undo: 'Болдырмау', redo: 'Қайталау', more: 'Тағы', 'toolbar.format': 'Пішім', 'toolbar.lists': 'Тізімдер',
   'common.apply': 'Қолдану', 'common.cancel': 'Болдырмау', 'common.close': 'Жабу', 'common.ok': 'Дайын', 'common.save': 'Сақтау',
 
   'fmt.bold': 'Жуан', 'fmt.italic': 'Көлбеу', 'fmt.underline': 'Асты сызылған', 'fmt.strike': 'Сызылған',
