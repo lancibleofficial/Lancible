@@ -96,7 +96,11 @@ test('тег вешается на задачу через пикер и сни�
   await page.mouse.click(5, 5);
   await expect(page.locator('#task-tags .tag-chip')).toHaveCount(2);
 
-  await page.locator('#task-tags .tag-chip').first().locator('.tag-chip-x').click();
+  // Значок удаления виден по наведению на чип — как и пользователь,
+  // сначала подводим мышь к чипу.
+  const first = page.locator('#task-tags .tag-chip').first();
+  await first.hover();
+  await first.locator('.tag-chip-x').click();
   await expect(page.locator('#task-tags .tag-chip')).toHaveCount(1);
   expect(await page.evaluate(() => state.tasks[0].tagIds.length)).toBe(1);
 });
@@ -283,4 +287,197 @@ test('пикер тегов в окне проекта не ложится на 
   expect(m.popBottom, 'список внутри окна').toBeLessThanOrEqual(m.modalBottom);
   expect(m.popBottom, 'и не поверх кнопок').toBeLessThanOrEqual(m.buttonsTop + 1);
   expect(m.popTop).toBeGreaterThanOrEqual(0);
+});
+
+test('поля плашки слева и справа равны — везде, где плашки рисуются', async ({ page }) => {
+  // Невидимый крестик у чипа с onRemove занимал 13 px справа от названия:
+  // «Cool Project» сидел в плашке сдвинутым влево. Меряется текст внутри
+  // плашки, а не сама плашка: поле — это расстояние от её края до букв.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seedProject(page);
+  await page.evaluate(() => {
+    const mk = (name, color, projectId) => { const tag = { id: uid(), name, color, projectId: projectId || null }; state.tags.push(tag); return tag.id; };
+    const a = mk('Cool Project', '#5ec8f2');
+    const b = mk('Some Tag', '#f5c451');
+    const c = mk('Ещё', '#87ff65');
+    const p = state.projects[0];
+    p.tagIds = [a, b];
+    state.tasks[0].tagIds = [a, b, c];
+    state.ui.projectId = p.id;
+    state.ui.boardProjectId = p.id;
+    state.ui.view = 'project';
+    state.ui.projectTab = 'board';
+    render();
+  });
+
+  // Поля плашек в выбранном месте: [{ text, left, right }].
+  const pads = (sel) => page.evaluate((sel) => [...document.querySelectorAll(sel)]
+    .filter((chip) => chip.getBoundingClientRect().width > 0)
+    .map((chip) => {
+      const box = chip.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(chip.querySelector('.tag-name') || chip);
+      const text = range.getBoundingClientRect();
+      return { text: chip.textContent.trim(), left: text.left - box.left, right: box.right - text.right };
+    }), sel);
+  const equal = (list, where) => {
+    expect(list.length, `${where}: плашки нашлись`).toBeGreaterThan(0);
+    for (const p of list) {
+      expect(Math.abs(p.left - p.right), `${where}, «${p.text}»: слева ${p.left}, справа ${p.right}`).toBeLessThanOrEqual(1);
+      expect(p.left, `${where}, «${p.text}»: поле не нулевое`).toBeGreaterThan(3);
+    }
+  };
+
+  equal(await pads('.board-card .tag-chip'), 'карточка доски');
+  equal(await pads('#ph-tags .tag-chip'), 'шапка проекта');
+
+  // С крестиком: чип задачи в свойствах и чип в окне проекта.
+  await page.evaluate(() => selectTask(state.tasks[0].id));
+  await expect(page.locator('#task-tags .tag-chip-x').first()).toBeAttached();
+  equal(await pads('#task-tags .tag-chip'), 'свойства задачи');
+
+  await page.evaluate(() => { state.ui.view = 'project'; render(); openProjectDialog(state.projects[0]); });
+  await expect(page.locator('#pdlg-tags .tag-chip').first()).toBeVisible();
+  equal(await pads('#pdlg-tags .tag-chip'), 'окно проекта');
+});
+
+test('значок удаления лежит поверх угла плашки: размер не меняется, виден по наведению и фокусу', async ({ page }) => {
+  // До 11 октября крестик в покое был шириной 0 и раскрывался по наведению:
+  // плашка дёргалась, а сам значок на 9 px выглядел кривым. Теперь значок —
+  // круг поверх правого верхнего угла, а плашка не меняется никогда.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await seedProject(page);
+  await createTag(page, 'Cool Project');
+  await page.evaluate(() => {
+    state.tasks[0].tagIds = state.tags.map((tg) => tg.id);
+    state.ui.view = 'project';
+    state.ui.projectTab = 'board';
+    render();
+    selectTask(state.tasks[0].id);
+  });
+
+  const chip = page.locator('#task-tags .tag-chip').first();
+  const x = chip.locator('.tag-chip-x');
+  await expect(chip).toBeVisible();
+  await expect(x).toHaveAttribute('aria-label', 'Удалить тег');
+
+  const box = () => chip.evaluate((n) => {
+    const r = n.getBoundingClientRect();
+    const cs = getComputedStyle(n);
+    return { w: r.width, h: r.height, pl: parseFloat(cs.paddingLeft), pr: parseFloat(cs.paddingRight) };
+  });
+  const opacity = () => x.evaluate((n) => Number(getComputedStyle(n).opacity));
+
+  const rest = await box();
+  expect(Math.abs(rest.pl - rest.pr), 'поля плашки равны в покое').toBeLessThanOrEqual(1);
+  expect(await opacity(), 'в покое значка не видно').toBe(0);
+
+  await chip.hover();
+  await expect.poll(opacity, { message: 'по наведению значок виден' }).toBe(1);
+  const hover = await box();
+  expect(hover.w, 'ширина плашки по наведению не изменилась').toBeCloseTo(rest.w, 1);
+  expect(hover.h, 'высота плашки по наведению не изменилась').toBeCloseTo(rest.h, 1);
+  expect(Math.abs(hover.pl - hover.pr), 'поля равны и по наведению').toBeLessThanOrEqual(1);
+
+  // Круг лежит на правом верхнем углу плашки, иконка — по центру круга.
+  const geo = await page.evaluate(() => {
+    const c = document.querySelector('#task-tags .tag-chip').getBoundingClientRect();
+    const b = document.querySelector('#task-tags .tag-chip-x');
+    const r = b.getBoundingClientRect();
+    const i = b.querySelector('.icon').getBoundingClientRect();
+    return {
+      round: getComputedStyle(b).borderRadius, w: r.width, h: r.height,
+      cornerDx: (r.left + r.width / 2) - c.right, cornerDy: (r.top + r.height / 2) - c.top,
+      iconDx: (i.left + i.width / 2) - (r.left + r.width / 2), iconDy: (i.top + i.height / 2) - (r.top + r.height / 2),
+      icon: i.width,
+    };
+  });
+  expect(geo.w).toBeCloseTo(geo.h, 1);
+  expect(geo.round, 'значок круглый').toMatch(/^(50%|\d{2,}px)$/);
+  expect(Math.abs(geo.cornerDx), 'центр круга у правого края плашки').toBeLessThanOrEqual(8);
+  expect(Math.abs(geo.cornerDy), 'центр круга у верхнего края плашки').toBeLessThanOrEqual(8);
+  expect(Math.abs(geo.iconDx) + Math.abs(geo.iconDy), 'иконка по центру круга').toBeLessThanOrEqual(1);
+  expect(geo.icon, 'иконка в тон тексту, а не крупнее его').toBeLessThanOrEqual(12);
+
+  // Клавиатура: убрали мышь — значок гаснет, фокус на нём его показывает.
+  await page.mouse.move(5, 5);
+  await expect.poll(opacity, { message: 'без наведения значок скрыт' }).toBe(0);
+  await x.focus();
+  await expect.poll(opacity, { message: 'по фокусу значок виден' }).toBe(1);
+  expect((await box()).w, 'и по фокусу плашка не меняется').toBeCloseTo(rest.w, 1);
+
+  // И снимает тег с клавиатуры (мышью — в тесте про пикер выше).
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#task-tags .tag-chip')).toHaveCount(0);
+  expect(await page.evaluate(() => state.tasks[0].tagIds.length)).toBe(0);
+});
+
+test('пикер тегов: подпись «общий» и галочка — колонками у правого края, у всех строк на одной линии', async ({ page }) => {
+  // 13 октября 2026: подпись стояла сразу за именем, и у строк с длинным и
+  // коротким именем «общий» и галочка гуляли. Теперь строка — сетка: точка ·
+  // имя · подпись (колонка постоянной ширины, текст по правому краю) · галочка.
+  await seedProject(page);
+  const pid = await page.evaluate(() => {
+    const p = state.projects[0];
+    state.tags.push(
+      { id: 'g1', name: 'Срочное', color: '#ff5a5a', projectId: null },
+      { id: 'g2', name: 'Очень длинное название общего тега', color: '#5ec8f2', projectId: null },
+      { id: 'p1', name: 'Макет', color: '#c084fc', projectId: p.id },
+    );
+    state.tasks[0].tagIds = ['g1', 'p1'];
+    selectTask(state.tasks[0].id);
+    return p.id;
+  });
+  expect(pid).toBeTruthy();
+  await page.locator('#task-tags-add').click();
+  await expect(page.locator('.tag-pop-item')).toHaveCount(3);
+  const m = await page.evaluate(() => [...document.querySelectorAll('.tag-pop-item')].map((row) => {
+    const scope = row.querySelector('.tag-pop-scope');
+    const s = scope.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(scope);
+    const text = range.getBoundingClientRect();
+    const after = getComputedStyle(row, '::after');
+    return {
+      name: row.querySelector('.tag-pop-name').textContent,
+      scopeText: scope.textContent, scopeLeft: Math.round(s.left), scopeRight: Math.round(s.right),
+      textRight: text.width ? Math.round(text.right) : null, checked: after.content.includes('✓'),
+      rowRight: Math.round(row.getBoundingClientRect().right),
+    };
+  }));
+  const byName = Object.fromEntries(m.map((r) => [r.name, r]));
+  expect(byName['Срочное'].scopeText).toBe('общий');
+  expect(byName['Макет'].scopeText, 'у тега проекта подписи нет').toBe('');
+  expect(new Set(m.map((r) => r.scopeLeft)).size, 'колонка подписи у всех строк одна').toBe(1);
+  expect(new Set(m.map((r) => r.scopeRight)).size).toBe(1);
+  for (const r of m.filter((x) => x.textRight != null)) expect(r.scopeRight - r.textRight, `${r.name}: «общий» по правому краю`).toBeLessThanOrEqual(1);
+  expect(m.filter((r) => r.checked).map((r) => r.name).sort()).toEqual(['Макет', 'Срочное']);
+  // Колонка галочки справа от подписи, длинное имя её не сдвигает.
+  for (const r of m) expect(r.rowRight - r.scopeRight, `${r.name}: место под галочку`).toBeGreaterThanOrEqual(12);
+});
+
+test('окно «Новый тег»: поле названия — общее (.field), как в окне проекта', async ({ page }) => {
+  // 13 октября 2026: поле стояло голым системным input, без нашей подложки и
+  // скругления.
+  await openSettings(page);
+  await page.locator('#tags-add').click();
+  await expect(page.locator('#tagdlg-backdrop')).toBeVisible();
+  const field = page.locator('#tagdlg-name');
+  await expect(field).toHaveClass(/\bfield\b/);
+  const m = await page.evaluate(() => {
+    const probe = document.createElement('input');
+    probe.className = 'field';
+    document.body.appendChild(probe);
+    const pick = (n) => { const cs = getComputedStyle(n); return { bg: cs.backgroundColor, radius: cs.borderTopLeftRadius, border: cs.borderTopWidth, pad: cs.paddingLeft, font: cs.fontSize }; };
+    const want = pick(probe);
+    probe.remove();
+    const input = document.getElementById('tagdlg-name');
+    const modal = input.closest('.modal');
+    const mr = modal.getBoundingClientRect();
+    const ms = getComputedStyle(modal);
+    const ir = input.getBoundingClientRect();
+    return { got: pick(input), want, fills: Math.abs((mr.width - parseFloat(ms.paddingLeft) - parseFloat(ms.paddingRight)) - ir.width) };
+  });
+  expect(m.got).toEqual(m.want);
+  expect(m.fills, 'поле во всю ширину окна').toBeLessThanOrEqual(1);
 });

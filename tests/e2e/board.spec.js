@@ -196,39 +196,76 @@ test('свойства задачи — строками в правой пан�
     selectTask(task.id);
   });
   // Свойства видны сразу; вкладки переключают только правую панель.
-  await expect(page.locator('#task-props #task-status')).toBeVisible();
+  await expect(page.locator('#task-props #task-statuses')).toBeVisible();
   await expect(page.locator('#task-tabs button')).toHaveText(['Свойства', 'История']);
 
-  // Панель стоит справа от редактора. Строка — подпись слева, управление у
-  // правого края; подписи и управление выровнены по своим колонкам.
+  // Панель стоит справа от редактора. С 13 октября 2026 свойства — строками
+  // «название · значение ›» на островах-группах (как на телефоне): названия в
+  // одну колонку у левого края острова, шевроны — у правого.
   const m = await page.evaluate(() => {
     const r = (sel) => document.querySelector(sel).getBoundingClientRect();
-    const rows = [...document.querySelectorAll('#task-props .task-params > div')].filter((d) => !d.hidden && !d.classList.contains('due-custom'));
+    const rows = [...document.querySelectorAll('#task-props .sgroup > .srow:not(.srow-add)')];
     return {
       editorRight: r('#task-detail').right,
       panelLeft: r('.task-props-island').left,
       panelRight: r('.task-props-island').right,
-      labelLefts: [...new Set(rows.map((d) => Math.round(d.querySelector('.due-label, label').getBoundingClientRect().left)))],
-      rowRights: rows.map((d) => Math.max(...[...d.children].filter((c) => !c.hidden).map((c) => c.getBoundingClientRect().right))),
-      labelWidth: r('#task-props .status-bar .due-label').width,
+      labelLefts: [...new Set(rows.map((d) => Math.round(d.querySelector('.srow-label').getBoundingClientRect().left)))],
+      chevRights: [...new Set(rows.map((d) => Math.round(d.querySelector('.srow-chev').getBoundingClientRect().right)))],
+      groupRight: r('#task-when').right,
     };
   });
   expect(m.panelLeft, 'панель справа от редактора').toBeGreaterThanOrEqual(m.editorRight);
-  expect(m.labelWidth, 'подпись видна').toBeGreaterThan(10);
-  expect(m.labelLefts, 'подписи в одну колонку').toHaveLength(1);
-  for (const right of m.rowRights) expect(m.panelRight - right, 'строка доходит до правого края панели').toBeLessThan(24);
+  expect(m.labelLefts, 'названия в одну колонку').toHaveLength(1);
+  expect(m.chevRights, 'шевроны в одну колонку').toHaveLength(1);
+  expect(m.groupRight - m.chevRights[0], 'шеврон у правого края острова').toBeLessThan(20);
+  expect(m.panelRight - m.groupRight, 'остров доходит до правого края панели').toBeLessThan(24);
 });
 
-test('в окне задачи из календаря свойства остаются колонкой с подписями', async ({ page }) => {
-  // Узел .task-params один: его одалживает окно задачи из календаря. Строка
-  // фишек ограничена #task-props, и в окне раскладка прежняя.
+test('в окне задачи из календаря свойства — те же группы строк', async ({ page }) => {
+  // Узел .task-params один: его одалживает окно задачи из календаря, и в окне
+  // он тот же — строки в одну колонку.
   await seed(page);
   const m = await page.evaluate(() => {
     openTaskModal(state.tasks[0], null);
     const left = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().left);
-    const label = document.querySelector('#tmdlg-params .status-bar .due-label').getBoundingClientRect();
-    return { lefts: ['#task-status', '#task-rate', '#due-date-btn'].map(left), labelWidth: label.width };
+    return {
+      lefts: ['#due-date-btn .srow-label', '#slots-row .srow-label', '#rate-row .srow-label'].map(left),
+      inModal: !!document.querySelector('#tmdlg-params #task-when'),
+    };
   });
+  expect(m.inModal).toBe(true);
   expect(new Set(m.lefts).size, `левые границы разошлись: ${m.lefts}`).toBe(1);
-  expect(m.labelWidth, 'подписи видны').toBeGreaterThan(10);
+});
+
+test('щелчок по карточке открывает задачу, а перетаскивание — переносит её и не открывает', async ({ page }) => {
+  // Доска с 6 октября — вкладка проекта, а карточка открывала задачу прежним
+  // способом («вид — проект, выбрана задача»): щелчок перерисовывал ту же
+  // доску, и задача не открывалась вовсе.
+  await seed(page);
+  await openBoard(page);
+
+  const card = page.locator('.board-card', { hasText: 'Пустая' });
+  await card.click();
+  await expect(page.locator('#task-view')).toBeVisible();
+  await expect(page.locator('#task-title')).toHaveValue('Пустая');
+  expect(await page.evaluate(() => state.ui.view), 'вид — страница задачи').toBe('task');
+  await expect(page.locator('.board-col').first()).toBeHidden();
+
+  // Назад к проекту — на ту же вкладку «Доска».
+  await page.locator('#task-back').click();
+  await expect(page.locator('.board-col').first()).toBeVisible();
+
+  // Перетаскивание в соседний столбец: статус меняется, задача не открывается.
+  const before = await page.evaluate(() => state.tasks.find((t) => t.title === 'Пустая').statusId);
+  await page.locator('.board-card', { hasText: 'Пустая' }).dragTo(page.locator('.board-col').nth(2));
+  const after = await page.evaluate(() => ({
+    statusId: state.tasks.find((t) => t.title === 'Пустая').statusId,
+    third: orderedStatuses(state.ui.projectId)[2].id,
+    view: state.ui.view,
+  }));
+  expect(after.statusId, 'карточка переехала в третий столбец').toBe(after.third);
+  expect(after.statusId).not.toBe(before);
+  expect(after.view, 'перетаскивание не открывает задачу').toBe('project');
+  await expect(page.locator('#task-view')).toBeHidden();
+  await expect(page.locator('.board-col').nth(2).locator('.board-card', { hasText: 'Пустая' })).toBeVisible();
 });

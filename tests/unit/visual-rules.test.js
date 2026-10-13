@@ -152,15 +152,26 @@ const LAYERS = ['Шрифты', 'Палитра', 'Основа', 'Компон�
  *  модификаторы чужих блоков (пустая клетка календаря, «призрак» будущего
  *  повторения) — такие правила детали не принадлежат, см. owns ниже. */
 const COMPONENTS = [
-  'primary', 'ghost', 'danger', 'icon-btn', 'icon-btn-accent', 'dp-btn', 'dp-btn-wide',
+  'primary', 'ghost', 'danger', 'icon-btn', 'icon-btn-accent', 'dp-btn', 'dp-btn-wide', 'dp-select',
   'switch', 'switch-track', 'switch-thumb',
   'modal', 'modal-lg', 'modal-buttons', 'modal-error', 'ctx-menu', 'ctx-item', 'ctx-sep', 'ctx-check',
   'st-swatch', 'task-status', 'board-dot', 'task-version',
   'segmented', 'segmented-sm', 'segmented-rows', 'segmented-row', 'field', 'field-sm',
   'period-head', 'period-nav', 'period-title', 'island', 'settings-card',
-  'btn-soft', 'btn-accent', 'island-head', 'island-title', 'island-note', 'island-empty',
+  'btn-soft', 'btn-accent', 'island-head', 'island-title', 'island-note',
   'page-head', 'page-title', 'row-list', 'rl-main', 'sq-btn', 'tag-chip', 'tag-dot', 'tag-add-btn',
-  'empty-state', 'empty-state-title', 'empty-state-text',
+  // 11 октября: кнопка запуска и галочка задачи — одна форма во всех местах,
+  // налив и слив кнопки, подложка сегментного переключателя.
+  'rl-play', 'task-done', 'liq-fill', 'liq-drain', 'seg-glide', 'seg-pill',
+  'empty-state', 'empty-state-title', 'empty-state-text', 'empty-state-sm',
+  // 11 октября: пустой экран в строку — выпадашки и списки в окне.
+  'empty-state-row', 'empty-state-body',
+  // 11 октября: край ленты, что листается вбок, — растворение и стрелка.
+  'edge-host', 'edge-scroll', 'edge-btn',
+  'es-art', 'es-plate', 'es-sheet', 'es-ink', 'es-ink-soft', 'es-dash', 'es-mark', 'es-on-mark',
+  // 13 октября: группа строк-настроек «название · значение ›» — правая панель
+  // задачи и окно «Время работы», как на телефоне.
+  'sgroup', 'sgroup-label', 'srow', 'srow-label', 'srow-box', 'srow-value', 'srow-sub', 'srow-chev', 'srow-add',
 ];
 
 test('styles.css: слои по порядку, общие детали — только в слое «Компоненты»', () => {

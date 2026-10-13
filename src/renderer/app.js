@@ -97,7 +97,9 @@ function applyStaticTranslations() {
   document.querySelectorAll('[data-i18n-ph]').forEach((el2) => { el2.placeholder = t(el2.dataset.i18nPh); });
   document.querySelectorAll('[data-i18n-title]').forEach((el2) => { el2.title = t(el2.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-aria]').forEach((el2) => { el2.setAttribute('aria-label', t(el2.dataset.i18nAria)); });
-  document.title = 'Lancible';
+  // Заголовок — по экрану (syncRoute), а не «Lancible»: эту функцию зовут и
+  // диалоги, пока человек на своём экране.
+  document.title = routeReady ? routeTitle(currentRoute()) : 'Lancible';
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +108,110 @@ function applyStaticTranslations() {
 // ---------------------------------------------------------------------------
 
 const icon = (name, cls) => Core.iconSvg(name, cls);
+
+// ---------------------------------------------------------------------------
+// Пустые экраны — сценки из core/illustrations.js. В разметке лежит пустой
+// <svg data-art="имя">, сценку в него вписывает paintArt() при запуске;
+// пустой экран, слова которого зависят от данных, собирает код —
+// emptyState() (в новом узле или в готовом из разметки) и fillEmpty() (в
+// списке, который перерисовывается целиком). Вид — .empty-state в styles.css.
+// ---------------------------------------------------------------------------
+
+function paintArt() {
+  document.querySelectorAll('svg[data-art]').forEach((n) => { n.innerHTML = Core.artShapes(n.dataset.art); });
+}
+
+/** Сценка, заголовок, строка пояснения и — если действие очевидно — кнопка.
+ *  action: { label, onClick, soft, icon } — soft, когда акцентная кнопка у
+ *  экрана уже есть (она одна на экран); icon — значок вместо «+». small —
+ *  компактный вид для панелей; row — компактный в строку (сценка слева) для
+ *  выпадашек и списков в окне, где строка создания стоит сразу под ним.
+ *
+ *  box — готовый узел из разметки (пустой экран с id, который экран прячет и
+ *  показывает): тогда вид собирается в нём. Те же слова — узел не трогается:
+ *  перерисовка на месте (тик, галочка, каждый символ в поиске) не
+ *  переигрывает появление сценки. */
+const emptyKeys = new WeakMap();
+function emptyState({ art, title, text, action, small, row }, box) {
+  box = box || elt('div');
+  const key = JSON.stringify([art, title, text || '', action ? action.label : '', !!small, !!row]);
+  if (emptyKeys.get(box) === key) return box;
+  emptyKeys.set(box, key);
+  box.classList.add('empty-state');
+  box.classList.toggle('empty-state-sm', !!(small || row));
+  box.classList.toggle('empty-state-row', !!row);
+  box.textContent = '';
+  box.insertAdjacentHTML('beforeend', Core.artSvg(art));
+  const words = row ? elt('div', 'empty-state-body') : box;
+  words.append(elt(small || row ? 'p' : 'h2', 'empty-state-title', title));
+  if (text) words.append(elt('p', 'empty-state-text', text));
+  if (row) box.append(words);
+  if (action) {
+    const b = elt('button', action.soft ? 'btn-soft' : 'btn-accent');
+    b.type = 'button';
+    b.innerHTML = icon(action.icon || 'plus');
+    b.append(elt('span', '', action.label));
+    b.addEventListener('click', action.onClick);
+    box.append(b);
+  }
+  return box;
+}
+
+/** Пустой экран единственным содержимым списка, который перерисовывается
+ *  целиком: тот же вид, что уже стоит, остаётся на месте — иначе сценка
+ *  появлялась бы заново на каждую перерисовку. */
+function fillEmpty(list, opts) {
+  const only = list.childElementCount === 1 && list.firstElementChild.classList.contains('empty-state') ? list.firstElementChild : null;
+  const box = emptyState(opts, only || undefined);
+  if (box !== only) list.replaceChildren(box);
+  return box;
+}
+
+// ---------------------------------------------------------------------------
+// Свойства задачи — разметка
+// ---------------------------------------------------------------------------
+// С 13 октября 2026 — как на телефоне: статус и версия чипами, теги бейджами
+// и «+ теги», дальше группы строк «название · значение ›» (.sgroup, .srow):
+// «Когда» — дедлайн, время работы, повторение; «Напоминания» — строка на
+// каждое и «Добавить»; «Ещё» — ставка. Каждая строка открывает своё окно.
+// Разметка одна на десктоп и веб: в обоих index.html стоит пустой
+// #task-params, а наполняет его эта функция — до того, как ниже соберётся
+// el. Тот же узел одалживает окно задачи из календаря (#tmdlg-params).
+
+/** Строка настройки: значок · название · значение (и тихая подстрока под ним)
+ *  · шеврон. Слова — data-i18n, их ставит applyStaticTranslations. */
+function srowHtml(id, iconName, labelKey, valueId, subId) {
+  return `<button type="button" class="srow" id="${id}">${icon(iconName)}`
+    + `<span class="srow-label" data-i18n="${labelKey}"></span>`
+    + `<span class="srow-box"><span class="srow-value" id="${valueId}"></span>`
+    + (subId ? `<span class="srow-sub" id="${subId}" hidden></span>` : '')
+    + `</span>${icon('chevron-right', 'icon srow-chev')}</button>`;
+}
+
+function taskParamsHtml() {
+  return [
+    '<div class="sgroup-label" data-i18n="task.status_label"></div>',
+    '<div class="tp-chips" id="task-statuses" role="group" data-i18n-aria="task.status_label"></div>',
+    '<div class="sgroup-label" id="task-version-label" data-i18n="version.label" hidden></div>',
+    '<div class="tp-chips" id="task-version-row" role="group" data-i18n-aria="version.label" hidden></div>',
+    '<div class="sgroup-label" data-i18n="tag.pick"></div>',
+    '<div class="tp-chips" id="task-tags-row"><div class="tag-chips" id="task-tags"></div>'
+      + `<button type="button" class="dp-btn is-empty tp-tag-add" id="task-tags-add" data-i18n-title="tag.pick">${icon('plus')}<span data-i18n="tag.pick"></span></button></div>`,
+    '<div class="sgroup-label" data-i18n="task.group_when"></div>',
+    '<div class="sgroup" id="task-when">',
+    srowHtml('due-date-btn', 'calendar', 'due.label', 'due-value'),
+    srowHtml('slots-row', 'clock', 'slot.label', 'slots-value'),
+    srowHtml('task-repeat', 'refresh', 'repeat.label', 'repeat-value', 'repeat-next'),
+    '</div>',
+    '<div class="sgroup-label" data-i18n="remind.label"></div>',
+    '<div class="sgroup" id="remind-row"></div>',
+    '<div class="sgroup-label" data-i18n="task.group_more"></div>',
+    '<div class="sgroup" id="task-more-group">',
+    srowHtml('rate-row', 'wallet', 'money.rate_label', 'rate-value'),
+    '</div>',
+  ].join('');
+}
+document.getElementById('task-params').innerHTML = taskParamsHtml();
 
 // ---------------------------------------------------------------------------
 // Элементы
@@ -131,7 +237,8 @@ const el = {
 
   authGoogleBtn: $('auth-google-btn'),
   authEmail: $('auth-email'), authPassword: $('auth-password'), authError: $('auth-error'),
-  authSignupOffer: $('auth-signup-offer'), authSignupBtn: $('auth-signup-btn'),
+  authTitle: $('auth-title'), authSub: $('auth-sub'),
+  authSwitchText: $('auth-switch-text'), authSwitchBtn: $('auth-switch-btn'),
   authCancel: $('auth-cancel'), authSubmit: $('auth-submit'),
   authName: $('auth-name'), authUsecases: $('auth-usecases'),
   authOnboardingSkip: $('auth-onboarding-skip'), authOnboardingSave: $('auth-onboarding-save'),
@@ -163,22 +270,23 @@ const el = {
   settingsVersion: $('settings-version'), settingsUpdateCheck: $('settings-update-check'),
   settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
   settingsSyncToggle: $('settings-sync-toggle'),
-  settingsRate: $('settings-rate'), settingsCurrency: $('settings-currency'),
+  settingsRate: $('settings-rate'),
+  settingsCurrencyRow: $('settings-currency-row'), settingsCurrencyValue: $('settings-currency-value'),
   settingsAccountLabel: $('settings-account-label'), settingsAccountCard: $('settings-account-card'),
   settingsNameRow: $('settings-name-row'), settingsNameValue: $('settings-name-value'),
   settingsPasswordRow: $('settings-password-row'), settingsSignoutRow: $('settings-signout-row'),
   settingsDeleteRow: $('settings-delete-row'),
   modalLabel2: $('modal-label2'), modalInput2: $('modal-input2'), modalError: $('modal-error'),
 
-  homeCount: $('home-count'), projectsTrack: $('projects-track'), deckPrev: $('deck-prev'), deckNext: $('deck-next'),
+  homeCount: $('home-count'), projectsTrack: $('projects-track'),
   recentSection: $('recent-section'), recentTrack: $('recent-track'),
   homeEmpty: $('home-empty'), homeEmptyCreate: $('home-empty-create'), createProjectBtn: $('create-project-btn'),
 
   phDot: $('ph-dot'), phName: $('ph-name'), projectMenuBtn: $('project-menu-btn'),
   projTabs: [...document.querySelectorAll('#proj-tabs button')], projList: $('proj-list'),
   projBoard: $('proj-board'), projVersions: $('proj-versions'), ptabVerCount: $('ptab-ver-count'),
-  projDocs: $('proj-docs'), ptabDocCount: $('ptab-doc-count'), pdocList: $('pdoc-list'), pdocEmpty: $('pdoc-empty'), pdocNew: $('pdoc-new'),
-  pverList: $('pver-list'), pverEmpty: $('pver-empty'), projBack: $('proj-back'), phDesc: $('ph-desc'),
+  projDocs: $('proj-docs'), ptabDocCount: $('ptab-doc-count'), pdocList: $('pdoc-list'), pdocEmpty: $('pdoc-empty'), pdocNew: $('pdoc-new'), pdocEmptyNew: $('pdoc-empty-new'),
+  pverList: $('pver-list'), pverEmpty: $('pver-empty'), pverEmptyNew: $('pver-empty-new'), projBack: $('proj-back'), phDesc: $('ph-desc'),
   ppDone: $('pp-done'), ppOf: $('pp-of'), ppPct: $('pp-pct'), ppBar: $('pp-bar'), ppLegend: $('pp-legend'),
   projVersionsCard: $('proj-versions-card'), pvRows: $('pv-rows'), pvAll: $('pv-all'), psList: $('ps-list'), psEmpty: $('ps-empty'),
   taskView: $('task-view'), taskBack: $('task-back'), crumbProjects: $('crumb-projects'), crumbProject: $('crumb-project'), crumbTask: $('crumb-task'),
@@ -187,11 +295,10 @@ const el = {
   navPinned: $('nav-pinned'), navPinnedHead: $('nav-pinned-head'),
   boardCols: $('board-cols'),
   boardStatuses: $('board-statuses'), stList: $('st-list'), stAdd: $('st-add'),
-  pdlgTabs: [...document.querySelectorAll('#pdlg-tabs button')], pdlgLater: $('pdlg-later'),
+  pdlgBody: $('pdlg-body'), pdlgLater: $('pdlg-later'),
   pdlgRate: $('pdlg-rate'), pdlgRateUnit: $('pdlg-rate-unit'), pdlgRateHint: $('pdlg-rate-hint'), pdlgCurrency: $('pdlg-currency'),
   pdlgTagList: $('pdlg-tag-list'), pdlgTagAdd: $('pdlg-tag-add'),
   verList: $('ver-list'), verAdd: $('ver-add'),
-  boardEmpty: $('board-empty'),
 
   taskList: $('task-list'), sidebarEmpty: $('sidebar-empty'), newTaskBtn: $('new-task-btn'),
   projectEarned: $('project-earned'),
@@ -202,7 +309,7 @@ const el = {
   title: $('task-title'),
   taskTabs: [...document.querySelectorAll('.task-tabs button')], tabNotes: $('tab-notes'), taskProps: $('task-props'), tabHistory: $('tab-history'),
   // Узел параметров задачи ездит между вкладкой и модалкой с календаря.
-  taskParams: document.querySelector('#task-props .task-params'),
+  taskParams: $('task-params'), taskMore: $('task-more'),
   tmdlgBackdrop: $('tmdlg-backdrop'), tmdlgDot: $('tmdlg-dot'), tmdlgTitle: $('tmdlg-title'),
   tmdlgProj: $('tmdlg-proj'), tmdlgTot: $('tmdlg-tot'), tmdlgEntry: $('tmdlg-entry'),
   tmdlgDate: $('tmdlg-date'), tmdlgStart: $('tmdlg-start'), tmdlgEnd: $('tmdlg-end'),
@@ -218,20 +325,34 @@ const el = {
   tfVersion: $('tf-version'), tfVersionRow: $('task-filter-version'),
   sfProject: $('sf-project'), sfVersion: $('sf-version'), sfReset: $('sf-reset'),
   exportPeriodBtn: $('export-period-btn'),
-  expdlgBackdrop: $('expdlg-backdrop'), expPills: $('exp-pills'), expRange: $('exp-range'),
-  expFrom: $('exp-from'), expTo: $('exp-to'),
-  expCalPrev: $('exp-cal-prev'), expCalNext: $('exp-cal-next'), expCalTitle: $('exp-cal-title'), expCalDays: $('exp-cal-days'),
+  expdlgBackdrop: $('expdlg-backdrop'), expPeriod: $('exp-period'), expRangeText: $('exp-range-text'), expDates: $('exp-dates'),
+  expFrom: $('exp-from'), expTo: $('exp-to'), expProjects: $('exp-projects'), expSummary: $('exp-summary'),
   expdlgOk: $('expdlg-ok'), expdlgCancel: $('expdlg-cancel'),
-  taskRate: $('task-rate'), rateUnit: $('rate-unit'), moneyCalc: $('money-calc'),
-  taskStatus: $('task-status'), taskStatusDot: $('task-status-dot'),
-  taskVersion: $('task-version'), taskVersionRow: $('task-version-row'),
-  repeatRow: $('repeat-row'), taskRepeat: $('task-repeat'), repeatNext: $('repeat-next'),
+  rateRow: $('rate-row'), rateValue: $('rate-value'),
+  taskStatuses: $('task-statuses'),
+  taskVersionLabel: $('task-version-label'), taskVersionRow: $('task-version-row'),
+  taskRepeat: $('task-repeat'), repeatValue: $('repeat-value'), repeatNext: $('repeat-next'),
   rpdlgBackdrop: $('rpdlg-backdrop'), rpEvery: $('rp-every'), rpUnit: $('rp-unit'),
   rpFreqSeg: $('rp-freq-seg'), rpDays: $('rp-days'), rpMonthSeg: $('rp-month-seg'),
   rpFromSeg: $('rp-from-seg'), rpEndsSeg: $('rp-ends-seg'),
   rpAfter: $('rp-after'), rpCount: $('rp-count'), rpUntilRow: $('rp-until-row'), rpUntil: $('rp-until'),
   rpHistory: $('rp-history'), rpPreview: $('rp-preview'),
+  rpFromField: $('rp-from-field'),
   rpdlgOff: $('rpdlg-off'), rpdlgCancel: $('rpdlg-cancel'), rpdlgSave: $('rpdlg-save'),
+  slotsRow: $('slots-row'), slotsValue: $('slots-value'),
+  sldlgBackdrop: $('sldlg-backdrop'), sldlgDateBtn: $('sldlg-date-btn'), sldlgDate: $('sldlg-date'),
+  sldlgStartBtn: $('sldlg-start-btn'), sldlgStart: $('sldlg-start'),
+  sldlgEndBtn: $('sldlg-end-btn'), sldlgEnd: $('sldlg-end'), sldlgDur: $('sldlg-dur'),
+  sldlgRepeatRow: $('sldlg-repeat-row'), sldlgRepeatNote: $('sldlg-repeat-note'),
+  sldlgDelete: $('sldlg-delete'), sldlgCancel: $('sldlg-cancel'), sldlgSave: $('sldlg-save'),
+  remindRow: $('remind-row'),
+  rmdlgBackdrop: $('rmdlg-backdrop'), rmKindSeg: $('rm-kind-seg'), rmNeedAnchor: $('rm-need-anchor'),
+  rmBefore: $('rm-before'), rmAnchorSeg: $('rm-anchor-seg'), rmPresets: $('rm-presets'),
+  rmN: $('rm-n'), rmUnitSeg: $('rm-unit-seg'),
+  rmAt: $('rm-at'), rmAtBtn: $('rm-at-btn'),
+  rmRepeat: $('rm-repeat'), rmFreqSeg: $('rm-freq-seg'), rmDays: $('rm-days'),
+  rmMonthLine: $('rm-month-line'), rmMonthDay: $('rm-monthday'), rmTimeBtn: $('rm-time-btn'),
+  rmError: $('rm-error'), rmdlgDelete: $('rmdlg-delete'), rmdlgCancel: $('rmdlg-cancel'), rmdlgSave: $('rmdlg-save'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
   settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
   settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
@@ -239,9 +360,7 @@ const el = {
   settingsLegalDocs: $('settings-legal-docs'),
   settingsNotifState: $('settings-notif-state'),
   notifList: $('notif-list'), notifEmpty: $('notif-empty'), notifSeen: $('notif-seen'),
-  dueDateBtn: $('due-date-btn'), dueState: $('due-state'),
-  dueRemind: $('due-remind'), dueClearBtn: $('due-clear-btn'), dueCustomRow: $('due-custom-row'),
-  remindDateBtn: $('remind-date-btn'),
+  dueDateBtn: $('due-date-btn'), dueValue: $('due-value'),
   editorWrap: $('editor-wrap'),
   docsView: $('docs-view'), docList: $('doc-list'), docListEmpty: $('doc-list-empty'), docSearch: $('doc-search'),
   docNewBtn: $('doc-new'), docFilterBtn: $('doc-filter'), docTitle: $('doc-title'), docProjectBtn: $('doc-project'),
@@ -256,8 +375,8 @@ const el = {
   calPeriodToggle: $('cal-period-toggle'),
   rangeFrom: $('range-from'), rangeTo: $('range-to'),
   dpPop: $('dp-pop'), dpTitle: $('dp-title'), dpDays: $('dp-days'), dpPrev: $('dp-prev'), dpNext: $('dp-next'),
-  dpTime: $('dp-time'), dpHours: $('dp-hours'), dpMinutes: $('dp-minutes'), dpHoursPick: $('dp-hours-pick'), dpMinutesPick: $('dp-minutes-pick'), dpDone: $('dp-done'),
-  tpPop: $('tp-pop'), tpHours: $('tp-hours'), tpMinutes: $('tp-minutes'),
+  dpTime: $('dp-time'), dpTimeBtn: $('dp-time-btn'), dpClear: $('dp-clear'), dpDone: $('dp-done'),
+  tpPop: $('tp-pop'), tpInput: $('tp-input'), tpList: $('tp-list'),
   calViewTot: $('cal-view-tot'),
   calDayHead: $('cal-day-head'), calDayTot: $('cal-day-tot'),
   calDayList: $('cal-day-list'), calDayEmpty: $('cal-day-empty'), calDayPanel: $('cal-day-panel'),
@@ -328,6 +447,9 @@ function setTaskStatus(task, statusId) {
   task.done = s.kind === 'done';
   task.cancelled = s.kind === 'cancelled';
   task.doneAt = task.done ? (task.doneAt || new Date().toISOString()) : null;
+  // Открыли руками — ждать дня возврата больше нечего, и засчитанный
+  // закрытием раз серии снимается (core/slots.js, planUntick).
+  if (!task.done) Object.assign(task, Core.planUntick(task));
   task.updatedAt = new Date().toISOString();
   afterTaskClosed(task, wasDone);
 }
@@ -346,6 +468,7 @@ function setTaskDone(task, done) {
   const wasDone = !!task.done;
   task.done = plan.setDone;
   task.doneAt = plan.setDone ? new Date().toISOString() : null;
+  if (!plan.setDone) Object.assign(task, Core.planUntick(task));
   task.updatedAt = new Date().toISOString();
   afterTaskClosed(task, wasDone);
 }
@@ -436,13 +559,10 @@ const rangeAgg = (from, to) => Core.rangeAgg(state.tasks, from, to, ratesMain())
 const tasksDoneOnDay = (key) => Core.tasksDoneOnDay(state.tasks, key);
 const projectMoney = (id) => Core.projectMoney(tasksOf(id), rates(), state.activeTimer, Date.now());
 const projectMs = (id) => Core.projectMs(tasksOf(id), state.activeTimer, Date.now());
-const reminderTime = Core.reminderTime;
 const dueState = (task) => Core.dueState(task, Date.now());
 
 /** Сумма с валютой: по умолчанию основной, у проекта — своей. */
 const fmtMoney = (n, code) => `${moneyFmt().format(Math.round((n + Number.EPSILON) * 100) / 100)} ${symOf(code || state.settings.currency)}`;
-
-const { REMIND_PRESETS, REMIND_LABEL } = Core;
 
 /** Короткая подпись срока для списка: «просрочено» / «сегодня» / дата. */
 const dueShort = (task) => Core.dueShort(task, Date.now(), t, fmtDateShort);
@@ -466,8 +586,8 @@ function toast(message) {
 const anyDialogOpen = () =>
   !el.modalBackdrop.hidden || !el.pdlgBackdrop.hidden || !el.sdlgBackdrop.hidden ||
   !el.confirmBackdrop.hidden || !el.searchPanel.hidden || !el.expdlgBackdrop.hidden ||
-  !el.tagdlgBackdrop.hidden || !el.rpdlgBackdrop.hidden ||
-  !el.tmdlgBackdrop.hidden;
+  !el.tagdlgBackdrop.hidden || !el.rpdlgBackdrop.hidden || !el.sldlgBackdrop.hidden ||
+  !el.rmdlgBackdrop.hidden || !el.tmdlgBackdrop.hidden;
 
 // ---------------------------------------------------------------------------
 // Диалог подтверждения (замена системного confirm())
@@ -483,10 +603,12 @@ const anyDialogOpen = () =>
  *  «повтор» и сообщение о несовпадении, смене имени — одно поле. */
 let promptResolve = null;
 let promptSubmit = null;
-function promptDialog({ label, value = '', type = 'text', label2 = null, okLabel = null, validate = null }) {
+function promptDialog({ label, value = '', type = 'text', label2 = null, okLabel = null, validate = null, placeholder = '' }) {
   el.modalLabel.textContent = label;
   el.modalInput.type = type;
   el.modalInput.value = value;
+  // Серая подсказка в пустом поле: у ставки задачи — откуда ставка берётся, пока своей нет.
+  el.modalInput.placeholder = placeholder;
   el.modalLabel2.textContent = label2 || '';
   el.modalLabel2.hidden = !label2;
   el.modalInput2.type = type;
@@ -503,9 +625,11 @@ function promptDialog({ label, value = '', type = 'text', label2 = null, okLabel
     if (err) { el.modalError.textContent = err; el.modalError.hidden = false; return; }
     closePrompt({ value: v1, value2: v2 });
   };
+  // Окно ввода бывает поверх другого (ставка — из окна задачи с календаря):
+  // Esc и Enter достаются только ему, окно под ним остаётся.
   const onKey = (e) => {
-    if (e.key === 'Escape') { e.preventDefault(); closePrompt(null); }
-    else if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePrompt(null); }
+    else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); submit(); }
   };
   document.addEventListener('keydown', onKey, true);
   promptSubmit = submit;
@@ -549,6 +673,42 @@ el.confirmBackdrop.addEventListener('click', (e) => { if (e.target === el.confir
 // Тема оформления (системная / светлая / тёмная)
 // ---------------------------------------------------------------------------
 
+/** Любой CSS-цвет → #rrggbb: холст разбирает формат сам. */
+function cssColorToHex(value) {
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.fillStyle = '#000000';
+  ctx.fillStyle = value;
+  return ctx.fillStyle;
+}
+
+/** Цвета нативных кнопок окна (Windows и Linux рисуют их поверх страницы).
+ *  Подложка — фон той поверхности, что лежит под кнопками: полноэкранный
+ *  редактор закрывает шапку, и тогда это его панель; иначе — шапка. Фон
+ *  берётся с первого непрозрачного предка, а текст кнопок — из токена
+ *  --text-dim. Своих цветов у main-процесса нет: всё, что он красит, пришло
+ *  отсюда, поэтому подложка совпадает с токенами обеих тем сама. */
+function titlebarColors() {
+  const surface = document.querySelector('.led.led-fullscreen .led-toolbar') || document.getElementById('titlebar');
+  let paint = 'transparent';
+  for (let node = surface; node; node = node.parentElement) {
+    paint = getComputedStyle(node).backgroundColor;
+    if (!/^(transparent|rgba\(.*,\s*0\))$/.test(paint)) break;
+  }
+  return {
+    color: cssColorToHex(paint),
+    symbolColor: cssColorToHex(getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim()),
+  };
+}
+
+/** Сообщить main-процессу тему и цвета кнопок окна. Звать после всего, что
+ *  меняет поверхность под ними: смены темы, входа в полноэкранный редактор
+ *  и выхода из него. Тему берёт из разметки, а не из state: на старте state
+ *  ещё не загружен, а data-theme уже выставил theme-boot.js. */
+function syncTitlebarOverlay() {
+  const theme = document.documentElement.getAttribute('data-theme') || 'system';
+  window.api.setTitlebarOverlay(theme, titlebarColors()).catch(() => {});
+}
+
 function applyTheme() {
   const theme = (state.settings && state.settings.theme) || 'system';
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
@@ -558,7 +718,7 @@ function applyTheme() {
   try { localStorage.setItem('lancible.theme', theme); } catch (e) { /* хранилище закрыто */ }
 
   for (const btn of el.themeTabs) btn.classList.toggle('on', btn.dataset.theme === theme);
-  window.api.setTitlebarOverlay(theme).catch(() => {});
+  syncTitlebarOverlay();
 }
 for (const btn of el.themeTabs) {
   btn.addEventListener('click', () => {
@@ -572,9 +732,13 @@ for (const btn of el.themeTabs) {
 // когда пользователь не переопределил тему явно (иначе CSS и так не следит).
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if (((state.settings && state.settings.theme) || 'system') === 'system') {
-    window.api.setTitlebarOverlay('system').catch(() => {});
+    syncTitlebarOverlay();
   }
 });
+// Кнопки окна нужны с первого кадра: main-процесс не показывает окно, пока
+// не получит их цвета. Тема уже стоит (theme-boot.js), загрузки данных ждать
+// незачем — applyTheme() повторит то же, когда данные придут.
+syncTitlebarOverlay();
 
 function setLang(code) {
   state.settings.lang = code;
@@ -592,7 +756,7 @@ function openLangMenu(anchor) {
     selected: code === ((state.settings && state.settings.lang) || 'ru'),
     onClick: () => setLang(code),
   }));
-  openMenu(anchor || el.langToggle, items);
+  openMenu(anchor || el.langToggle, items, { toggle: true });
 }
 el.langToggle.addEventListener('click', () => openLangMenu(el.langToggle));
 el.settingsLangRow.addEventListener('click', () => openLangMenu(el.settingsLangRow));
@@ -661,7 +825,7 @@ el.settingsPasswordRow.addEventListener('click', async () => {
 });
 el.settingsSignoutRow.addEventListener('click', signOut);
 el.settingsDeleteRow.addEventListener('click', deleteAccount);
-el.settingsCurrency.addEventListener('click', () => openCurrencyMenu(el.settingsCurrency));
+el.settingsCurrencyRow.addEventListener('click', () => openCurrencyMenu(el.settingsCurrencyRow));
 
 if (el.mobileBackToList) {
   el.mobileBackToList.addEventListener('click', () => {
@@ -799,7 +963,7 @@ function renderAccountBtn() {
 /** Страница «Статистика»: четыре карточки, как на главной, и под ними
  *  календарь. Разбивки по проектам, статусам и задачам убраны — то же самое
  *  теперь видно в правой панели календаря, разложенное по проектам. */
-/** Раздел «Время»: шапка с режимами, числа, сетка (часовая или итогов),
+/** Раздел «Статистика»: шапка с режимами, числа, сетка (часовая или итогов),
  *  справа день. Режим «Месяц» — сетка итогов статистики с выбором периода;
  *  остальные режимы — расписание (core/agenda.js). */
 function renderTimePage() {
@@ -833,10 +997,16 @@ function renderTimePage() {
   el.periodBarInfo.hidden = !calState.periodOn;
 }
 
-function setTimeMode(mode) {
+/** Режим выставляется отдельно от перерисовки: из адреса он приходит вместе с
+ *  переходом на экран, и рисовать дважды незачем. */
+function applyTimeMode(mode) {
   state.ui.timeMode = mode;
   if (mode === 'month') { calState.mode = 'month'; if (calState.periodOn) seedRangeFromView(); }
   else agenda.mode = mode;
+}
+
+function setTimeMode(mode) {
+  applyTimeMode(mode);
   render();
   scheduleSave();
 }
@@ -879,8 +1049,8 @@ function renderSettings() {
         <button type="button" class="ghost" id="settings-signin-btn">${escapeHtml(t('auth.sign_in'))}</button>
         <button type="button" class="btn-accent" id="settings-signup-btn">${escapeHtml(t('auth.create_account'))}</button>
       </div>`;
-    $('settings-signin-btn').addEventListener('click', openAuthModal);
-    $('settings-signup-btn').addEventListener('click', openAuthModal);
+    $('settings-signin-btn').addEventListener('click', () => openAuthModal('signin'));
+    $('settings-signup-btn').addEventListener('click', () => openAuthModal('signup'));
   }
 
   el.settingsAccountLabel.hidden = !currentUser;
@@ -925,14 +1095,37 @@ function showAuthStep(step) {
   el.authStepCredentials.hidden = step !== 'credentials';
   el.authStepOnboarding.hidden = step !== 'onboarding';
 }
-function openAuthModal() {
+/** Текст с ключом перевода: ключ запоминается в data-i18n, чтобы смена языка
+ *  при открытом окне переписала и его. */
+function setI18nText(node, key) {
+  node.dataset.i18n = key;
+  node.textContent = t(key);
+}
+/** Окно входа одно на два режима: 'signin' и 'signup'. Режим меняет заголовок,
+ *  подпись главной кнопки, подсказку для менеджера паролей и строку-переключатель
+ *  внизу. Почта и пароль остаются как были — человек не перепечатывает их. */
+let authMode = 'signin';
+function setAuthMode(mode) {
+  authMode = mode === 'signup' ? 'signup' : 'signin';
+  const up = authMode === 'signup';
   el.authError.hidden = true;
-  el.authSignupOffer.hidden = true;
+  setI18nText(el.authTitle, up ? 'auth.signup_title' : 'auth.title');
+  setI18nText(el.authSub, up ? 'auth.signup_subtitle' : 'auth.subtitle');
+  setI18nText(el.authSubmit, up ? 'auth.create_account' : 'auth.sign_in');
+  setI18nText(el.authSwitchText, up ? 'auth.have_account' : 'auth.no_account_q');
+  setI18nText(el.authSwitchBtn, up ? 'auth.sign_in' : 'auth.create_account');
+  el.authPassword.autocomplete = up ? 'new-password' : 'current-password';
+}
+function openAuthModal(mode) {
+  setAuthMode(mode);
   el.authEmail.value = '';
   el.authPassword.value = '';
   showAuthStep('credentials');
   el.authBackdrop.hidden = false;
-  setTimeout(() => el.authEmail.focus(), 30);
+  // Фокус на почту — отложенно, и только если за эти 30 мс человек (или менеджер
+  // паролей) не встал в другое поле окна: иначе таймер отнимет у него ввод, и
+  // пароль уйдёт в поле почты.
+  setTimeout(() => { if (!el.authBackdrop.contains(document.activeElement)) el.authEmail.focus(); }, 30);
 }
 function closeAuthModal() {
   el.authBackdrop.hidden = true;
@@ -1019,18 +1212,26 @@ async function afterSignedIn(opts) {
   await syncOnSignIn();
 }
 
+/** Главная кнопка и Enter: вход или регистрация, смотря какой режим. */
 async function handleAuthSubmit() {
+  if (authMode === 'signup') { await handleSignup(); return; }
   const email = el.authEmail.value.trim();
   const password = el.authPassword.value;
   if (!email || !password) return;
   el.authError.hidden = true;
-  el.authSignupOffer.hidden = true;
   el.authSubmit.disabled = true;
   try {
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
-      if (/invalid login credentials/i.test(error.message || '')) el.authSignupOffer.hidden = false;
-      else showAuthError('auth.error_generic');
+      // Неверная пара — это и опечатка в пароле, и «аккаунта ещё нет», сервер
+      // их не различает. Поэтому ошибка красным, как у любой другой неудачи, а
+      // рядом — предложение создать аккаунт: тот же переключатель внизу, но с
+      // подсказкой, как на телефоне. Одной подсказки мало: человек с опечаткой
+      // не увидел бы, что вход не удался.
+      if (error.code === 'invalid_credentials' || /invalid login credentials/i.test(error.message || '')) {
+        showAuthError('auth.error_invalid');
+        setI18nText(el.authSwitchText, 'auth.no_account');
+      } else showAuthError('auth.error_generic');
       return;
     }
     await afterSignedIn();
@@ -1041,14 +1242,31 @@ async function handleAuthSubmit() {
   }
 }
 
+/** Ответ signUp понятными словами. Аккаунт уже есть — переключаем на вход, не
+ *  стирая почту и пароль. supabase-js отдаёт код в error.code (новый сервер) или
+ *  только текст 'User already registered' (старый); слабый пароль — код
+ *  weak_password. Если подтверждение почты включено, а адрес занят, сервер не
+ *  ошибается, а отдаёт «пустого» пользователя без identities. */
+function signupFailed(error, data) {
+  const code = (error && error.code) || '';
+  const text = (error && error.message) || '';
+  const exists = code === 'user_already_exists' || /already registered/i.test(text)
+    || (!error && data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
+  if (exists) { setAuthMode('signin'); showAuthError('auth.error_exists'); return true; }
+  if (!error) return false;
+  showAuthError(code === 'weak_password' || /password should be at least/i.test(text) ? 'auth.error_weak_password' : 'auth.error_generic');
+  return true;
+}
+
 async function handleSignup() {
   const email = el.authEmail.value.trim();
   const password = el.authPassword.value;
   if (!email || !password) return;
-  el.authSignupBtn.disabled = true;
+  el.authError.hidden = true;
+  el.authSubmit.disabled = true;
   try {
     const { data, error } = await sb.auth.signUp({ email, password });
-    if (error) { showAuthError('auth.error_generic'); return; }
+    if (signupFailed(error, data)) return;
     // Подтверждения почты нет: логин и пароль — и сразу внутри. Сервер без
     // сессии — входим тем же паролем; не вышло — ошибка в форме.
     if (!data.session) {
@@ -1059,7 +1277,7 @@ async function handleSignup() {
   } catch {
     showAuthError('auth.error_generic');
   } finally {
-    el.authSignupBtn.disabled = false;
+    el.authSubmit.disabled = false;
   }
 }
 
@@ -1341,7 +1559,7 @@ el.accountBtn.addEventListener('click', () => {
       { sep: true },
       { label: t('auth.sign_out'), danger: true, onClick: signOut },
     ]);
-  } else openAuthModal();
+  } else openAuthModal('signin');
 });
 el.authCancel.addEventListener('click', closeAuthModal);
 // Шаг согласия не закрывается ни щелчком мимо окна, ни Escape: иначе он
@@ -1363,7 +1581,7 @@ el.authConsentDecline.addEventListener('click', async () => {
   toast(t('auth.signed_out_toast'));
 });
 el.authSubmit.addEventListener('click', handleAuthSubmit);
-el.authSignupBtn.addEventListener('click', handleSignup);
+el.authSwitchBtn.addEventListener('click', () => setAuthMode(authMode === 'signup' ? 'signin' : 'signup'));
 el.authGoogleBtn.addEventListener('click', handleGoogleSignIn);
 el.authOnboardingSave.addEventListener('click', () => saveOnboarding(true));
 // «Пропустить» пропускает имя и назначение, но не согласие: строка профиля
@@ -1373,7 +1591,16 @@ el.authOnboardingSkip.addEventListener('click', () => saveOnboarding(false));
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAuthSubmit(); });
 });
 
-sb.auth.getSession().then(({ data }) => { if (data && data.session) afterSignedIn({ silent: true }); });
+// Первая синхронизация после запуска. Её ждёт startRoute(): ссылка на проект
+// или задачу, которых на этом устройстве ещё нет, — не повод отправлять на
+// «Сегодня», пока облако не ответило. Выполняется и тогда, когда входа нет, и
+// когда синхронизация упала: ждать больше нечего.
+let firstSyncDone;
+const firstSync = new Promise((resolve) => { firstSyncDone = resolve; });
+sb.auth.getSession()
+  .then(({ data }) => (data && data.session ? afterSignedIn({ silent: true }) : null))
+  .catch((err) => console.error('Не удалось восстановить сессию:', err))
+  .finally(firstSyncDone);
 
 // ---------------------------------------------------------------------------
 // Синхронизация данных (проекты/задачи) с Supabase — только для вошедших.
@@ -1457,12 +1684,17 @@ function applyRemoteData(data) {
   // (правило в core/sync.js: pickDocuments).
   state.documents = Core.pickDocuments(state.documents, data);
   migrate();
+  // Отпечаток — того, что пришло, до возврата задач: возврат — своя правка
+  // этого устройства, и уйти в облако он должен, как любая другая. Снятый
+  // после, он считался бы уже отправленным, и второе устройство продолжало бы
+  // видеть задачу закрытой.
+  lastSyncedJSON = JSON.stringify(syncPayload());
+  reopenDueTasks(Date.now());
   if (selectedId && !getTask(selectedId)) selectedId = null;
   if (state.ui.projectId && !getProject(state.ui.projectId)) {
     state.ui.view = 'home';
     state.ui.projectId = null;
   }
-  lastSyncedJSON = JSON.stringify(syncPayload());
   render();
   refreshEditorsFromRemote();
   scheduleSave(); // сохраняем локально; pushSyncState сам не отправит лишнего — см. lastSyncedJSON
@@ -1615,6 +1847,9 @@ let shownScreen = '';
 let settleTimer = 0;
 
 function render() {
+  // Где стояли строки, у которых порядок может поменяться (см. «Порядок
+  // строк»): замер — до того, как страница перерисуется.
+  const flipBefore = flipSnapshot();
   // Отдельного вида «Доска» с 6 октября 2026 нет: доска — вкладка проекта.
   // Сохранённое когда-то «board» открывается как проект на этой вкладке.
   if (state.ui.view === 'board') {
@@ -1647,6 +1882,9 @@ function render() {
   const shown = `${v}:${v === 'task' ? selectedId : v === 'project' ? state.ui.projectId : ''}`;
   const entering = shown !== shownScreen;
   shownScreen = shown;
+  // Новый экран — порядок строк считается заново, без заморозки и без
+  // переезда: человек ушёл и вернулся, а не смотрел, как строка едет.
+  if (entering) { orderHold = null; shownOrder.clear(); flipArm = null; }
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1664,6 +1902,9 @@ function render() {
   // Модалка задачи живёт поверх любой страницы, и общий render() про неё
   // сам не знает: без этой строки статус, поменянный в ней же, не обновлялся.
   if (!el.tmdlgBackdrop.hidden) renderTaskModal();
+
+  flipPlay(entering ? null : flipBefore);
+  syncRoute();
 }
 
 /** Переход на экран: он въезжает (viewIn), строки и карточки — лесенкой
@@ -1678,7 +1919,7 @@ function enterView(node) {
 }
 
 /** Старые имена экранов — «calendar» и «stats» — с 7 октября 2026 один
- *  раздел «Время»: календарь открывается в своём последнем режиме,
+ *  раздел «Статистика»: календарь открывается в своём последнем режиме,
  *  статистика — месяцем. */
 function aliasTimeView() {
   if (state.ui.view === 'calendar') {
@@ -1712,6 +1953,179 @@ function toggleNav() {
 }
 
 // ---------------------------------------------------------------------------
+// Адреса экранов
+//
+// Экран и открытая сущность отражаются в хэше (core/route.js): обновление
+// страницы остаётся на месте, а у проекта, задачи и документа есть ссылка.
+// Адрес пишет сам render() — через syncRoute(), в самом конце, когда вид уже
+// приведён в порядок, — поэтому ни один из десятка переходов в коде не знает
+// про историю браузера. В обратную сторону работает openRoute(): назад и
+// вперёд, ручная правка адреса, запуск и lancible://.
+// ---------------------------------------------------------------------------
+
+/** Пока адрес не разобран на запуске, он не пишется: иначе первый же render()
+ *  затёр бы ссылку, по которой человека сюда привели. */
+let routeReady = false;
+/** Идёт переход из адреса: исправления адреса при этом — замена записи в
+ *  истории, а не новая запись. */
+let routeApplying = false;
+/** Экран последней записи в истории (core/route.js: routeKey) — по нему
+ *  отличается новый экран от вкладки или режима внутри прежнего. */
+let lastRouteKey = null;
+/** Ссылка lancible://, пришедшая раньше, чем окно закончило запуск. */
+let pendingDeepRoute = null;
+/** Адрес, с которым экран уже согласован: на «назад» браузер шлёт popstate и
+ *  hashchange подряд, и второй раз переходить незачем. */
+let lastRouteHash = '';
+
+/** Сколько ждать первую синхронизацию, прежде чем решить, что сущности по
+ *  ссылке нет. Облако отвечает за секунду-две; потолок нужен, чтобы
+ *  зависшая сеть не оставила человека перед заставкой. */
+const FIRST_SYNC_WAIT_MS = 8000;
+
+/** Адрес веб-версии: десктоп копирует ссылки на неё. На вебе ссылка идёт от
+ *  страницы, на которой человек сидит, — так её открывает и боевой сайт
+ *  (/app/), и локальный сервер, где приложение лежит в корне. */
+const WEB_APP_URL = 'https://lancible.vercel.app/app/';
+
+/** Маршрут того, что на экране. Звать после того, как render() привёл вид в
+ *  порядок: нет проекта — «Сегодня», нет задачи — её проект. */
+function currentRoute() {
+  const v = state.ui.view;
+  if (v === 'project') return { view: v, id: state.ui.projectId, tab: projectTab() };
+  if (v === 'task') return { view: v, id: selectedId };
+  if (v === 'docs') return { view: v, id: state.ui.docId || undefined };
+  if (v === 'time') return { view: v, mode: timeMode() };
+  return { view: v };
+}
+
+/** Есть ли у нас то, на что указывает маршрут. Экранам без сущности — да. */
+function routeFound(route) {
+  if (route.view === 'project') return !!getProject(route.id);
+  if (route.view === 'task') return !!getTask(route.id);
+  if (route.view === 'docs' && route.id) return !!getDocument(route.id);
+  return true;
+}
+
+/** Заголовок вкладки браузера (и окна десктопа): что открыто. */
+function routeTitle(route) {
+  let name = null;
+  if (route.view === 'project') name = (getProject(route.id) || {}).name;
+  else if (route.view === 'task') { const task = getTask(route.id); name = task && (task.title || t('task.no_name')); }
+  else if (route.view === 'docs' && route.id) { const d = getDocument(route.id); name = d && docTitle(d); }
+  else name = t({ projects: 'nav.projects', docs: 'nav.docs', time: 'nav.stats', settings: 'nav.settings' }[route.view] || 'nav.home');
+  return name ? `${name} — Lancible` : 'Lancible';
+}
+
+/** Адрес и заголовок — по тому, что на экране. Новый экран — новая запись
+ *  истории (назад ходит по экранам); вкладка проекта, режим «Времени» и всё,
+ *  что поправлено при переходе из самого адреса, — замена текущей. На
+ *  десктопе последний экран ещё и запоминается для следующего запуска. */
+function syncRoute() {
+  if (!routeReady) return;
+  const route = currentRoute();
+  const hash = Core.buildRoute(route);
+  const key = Core.routeKey(route);
+  const title = routeTitle(route);
+  if (document.title !== title) document.title = title;
+  // Токены входа в хэше разбирает клиент базы — его адрес не трогаем.
+  if (location.hash !== hash && !Core.isAuthHash(location.hash)) {
+    history[routeApplying || key === lastRouteKey ? 'replaceState' : 'pushState'](null, '', hash);
+  }
+  lastRouteKey = key;
+  lastRouteHash = location.hash;
+  if (!IS_WEB && state.ui.route !== hash) {
+    state.ui.route = hash;
+    scheduleSave();
+  }
+}
+
+/** Привести приложение к маршруту. Нет такой сущности (чужой id, удалена,
+ *  кривая ссылка) — «Сегодня», и адрес заменяется на него. */
+function openRoute(route) {
+  if (!routeFound(route)) route = { view: 'home' };
+  routeApplying = true;
+  try {
+    if (route.view === 'project') {
+      state.ui.projectTab = route.tab;
+      if (state.ui.view === 'project' && state.ui.projectId === route.id) {
+        // Тот же проект, другая вкладка: переход не нужен, только перерисовка.
+        flushEditor();
+        closeMenu();
+        render();
+        scheduleSave();
+      } else openProject(route.id);
+    } else if (route.view === 'task') {
+      selectTask(route.id); // задача уже открыта — он сам ничего не делает
+    } else if (route.view === 'docs') {
+      // Список документов может быть отфильтрован так, что открываемого в нём
+      // нет, — тогда фильтр и поиск сбрасываются.
+      if (route.id && !docsShown().some((d) => d.id === route.id)) {
+        docFilter = 'all';
+        docQuery = '';
+        if (el.docSearch) el.docSearch.value = '';
+      }
+      openDocs(route.id);
+    } else if (route.view === 'time') {
+      if (route.mode) applyTimeMode(route.mode);
+      openView('time');
+    } else openView(route.view);
+    syncRoute(); // экран не менялся (уже там) — адрес всё равно приводится к виду
+  } finally {
+    routeApplying = false;
+  }
+}
+
+/** Запуск и обновление страницы: экран берётся из адреса. Пустой адрес — на
+ *  десктопе последний экран, на вебе «Сегодня». Если сущности по ссылке нет
+ *  у нас, а человек вошёл в аккаунт, ждём первую синхронизацию: на новом
+ *  устройстве его проект приедет только с ней. */
+async function startRoute() {
+  const hash = location.hash;
+  let route = hash && hash !== '#' ? Core.parseRoute(hash)
+    : IS_WEB ? { view: 'home' } : Core.parseRoute(state.ui.route);
+  if (pendingDeepRoute) route = pendingDeepRoute;
+  if (!routeFound(route)) {
+    await Promise.race([firstSync, new Promise((resolve) => setTimeout(resolve, FIRST_SYNC_WAIT_MS))]);
+    // Ссылка lancible:// могла прийти, пока ждали, — она новее адреса.
+    if (pendingDeepRoute) route = pendingDeepRoute;
+  }
+  pendingDeepRoute = null;
+  routeReady = true;
+  openRoute(route);
+}
+
+// Назад, вперёд и правка адреса руками. popstate и hashchange приходят парой
+// (на ручную правку и на «назад» по хэшу — оба): второй видит адрес, с которым
+// экран уже согласован, и ничего не делает.
+function onRouteChange() {
+  if (!routeReady || location.hash === lastRouteHash || Core.isAuthHash(location.hash)) return;
+  openRoute(Core.parseRoute(location.hash));
+}
+window.addEventListener('popstate', onRouteChange);
+window.addEventListener('hashchange', onRouteChange);
+
+// Десктоп: lancible://project/<id> присылает главный процесс (src/main.js).
+if (window.api.onRouteOpen) {
+  window.api.onRouteOpen(({ route }) => {
+    if (!route) return;
+    if (routeReady) openRoute(route);
+    else pendingDeepRoute = route;
+  });
+}
+
+/** Ссылка на экран: её можно отправить, и она откроет то же самое. */
+function routeUrl(route) {
+  const base = IS_WEB ? location.origin + location.pathname.replace(/index\.html$/, '') : WEB_APP_URL;
+  return Core.routeLink(base, route);
+}
+
+async function copyRouteLink(route) {
+  try { await window.api.copy(routeUrl(route)); toast(t('toast.link_copied')); }
+  catch { toast(t('toast.copy_failed')); }
+}
+
+// ---------------------------------------------------------------------------
 // Статистика
 // ---------------------------------------------------------------------------
 
@@ -1721,7 +2135,7 @@ function renderStats() {
   const now = new Date();
   const today = aggregateDays().get(dayKey(now)) || { ms: 0, money: 0 };
   const weekFrom = mondayOf(now);
-  const weekTo = new Date(weekFrom.getTime() + 6 * 86400000);
+  const weekTo = new Date(Core.addDaysMs(weekFrom, 6));
   weekTo.setHours(23, 59, 59, 999);
   const week = rangeAgg(weekFrom, weekTo);
   const monthFrom = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1757,13 +2171,23 @@ function startableTask() {
 function renderTbTimer() {
   const at = state.activeTimer;
   const task = at && getTask(at.taskId);
-  el.tbTimer.hidden = !task;
   const next = task ? null : startableTask();
+  // Смена «стоит ↔ идёт» — перелив (tbPour); первая отрисовка — без него.
+  const was = tbRunning;
+  tbRunning = !!task;
+  const pour = was === null || was === tbRunning ? null : task ? 'in' : 'out';
+  // «Старт» мерим, пока он на месте: из его ширины капсула и растекается.
+  const fromW = pour === 'in' ? el.tbStart.offsetWidth : 0;
+  // Стекающая капсула видна, пока не стечёт.
+  const draining = pour === 'out' ? !reducedMotion() : el.tbTimer.classList.contains('liq-shrink');
+  el.tbTimer.hidden = !task && !draining;
   el.tbStart.hidden = !next;
   if (next) el.tbStart.title = t('timer.start_last', { name: next.title || t('task.no_name') });
-  if (!task) return;
-  el.tbTimerTime.textContent = fmtClock(Date.now() - new Date(at.startedAt).getTime());
-  el.tbTimerName.textContent = task.title || t('task.no_name');
+  if (task) {
+    el.tbTimerTime.textContent = fmtClock(Date.now() - new Date(at.startedAt).getTime());
+    el.tbTimerName.textContent = task.title || t('task.no_name');
+  }
+  if (pour) tbPour(pour, pour === 'in' ? fromW : el.tbStart.offsetWidth);
 }
 
 // ---------------------------------------------------------------------------
@@ -1804,15 +2228,25 @@ function todaySessions() {
 }
 
 /** День: дата, записано, лента записей с 8 до 20 (шире, если записи были
- *  раньше или позже), идущая запись — акцентом, «сейчас» — красной линией. */
+ *  раньше или позже), запись — цветом проекта своей задачи, идущая — акцентом,
+ *  «сейчас» — красной линией.
+ *
+ *  Зовётся из тика каждые 250 мс, пока на «Сегодня» идёт таймер. Идущая запись
+ *  и красная линия за это время сдвигаются на тысячные доли процента, поэтому
+ *  сначала описывается всё, что рисуется (положения — с точностью до сотой
+ *  процента, меньше пикселя), и DOM пересобирается, только когда описание
+ *  изменилось: раз в несколько секунд, а не четыре раза в секунду. Иначе
+ *  каждый тик стирал и заводил заново десяток узлов, а наблюдатели за <body>
+ *  разбирали их каждый раз. */
+let dayIslandKey = '';
 function renderDayIsland() {
   const now = new Date();
   const title = now.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
-  el.dayTitle.textContent = title.charAt(0).toUpperCase() + title.slice(1);
+  const titleText = title.charAt(0).toUpperCase() + title.slice(1);
   const agg = aggregateDays().get(dayKey(now)) || { ms: 0, money: 0 };
   const at = state.activeTimer;
   const since = at ? ` · ${t('home.since', { time: hm(at.startedAt) })}` : '';
-  el.daySub.innerHTML = `${escapeHtml(t('home.recorded'))} <b>${escapeHtml(fmtDur(agg.ms))}</b> · <b>${escapeHtml(fmtMoney(agg.money))}</b><span class="muted">${escapeHtml(since)}</span>`;
+  const subHtml = `${escapeHtml(t('home.recorded'))} <b>${escapeHtml(fmtDur(agg.ms))}</b> · <b>${escapeHtml(fmtMoney(agg.money))}</b><span class="muted">${escapeHtml(since)}</span>`;
 
   const items = todaySessions();
   let h0 = 8;
@@ -1824,27 +2258,46 @@ function renderDayIsland() {
   const span = (h1 - h0) * 60;
   const minOf = (d) => d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60 - h0 * 60;
   const pct = (m) => Math.max(0, Math.min(100, (m / span) * 100));
-  el.dayTrack.innerHTML = `<div class="day-grid">${'<i></i>'.repeat(h1 - h0)}</div>`;
-  for (const it of items) {
+  const hundredth = (v) => Math.round(v * 100) / 100;
+  const blocks = items.map((it) => {
     const left = pct(minOf(it.start));
     const width = Math.max(0.4, pct(minOf(it.end)) - left);
+    const proj = getProject(it.task.projectId);
+    const name = it.task.title || t('task.no_name');
+    return {
+      it, left: hundredth(left), width: hundredth(width), color: proj ? proj.color : PALETTE[0],
+      title: `${name} · ${hm(it.start)}–${it.running ? '…' : hm(it.end)}`,
+      label: width > 6 ? (it.running ? `${t('task.running_now')} · ${fmtShort(it.end - it.start)}` : name) : '',
+    };
+  });
+  const nowMin = minOf(now);
+  const nowAt = nowMin >= 0 && nowMin <= span ? hundredth(pct(nowMin)) : null;
+  const key = JSON.stringify([titleText, subHtml, h0, h1, nowAt,
+    blocks.map((b) => [b.it.task.id, b.it.task.projectId, b.it.running, b.left, b.width, b.color, b.title, b.label])]);
+  if (key === dayIslandKey && el.dayTrack.firstChild) return;
+  dayIslandKey = key;
+
+  el.dayTitle.textContent = titleText;
+  el.daySub.innerHTML = subHtml;
+  el.dayTrack.innerHTML = `<div class="day-grid">${'<i></i>'.repeat(h1 - h0)}</div>`;
+  for (const blk of blocks) {
+    const { it } = blk;
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'day-blk' + (it.running ? ' run' : '');
-    b.style.left = `${left}%`;
-    b.style.width = `${width}%`;
-    const name = it.task.title || t('task.no_name');
-    b.title = `${name} · ${hm(it.start)}–${it.running ? '…' : hm(it.end)}`;
-    b.setAttribute('aria-label', b.title);
-    if (width > 6) b.textContent = it.running ? `${t('task.running_now')} · ${fmtShort(it.end - it.start)}` : name;
+    b.style.setProperty('--pc', blk.color);
+    b.style.left = `${blk.left}%`;
+    b.style.width = `${blk.width}%`;
+    b.title = blk.title;
+    b.setAttribute('aria-label', blk.title);
+    if (blk.label) b.textContent = blk.label;
     b.addEventListener('click', () => { openProject(it.task.projectId); selectTask(it.task.id); });
     el.dayTrack.appendChild(b);
   }
-  const nowMin = minOf(now);
-  if (nowMin >= 0 && nowMin <= span) {
+  if (nowAt !== null) {
     const line = document.createElement('i');
     line.className = 'day-now';
-    line.style.left = `${pct(nowMin)}%`;
+    line.style.left = `${nowAt}%`;
     el.dayTrack.appendChild(line);
   }
   el.dayHours.innerHTML = Array.from({ length: h1 - h0 }, (_, i) => `<span>${pad2(h0 + i)}</span>`).join('');
@@ -1869,7 +2322,7 @@ function recentProjects(limit) {
 }
 
 function renderHomeProjects() {
-  const list = recentProjects(3);
+  const list = listRows('home-projects', recentProjects(3));
   el.homeProjects.hidden = list.length === 0;
   el.homeProjGrid.innerHTML = '';
   for (const p of list) {
@@ -1879,6 +2332,7 @@ function renderHomeProjects() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'hp-card';
+    flipTag(b, 'home-projects', p.id);
     b.style.setProperty('--pc', p.color || PALETTE[0]);
     b.innerHTML = `<span class="hp-head"><i class="hp-dot"></i><span class="hp-name">${escapeHtml(p.name)}</span></span>`
       + `<span class="hp-figs"><span><b>${escapeHtml(fmtDur(projectMs(p.id)))}</b> · ${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span><span>${done}/${tasks.length}</span></span>`
@@ -1891,7 +2345,9 @@ function renderHomeProjects() {
 /** Сроки — та же лента, что в колокольчике: просроченное, ближайшее,
  *  сработавшие напоминания. */
 function renderHomeDue() {
-  const feed = notificationFeed().slice(0, 6);
+  // Остров называется «Дедлайны»: напоминания отрезков «времени работы» —
+  // не про сроки, они живут в колокольчике.
+  const feed = notificationFeed().filter((n) => n.kind !== 'slot').slice(0, 6);
   el.homeDueList.innerHTML = '';
   el.homeDueEmpty.hidden = feed.length > 0;
   const overdue = feed.filter((n) => n.kind === 'overdue').length;
@@ -1903,7 +2359,7 @@ function renderHomeDue() {
     li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
     li.innerHTML = `<span class="rl-main"><span class="rl-name">${escapeHtml(n.task.title || t('task.no_name'))}</span>`
       + `<span class="rl-sub"><i class="rl-dot"></i>${escapeHtml(p ? p.name : '')}${n.kind === 'reminder' ? ` · ${escapeHtml(t('notif.reminder'))}` : ''}</span></span>`
-      + `<span class="rl-when${n.kind === 'overdue' ? ' overdue' : ''}">${escapeHtml(dueShort(n.task))}</span>`;
+      + `<span class="rl-when${n.kind === 'overdue' ? ' overdue' : ''}">${escapeHtml(notifWhen(n))}</span>`;
     li.addEventListener('click', () => { openProject(n.task.projectId); selectTask(n.task.id); });
     el.homeDueList.appendChild(li);
   }
@@ -1913,6 +2369,7 @@ function renderHomeDue() {
  *  последняя, чтобы продолжить одним нажатием. */
 const nowTask = () => (state.activeTimer && getTask(state.activeTimer.taskId)) || recentTasks(1)[0] || null;
 
+let nowProjHtml = '';
 function renderNowIsland() {
   const at = state.activeTimer;
   const running = at && getTask(at.taskId);
@@ -1926,9 +2383,19 @@ function renderNowIsland() {
   // кнопке плей под ней.
   el.nowSince.textContent = running ? hm(at.startedAt) : '';
   el.nowTitle.textContent = task.title || t('task.no_name');
-  el.nowProj.innerHTML = `<i class="rl-dot" style="--pc:${p ? p.color : PALETTE[0]}"></i>${escapeHtml(p ? p.name : '')}`;
-  el.nowBtn.className = 'sq-btn' + (running ? ' run' : '');
-  el.nowBtn.innerHTML = running ? SVG_STOP : SVG_PLAY;
+  // Остров перерисовывается каждые 250 мс; точка проекта в DOM заводится заново,
+  // только когда проект другой (иначе наблюдатели за <body> разбирали бы её
+  // четыре раза в секунду).
+  const projHtml = `<i class="rl-dot" style="--pc:${escapeHtml(p ? p.color : PALETTE[0])}"></i>${escapeHtml(p ? p.name : '')}`;
+  if (projHtml !== nowProjHtml) {
+    nowProjHtml = projHtml;
+    el.nowProj.innerHTML = projHtml;
+  }
+  // Классом, а не className целиком: остров перерисовывается каждые 250 мс,
+  // и налив кнопки (.liq-fill) не должен слетать посреди анимации.
+  el.nowBtn.classList.toggle('run', !!running);
+  setPlayIcon(el.nowBtn, running);
+  liqMark(el.nowBtn, task.id);
   el.nowBtn.setAttribute('aria-label', running ? t('timer.stop') : t('timer.start'));
   el.nowTime.textContent = fmtClock(taskElapsedMs(task));
   const earned = earnedOf(task);
@@ -1946,18 +2413,30 @@ function lastSessionAt(task) {
 const whenLabel = (ms) => Core.fmtWhen(new Date(ms).toISOString(), locale(), t, Date.now());
 
 function renderRecentList() {
-  const recent = recentTasks(6);
+  const recent = listRows('recent', recentTasks(6));
   el.recentList.innerHTML = '';
   el.recentEmpty.hidden = recent.length > 0;
+  // Проектов нет вовсе — весь экран из пустых островов, и начать можно только
+  // с проекта: кнопка акцентная, другой акцентной на «Сегодня» нет.
+  if (!recent.length) {
+    emptyState(state.projects.length
+      ? { art: 'timer', title: t('empty.recent_title'), text: t('home.recent_empty'), small: true }
+      : {
+        art: 'projects', title: t('empty.start_project'), text: t('empty.start_project_text'), small: true,
+        action: { label: t('project.new_title'), onClick: () => openProjectDialog(null) },
+      }, el.recentEmpty);
+  }
   for (const task of recent) {
     const p = getProject(task.projectId);
     const running = !!state.activeTimer && state.activeTimer.taskId === task.id;
-    const li = document.createElement('li');
+    const li = flipTag(document.createElement('li'), 'recent', task.id);
     li.style.setProperty('--pc', p ? p.color : PALETTE[0]);
     li.innerHTML = `<span class="rl-main"><span class="rl-name">${escapeHtml(task.title || t('task.no_name'))}</span>`
       + `<span class="rl-sub"><i class="rl-dot"></i>${escapeHtml(p ? p.name : '')} · ${escapeHtml(running ? t('task.running_now') : whenLabel(lastSessionAt(task)))}</span></span>`
       + `<button type="button" class="icon-btn rl-play${running ? ' run' : ''}" aria-label="${escapeHtml(running ? t('timer.stop') : t('timer.start'))}">${running ? SVG_STOP : SVG_PLAY}</button>`;
-    li.querySelector('.rl-play').addEventListener('click', (e) => { e.stopPropagation(); if (running) stopTimer(); else startTimer(task.id); });
+    const play = li.querySelector('.rl-play');
+    play.addEventListener('click', (e) => { e.stopPropagation(); if (running) stopTimer(); else startTimer(task.id); });
+    liqMark(play, task.id);
     li.addEventListener('click', () => { openProject(task.projectId); selectTask(task.id); });
     el.recentList.appendChild(li);
   }
@@ -1999,9 +2478,8 @@ function renderProjects() {
     if (lists.has(n.dataset.id)) n.querySelector('.ptile-tasks').scrollTop = lists.get(n.dataset.id);
     if (n.dataset.id === focusId) n.querySelector('.ptile-qa-in').focus({ preventScroll: true });
   }
-  updateDeckArrows();
 
-  const recent = recentTasks(8);
+  const recent = listRows('recent', recentTasks(8));
   el.recentSection.hidden = recent.length === 0;
   el.recentTrack.innerHTML = '';
   recent.forEach((task) => el.recentTrack.appendChild(recentRow(task)));
@@ -2013,25 +2491,6 @@ function fillNodes(container, nodes) {
     n.style.animationDelay = `${Math.min(i, 10) * 24}ms`;
     container.appendChild(n);
   });
-}
-
-/** Стрелки ряда карточек: гаснут у края, а если ряд влез целиком — их нет. */
-function updateDeckArrows() {
-  const track = el.projectsTrack;
-  const max = track.scrollWidth - track.clientWidth;
-  el.deckPrev.hidden = el.deckNext.hidden = max <= 1;
-  el.deckPrev.disabled = track.scrollLeft <= 1;
-  el.deckNext.disabled = track.scrollLeft >= max - 1;
-}
-
-/** Листнуть ряд на столько карточек, сколько видно целиком. */
-function scrollDeck(dir) {
-  const track = el.projectsTrack;
-  const card = track.querySelector('.ptile');
-  if (!card) return;
-  const step = card.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || 0);
-  const fit = Math.max(1, Math.floor((track.clientWidth + 1) / step));
-  track.scrollBy({ left: dir * fit * step, behavior: 'smooth' });
 }
 
 /** Карточка проекта — как колода на телефоне: шапка (открывает проект),
@@ -2091,36 +2550,73 @@ function projectTile(p) {
     selectTask(task.id);
   });
 
+  // Как на телефоне (13 октября 2026): сверху открытые (порядок —
+  // Core.deckTasks), под ними выполненные — серые и зачёркнутые, в самом низу
+  // отменённые; закрытые — свежие выше.
   const list = tile.querySelector('.ptile-tasks');
-  const own = Core.deckTasks(tasks, deckPin);
-  if (!own.length) list.innerHTML = `<li class="ptile-empty">${escapeHtml(t('deck.no_tasks'))}</li>`;
+  const own = listRows(`deck:${p.id}`, Core.deckTasks(tasks.filter((t2) => !isCancelledTask(t2)), deckPin));
+  const finished = byFresh(tasks.filter((t2) => t2.done));
+  const cancelled = byFresh(tasks.filter(isCancelledTask));
+  if (!own.length && !finished.length && !cancelled.length) {
+    // Задач нет — компактный пустой экран посередине карточки; поле новой
+    // задачи прямо над ним, поэтому без кнопки.
+    const empty = elt('li', 'ptile-empty');
+    empty.append(emptyState({ art: 'tasks', title: t('deck.no_tasks'), text: t('empty.tasks_text'), small: true }));
+    list.appendChild(empty);
+  }
   own.forEach((task) => list.appendChild(deckRow(task)));
+  finished.forEach((task) => list.appendChild(deckRow(task, 'done')));
+  cancelled.forEach((task) => list.appendChild(deckRow(task, 'cancelled')));
   return tile;
 }
+
+/** Отменена ли задача: закрыта, но не выполнена — вид статуса «отменено», а
+ *  без статуса — флаг задачи. Выполненная отменённой не бывает. То же
+ *  правило, что isCancelled на телефоне (mobile/src/lib/statuses.js). */
+function isCancelledTask(task) {
+  if (!task || task.done) return false;
+  const st = task.statusId ? getStatus(task.statusId) : null;
+  return st ? st.kind === 'cancelled' : !!task.cancelled;
+}
+
+/** Закрытые задачи в карточке — свежеизменённые выше. */
+const byFresh = (list) => list.sort((a, b) => (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0));
 
 /** Строка задачи в карточке: галочка, название, тихая мета (статус или
  *  «идёт сейчас», дедлайн, время), справа плей/стоп. Что показать — решает
  *  ядро (taskRowView), как в списке проекта. Отмеченная строка сначала тает,
- *  потом задача закрывается и уходит из карточки. */
-function deckRow(task) {
+ *  потом задача закрывается и уезжает вниз, к выполненным.
+ *  closed — 'done' или 'cancelled': закрытая строка тише и без плея; у
+ *  выполненной галочка стоит (снять — вернуть в работу), у отменённой на её
+ *  месте серый крестик. */
+function deckRow(task, closed) {
   const v = Core.taskRowView(task, taskRowCtx());
   const li = document.createElement('li');
-  li.className = 'ptile-task' + (v.running ? ' run' : '');
+  li.className = 'ptile-task' + (v.running ? ' run' : '') + (closed ? ` ${closed}` : '');
   li.dataset.id = task.id;
+  if (!closed) flipTag(li, `deck:${task.projectId}`, task.id);
 
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.className = 'task-done';
-  cb.setAttribute('aria-label', t('task.done_label'));
-  cb.addEventListener('click', (e) => e.stopPropagation());
-  cb.addEventListener('change', () => {
-    li.classList.add('leaving');
-    setTimeout(() => {
-      setTaskDone(task, true);
-      render();
-      scheduleSave();
-    }, 240);
-  });
+  let cb;
+  if (closed === 'cancelled') {
+    cb = elt('span', 'ptile-x');
+    cb.innerHTML = icon('x');
+    cb.title = t('status.kind_cancelled');
+  } else {
+    cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'task-done';
+    cb.checked = closed === 'done';
+    cb.setAttribute('aria-label', t('task.done_label'));
+    cb.addEventListener('click', (e) => e.stopPropagation());
+    cb.addEventListener('change', () => {
+      li.classList.add('leaving');
+      setTimeout(() => {
+        setTaskDone(task, cb.checked);
+        render();
+        scheduleSave();
+      }, 240);
+    });
+  }
 
   const main = elt('span', 'rl-main');
   main.appendChild(elt('span', 'rl-name', v.title));
@@ -2149,9 +2645,12 @@ function deckRow(task) {
     e.stopPropagation();
     if (v.running) stopTimer(); else startTimer(task.id);
   });
+  liqMark(play, task.id);
 
-  li.append(cb, main, play);
+  li.append(cb, main);
+  if (!closed) li.append(play);
   li.addEventListener('click', () => selectTask(task.id));
+  li.addEventListener('contextmenu', (e) => { e.preventDefault(); openTaskMenu(task, li); });
   return li;
 }
 
@@ -2187,8 +2686,9 @@ function recentRow(task) {
   const row = document.createElement('button');
   row.type = 'button';
   row.className = 'recent-row';
+  flipTag(row, 'recent', task.id);
   row.innerHTML = `<span class="icon-btn rl-play${running ? ' run' : ''}" role="button" tabindex="0" aria-label="${escapeHtml(running ? t('timer.stop') : t('timer.start'))}">${running ? SVG_STOP : SVG_PLAY}</span>`
-    + `<span class="recent-main"><span class="recent-name">${escapeHtml(task.title || t('task.no_name'))}</span><span class="recent-sub"><i class="rl-dot" style="--pc:${p ? p.color : PALETTE[0]}"></i>${escapeHtml(p ? p.name : '')}</span></span>`
+    + `<span class="recent-main"><span class="recent-name">${escapeHtml(task.title || t('task.no_name'))}</span><span class="recent-sub"><i class="rl-dot" style="--pc:${escapeHtml(p ? p.color : PALETTE[0])}"></i>${escapeHtml(p ? p.name : '')}</span></span>`
     + `<span class="recent-when${running ? ' run' : ''}">${escapeHtml(running ? t('task.running_now') : whenLabel(lastSessionAt(task)))}</span>`
     + `<span class="recent-num">${escapeHtml(fmtDur(taskElapsedMs(task)))}</span>`
     + `<span class="recent-num money">${escapeHtml(fmtMoney(earnedOf(task), currencyOf(task.projectId)))}</span>`;
@@ -2196,6 +2696,7 @@ function recentRow(task) {
   const toggle = (e) => { e.stopPropagation(); if (running) stopTimer(); else startTimer(task.id); };
   play.addEventListener('click', toggle);
   play.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); } });
+  liqMark(play, task.id);
   row.addEventListener('click', () => { openProject(task.projectId); selectTask(task.id); });
   return row;
 }
@@ -2222,9 +2723,10 @@ function searchOutside(e) {
 
 function renderSearch(q) {
   q = q.trim().toLowerCase();
-  el.searchResults.innerHTML = '';
+  // Пусто — компактный пустой экран; пока слова те же (каждый следующий
+  // символ мимо), он стоит на месте, а не появляется заново.
   if (!q) {
-    el.searchResults.innerHTML = `<div class="sr-empty">${escapeHtml(t('search.start_typing'))}</div>`;
+    fillEmpty(el.searchResults, { art: 'search', title: t('empty.search_start'), text: t('empty.search_start_text'), small: true });
     return;
   }
   const projects = state.projects
@@ -2235,15 +2737,16 @@ function renderSearch(q) {
     .slice(0, 10);
 
   if (!projects.length && !tasks.length) {
-    el.searchResults.innerHTML = `<div class="sr-empty">${escapeHtml(t('search.nothing_found'))}</div>`;
+    fillEmpty(el.searchResults, { art: 'search', title: t('search.nothing_found'), text: t('empty.search_text'), small: true });
     return;
   }
+  el.searchResults.innerHTML = '';
 
   const addItem = (opts) => {
     const b = document.createElement('button');
     b.className = 'sr-item';
     b.innerHTML =
-      `<span class="sr-dot" style="background:${opts.color}"></span>` +
+      `<span class="sr-dot" style="background:${escapeHtml(opts.color)}"></span>` +
       `<span class="sr-main"><span class="sr-title">${escapeHtml(opts.title)}</span>` +
       (opts.sub ? `<span class="sr-sub">${escapeHtml(opts.sub)}</span>` : '') + '</span>' +
       (opts.meta ? `<span class="sr-meta">${escapeHtml(opts.meta)}</span>` : '');
@@ -2324,9 +2827,9 @@ function calShift(delta) {
     calState.year = dt.getFullYear();
     calState.month = dt.getMonth();
   } else if (calState.mode === 'week') {
-    calState.weekStart = new Date(calState.weekStart.getTime() + delta * 7 * 86400000);
+    calState.weekStart = new Date(Core.addDaysMs(calState.weekStart, delta * 7));
   } else {
-    calState.day = new Date(calState.day.getTime() + delta * 86400000);
+    calState.day = new Date(Core.addDaysMs(calState.day, delta));
     calState.selected = dayKey(calState.day);
   }
   renderCalendar();
@@ -2335,7 +2838,7 @@ function calShift(delta) {
 /** Границы текущего вида (для авто-заполнения диапазона периода). */
 function currentViewBounds() {
   if (calState.mode === 'month') return [new Date(calState.year, calState.month, 1), new Date(calState.year, calState.month + 1, 0)];
-  if (calState.mode === 'week') return [new Date(calState.weekStart), new Date(calState.weekStart.getTime() + 6 * 86400000)];
+  if (calState.mode === 'week') return [new Date(calState.weekStart), new Date(Core.addDaysMs(calState.weekStart, 6))];
   return [new Date(calState.day), new Date(calState.day)];
 }
 
@@ -2405,8 +2908,10 @@ function fmtDpBtn(key) {
  *  onPick(key) вызывается при клике по дню.
  *
  *  С временем (opts.time = 'HH:MM', opts.onTime) под календарём появляется
- *  строка часов и минут, и окно не закрывается по выбору дня: дата и время
- *  задаются вместе, закрывает его «Готово» или щелчок мимо. */
+ *  строка «Время» с кнопкой часов — она открывает общий выбор времени
+ *  (openTimePicker) поверх окна, — и окно не закрывается по выбору дня: дата
+ *  и время задаются вместе, закрывает его «Готово» или щелчок мимо.
+ *  opts.onClear — ещё и кнопка «Убрать» рядом с «Готово» (дедлайн). */
 function openDatePicker(anchorEl, value, onPick, opts) {
   closeTimePicker();
   dp.anchor = anchorEl;
@@ -2415,12 +2920,10 @@ function openDatePicker(anchorEl, value, onPick, opts) {
   dp.onPick = onPick;
   dp.withTime = !!(opts && opts.time);
   dp.onTime = dp.withTime ? opts.onTime : null;
+  dp.onClear = (opts && opts.onClear) || null;
   el.dpTime.hidden = !dp.withTime;
-  if (dp.withTime) {
-    const [h, m] = opts.time.split(':');
-    el.dpHours.value = h;
-    el.dpMinutes.value = m;
-  }
+  if (dp.withTime) el.dpTimeBtn.textContent = opts.time;
+  el.dpClear.hidden = !dp.onClear;
   dp.open = true;
   anchorEl.classList.add('on');
   renderDatePicker();
@@ -2444,41 +2947,17 @@ function placePopBelow(pop, anchorEl) {
 }
 function closeDatePicker() {
   if (!dp.open) return;
+  // Выбор времени, открытый из этого окна, уходит вместе с ним.
+  if (tp.open && tp.stacked) closeTimePicker();
   dp.open = false;
   el.dpPop.hidden = true;
   if (dp.anchor) dp.anchor.classList.remove('on');
   document.removeEventListener('pointerdown', dpOutside, true);
 }
 function dpOutside(e) {
-  // Список часов или минут — это общее меню поверх окна; щелчок по нему —
-  // не «мимо».
-  if (el.ctxMenu.contains(e.target)) return;
+  // Меню и выбор времени поверх окна — не «мимо».
+  if (el.ctxMenu.contains(e.target) || el.tpPop.contains(e.target)) return;
   if (!el.dpPop.contains(e.target) && e.target !== dp.anchor) closeDatePicker();
-}
-
-/** Время из полей, если оба числа в пределах суток; иначе null. */
-function dpTimeValue() {
-  const h = Number(el.dpHours.value);
-  const m = Number(el.dpMinutes.value);
-  if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 23 || m < 0 || m > 59) return null;
-  return `${pad2(h)}:${pad2(m)}`;
-}
-function dpCommitTime() {
-  const v = dpTimeValue();
-  if (!v || !dp.onTime) return;
-  const [h, m] = v.split(':');
-  el.dpHours.value = h;
-  el.dpMinutes.value = m;
-  dp.onTime(v);
-}
-/** Список значений для поля: часы — все 24, минуты — через пять. Руками
- *  можно вписать любую минуту. */
-function dpPickFrom(btn, input, values) {
-  openMenu(btn, values.map((v) => ({
-    label: pad2(v),
-    selected: Number(input.value) === v,
-    onClick: () => { input.value = pad2(v); dpCommitTime(); },
-  })), { compact: true });
 }
 function renderDatePicker() {
   const y = dp.view.getFullYear();
@@ -2510,29 +2989,59 @@ function renderDatePicker() {
 }
 
 // ---------------------------------------------------------------------------
-// Кастомный выбор времени (часы/минуты) — свой попап вместо <input type="time">.
+// Выбор времени — поле и подсказки (13 октября 2026), один на все места:
+// запись времени, отрезок, напоминание, дедлайн. Двух колёс «часы | минуты»
+// больше нет: время вписывается руками в любом привычном виде, а под полем —
+// подсказки через 15 минут на два часа в обе стороны от значения.
 // ---------------------------------------------------------------------------
 
-const tp = { open: false, anchor: null, value: null, onPick: null };
+const TP_STEP = 15;           // шаг подсказок и стрелок, минуты
+const TP_SPAN = 120;          // подсказки — на два часа в обе стороны
+const TP_LAST = 24 * 60 - 1;  // 23:59
+const tp = { open: false, anchor: null, value: 0, cur: 0, onPick: null, stacked: false };
 
-/** Открывает попап у anchor, показывая value ('HH:MM'); onPick('HH:MM') вызывается при каждом клике. */
+/** Время, вписанное руками, — в минуты от полуночи; не разобрать — null.
+ *  Понимает «9:30», «09:30», «9.30», «21.15», «9 30», «0930», «930», «9»,
+ *  «21». */
+function parseTimeInput(text) {
+  const s = String(text == null ? '' : text).trim();
+  let h;
+  let m;
+  const g = s.match(/^(\d{1,2})\s*[:.,\s]\s*(\d{1,2})$/);
+  if (g) { h = +g[1]; m = +g[2]; }
+  else if (/^\d{3,4}$/.test(s)) { const d = s.padStart(4, '0'); h = +d.slice(0, 2); m = +d.slice(2); }
+  else if (/^\d{1,2}$/.test(s)) { h = +s; m = 0; }
+  else return null;
+  return h <= 23 && m <= 59 ? h * 60 + m : null;
+}
+const tpText = (min) => `${pad2(Math.floor(min / 60))}:${pad2(min % 60)}`;
+
+/** Открывает выбор времени у anchor: поле с value ('HH:MM') и подсказки.
+ *  onPick('HH:MM') зовётся один раз — когда время выбрано: Enter в поле или
+ *  щелчок по подсказке. Esc и щелчок мимо закрывают без выбора. ↑/↓ — шаг
+ *  15 минут по подсказкам (вниз — позже). Открытый из окна даты (дедлайн,
+ *  напоминание «один раз») встаёт поверх него, окно даты остаётся. */
 function openTimePicker(anchorEl, value, onPick) {
-  closeDatePicker();
-  const [h, m] = (value || '00:00').split(':').map(Number);
+  closeTimePicker();
+  tp.stacked = el.dpPop.contains(anchorEl);
+  if (!tp.stacked) closeDatePicker();
+  const v = parseTimeInput(value);
   tp.anchor = anchorEl;
-  tp.value = { h: h || 0, m: m || 0 };
+  tp.value = v == null ? 9 * 60 : v;
+  tp.cur = tp.value;
   tp.onPick = onPick;
   tp.open = true;
   anchorEl.classList.add('on');
+  el.tpInput.value = tpText(tp.value);
+  el.tpInput.classList.remove('bad');
+  // Сначала подсказки, потом место: окно меряется уже с ними, иначе у нижнего
+  // края экрана оно уходило бы за край.
+  el.tpPop.hidden = false;
   renderTimePicker();
   placePopBelow(el.tpPop, anchorEl);
+  el.tpInput.focus({ preventScroll: true });
+  el.tpInput.select();
   setTimeout(() => document.addEventListener('pointerdown', tpOutside, true), 0);
-  requestAnimationFrame(() => {
-    const selH = el.tpHours.querySelector('.sel');
-    const selM = el.tpMinutes.querySelector('.sel');
-    if (selH) selH.scrollIntoView({ block: 'center' });
-    if (selM) selM.scrollIntoView({ block: 'center' });
-  });
 }
 function closeTimePicker() {
   if (!tp.open) return;
@@ -2544,30 +3053,70 @@ function closeTimePicker() {
 function tpOutside(e) {
   if (!el.tpPop.contains(e.target) && e.target !== tp.anchor) closeTimePicker();
 }
+/** Подсказки вокруг того, что сейчас в поле (в пределах суток): выбранное
+ *  при открытии — заливкой, подсвеченное стрелками или вписанное —
+ *  подложкой. Список встаёт так, чтобы текущее было посередине. */
 function renderTimePicker() {
-  el.tpHours.innerHTML = '';
-  for (let h = 0; h < 24; h++) {
+  const center = Math.min(TP_LAST - (TP_LAST % TP_STEP), Math.round(tp.cur / TP_STEP) * TP_STEP);
+  const from = Math.max(0, center - TP_SPAN);
+  const to = Math.min(TP_LAST, center + TP_SPAN);
+  el.tpList.innerHTML = '';
+  let mid = null;
+  for (let min = from; min <= to; min += TP_STEP) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = pad2(h);
-    if (h === tp.value.h) b.classList.add('sel');
-    b.addEventListener('click', () => { tp.value.h = h; commitTime(); });
-    el.tpHours.appendChild(b);
+    b.tabIndex = -1;
+    b.className = `tp-opt${min === tp.value ? ' sel' : ''}${min === tp.cur ? ' cur' : ''}`;
+    b.setAttribute('role', 'option');
+    b.setAttribute('aria-selected', String(min === tp.cur));
+    b.dataset.min = String(min);
+    b.textContent = tpText(min);
+    b.addEventListener('click', () => pickTime(min));
+    if (min === center) mid = b;
+    el.tpList.appendChild(b);
   }
-  el.tpMinutes.innerHTML = '';
-  for (let m = 0; m < 60; m++) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = pad2(m);
-    if (m === tp.value.m) b.classList.add('sel');
-    b.addEventListener('click', () => { tp.value.m = m; commitTime(); });
-    el.tpMinutes.appendChild(b);
-  }
+  if (mid) el.tpList.scrollTop = mid.offsetTop - (el.tpList.clientHeight - mid.offsetHeight) / 2;
 }
-function commitTime() {
+function pickTime(min) {
+  const done = tp.onPick;
+  closeTimePicker();
+  if (done) done(tpText(min));
+}
+el.tpInput.addEventListener('input', () => {
+  const v = parseTimeInput(el.tpInput.value);
+  el.tpInput.classList.toggle('bad', v == null && el.tpInput.value.trim() !== '');
+  if (v == null) return;
+  tp.cur = v;
   renderTimePicker();
-  if (tp.onPick) tp.onPick(`${pad2(tp.value.h)}:${pad2(tp.value.m)}`);
-}
+});
+el.tpInput.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const typed = parseTimeInput(el.tpInput.value);
+    const base = typed == null ? tp.cur : typed;
+    // С ровной четверти — на шаг; с неровной («9:07») — до ближайшей
+    // четверти в ту сторону.
+    const next = e.key === 'ArrowDown'
+      ? Math.floor(base / TP_STEP) * TP_STEP + TP_STEP
+      : Math.ceil(base / TP_STEP) * TP_STEP - TP_STEP;
+    tp.cur = Math.max(0, Math.min(TP_LAST, next));
+    el.tpInput.value = tpText(tp.cur);
+    el.tpInput.classList.remove('bad');
+    renderTimePicker();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const v = parseTimeInput(el.tpInput.value);
+    if (v == null) { el.tpInput.classList.add('bad'); return; }
+    pickTime(v);
+  } else if (e.key === 'Escape') {
+    // Закрывается только выбор времени — окно под ним (дата, запись) остаётся.
+    e.preventDefault();
+    e.stopPropagation();
+    closeTimePicker();
+  } else if (e.key === 'Tab') {
+    closeTimePicker();
+  }
+});
 
 /** Итог по времени/деньгам за весь видимый месяц/неделю — всегда виден в правой
  * панели, независимо от режима «период». Для «день» не нужен — там панель
@@ -2601,10 +3150,10 @@ function renderCalendar() {
     while (cells.length % 7) cells.push(null);
   } else {
     const ws = calState.weekStart;
-    const we = new Date(ws.getTime() + 6 * 86400000);
+    const we = new Date(Core.addDaysMs(ws, 6));
     el.calTitle.textContent = `${ws.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })} – ${we.toLocaleDateString(locale(), { day: 'numeric', month: 'short' })}`;
     for (let i = 0; i < 7; i++) {
-      const d = new Date(ws.getTime() + i * 86400000);
+      const d = new Date(Core.addDaysMs(ws, i));
       cells.push({ key: dayKey(d), day: d.getDate() });
     }
   }
@@ -2679,7 +3228,7 @@ function renderDayHours() {
     row.className = 'hour-row' + (items.length ? ' has' : '');
     const chips = items.map(({ t: t2, s }) => {
       const p = getProject(t2.projectId);
-      return `<button class="hour-chip" style="--pc:${p ? p.color : PALETTE[0]}">` +
+      return `<button class="hour-chip" style="--pc:${escapeHtml(p ? p.color : PALETTE[0])}">` +
         `<b>${escapeHtml(t2.title || t('task.no_name'))}</b>` +
         `<span>${fmtTime(s.start).slice(0, 5)}–${s.end ? fmtTime(s.end).slice(0, 5) : '…'} · ${fmtDur(s.ms)}</span></button>`;
     }).join('');
@@ -2716,12 +3265,12 @@ function renderCalDay() {
   for (const g of groupByProject(items)) {
     el.calDayList.appendChild(calGroupNode(g, ({ t: t2, s, money }) => {
       const row = document.createElement('li');
-      row.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
       // Название проекта ушло в заголовок группы — в строке оно повторялось бы.
+      // Порядок — как читается: задача и длительность, под ними интервал и деньги.
       row.innerHTML = `
-        <div class="cdl-time">${fmtTime(s.start).slice(0, 5)}–${s.end ? fmtTime(s.end).slice(0, 5) : '…'}</div>
-        <div class="cdl-dur">${fmtDur(s.ms)}</div>
         <div class="cdl-task">${escapeHtml(t2.title || t('task.no_name'))}</div>
+        <div class="cdl-dur">${fmtDur(s.ms)}</div>
+        <div class="cdl-time">${fmtTime(s.start).slice(0, 5)}–${s.end ? fmtTime(s.end).slice(0, 5) : '…'}</div>
         <div class="cdl-money">${fmtMoney(money, currencyOf(t2.projectId))}</div>`;
       row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
       return row;
@@ -2729,6 +3278,7 @@ function renderCalDay() {
   }
   el.calDayTot.textContent = items.length ? `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}` : '';
   el.calDayEmpty.hidden = items.length > 0;
+  if (!items.length) emptyState({ art: 'time', title: t('calendar.day_empty'), text: t('empty.day_text'), small: true }, el.calDayEmpty);
 }
 
 /** Сводка за выбранный период: сколько заработано и по каким задачам. */
@@ -2763,16 +3313,17 @@ function renderPeriodSummary() {
   el.calViewTot.innerHTML = `<span>${escapeHtml(t('calendar.period_label'))}</span>`
     + `<b>${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}</b>`;
   el.calDayEmpty.hidden = tasks.length > 0;
+  if (!tasks.length) emptyState({ art: 'time', title: t('agenda.empty'), text: t('empty.period_text'), small: true }, el.calDayEmpty);
 
   el.calDayList.innerHTML = '';
   for (const g of groupByProject(tasks)) {
     el.calDayList.appendChild(calGroupNode(g, ({ t: t2, ms, money }) => {
       const row = document.createElement('li');
-      row.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
+      // Длительность над деньгами — как в записях дня.
       row.innerHTML = `
         <span class="pl-check${t2.done ? ' done' : ''}">${icon('check')}</span>
         <span><span class="pl-name">${escapeHtml(t2.title || t('task.no_name'))}</span></span>
-        <span class="pl-right"><span class="pl-money">${fmtMoney(money, currencyOf(t2.projectId))}</span><span class="pl-time">${fmtDur(ms)}</span></span>`;
+        <span class="pl-right"><span class="pl-time">${fmtDur(ms)}</span><span class="pl-money">${fmtMoney(money, currencyOf(t2.projectId))}</span></span>`;
       row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
       return row;
     }));
@@ -2799,7 +3350,8 @@ function boardProjectId() {
 function renderBoardPage() {
   const pid = boardProjectId();
   state.ui.boardProjectId = pid;
-  el.boardEmpty.hidden = !!pid;
+  // Доска — вкладка проекта, так что без проекта её не открыть; пустого
+  // экрана «Сначала создайте проект» поэтому нет (опись пустых экранов, № 23).
   el.boardCols.hidden = !pid;
   if (!pid) { el.boardCols.innerHTML = ''; return; }
   renderBoard();
@@ -3061,7 +3613,8 @@ function tagChip(tag, onRemove) {
     const x = document.createElement('button');
     x.type = 'button';
     x.className = 'tag-chip-x';
-    x.title = t('common.delete');
+    x.title = t('tag.remove');
+    x.setAttribute('aria-label', t('tag.remove'));
     x.innerHTML = icon('x');
     x.addEventListener('click', (e) => { e.stopPropagation(); onRemove(tag.id); });
     chip.appendChild(x);
@@ -3106,9 +3659,9 @@ function renderTagsSettings() {
   el.tagsList.innerHTML = '';
   const globalTags = state.tags.filter(Core.isGlobalTag);
   if (!globalTags.length) {
-    const empty = document.createElement('div');
-    empty.className = 'settings-row tags-empty';
-    empty.innerHTML = `<span class="settings-row-label muted">${escapeHtml(t('tag.empty_hint'))}</span>`;
+    // Без кнопки: строка «Новый тег» стоит сразу под ним.
+    const empty = emptyState({ art: 'tags', title: t('empty.tags_title'), text: t('tag.empty_hint'), small: true });
+    empty.classList.add('tags-empty');
     el.tagsList.appendChild(empty);
     return;
   }
@@ -3246,7 +3799,7 @@ function openTagPicker(anchor, getIds, setIds, projectId) {
       row.className = 'tag-pop-item' + (ids.includes(tag.id) ? ' sel' : '');
       row.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(tag.color || PALETTE[0])}"></span>`
         + `<span class="tag-pop-name">${escapeHtml(tag.name || '')}</span>`
-        + (Core.isGlobalTag(tag) ? `<span class="tag-pop-scope">${escapeHtml(t('tag.scope_global'))}</span>` : '');
+        + `<span class="tag-pop-scope">${Core.isGlobalTag(tag) ? escapeHtml(t('tag.scope_global')) : ''}</span>`;
       row.addEventListener('click', () => { setIds(Core.toggleTag(getIds(), tag.id)); draw(); });
       list.appendChild(row);
     }
@@ -3262,9 +3815,9 @@ function openTagPicker(anchor, getIds, setIds, projectId) {
       });
       list.appendChild(create);
     } else if (!visible().length) {
-      const empty = document.createElement('div');
-      empty.className = 'tag-pop-empty muted';
-      empty.textContent = t('tag.none');
+      // В строку: тег создаётся из поля над списком.
+      const empty = emptyState({ art: 'tags', title: t('tag.none'), text: t('empty.tag_pick_text'), row: true });
+      empty.classList.add('tag-pop-empty');
       list.appendChild(empty);
     }
   };
@@ -3323,8 +3876,8 @@ function renderStatusDialog() {
     const row = document.createElement('div');
     row.className = 'st-row';
     row.innerHTML = `
-      <button type="button" class="st-color" style="--sc:${st.color}" data-act="color" data-i18n-title="project.color" title="Цвет"></button>
-      <input class="st-name" type="text" value="${escapeHtml(st.name)}" data-i18n-ph="status.name_ph" placeholder="Название" />
+      <button type="button" class="st-color" style="--sc:${escapeHtml(st.color)}" data-act="color" data-i18n-title="project.color" title="Цвет"></button>
+      <input class="field-sm st-name" type="text" value="${escapeHtml(st.name)}" data-i18n-ph="status.name_ph" placeholder="Название" />
       <button type="button" class="dp-btn st-kind" data-act="kind">${escapeHtml(t(`status.kind_${st.kind}`))}</button>
       <button type="button" class="icon-btn" data-act="up" ${i === 0 ? 'disabled' : ''} data-i18n-title="common.back" title="Выше">
         ${icon('chevron-up')}
@@ -3425,7 +3978,7 @@ function newTaskInStatus(projectId, statusId, versionId) {
     id: uid(), projectId, title: '', done: false, notes: null,
     totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
     statusId, tagIds: [], versionId: versionId || null, repeat: null, cancelled: false,
-    dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+    dueAt: null, reminders: [], remindOffsetMin: null, remindAt: null, notifiedAt: null,
   };
   setTaskStatus(task, statusId);
   state.tasks.unshift(task);
@@ -3464,15 +4017,13 @@ function boardCard(task) {
     card.classList.add('dragging');
   });
   card.addEventListener('dragend', () => card.classList.remove('dragging'));
-  // Клик по карточке открывает задачу в обычном режиме — доска для
-  // раскладки, а редактор всё равно один.
-  card.addEventListener('click', () => {
-    state.ui.projectId = task.projectId;
-    state.ui.view = 'project';
-    selectedId = task.id;
-    loadEditor(task);
-    render();
-  });
+  // Клик по карточке открывает задачу её страницей — доска для раскладки, а
+  // редактор всё равно один. Раньше тут стояло «вид — проект, выбрана задача»:
+  // со времён, когда задача жила справа от списка. С 6 октября доска —
+  // вкладка проекта, и тот же вид просто перерисовывал доску, не открывая
+  // ничего.
+  card.addEventListener('click', () => selectTask(task.id));
+  card.addEventListener('contextmenu', (e) => { e.preventDefault(); openTaskMenu(task, card); });
   return card;
 }
 
@@ -3532,6 +4083,9 @@ function renderProjectDocs() {
     el.pdocList.appendChild(b);
   }
   el.pdocEmpty.hidden = list.length > 0;
+  // Пока документов нет, создают их кнопкой по центру — «Новый документ» в
+  // шапке вкладки её не повторяет.
+  el.pdocNew.hidden = !list.length;
 }
 
 /** Шапка одной строкой: название, вкладки, итоги. Описание — подсказкой на
@@ -3693,7 +4247,11 @@ function renderVersionsTab() {
     rates: rates(), activeTimer: state.activeTimer, now: Date.now(),
   });
   el.pverList.textContent = '';
-  el.pverEmpty.hidden = versionsOf(pid).length > 0;
+  // Версий нет — пустой экран вместо строк: одна строка «Без версии» со всеми
+  // задачами проекта ничего не говорила бы.
+  const none = !versionsOf(pid).length;
+  el.pverEmpty.hidden = !none;
+  if (none) return;
   for (const r of rows) {
     const li = elt('li', 'pver-row' + (r.released ? ' released' : ''));
     const head = elt('div', 'pver-head');
@@ -3723,6 +4281,13 @@ function renderVersionsTab() {
 }
 
 
+/** «Показать все» у отбора, который ничего не оставил: статус «Все» и любая
+ *  версия — как при открытии проекта. */
+function showAllTasks() {
+  taskFilter = { status: 'all', versionId: 'all' };
+  render();
+}
+
 function renderSidebar() {
   el.tfStatus.forEach((b) => b.classList.toggle('on', b.dataset.status === taskFilter.status));
   renderTaskVersionFilter();
@@ -3731,10 +4296,21 @@ function renderSidebar() {
   // Группы — по статусам в порядке столбцов доски, закреплённые сверху;
   // решает ядро (projectListGroups). Фильтр сужает задачи, группы остаются.
   const list = isFilterActive() ? filteredProjectTasks() : visibleTasks();
-  el.sidebarEmpty.innerHTML = list.length === 0 && visibleTasks().length > 0
-    ? escapeHtml(t('sidebar.no_match'))
-    : t('sidebar.empty_default');
+  // Пусто: задач нет совсем — большой пустой экран и «Новая задача» (та же,
+  // что «+ Задача» в шапке, поэтому тихая); фильтр ничего не оставил —
+  // компактный и «Показать все». Заголовки колонок на это время прячет CSS.
   el.sidebarEmpty.hidden = list.length > 0;
+  if (!list.length) {
+    emptyState(visibleTasks().length
+      ? {
+        art: 'filter', title: t('empty.filter_title'), text: t('empty.filter_text'), small: true,
+        action: { label: t('empty.show_all'), soft: true, icon: 'eye', onClick: showAllTasks },
+      }
+      : {
+        art: 'tasks', title: t('deck.no_tasks'), text: t('empty.project_tasks_text'),
+        action: { label: t('empty.new_task'), soft: true, onClick: () => el.newTaskBtn.click() },
+      }, el.sidebarEmpty);
+  }
 
   const groups = Core.projectListGroups(list, {
     statuses: state.statuses,
@@ -3868,6 +4444,7 @@ function taskItem(task, i) {
   const money = earnedOf(task);
   li.append(cb, main, due, elt('span', 'task-time', v.time), elt('span', 'ti-money', money ? fmtMoney(money, currencyOf(task.projectId)) : ''));
   li.addEventListener('click', () => selectTask(task.id));
+  li.addEventListener('contextmenu', (e) => { e.preventDefault(); openTaskMenu(task, li); });
   return li;
 }
 
@@ -3885,6 +4462,37 @@ function renderNotifBadge() {
   const unread = notificationFeed().filter((n) => n.unread).length;
   el.notifBadge.hidden = unread === 0;
   el.notifBadge.textContent = unread > 99 ? '99+' : String(unread);
+  ringBell(unread);
+}
+
+/** Сколько непрочитанных было при прошлой отрисовке; null — ещё не рисовали. */
+let bellUnread = null;
+
+/** Колокольчик звенит, когда непрочитанных стало больше (и при запуске, если
+ *  они есть): три коротких звона с паузой — в styles.css. Прочитали — молчит. */
+function ringBell(unread) {
+  const prev = bellUnread;
+  bellUnread = unread;
+  const btn = el.notifBtn;
+  if (!unread) { btn.classList.remove('ring'); return; }
+  if (prev !== null && unread <= prev) return;
+  if (reducedMotion()) return;
+  restartClass(btn, 'ring');
+}
+el.notifBtn.addEventListener('animationend', (e) => {
+  if (e.animationName === 'bellRing') el.notifBtn.classList.remove('ring');
+});
+
+/** Подпись справа у записи ленты. У отрезка «времени работы» — его часы, у
+ *  напоминания без дедлайна рядом («один раз», «повторять», голое) — момент
+ *  срабатывания, у остальных — срок. Дата добавляется, только если это не
+ *  сегодня. */
+function notifWhen(n) {
+  const clock = (ms) => fmtTime(ms).slice(0, 5);
+  const day = (ms) => (Core.startOfDayMs(ms) === Core.startOfDayMs(Date.now()) ? '' : `${fmtDateShort(ms)}, `);
+  if (n.kind === 'slot') return `${day(n.due)}${clock(n.due)}–${clock(n.end)}`;
+  if (!n.task.dueAt || (n.kind === 'reminder' && n.due === null)) return `${day(n.at)}${clock(n.at)}`;
+  return dueShort(n.task);
 }
 
 function renderNotifPanel() {
@@ -3900,7 +4508,8 @@ function renderNotifPanel() {
     li.innerHTML = `<span class="notif-dot"></span>`
       + `<span class="notif-main"><span class="notif-name">${escapeHtml(n.task.title || t('task.no_name'))}</span>`
       + `<span class="notif-sub">${escapeHtml(t(`notif.${n.kind}`))} · ${escapeHtml(p ? p.name : '')}</span></span>`
-      + `<span class="notif-when ${when}">${escapeHtml(dueShort(n.task))}</span>`;
+      + `<span class="notif-when ${when}">${escapeHtml(notifWhen(n))}</span>`;
+    li.dataset.key = n.key;
     li.addEventListener('click', () => { closeNotifPanel(); openProject(n.task.projectId); selectTask(n.task.id); });
     el.notifList.appendChild(li);
   }
@@ -3946,48 +4555,59 @@ function notifyOS(title, body) {
   } catch (err) { console.warn('Не удалось показать системное уведомление:', err); }
 }
 
-/** Раз в полминуты проверяем, не пора ли напомнить. notifiedAt пишется в
- *  саму задачу и синхронизируется, поэтому второе устройство про эту же
- *  задачу молчит. */
+/** Слова системного уведомления о сработавшем напоминании: «Через 15 мин
+ *  начало: …», «Дедлайн через 1 ч: …», «Напоминание: …». Для «до начала» в
+ *  теле уведомления — часы вхождения. */
+function remindNotice(task, item) {
+  const title = task.title || t('task.no_name');
+  const rem = Core.remindersOf(task).find((r) => r.id === item.reminderId);
+  const d = rem ? Core.describeReminder(rem) : null;
+  if (!d || d.kind !== 'before') return { text: t('notif.reminder_text', { title }), body: '' };
+  const side = d.anchor === 'start' ? 'start' : 'due';
+  const text = d.offsetMin === 0
+    ? t(`notif.at_${side}`, { title })
+    : t(`notif.before_${side}`, { n: d.n, unit: remindUnit(d.unit, d.n), title });
+  return { text, body: side === 'start' ? `${hhmm(item.start)}–${hhmm(item.end)}` : '' };
+}
+
+/** Раз в полминуты проверяем, не пора ли напомнить (core/reminders.js).
+ *  Отметка «уже напомнили» пишется в само напоминание задачи и
+ *  синхронизируется, поэтому второе устройство про это же вхождение молчит. */
 function checkReminders() {
   const now = Date.now();
   let fired = false;
-  for (const task of state.tasks) {
-    if (task.done || task.notifiedAt) continue;
-    const rt = reminderTime(task);
-    if (!rt || rt.getTime() > now) continue;
-    task.notifiedAt = new Date().toISOString();
+  // Сначала возвращаем задачи, чей день настал: открытая задача и напоминать
+  // может, закрытая — нет.
+  const reopened = reopenDueTasks(now);
+  for (const item of Core.remindersDue(state.tasks, now)) {
+    const task = getTask(item.taskId);
+    const patch = task && Core.markFired(task, item);
+    if (!patch) continue;
+    const notice = remindNotice(task, item);
+    Object.assign(task, patch);
+    task.updatedAt = new Date().toISOString();
     fired = true;
-    notifyOS(t('notif.reminder'), task.title || t('task.no_name'));
+    notifyOS(notice.text, notice.body);
   }
-  if (fired) scheduleSave();
+  if (fired || reopened) scheduleSave();
+  if (reopened) render();
   renderNotifBadge();
 }
 
 function renderDue(task) {
   // Повторение считается от дедлайна: появился или исчез срок — строка
   // повторения должна это заметить.
-  if (el.repeatRow) renderTaskRepeat(task);
+  renderTaskRepeat(task);
+  renderTaskSlots(task);
+  renderTaskReminders(task);
+  // Строка «Дедлайн · 12 июн. 2026, 18:00 ›»: заданный срок — жирным и цветом
+  // своего состояния (просрочен, в пределах суток), как в строках задач.
   const has = !!task.dueAt;
   const due = has ? new Date(task.dueAt) : null;
-  el.dueDateBtn.textContent = has ? `${fmtDpBtn(dayKey(due))}, ${pad2(due.getHours())}:${pad2(due.getMinutes())}` : t('due.set');
-  el.dueDateBtn.classList.toggle('is-empty', !has);
-  el.dueDateBtn.classList.toggle('muted-btn', !has);
-  el.dueClearBtn.hidden = !has;
-  el.dueRemind.hidden = !has;
-
-  const state2 = dueState(task);
-  el.dueState.hidden = !state2 || state2 === 'later';
-  el.dueState.className = `due-state ${state2 || ''}`;
-  if (!el.dueState.hidden) el.dueState.textContent = dueShort(task);
-
-  const isCustom = (task.remindOffsetMin === null || task.remindOffsetMin === undefined) && !!task.remindAt;
-  el.dueRemind.textContent = t(REMIND_LABEL[remindKey(task)]);
-  el.dueCustomRow.hidden = !has || !isCustom;
-  if (isCustom) {
-    const r = new Date(task.remindAt);
-    el.remindDateBtn.textContent = `${fmtDpBtn(dayKey(r))}, ${pad2(r.getHours())}:${pad2(r.getMinutes())}`;
-  }
+  const st = has ? dueState(task) : null;
+  el.dueValue.textContent = has ? `${fmtDpBtn(dayKey(due))}, ${pad2(due.getHours())}:${pad2(due.getMinutes())}` : t('due.none');
+  el.dueValue.className = `srow-value${has ? ' set' : ''}${st === 'soon' || st === 'overdue' ? ` ${st}` : ''}`;
+  el.dueValue.title = st === 'soon' || st === 'overdue' ? dueShort(task) : '';
 }
 
 /** Страница задачи: крошки, название с тегами и редактор, справа таймер и
@@ -4018,32 +4638,42 @@ function renderDetail() {
   renderSessions(task);
 }
 
-/** Статус задачи в редакторе. До этого поменять его можно было только
- *  перетаскиванием на доске — здесь он рядом со ставкой и сроком, среди
- *  остальных параметров задачи. */
+/** Статус задачи — чипами (как на телефоне): весь короткий список статусов
+ *  проекта на виду, выбранный отмечен. Щелчок ставит статус сразу. */
 function renderTaskStatus(task) {
-  const cur = getStatus(task.statusId);
-  el.taskStatus.textContent = cur ? cur.name : t('due.none');
-  el.taskStatusDot.style.setProperty('--sc', cur ? cur.color : 'transparent');
+  el.taskStatuses.innerHTML = '';
+  for (const st of orderedStatuses(task.projectId)) {
+    const on = st.id === task.statusId;
+    const chip = elt('button', `dp-btn${on ? ' on' : ''}`);
+    chip.type = 'button';
+    chip.dataset.statusId = st.id;
+    chip.setAttribute('aria-pressed', String(on));
+    const dot = elt('i', 'st-swatch');
+    dot.style.setProperty('--sc', st.color);
+    chip.append(dot, elt('span', 'tp-chip-name', st.name));
+    chip.addEventListener('click', () => {
+      if (task.statusId === st.id) return;
+      setTaskStatus(task, st.id);
+      render();
+      scheduleSave();
+    });
+    el.taskStatuses.appendChild(chip);
+  }
+}
+
+/** Ставка задачи словами — значение строки «Ставка»: своя — «5 000 ₽/ч»,
+ *  иначе откуда она берётся — «как у проекта — …» или «общая — …». */
+function rateValueText(task) {
+  const perHour = (n) => `${fmtMoney(n, currencyOf(task.projectId))}${t('rate.per_hour')}`;
+  if (hasOwnRate(task)) return perHour(Number(task.rate));
+  const base = Core.baseRate(task, rates());
+  const p = getProject(task.projectId);
+  if (p && p.rate !== null && p.rate !== undefined && p.rate !== '') return t('task.rate_project', { rate: perHour(base) });
+  return base ? t('rate.shared', { rate: perHour(base) }) : t('rate.none');
 }
 
 function renderMoney(task) {
-  const own = hasOwnRate(task);
-  if (document.activeElement !== el.taskRate) el.taskRate.value = own ? String(task.rate) : '';
-  const def = Number(state.settings.hourlyRate) || 0;
-  el.taskRate.placeholder = def ? String(def) : '0';
-  // Без пометки «по умолчанию»: ставка по умолчанию задаётся в настройках, и
-  // повторять это в каждой задаче незачем — строка только удлинялась.
-  el.rateUnit.textContent = `${symOf(currencyOf(task.projectId))}${t('rate.per_hour')}`;
-
-  const rate = effectiveRate(task);
-  const ms = taskElapsedMs(task);
-  const mins = Math.round(ms / 60000);
-  const minWord = { ru: 'мин', en: 'min', uk: 'хв', kk: 'мин' }[lang()] || 'мин';
-  const time = mins < 60 ? `${mins} ${minWord}` : fmtShort(ms);
-  el.moneyCalc.innerHTML = rate
-    ? `${t('money.calc', { time, rate: moneyFmt().format(rate), cur: symOf(currencyOf(task.projectId)) })} <b>${fmtMoney(earnedOf(task), currencyOf(task.projectId))}</b>`
-    : t('money.no_rate');
+  el.rateValue.textContent = rateValueText(task);
 }
 
 function renderTimer(task) {
@@ -4054,10 +4684,11 @@ function renderTimer(task) {
   const earned = earnedOf(task);
   el.timerEarned.hidden = !earnedShown(task, earned);
   el.timerEarned.textContent = fmtMoney(earned, currencyOf(task.projectId));
-  el.timerBtnIcon.innerHTML = running ? SVG_STOP : SVG_PLAY;
+  setPlayIcon(el.timerBtnIcon, running);
   el.timerBtnLabel.textContent = running ? t('timer.stop') : t('timer.start');
   el.timerBtn.setAttribute('aria-label', running ? t('timer.stop') : t('timer.start'));
-  el.timerBtn.classList.toggle('run', running);
+  el.timerBtn.classList.toggle('run', !!running);
+  liqMark(el.timerBtn, task.id);
   const rate = effectiveRate(task);
   el.timerRate.textContent = rate ? `· ${moneyFmt().format(rate)} ${symOf(currencyOf(task.projectId))}${t('rate.per_hour')}` : '';
   if (running) {
@@ -4175,6 +4806,32 @@ function newTask() {
   el.title.focus();
 }
 
+/** Дублировать задачу: всё, кроме записей времени и отметки «выполнено» (см.
+ *  core/duplicate.js). Копия встаёт в список сразу за оригиналом и
+ *  открывается. */
+function duplicateTask(id) {
+  const task = getTask(id);
+  if (!task) return;
+  flushEditor();
+  const copy = Core.duplicateTask(state, id, { uid, now: new Date().toISOString(), suffix: t('docs.copy_suffix') });
+  if (!copy) return;
+  state.tasks.splice(state.tasks.indexOf(task) + 1, 0, copy);
+  selectTask(copy.id);
+}
+
+/** Меню задачи — правой кнопкой по строке списка, карточке доски и строке
+ *  в карточке проекта, и кнопкой «⋯» на странице задачи (opts — как у
+ *  openMenu: у кнопки повторный щелчок закрывает меню). */
+function openTaskMenu(task, anchor, opts) {
+  openMenu(anchor, [
+    { label: t(task.pinnedAt ? 'task.unpin_short' : 'task.pin_short'), onClick: () => togglePinTask(task.id) },
+    { label: t('task.duplicate'), icon: 'copy', onClick: () => duplicateTask(task.id) },
+    { label: t('link.copy'), icon: 'link', onClick: () => copyRouteLink({ view: 'task', id: task.id }) },
+    { sep: true },
+    { label: t('task.delete_title'), danger: true, onClick: () => deleteTask(task.id) },
+  ], opts);
+}
+
 async function deleteTask(id) {
   const task = getTask(id);
   if (!task) return;
@@ -4254,6 +4911,27 @@ async function deleteProject(id) {
   scheduleSave();
 }
 
+/** Дублировать проект: настройки, статусы, версии, теги проекта, все задачи и
+ *  документы — всё, кроме записей времени. Что и как копируется, решает ядро
+ *  (core/duplicate.js); здесь копия встаёт в список сразу за оригиналом и
+ *  открывается. Уйдёт в облако вместе со всем остальным: синхронизация шлёт
+ *  состояние целиком, отдельных записей у неё нет. */
+function duplicateProject(id) {
+  const p = getProject(id);
+  if (!p) return;
+  flushEditor(); // текст открытой задачи ещё может сидеть в редакторе
+  const copy = Core.duplicateProject(state, id, { uid, now: new Date().toISOString(), suffix: t('docs.copy_suffix') });
+  if (!copy) return;
+  state.projects.splice(state.projects.indexOf(p) + 1, 0, copy.project);
+  state.statuses.push(...copy.statuses);
+  state.versions.push(...copy.versions);
+  state.tags.push(...copy.tags);
+  state.tasks.push(...copy.tasks);
+  state.documents.push(...copy.documents);
+  seedProjectStatuses(copy.project.id); // у оригинала статусов не было — набор по умолчанию, как у нового
+  openProject(copy.project.id);
+}
+
 async function copyProjectSummary(p) {
   const tasks = tasksOf(p.id);
   const done = tasks.filter((t2) => t2.done).length;
@@ -4270,22 +4948,54 @@ async function copyProjectSummary(p) {
 // ---------------------------------------------------------------------------
 
 let menuCleanup = null;
-/** opts.compact — узкий короткий список с прокруткой (часы, минуты). */
+/** opts.compact — узкий короткий список с прокруткой (часы, минуты).
+ *  opts.toggle — кнопка-выпадашка: повторный щелчок по ней закрывает меню, а
+ *  не открывает его заново. Без этого нажатие снаружи закрывало меню, а тот
+ *  же щелчок по кнопке тут же открывал его снова. Меню, вызванные правой
+ *  кнопкой на строке, флаг не берут: щелчок по такой строке должен её
+ *  открыть.
+ *  opts.width — ширина меню в пикселях (обычно ширина кнопки): названия,
+ *  которые в неё не помещаются, обрезаются многоточием.
+ *  opts.refresh — для пунктов-галочек (keep): возвращает список пунктов
+ *  заново, уже с новым выбором; им меню перерисовывается на месте.
+ *  Пункт: label, onClick, danger, selected, dot (цвет кружка) и icon — имя
+ *  значка из core/icons.js; он стоит справа, на месте галочки выбранного, —
+ *  так подписи остаются в один столбец у пунктов со значком и без него.
+ *  keep — мультивыбор: клик не закрывает меню (см. opts.refresh). */
 function openMenu(anchor, items, opts = {}) {
   closeMenu();
   const m = el.ctxMenu;
   m.innerHTML = '';
   m.classList.toggle('compact', !!opts.compact);
-  for (const it of items) {
-    if (it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); continue; }
-    const b = document.createElement('button');
-    b.className = 'ctx-item' + (it.danger ? ' danger' : '') + (it.selected ? ' sel' : '');
-    const dot = it.dot ? `<span class="ctx-dot" style="--sc:${escapeHtml(it.dot)}"></span>` : '';
-    b.innerHTML = `<span class="ctx-main">${dot}<span>${escapeHtml(it.label)}</span></span>` +
-      (it.selected ? icon('check', 'icon ctx-check') : '');
-    b.addEventListener('click', () => { closeMenu(); it.onClick(); });
-    m.appendChild(b);
-  }
+  // Меню шириной с кнопку: длинные названия в нём не тянут его вширь, а
+  // обрезаются многоточием (#ctx-menu.fit).
+  m.classList.toggle('fit', !!opts.width);
+  m.style.width = opts.width ? `${opts.width}px` : '';
+  const fill = (list) => {
+    m.innerHTML = '';
+    list.forEach((it, i) => {
+      if (it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); return; }
+      const b = document.createElement('button');
+      b.className = 'ctx-item' + (it.danger ? ' danger' : '') + (it.selected ? ' sel' : '');
+      const dot = it.dot ? `<span class="ctx-dot" style="--sc:${escapeHtml(it.dot)}"></span>` : '';
+      b.innerHTML = `<span class="ctx-main">${dot}<span class="ctx-label">${escapeHtml(it.label)}</span></span>` +
+        (it.selected ? icon('check', 'icon ctx-check') : '') +
+        (it.icon ? icon(it.icon, 'icon ctx-icon') : '');
+      b.addEventListener('click', () => {
+        if (!it.keep) { closeMenu(); it.onClick(); return; }
+        // Пункт-галочка: меню остаётся, выбор рисуется заново — клик по «Все
+        // проекты» меняет и соседей. Прокрутка и фокус остаются на месте.
+        const top = m.scrollTop;
+        const focused = document.activeElement === b;
+        it.onClick();
+        if (opts.refresh) fill(opts.refresh());
+        m.scrollTop = top;
+        if (focused && m.children[i]) m.children[i].focus({ preventScroll: true });
+      });
+      m.appendChild(b);
+    });
+  };
+  fill(items);
   m.hidden = false;
   m.scrollTop = 0;
   const sel = m.querySelector('.ctx-item.sel');
@@ -4297,25 +5007,47 @@ function openMenu(anchor, items, opts = {}) {
   m.style.left = `${Math.max(8, x)}px`;
   m.style.top = `${y}px`;
   anchor.classList.add('open');
-  const onDown = (e) => { if (!m.contains(e.target)) closeMenu(); };
+  // У кнопки-выпадашки нажатие закрывать не надо: меню закроет её же щелчок
+  // (onAnchorClick), и тот не дойдёт до её обработчика, который открыл бы меню
+  // заново.
+  const onDown = (e) => {
+    if (m.contains(e.target) || (opts.toggle && anchor.contains(e.target))) return;
+    closeMenu();
+  };
+  const onAnchorClick = (e) => {
+    if (!anchor.contains(e.target)) return;
+    e.stopPropagation();
+    e.preventDefault();
+    closeMenu();
+  };
   const onKey = (e) => { if (e.key === 'Escape') closeMenu(); };
   // Прокрутка страницы закрывает меню, а своя — нет: длинный список
   // прокручивается внутри.
   const onScroll = (e) => { if (e.target !== m) closeMenu(); };
   setTimeout(() => {
     document.addEventListener('pointerdown', onDown, true);
+    if (opts.toggle) document.addEventListener('click', onAnchorClick, true);
     document.addEventListener('keydown', onKey, true);
     document.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', closeMenu);
   }, 0);
   menuCleanup = () => {
     document.removeEventListener('pointerdown', onDown, true);
+    document.removeEventListener('click', onAnchorClick, true);
     document.removeEventListener('keydown', onKey, true);
     document.removeEventListener('scroll', onScroll, true);
     window.removeEventListener('resize', closeMenu);
     anchor.classList.remove('open');
   };
 }
+/** Ширина меню выбора проекта: как у кнопки, но не уже 220 и не шире 320 px.
+ *  Без этого меню тянулось по самому длинному названию проекта («километровое»
+ *  под узкой кнопкой фильтра); теперь длинное кончается многоточием
+ *  (#ctx-menu.fit), а цветная точка остаётся на месте. */
+function pickerWidth(anchor) {
+  return Math.min(320, Math.max(220, Math.round(anchor.getBoundingClientRect().width)));
+}
+
 function closeMenu() {
   el.ctxMenu.hidden = true;
   if (menuCleanup) { menuCleanup(); menuCleanup = null; }
@@ -4325,11 +5057,12 @@ function openProjectMenu(p, anchor) {
   const inProject = state.ui.view === 'project' && state.ui.projectId === p.id;
   const items = [];
   if (!inProject) items.push({ label: t('project.open'), onClick: () => openProject(p.id) });
-  items.push({ label: t('project.edit'), onClick: () => openProjectDialog(p) });
-  // Статусы и версии — и в меню: на телефонной ширине шестерёнки в шапке нет.
-  if (inProject) items.push({ label: t('board.statuses'), onClick: openStatusDialog });
+  // «Редактировать…» и «Статусы и версии» убраны 13 октября 2026: настройки
+  // проекта — шестерёнкой в его шапке и на доске.
   // Закреплённый проект встаёт в левое меню группой «Быстрый доступ».
   items.push({ label: t(p.pinnedAt ? 'project.unpin' : 'project.pin'), onClick: () => togglePinProject(p.id) });
+  items.push({ label: t('project.duplicate'), icon: 'copy', onClick: () => duplicateProject(p.id) });
+  items.push({ label: t('link.copy'), icon: 'link', onClick: () => copyRouteLink({ view: 'project', id: p.id }) });
   items.push({ sep: true });
   items.push({ label: t('project.excel'), onClick: () => exportProjectById(p.id) });
   items.push({ label: t('project.copy_summary'), onClick: () => copyProjectSummary(p) });
@@ -4356,8 +5089,9 @@ function renderPdlgTags() {
 const pdlgProjectId = () => (pdlg.editing ? pdlg.editing.id : null);
 
 /** @param {object|null} project — null для нового
- *  @param {string} [sec] — раздел, с которого открыть: main, money, tags,
- *  statuses, versions. У нового проекта есть только первые два. */
+ *  @param {string} [sec] — к какому разделу сразу прокрутить: main, money,
+ *  tags, versions, statuses. Окно одно, разделы лежат в нём одним списком;
+ *  у нового проекта есть только первые два. */
 function openProjectDialog(project, sec) {
   pdlg.editing = project || null;
   pdlg.color = project ? (project.color || PALETTE[0]) : PALETTE[state.projects.length % PALETTE.length];
@@ -4372,26 +5106,26 @@ function openProjectDialog(project, sec) {
   el.pdlgRate.value = pdlg.rate !== null ? String(pdlg.rate) : '';
   el.pdlgRate.placeholder = String(defaultRate() || 0);
   el.pdlgLater.hidden = !!project;
-  setPdlgSection(project && ['money', 'tags', 'statuses', 'versions'].includes(sec) ? sec : (sec === 'money' ? 'money' : 'main'));
+  renderPdlgSections();
   el.pdlgBackdrop.hidden = false;
-  if (!sec || sec === 'main') { el.pdlgName.focus(); el.pdlgName.select(); }
+  el.pdlgBody.scrollTop = 0;
+  if (!sec || sec === 'main') { el.pdlgName.focus(); el.pdlgName.select(); return; }
+  // Прокрутка — по offsetTop, а не по рамке: окно ещё въезжает с масштабом.
+  const target = document.getElementById(`pdlg-sec-${sec}`);
+  if (target && !target.hidden) el.pdlgBody.scrollTop = target.offsetTop;
 }
 
-/** Разделы окна проекта. Теги, статусы и версии — только у существующего. */
-function setPdlgSection(sec) {
-  pdlg.sec = sec;
+/** Разделы окна проекта — все сразу, одним списком (как на телефоне).
+ *  Теги, версии и статусы — только у существующего: новому проекту они
+ *  появятся после создания, а пока вместо них — подсказка. */
+function renderPdlgSections() {
   const has = !!pdlg.editing;
-  el.pdlgTabs.forEach((b) => {
-    b.classList.toggle('on', b.dataset.sec === sec);
-    b.hidden = !has && ['tags', 'statuses', 'versions'].includes(b.dataset.sec);
-  });
-  for (const name of ['main', 'money', 'tags', 'statuses', 'versions']) {
-    document.getElementById(`pdlg-sec-${name}`).hidden = name !== sec;
-  }
-  if (sec === 'money') renderPdlgMoney();
-  if (sec === 'tags') renderPdlgTagList();
-  if (sec === 'statuses') renderStatusDialog();
-  if (sec === 'versions') renderVersionDialog();
+  for (const name of ['tags', 'versions', 'statuses']) document.getElementById(`pdlg-sec-${name}`).hidden = !has;
+  renderPdlgMoney();
+  if (!has) return;
+  renderPdlgTagList();
+  renderVersionDialog();
+  renderStatusDialog();
 }
 
 function renderPdlgMoney() {
@@ -4409,9 +5143,9 @@ function renderPdlgTagList() {
   el.pdlgTagList.innerHTML = '';
   const own = state.tags.filter((tg) => tg.projectId === pid);
   if (!own.length) {
-    const empty = document.createElement('div');
-    empty.className = 'settings-row tags-empty';
-    empty.innerHTML = `<span class="settings-row-label muted">${escapeHtml(t('tag.project_empty'))}</span>`;
+    // В строку: «Новый тег проекта» стоит сразу под ним.
+    const empty = emptyState({ art: 'tags', title: t('tag.project_empty'), text: t('empty.project_tags_text'), row: true });
+    empty.classList.add('tags-empty');
     el.pdlgTagList.appendChild(empty);
   }
   for (const tag of own) {
@@ -4441,7 +5175,7 @@ function buildSwatches() {
 function closeProjectDialog() { el.pdlgBackdrop.hidden = true; closeDatePicker(); }
 function saveProjectDialog() {
   const name = el.pdlgName.value.trim();
-  if (!name) { setPdlgSection('main'); el.pdlgName.focus(); return; }
+  if (!name) { el.pdlgBody.scrollTop = 0; el.pdlgName.focus(); return; }
   const description = el.pdlgDesc.value.trim();
   const rateText = el.pdlgRate.value.trim();
   const rate = rateText === '' ? null : parseNum(rateText);
@@ -4497,7 +5231,9 @@ function spanFromParts(dateKey, startHm, endHm) {
   if (dparts.length !== 3 || sp.length < 2 || ep.length < 2 || dparts.some(Number.isNaN)) return null;
   const start = new Date(dparts[0], dparts[1] - 1, dparts[2], sp[0], sp[1]);
   let end = new Date(dparts[0], dparts[1] - 1, dparts[2], ep[0], ep[1]);
-  if (end <= start) end = new Date(end.getTime() + 24 * 3_600_000);
+  // Следующий день — по календарю: в день перевода часов «плюс 24 часа»
+  // промахивается на час, и запись 23:30–00:30 схлопывалась бы в ноль.
+  if (end <= start) end = new Date(dparts[0], dparts[1] - 1, dparts[2] + 1, ep[0], ep[1]);
   return { start, end, ms: end - start };
 }
 
@@ -4571,10 +5307,6 @@ function buildProjectSheets(project, versionId) {
   return reportsFor(project.id).buildProjectSheets(project, tasks, { meta });
 }
 
-function buildAllProjectsSheets() {
-  return reportsFor(null).buildAllProjectsSheets(state.projects, tasksOf);
-}
-
 function buildPeriodSheets(from, to) {
   // statsTasks() уже учитывает фильтр по проекту на экране статистики,
   // поэтому ядру достаётся готовый список, а оно отбирает сессии по датам.
@@ -4600,131 +5332,185 @@ function exportProjectById(id, versionId) {
   const suffix = versionId && versionId !== 'all' ? ` — ${versionFilterLabel(id, versionId)}` : '';
   runExport(`${p.name} — ${t('export.all_tasks')}${suffix} — ${fmtDate(Date.now())}`, buildProjectSheets(p, versionId));
 }
-/** Выбор периода выгрузки — то же, что лист ExportPeriodSheet в мобильном:
- *  пресеты плюс «Свой» с двумя датами. «Всё время» уходит в сводку по всем
- *  проектам (buildAllProjectsSheets), остальные — в лист сессий за диапазон
- *  (buildPeriodSheets), ровно как решает onExportRange на мобилке. */
-// Порядок и разбивка строк — как в мобильном приложении: 3 сверху, 4 снизу.
-const EXPORT_PRESET_ROWS = [['all', 'day', 'week'], ['month', 'half_year', 'year', 'custom']];
-const EXPORT_PRESETS = EXPORT_PRESET_ROWS.flat();
-const expdlg = { preset: 'all', from: null, to: null, picking: false, view: new Date() };
+/** Окно «Экспорт в Excel»: период и проекты — двумя выпадашками, под ними
+ *  сводка того, что уйдёт в файл. Правила — в core/export.js: что значит
+ *  период, как отмечаются проекты, сколько записей наберётся. Здесь только
+ *  окно и сборка листов.
+ *
+ *  «Всё время» уходит в сводку по проектам (buildAllProjectsSheets: итоги и
+ *  по листу на проект), остальные периоды — в один лист сессий
+ *  (buildPeriodSheets), как решает onExportRange на телефоне.
+ *
+ *  Период помнится между открытиями, проекты — нет: они берутся с экрана, с
+ *  которого окно открыли. versionId — отбор по версии, оставшийся от фильтра
+ *  статистики; любая отметка в списке проектов его снимает.
+ *
+ *  Своя пара дат — две кнопки «С» и «По» с обычным выбором даты, а не
+ *  встроенный календарь: две даты проще выбрать двумя щелчками, чем набирать
+ *  диапазон по сетке. */
+const expdlg = { period: 'all', from: null, to: null, projects: null, versionId: 'all' };
 
-function expdlgRange() {
-  const now = new Date();
-  const endOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
-  if (expdlg.preset === 'all') return null;
-  if (expdlg.preset === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1), endOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
-  if (expdlg.preset === 'week') { const ws = mondayOf(now); return [ws, endOfDay(new Date(ws.getTime() + 6 * 86400000))]; }
-  if (expdlg.preset === 'day') return [new Date(now.getFullYear(), now.getMonth(), now.getDate()), endOfDay(now)];
-  if (expdlg.preset === 'half_year') return [new Date(now.getFullYear(), now.getMonth() - 5, 1), endOfDay(now)];
-  if (expdlg.preset === 'year') return [new Date(now.getFullYear(), now.getMonth() - 11, 1), endOfDay(now)];
-  let a = keyToDate(expdlg.from);
-  let b = keyToDate(expdlg.to);
-  if (a > b) [a, b] = [b, a];
-  return [a, endOfDay(b)];
+const expdlgRange = () => Core.exportRange(expdlg.period, new Date(), { from: expdlg.from, to: expdlg.to });
+const expdlgTasks = () => Core.exportTasks(Core.filterTasks(state.tasks, state.versions, { versionId: expdlg.versionId }), expdlg.projects);
+
+/** Дата для подписей окна: «1 окт.» и «1 окт. 2026». Год дописывается сам, а
+ *  не берётся из toLocaleDateString: тот ставит к нему «г.», «р.», «ж.», а у
+ *  казахского ещё и в начало строки. */
+function fmtExpDate(d, withYear) {
+  const day = d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  if (!withYear) return day;
+  return lang() === 'en' ? `${day}, ${d.getFullYear()}` : `${day} ${d.getFullYear()}`;
 }
+
+/** Подпись кнопки проектов; отбор по версии дописывается к ней, чтобы было
+ *  видно, что выгрузка уже. */
+function expdlgProjectsText() {
+  const base = Core.exportProjectsLabel(expdlg.projects, state.projects, {
+    all: t('filter.all_projects'),
+    many: (n) => t('export.projects_n', { n, plural: pluralForm(n, 'plural.project') }),
+  });
+  return expdlg.versionId === 'all' ? base : `${base} · ${versionFilterLabel(null, expdlg.versionId)}`;
+}
+
+const selectHtml = (text) => `<span class="dp-select-name">${escapeHtml(text)}</span>${icon('chevron-down')}`;
 
 function renderExpdlg() {
-  // Пресеты — сеткой 3 + 4 на одной подложке, как в мобильном приложении.
-  // В одну строку семь вариантов не помещаются читаемо, а списком они
-  // занимали бы пол-модалки.
-  el.expPills.innerHTML = '';
-  for (const row of EXPORT_PRESET_ROWS) {
-    const line = document.createElement('div');
-    line.className = 'exp-tab-row segmented-row';
-    for (const p of row) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'exp-tab' + (p === expdlg.preset ? ' on' : '');
-      b.textContent = t(`export.period_${p}`);
-      b.addEventListener('click', () => { expdlg.preset = p; renderExpdlg(); });
-      line.appendChild(b);
-    }
-    el.expPills.appendChild(line);
-  }
-  el.expRange.hidden = expdlg.preset !== 'custom';
-  el.expFrom.textContent = fmtDpBtn(expdlg.from);
-  el.expTo.textContent = fmtDpBtn(expdlg.to);
-  // Подсвечена та граница, которую задаст следующий клик по календарю.
-  el.expFrom.classList.toggle('active', !expdlg.picking);
-  el.expTo.classList.toggle('active', !!expdlg.picking);
-  if (expdlg.preset === 'custom') renderExpCal();
+  const tasks = expdlgTasks();
+  const range = expdlgRange();
+  const custom = expdlg.period === 'custom';
+
+  el.expPeriod.innerHTML = selectHtml(t(`export.period_${expdlg.period}`));
+  const projectsText = expdlgProjectsText();
+  el.expProjects.innerHTML = selectHtml(projectsText);
+  el.expProjects.title = projectsText;
+
+  // Под полем — точные даты. У «Всего времени» границ нет, и показано то, что
+  // за ним лежит: от первой записи до последней. У своего периода эти даты
+  // уже на кнопках ниже.
+  const shown = range || Core.exportSpan(tasks);
+  el.expRangeText.hidden = custom;
+  el.expRangeText.textContent = shown ? Core.exportRangeLabel(shown, fmtExpDate) : '';
+  el.expDates.hidden = !custom;
+  el.expFrom.textContent = fmtExpDate(keyToDate(expdlg.from), true);
+  el.expTo.textContent = fmtExpDate(keyToDate(expdlg.to), true);
+
+  const sum = Core.exportSummary(tasks, range);
+  el.expSummary.classList.toggle('empty', sum.empty);
+  el.expSummary.textContent = sum.empty
+    ? t('export.empty')
+    : t('export.summary', { n: sum.count, plural: pluralForm(sum.count, 'plural.entry'), time: fmtDur(sum.ms) });
+  // Выгружать нечего — кнопка гаснет, а подсказка при наведении та же, что в
+  // строке: иначе гаснущая кнопка ничего не объясняет.
+  el.expdlgOk.disabled = sum.empty;
+  el.expdlgOk.title = sum.empty ? t('export.empty') : '';
 }
 
-/** Календарь внутри модалки экспорта: он всегда на виду, а не выскакивает
- *  поверх неё по клику на поле. Диапазон набирается двумя кликами прямо по
- *  сетке — первый задаёт начало, второй конец, — и подсвечивается целиком. */
-function renderExpCal() {
-  const y = expdlg.view.getFullYear();
-  const m = expdlg.view.getMonth();
-  el.expCalTitle.textContent = monthLabel(y, m);
-  const startOffset = (new Date(y, m, 1).getDay() + 6) % 7;
-  const dim = new Date(y, m + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= dim; d++) cells.push(d);
-  const todayKey = dayKey(new Date());
-  let [lo, hi] = [expdlg.from, expdlg.to];
-  if (lo && hi && lo > hi) [lo, hi] = [hi, lo];
-
-  el.expCalDays.innerHTML = '';
-  for (const d of cells) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'dp-day';
-    if (d == null) { b.classList.add('empty'); b.disabled = true; el.expCalDays.appendChild(b); continue; }
-    const key = `${y}-${pad2(m + 1)}-${pad2(d)}`;
-    if (key === todayKey) b.classList.add('today');
-    if (key === lo || key === hi) b.classList.add('sel');
-    else if (lo && hi && key > lo && key < hi) b.classList.add('in-range');
-    b.textContent = String(d);
-    b.addEventListener('click', () => { pickExpDay(key); });
-    el.expCalDays.appendChild(b);
-  }
+// Ширина меню — по offsetWidth, а не по рамке: окно ещё въезжает с масштабом, и рамка
+// кнопки в первые 160 мс меньше настоящей.
+function openExpdlgPeriodMenu() {
+  openMenu(el.expPeriod, Core.EXPORT_PERIODS.map((p) => ({
+    label: t(`export.period_${p}`),
+    selected: expdlg.period === p,
+    onClick: () => { expdlg.period = p; renderExpdlg(); },
+  })), { toggle: true, width: el.expPeriod.offsetWidth });
 }
 
-/** Первый клик задаёт начало и сбрасывает конец, второй — конец. Если второй
- *  клик пришёлся раньше первого, границы меняются местами, а не игнорируются. */
-function pickExpDay(key) {
-  if (!expdlg.picking) {
-    expdlg.from = key;
-    expdlg.to = key;
-    expdlg.picking = true;
-  } else {
-    if (key < expdlg.from) { expdlg.to = expdlg.from; expdlg.from = key; }
-    else expdlg.to = key;
-    expdlg.picking = false;
-  }
-  renderExpdlg();
+/** Проекты с галочками: «Все проекты» наверху, ниже — по строке на проект.
+ *  Меню не закрывается на отметке (keep) и перерисовывается этой же
+ *  функцией (refresh). */
+function expdlgProjectItems() {
+  const ids = state.projects.map((p) => p.id);
+  const picked = expdlg.projects;
+  const change = (next) => { expdlg.projects = next; expdlg.versionId = 'all'; renderExpdlg(); };
+  return [
+    { label: t('filter.all_projects'), selected: !picked, keep: true, onClick: () => change(null) },
+    ...(state.projects.length ? [{ sep: true }] : []),
+    ...state.projects.map((p) => ({
+      label: p.name,
+      dot: p.color || PALETTE[0],
+      selected: !!picked && picked.includes(p.id),
+      keep: true,
+      onClick: () => change(Core.toggleExportProject(picked, p.id, ids)),
+    })),
+  ];
+}
+function openExpdlgProjectsMenu() {
+  openMenu(el.expProjects, expdlgProjectItems(), {
+    toggle: true,
+    width: el.expProjects.offsetWidth,
+    refresh: expdlgProjectItems,
+  });
 }
 
+// Кнопка, с которой окно открыли: после закрытия фокус возвращается ей, а не
+// остаётся на невидимом.
+let expdlgOpener = null;
 function openExportPeriodDialog() {
   const today = dayKey(new Date());
   if (!expdlg.from) expdlg.from = today;
   if (!expdlg.to) expdlg.to = today;
-  expdlg.picking = false;
-  expdlg.view = keyToDate(expdlg.from);
+  // Открыли с экрана, где выбран проект (фильтр статистики), — он и предвыбран,
+  // вместе с версией, если она там выбрана.
+  const fromFilter = statsFilter.projectId !== 'all' && !!getProject(statsFilter.projectId);
+  expdlg.projects = Core.normalizeExportProjects(fromFilter ? [statsFilter.projectId] : null, state.projects.map((p) => p.id));
+  expdlg.versionId = fromFilter ? statsFilter.versionId || 'all' : 'all';
   renderExpdlg();
+  expdlgOpener = document.activeElement === document.body ? null : document.activeElement;
   el.expdlgBackdrop.hidden = false;
+  el.expPeriod.focus();
 }
-function closeExpdlg() { el.expdlgBackdrop.hidden = true; }
+function closeExpdlg() {
+  const opener = expdlgOpener && expdlgOpener.isConnected ? expdlgOpener : el.exportPeriodBtn;
+  expdlgOpener = null;
+  el.expdlgBackdrop.hidden = true;
+  closeDatePicker();
+  closeMenu();
+  opener.focus();
+}
 
-// Границы диапазона больше не открывают отдельный календарь — он встроен в
-// модалку и всегда на виду. Стрелками листаются месяцы.
-el.expCalPrev.addEventListener('click', () => { expdlg.view = new Date(expdlg.view.getFullYear(), expdlg.view.getMonth() - 1, 1); renderExpCal(); });
-el.expCalNext.addEventListener('click', () => { expdlg.view = new Date(expdlg.view.getFullYear(), expdlg.view.getMonth() + 1, 1); renderExpCal(); });
+el.expPeriod.addEventListener('click', openExpdlgPeriodMenu);
+el.expProjects.addEventListener('click', openExpdlgProjectsMenu);
+// Границы не расходятся: дальше «по» — «с» подтягивает её за собой, и наоборот.
+el.expFrom.addEventListener('click', () => openDatePicker(el.expFrom, expdlg.from, (key) => {
+  expdlg.from = key;
+  if (expdlg.to < key) expdlg.to = key;
+  renderExpdlg();
+}));
+el.expTo.addEventListener('click', () => openDatePicker(el.expTo, expdlg.to, (key) => {
+  expdlg.to = key;
+  if (expdlg.from > key) expdlg.from = key;
+  renderExpdlg();
+}));
 el.expdlgCancel.addEventListener('click', closeExpdlg);
-el.expdlgOk.addEventListener('click', () => {
-  const range = expdlgRange();
+el.expdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.expdlgBackdrop) closeExpdlg(); });
+// Escape закрывает окно — но не поверх открытого меню или календаря: тем
+// закрыться первыми, а окну остаться. Меню гасит себя своим обработчиком в
+// фазе перехвата, и обычный слушатель документа увидел бы его уже закрытым;
+// поэтому этот стоит в той же фазе и зарегистрирован раньше любого меню.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || el.expdlgBackdrop.hidden || !el.ctxMenu.hidden || dp.open) return;
+  e.preventDefault();
   closeExpdlg();
-  if (!range) { exportAllProjects(); return; }
-  const [from, to] = range;
-  runExport(`Lancible — ${t('export.period')}${filterSuffix(statsFilter)} — ${fmtDate(from)} — ${fmtDate(to)}`, buildPeriodSheets(from, to));
+}, true);
+el.expdlgOk.addEventListener('click', () => {
+  const tasks = expdlgTasks();
+  const range = expdlgRange();
+  if (Core.exportSummary(tasks, range).empty) return;
+  const ids = expdlg.projects;
+  const projects = ids ? state.projects.filter((p) => ids.includes(p.id)) : state.projects;
+  // Один проект — в его валюте и по его ставкам, несколько — в основной.
+  const rep = reportsFor(projects.length === 1 ? projects[0].id : null);
+  const scope = expdlgProjectsText();
+  closeExpdlg();
+  if (!range) {
+    runExport(`Lancible — ${ids ? scope : t('export.all_projects')} — ${fmtDate(Date.now())}`,
+      rep.buildAllProjectsSheets(projects, (id) => tasks.filter((x) => x.projectId === id)));
+    return;
+  }
+  runExport(`Lancible — ${t('export.period')}${ids ? ` — ${scope}` : ''} — ${fmtDate(range.from)} — ${fmtDate(range.to)}`,
+    rep.buildPeriodSheets(tasks, getProject, range));
 });
 
-function exportAllProjects() {
-  runExport(`Lancible — ${t('export.all_projects')} — ${fmtDate(Date.now())}`, buildAllProjectsSheets());
-}
 /** Экспорт открытого проекта — та же выгрузка, что в контекстном меню
  *  плитки на главной, но доступная изнутри проекта (как в мобильном). */
 function exportProject() {
@@ -4756,6 +5542,8 @@ function startTimer(id) {
   if (state.activeTimer) stopTimer();
   const now = new Date().toISOString();
   state.activeTimer = { taskId: id, startedAt: now, heartbeatAt: now };
+  holdOrders(id);
+  liqKick(id, 'fill');
   savePending = true;
   saveNow();
   render();
@@ -4763,6 +5551,8 @@ function startTimer(id) {
 function stopTimer() {
   if (!state.activeTimer) return;
   const { taskId, startedAt } = state.activeTimer;
+  liqKick(taskId, 'drain');
+  releaseOrders(taskId);
   const task = getTask(taskId);
   const end = new Date();
   const ms = Math.max(0, end.getTime() - new Date(startedAt).getTime());
@@ -4776,6 +5566,340 @@ function stopTimer() {
   savePending = true;
   saveNow();
   render();
+}
+
+// ---------------------------------------------------------------------------
+// Порядок строк: на запуске не прыгает, на остановке плавно переезжает
+// ---------------------------------------------------------------------------
+//
+// «Недавние задачи», проекты и карточки «Проектов» стоят по свежести, и у
+// идущей задачи она — «сейчас», то есть первая. Раньше строка выпрыгивала
+// вверх в момент нажатия. Теперь запуск порядок не трогает: startTimer
+// запоминает, как списки стояли на экране (shownOrder), и listRows держит
+// этот порядок, пока таймер идёт (Core.holdOrder). Остановили — заморозка
+// снята, порядок обычный, и строки переезжают на новые места: flipSnapshot
+// замеряет, где каждая стояла, flipPlay — где встала, и строка едет оттуда
+// сюда (FLIP: .flip-move, --flip-x/--flip-y). Ушли с экрана и вернулись —
+// порядок считается заново, без заморозки и без движения (render()).
+//
+// В переезде участвуют только строки с flipTag: ключ списка и id. Перерисовка
+// посреди переезда (синхронизация, переключение таймера) его не сбрасывает:
+// замер берёт строки там, где они видны сейчас, и новый переезд идёт оттуда.
+// Без движения (prefers-reduced-motion) строки встают сразу.
+
+/** Как списки стояли на экране в последней отрисовке: ключ → id строк. */
+const shownOrder = new Map();
+/** Заморозка: { taskId, orders } — пока идёт таймер этой задачи, списки
+ *  держат порядок orders (ключ → id строк). */
+let orderHold = null;
+/** Остановленная задача: при ближайшей перерисовке её строки едут на место. */
+let flipArm = null;
+
+/** Строки списка в показанном порядке. rows — объекты с id в обычном
+ *  порядке; пока идёт заморозка, порядок тот, что был на экране. */
+function listRows(key, rows) {
+  const frozen = orderHold && state.activeTimer && state.activeTimer.taskId === orderHold.taskId;
+  const ids = Core.holdOrder(frozen ? orderHold.orders.get(key) : null, rows.map((r) => r.id));
+  shownOrder.set(key, ids);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return ids.map((id) => byId.get(id));
+}
+
+function holdOrders(taskId) { orderHold = { taskId, orders: new Map(shownOrder) }; }
+function releaseOrders(taskId) { orderHold = null; flipArm = taskId; }
+
+/** Пометить строку как участницу переезда: key — список, id — строка в нём. */
+function flipTag(node, key, id) {
+  node.dataset.flip = key;
+  node.dataset.flipId = id;
+  return node;
+}
+const flipKey = (node) => `${node.dataset.flip}|${node.dataset.flipId}`;
+
+/** Где сейчас стоят строки — пока перерисовка их не заменила. Нужен, только
+ *  если кого-то остановили или переезд ещё идёт; иначе null. Прямоугольник
+ *  берётся вместе с идущей анимацией, поэтому прерванный переезд продолжается
+ *  с того места, где строка была видна; у едущей строки запоминается ещё, на
+ *  сколько она сдвинута, откуда ехала и сколько уже проехала. */
+function flipSnapshot() {
+  if (!flipArm && !document.querySelector('.flip-move')) return null;
+  const before = new Map();
+  for (const node of document.querySelectorAll('[data-flip]')) {
+    const rect = node.getBoundingClientRect();
+    if (!rect.width && !rect.height) continue;
+    const was = { rect, live: node.classList.contains('flip-move'), lead: node.classList.contains('flip-lead') };
+    if (was.live) {
+      const shift = new DOMMatrixReadOnly(getComputedStyle(node).transform);
+      const run = node.getAnimations().find((a) => a.animationName === 'flipMove');
+      Object.assign(was, {
+        tx: shift.m41, ty: shift.m42,
+        x: node.style.getPropertyValue('--flip-x'), y: node.style.getPropertyValue('--flip-y'),
+        at: run ? run.effect.getComputedTiming().localTime - run.effect.getComputedTiming().delay : 0,
+      });
+    }
+    before.set(flipKey(node), was);
+  }
+  return before;
+}
+
+/** Строки, что встали не там, где стояли, едут на новое место. Остановленная
+ *  поднимается над остальными (.flip-lead). Перерисовка посреди переезда не
+ *  сбрасывает его: если место, куда строка ехала, не сменилось, новая строка
+ *  доигрывает ту же анимацию с того же момента (--flip-t — отрицательная
+ *  задержка, как у --liq-t); сменилось — едет оттуда, где была видна. */
+function flipPlay(before) {
+  const armed = flipArm;
+  flipArm = null;
+  if (!before || reducedMotion()) return;
+  for (const node of document.querySelectorAll('[data-flip]')) {
+    const was = before.get(flipKey(node));
+    if (!was) continue;
+    const now = node.getBoundingClientRect();
+    if (!now.width && !now.height) continue;
+    const dx = Math.round(was.rect.left - now.left);
+    const dy = Math.round(was.rect.top - now.top);
+    if (was.live && Math.abs(dx - was.tx) < 1 && Math.abs(dy - was.ty) < 1) {
+      node.style.setProperty('--flip-x', was.x);
+      node.style.setProperty('--flip-y', was.y);
+      node.style.setProperty('--flip-t', `${-Math.round(was.at)}ms`);
+    } else if (dx || dy) {
+      node.style.setProperty('--flip-x', `${dx}px`);
+      node.style.setProperty('--flip-y', `${dy}px`);
+    } else continue;
+    node.classList.toggle('flip-lead', was.lead || node.dataset.flipId === armed);
+    node.classList.add('flip-move');
+    node.addEventListener('animationend', (e) => {
+      if (e.target === node && e.animationName === 'flipMove') node.classList.remove('flip-move', 'flip-lead');
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Жидкий старт: кнопка запуска наливается, капсула шапки перетекает
+// ---------------------------------------------------------------------------
+//
+// Запустили задачу — каждая её кнопка запуска на экране «наливается»
+// (.liq-fill), остановили — «стекает» (.liq-drain); вид и время — в
+// styles.css, «Кнопка запуска». Строки перерисовываются целиком, поэтому
+// кнопка не помнит, что её только что нажали: помнит liqKicks — какую задачу
+// и когда тронули, — а каждое место, которое рисует кнопку запуска, зовёт
+// liqMark. Перерисованная посреди анимации кнопка подхватывает её с того же
+// места (--liq-t), а не начинает заново. Время — по часам анимаций
+// (document.timeline), а не Date.now(): их и догоняем.
+//
+// Без движения (prefers-reduced-motion) ничего этого нет: кнопки и капсула
+// меняются сразу.
+
+function reducedMotion() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+function animNow() { return (document.timeline && document.timeline.currentTime) || performance.now(); }
+/** Сколько после нажатия новая кнопка ещё подхватывает анимацию: чуть
+ *  дольше самой длинной из них (0.62 с). */
+const LIQ_WINDOW_MS = 700;
+const liqKicks = new Map(); // id задачи → { kind: 'fill' | 'drain', at, seen: WeakSet }
+
+function liqKick(taskId, kind) {
+  if (!taskId || reducedMotion()) return;
+  liqKicks.set(taskId, { kind, at: animNow(), seen: new WeakSet() });
+}
+
+/** Кнопке запуска задачи — налив или слив, если задачу только что тронули.
+ *  Одна кнопка играет его один раз: «Сейчас идёт» и таймер страницы задачи
+ *  перерисовываются каждые 250 мс, и без этого анимация шла бы по кругу. */
+function liqMark(btn, taskId) {
+  const k = liqKicks.get(taskId);
+  if (!k || k.seen.has(btn)) return;
+  const age = animNow() - k.at;
+  if (age > LIQ_WINDOW_MS) { liqKicks.delete(taskId); return; }
+  k.seen.add(btn);
+  const cls = `liq-${k.kind}`;
+  btn.classList.remove('liq-fill', 'liq-drain');
+  btn.style.setProperty('--liq-t', `${-Math.round(age)}ms`);
+  btn.classList.add(cls);
+  liqSettle(btn, () => btn.classList.remove(cls));
+}
+
+/** Позвать done, когда все анимации узла (с потомками и ::before/::after)
+ *  кончились или сорвались. Строку собирают до вставки в страницу, поэтому
+ *  смотрим в микрозадаче, когда она уже на месте; анимаций нет (выключены
+ *  стилями, узел не на экране) — done сразу. */
+function liqSettle(node, done) {
+  queueMicrotask(() => {
+    const anims = node.isConnected ? node.getAnimations({ subtree: true }) : [];
+    Promise.allSettled(anims.map((a) => a.finished)).then(done);
+  });
+}
+
+/** Значок плея или стопа — только когда он правда сменился: перерисовка раз в
+ *  250 мс не должна заново запускать выпрыгивание значка. */
+function setPlayIcon(node, running) {
+  const kind = running ? 'stop' : 'play';
+  if (node.dataset.ico === kind) return;
+  node.dataset.ico = kind;
+  node.innerHTML = running ? SVG_STOP : SVG_PLAY;
+}
+
+/** Слой капли под содержимым капсулы и SVG-фильтр, который делает из двух
+ *  пятен одну жидкость: размыть и снова обрезать по прозрачности. */
+function setupLiquid() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'liq-defs');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  svg.innerHTML = '<filter id="liq-goo" x="-20%" y="-60%" width="140%" height="220%" color-interpolation-filters="sRGB">'
+    + '<feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur"/>'
+    + '<feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -9"/></filter>';
+  document.body.append(svg);
+  const goo = elt('span', 'liq-goo');
+  goo.setAttribute('aria-hidden', 'true');
+  goo.append(elt('i', 'liq-drop'), elt('i', 'liq-bead'));
+  el.tbTimer.prepend(goo);
+}
+
+/** Шла ли запись при прошлой отрисовке шапки; null — шапку ещё не рисовали
+ *  (на первой отрисовке переливаться нечему). */
+let tbRunning = null;
+
+/** Где в капсуле капля «Стопа» и куда катится бусина — от вёрстки капсулы,
+ *  какой она будет (или была). fromW — ширина «Старта». */
+function tbLiquidGeometry(fromW) {
+  const t = el.tbTimer;
+  const stop = el.tbTimerStop;
+  const dot = t.querySelector('.tb-timer-dot');
+  const drop = t.querySelector('.liq-drop');
+  const bead = t.querySelector('.liq-bead');
+  t.style.setProperty('--liq-from', `${Math.round(fromW || t.offsetHeight)}px`);
+  drop.style.left = `${stop.offsetLeft}px`;
+  drop.style.top = `${stop.offsetTop}px`;
+  drop.style.width = `${stop.offsetWidth}px`;
+  drop.style.height = `${stop.offsetHeight}px`;
+  // Бусина начинает, наполовину сидя в капле, и кончает на месте точки.
+  const size = bead.offsetWidth;
+  const from = stop.offsetLeft - size / 2;
+  const to = dot.offsetLeft + dot.offsetWidth / 2 - size / 2;
+  bead.style.left = `${from}px`;
+  bead.style.top = `${t.clientHeight / 2 - size / 2}px`;
+  t.style.setProperty('--liq-run', `${Math.round(to - from)}px`);
+}
+
+/** Перезапустить класс-анимацию: снять, дать стилям увидеть, поставить. */
+function restartClass(node, cls) {
+  node.classList.remove(cls);
+  void node.offsetWidth;
+  node.classList.add(cls);
+}
+
+/** Перелив шапки. 'in' — «Старт» растекается в капсулу; 'out' — капсула
+ *  стекает в «Старт»: на это время она остаётся видимой поверх него
+ *  (renderTbTimer её не прячет), а прячется, когда анимация кончилась. */
+function tbPour(dir, fromW) {
+  const t = el.tbTimer;
+  const start = el.tbStart;
+  t.classList.remove('liq-grow', 'liq-shrink');
+  start.classList.remove('liq-settle');
+  if (reducedMotion()) return;
+  // Сначала класс, потом замеры: слой капли виден (и меряется) только с ним.
+  if (dir === 'in') {
+    restartClass(t, 'liq-grow');
+    tbLiquidGeometry(fromW);
+    liqSettle(t, () => t.classList.remove('liq-grow'));
+    return;
+  }
+  restartClass(t, 'liq-shrink');
+  tbLiquidGeometry(fromW);
+  if (!start.hidden) restartClass(start, 'liq-settle');
+  liqSettle(t, () => {
+    if (!t.classList.contains('liq-shrink')) return; // её уже перебил новый запуск
+    t.classList.remove('liq-shrink');
+    t.hidden = !tbRunning;
+  });
+  liqSettle(start, () => start.classList.remove('liq-settle'));
+}
+
+// ---------------------------------------------------------------------------
+// Сегментный переключатель: подложка выбранной кнопки переезжает
+// ---------------------------------------------------------------------------
+//
+// Выбранная кнопка .segmented — .on, и ставят её в десятке мест (вкладки
+// проекта и задачи, режимы «Статистики», фильтр статусов, тема, повторение,
+// настройки редактора). Чтобы не трогать каждое, подложка следит за классом
+// кнопок сама: MutationObserver увидел новую .on — общий .seg-pill едет к ней
+// (положение и ширина, пружина — в styles.css). Размер кнопок поменялся
+// (язык, ширина окна, переключатель показали) — ResizeObserver ставит подложку
+// на место без анимации. Новые переключатели (редактор) подхватывает
+// watchSegmented.
+
+const segAreas = new WeakMap(); // .segmented → { pill, on, box, ro }
+
+function attachSegGlide(seg) {
+  if (segAreas.has(seg) || !seg.querySelector(':scope > button')) return;
+  const pill = elt('span', 'seg-pill still none');
+  pill.setAttribute('aria-hidden', 'true');
+  seg.prepend(pill);
+  seg.classList.add('seg-glide');
+  const area = { seg, pill, on: null, box: null, ro: new ResizeObserver(() => segPlace(area, false)) };
+  segAreas.set(seg, area);
+  const watch = () => { for (const b of seg.children) if (b !== pill) area.ro.observe(b); };
+  area.ro.observe(seg);
+  watch();
+  new MutationObserver((list) => {
+    if (list.some((m) => m.type === 'childList')) watch();
+    segPlace(area, true);
+  }).observe(seg, { attributes: true, attributeFilter: ['class'], subtree: true, childList: true });
+  segPlace(area, false);
+}
+
+/** Поставить подложку под выбранную кнопку. glide — ехать, если выбранная
+ *  сменилась на видимом переключателе; иначе — встать сразу. Координаты — в
+ *  раскладке переключателя: масштаб окна, которое ещё раскрывается (popIn),
+ *  делится обратно, прокрутка ряда (узкий веб) прибавляется. */
+function segPlace(area, glide) {
+  const { seg, pill } = area;
+  const on = seg.querySelector(':scope > button.on');
+  pill.classList.toggle('none', !on);
+  if (!on || !seg.isConnected || !seg.offsetWidth || !on.offsetWidth) {
+    // Нечего выделять или переключатель не на экране: встанет, когда покажут.
+    area.on = null;
+    area.box = null;
+    return;
+  }
+  const s = seg.getBoundingClientRect();
+  const r = on.getBoundingClientRect();
+  const k = s.width / seg.offsetWidth || 1;
+  const box = {
+    x: (r.left - s.left) / k - seg.clientLeft + seg.scrollLeft,
+    y: (r.top - s.top) / k - seg.clientTop + seg.scrollTop,
+    w: r.width / k,
+    h: r.height / k,
+  };
+  const same = area.box && area.on === on && ['x', 'y', 'w', 'h'].every((p) => Math.abs(area.box[p] - box[p]) < 0.5);
+  if (same) return;
+  const move = glide && area.on && area.on !== on && !reducedMotion();
+  pill.classList.toggle('still', !move);
+  pill.style.transform = `translate(${box.x}px, ${box.y}px)`;
+  pill.style.width = `${box.w}px`;
+  pill.style.height = `${box.h}px`;
+  area.on = on;
+  area.box = box;
+}
+
+/** Переключатели, что уже есть, и те, что появятся (настройки редактора). */
+function watchSegmented() {
+  const find = (root) => {
+    if (root.classList.contains('segmented')) attachSegGlide(root);
+    // Внутри — ни одного элемента: искать в поддереве нечего.
+    if (root.firstElementChild) for (const seg of root.getElementsByClassName('segmented')) attachSegGlide(seg);
+  };
+  find(document.body);
+  new MutationObserver((list) => {
+    for (const m of list) {
+      // Переключатель в переключателе не бывает: то, что вставлено внутрь него
+      // (кнопки, подложка при подключении), не разбираем. Текстовые узлы и
+      // накладные дорожки (они лежат в <body>) — тоже.
+      if (m.target.closest('.segmented')) continue;
+      for (const n of m.addedNodes) if (n.nodeType === 1 && !ovsTracks.has(n)) find(n);
+    }
+  }).observe(document.body, { childList: true, subtree: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -4830,6 +5954,9 @@ function editorOptions(extra) {
     assets: editorAssets,
     toast,
     openUrl: (href) => openExternalUrl(href),
+    // Полноэкранный редактор ложится поверх шапки, а с ней и поверх кнопок
+    // окна: их подложка должна стать цветом его панели и вернуться обратно.
+    onFullscreen: () => syncTitlebarOverlay(),
     // Веб на телефоне — тот же режим, что в приложении для телефона: кнопки
     // крупнее, панель одной строкой, без ручки блока.
     mobile: !!(window.matchMedia && window.matchMedia('(pointer: coarse) and (max-width: 760px)').matches),
@@ -4980,6 +6107,8 @@ function renderDocsPage() {
   }
   el.docEmpty.hidden = !!d;
   el.docMain.hidden = !d;
+  // Акцентная кнопка — одна на экран: пока документов нет, она по центру.
+  el.docNewBtn.hidden = !docs.length;
 }
 
 function docsShown() {
@@ -4992,8 +6121,11 @@ function docsShown() {
 function renderDocList() {
   if (!el.docList) return;
   const list = docsShown();
-  el.docFilterBtn.textContent = docFilter === 'all' ? t('docs.filter_all')
+  const filterName = docFilter === 'all' ? t('docs.filter_all')
     : docFilter === 'none' ? t('docs.no_project') : ((getProject(docFilter) || {}).name || t('docs.filter_all'));
+  // Название и стрелка вниз — по ней видно, что это выпадающий список.
+  el.docFilterBtn.innerHTML = `<span class="dp-select-name">${escapeHtml(filterName)}</span>${icon('chevron-down')}`;
+  el.docFilterBtn.title = filterName;
   el.docList.innerHTML = '';
   for (const d of list) {
     const p = d.projectId && getProject(d.projectId);
@@ -5004,12 +6136,14 @@ function renderDocList() {
     b.dataset.id = d.id;
     b.innerHTML = `<span class="doc-item-title">${d.pinnedAt ? icon('pin', 'icon doc-pin') : ''}${escapeHtml(docTitle(d))}</span>`
       + `<span class="doc-item-meta">${p ? `<span class="ctx-dot" style="--sc:${escapeHtml(p.color || '')}"></span>${escapeHtml(p.name)} · ` : ''}${escapeHtml(t('docs.words_n', { n: st.words }))} · ${escapeHtml(fmtWhenShort(d.updatedAt))}</span>`;
-    b.addEventListener('click', () => { if (d.id !== state.ui.docId) { flushEditor(); state.ui.docId = d.id; renderDocsPage(); scheduleSave(); } });
+    b.addEventListener('click', () => { if (d.id !== state.ui.docId) { flushEditor(); state.ui.docId = d.id; renderDocsPage(); syncRoute(); scheduleSave(); } });
     b.addEventListener('contextmenu', (e) => { e.preventDefault(); openDocMenu(d, b); });
     el.docList.appendChild(b);
   }
-  el.docListEmpty.hidden = list.length > 0;
-  el.docListEmpty.textContent = (state.documents || []).length ? t('docs.nothing_found') : t('docs.empty_list');
+  // Документов нет совсем — об этом говорит пустой экран справа, список
+  // молчит, чтобы не повторять его слово в слово. Есть, но поиск или фильтр
+  // мимо — компактный пустой экран в самом списке.
+  el.docListEmpty.hidden = list.length > 0 || !(state.documents || []).length;
 }
 
 function fmtWhenShort(iso) {
@@ -5076,7 +6210,7 @@ function pickDocProject(d, anchor) {
       label: p.name, dot: p.color, selected: d.projectId === p.id,
       onClick: () => { d.projectId = p.id; d.updatedAt = new Date().toISOString(); renderDocsPage(); scheduleSave(); },
     })),
-  ]);
+  ], { width: pickerWidth(anchor) });
 }
 
 function openDocFilterMenu(anchor) {
@@ -5084,7 +6218,7 @@ function openDocFilterMenu(anchor) {
     { label: t('docs.filter_all'), selected: docFilter === 'all', onClick: () => { docFilter = 'all'; renderDocList(); } },
     { label: t('docs.no_project'), selected: docFilter === 'none', onClick: () => { docFilter = 'none'; renderDocList(); } },
     ...state.projects.map((p) => ({ label: p.name, dot: p.color, selected: docFilter === p.id, onClick: () => { docFilter = p.id; renderDocList(); } })),
-  ]);
+  ], { toggle: true, width: pickerWidth(anchor) });
 }
 
 function openDocMenu(d, anchor) {
@@ -5210,10 +6344,6 @@ el.searchInput.addEventListener('keydown', (e) => {
 });
 el.createProjectBtn.addEventListener('click', () => openProjectDialog(null));
 el.homeEmptyCreate.addEventListener('click', () => openProjectDialog(null));
-el.deckPrev.addEventListener('click', () => scrollDeck(-1));
-el.deckNext.addEventListener('click', () => scrollDeck(1));
-el.projectsTrack.addEventListener('scroll', updateDeckArrows, { passive: true });
-window.addEventListener('resize', () => { if (state.ui.view === 'projects') updateDeckArrows(); });
 el.homeAllProjects.addEventListener('click', () => openView('projects'));
 el.dayAddEntry.addEventListener('click', () => {
   const start = Core.snapMinutes(Date.now(), AG_SNAP_MIN);
@@ -5263,7 +6393,6 @@ el.pdlgTagsAdd.addEventListener('click', () => {
     renderPdlgTags();
   }, pdlgProjectId());
 });
-el.pdlgTabs.forEach((b) => b.addEventListener('click', () => setPdlgSection(b.dataset.sec)));
 el.pdlgCurrency.addEventListener('click', () => {
   const main = state.settings.currency;
   openMenu(el.pdlgCurrency, [
@@ -5280,6 +6409,9 @@ el.pdocNew.addEventListener('click', () => {
   docFilter = state.ui.projectId || 'all';
   newDocument(state.ui.projectId);
 });
+// Кнопки пустых экранов вкладок проекта — те же действия, что у их «+».
+el.pdocEmptyNew.addEventListener('click', () => el.pdocNew.click());
+el.pverEmptyNew.addEventListener('click', () => openProjectDialog(getProject(state.ui.projectId), 'versions'));
 el.projTabs.forEach((b) => b.addEventListener('click', () => {
   flushEditor();
   closeMenu();
@@ -5322,6 +6454,12 @@ el.taskTabs.forEach((b) => b.addEventListener('click', () => setTaskTab(b.datase
 el.newTaskBtn.addEventListener('click', newTask);
 el.timerBtn.addEventListener('click', toggleTimer);
 el.deleteBtn.addEventListener('click', () => deleteTask(selectedId));
+// «Дублировать» на странице задачи — пунктом её меню «⋯» (13 октября 2026):
+// отдельная кнопка внизу панели убрана, меню то же, что на строке списка.
+el.taskMore.addEventListener('click', () => {
+  const task = getTask(selectedId);
+  if (task) openTaskMenu(task, el.taskMore, { toggle: true });
+});
 el.exportTaskBtn.addEventListener('click', exportTask);
 
 /** Правки срока пишутся прямо в задачу: отдельного «сохранить» в этом
@@ -5338,36 +6476,365 @@ el.notifSeen.addEventListener('click', (e) => { e.stopPropagation(); markNotifSe
 el.notifPanel.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => { if (!el.notifPanel.hidden) closeNotifPanel(); });
 
-// Полоса прокрутки видна, пока над областью мышь или её крутят (вид —
-// «Скроллбар» в styles.css). Наведение — тоже классом: на :hover Chromium
-// полосу не перерисовывает. scroll не всплывает, поэтому слушаем на
-// погружении — один обработчик на все прокручиваемые области.
-let scrollHovered = [];
-const isScrollBox = (n) => (n.scrollHeight > n.clientHeight || n.scrollWidth > n.clientWidth)
-  && /auto|scroll/.test(getComputedStyle(n).overflow);
-const markScrollHover = (boxes) => {
-  for (const n of scrollHovered) if (!boxes.includes(n)) n.classList.remove('scroll-hover');
-  for (const n of boxes) n.classList.add('scroll-hover');
-  scrollHovered = boxes;
-};
-document.addEventListener('mouseover', (e) => {
-  const boxes = [];
-  for (let n = e.target; n instanceof Element; n = n.parentElement) if (isScrollBox(n)) boxes.push(n);
-  markScrollHover(boxes);
+// ---------- Накладные полосы прокрутки ----------
+// Нативная полоса занимает место и двигает содержимое: список, выросший за край
+// окна, на её ширину сужался. Поэтому у прокручиваемых областей приложения она
+// скрыта (атрибут data-ovs, вид — «Скроллбар» в styles.css), а поверх
+// содержимого, у правого края области, рисуется своя: дорожка .ovs-track с
+// бегунком. Дорожки лежат в <body> и в разметку областей не вмешиваются:
+// перерисовка списка их не стирает, а раскладка о них не знает. Вбок полосы
+// нет совсем: ленты, что листаются вбок, — «края ленты», см. ниже.
+//
+// Дорожка видна, пока область крутят или над ней (или над самим бегунком)
+// мышь, и гаснет через секунду тишины. Бегунок тянется, колесо над ним крутит
+// область. Сама дорожка мышь не ловит (pointer-events: none): она лежит поверх
+// содержимого, и щелчок в правых 10 px строки списка или пункта длинного меню
+// должен дойти до строки или пункта; поэтому листания страницами щелчком по
+// дорожке нет — как и у всякой накладной полосы, что делит место с
+// содержимым. Размер и положение бегунка — от scrollHeight, clientHeight и
+// scrollTop; прокручивать нечего — дорожки нет. Рисуется она, только если в точке рядом с ней сверху лежит сама
+// область: закрытая окном или меню, обрезанная прокручиваемым предком — молчит.
+//
+// Области — списком селекторов (и текстовые поля: <textarea> с длинным текстом
+// тоже листается): новые подхватывает MutationObserver, в том числе меню и
+// окна, которых при загрузке ещё нет. Внутренности текста
+// редактора (блоки кода, таблицы) и его подсказки сюда не входят — их скролл
+// остаётся нативным, а прокручиваемая страница документа (.led-scroll) здесь.
+// Что любой overflow: auto из styles.css есть в этом списке, сторожит
+// tests/unit/overlay-scroll.test.js.
+const OVS_AREAS = [
+  '.nav-projects', '#search-results', '#notif-list', '#settings-view', '#projects-view',
+  '.ptile-tasks', '.home-main', '.home-side', '.proj-side', '.proj-versions',
+  '.proj-docs', '#task-list', '#tab-history', '.task-side', '.doc-list', '.led-scroll',
+  '.cal-main', '.cal-days', '.cal-day', '.tp-list', '.board-cols', '.board-col-body',
+  '.ag-scroll', '.ag-list', '.ag-allday-row', '.pjdlg-body', '.tmdlg', '.rpdlg',
+  '.tag-pop-list', '.ctx-menu', 'textarea',
+].join(', ');
+const OVS_IDLE = 1000;
+const OVS_MIN_THUMB = 28;
+const ovsAreas = new Map();      // область → её состояние
+const ovsShown = new Set();      // области, у которых дорожка сейчас на экране
+const ovsPending = new Set();    // области, которые пересчитать в ближайшем кадре
+const ovsTracks = new WeakMap(); // дорожка → её полоса (с областью внутри)
+let ovsFrame = 0;
+let ovsThick = 0;
+
+function attachOverlayScroll(box) {
+  if (ovsAreas.has(box)) return;
+  const area = { box, bar: null, until: 0, hot: false, drag: false, timer: 0 };
+  box.setAttribute('data-ovs', '');
+  // Размер области или её содержимого поменялся — положение бегунка тоже.
+  area.ro = new ResizeObserver(() => ovsSchedule(area));
+  area.ro.observe(box);
+  area.mo = new MutationObserver(() => ovsSchedule(area));
+  area.mo.observe(box, { childList: true });
+  ovsAreas.set(box, area);
+}
+
+function ovsDrop(area) {
+  clearTimeout(area.timer);
+  area.ro.disconnect();
+  area.mo.disconnect();
+  if (area.bar) area.bar.track.remove();
+  ovsAreas.delete(area.box);
+  ovsShown.delete(area);
+  ovsPending.delete(area);
+}
+
+/** Пересчёт — раз в кадр, сколько бы событий ни пришло. Заодно уходят области,
+ *  которых уже нет на странице (закрытые окна и меню). */
+function ovsSchedule(area) {
+  if (area) ovsPending.add(area);
+  if (ovsFrame) return;
+  ovsFrame = requestAnimationFrame(() => {
+    ovsFrame = 0;
+    const todo = new Set([...ovsShown, ...ovsPending]);
+    ovsPending.clear();
+    for (const a of todo) ovsSync(a);
+    for (const a of ovsAreas.values()) if (!a.box.isConnected) ovsDrop(a);
+  });
+}
+
+/** Область потревожили (крутят, мышь над ней): показать и отсчитать секунду. */
+function ovsTouch(area, resync = true) {
+  area.until = performance.now() + OVS_IDLE;
+  if (resync || !ovsShown.has(area)) ovsSchedule(area);
+  if (area.timer) return;
+  const tick = () => {
+    area.timer = 0;
+    const left = area.until - performance.now();
+    if (left > 0) area.timer = setTimeout(tick, left);
+    else ovsSchedule(area);
+  };
+  area.timer = setTimeout(tick, OVS_IDLE);
+}
+
+/** Дорожка области: создаётся, когда понадобилась впервые. */
+function ovsBar(area) {
+  if (area.bar) return area.bar;
+  const { box } = area;
+  const track = document.createElement('div');
+  track.className = 'ovs-track';
+  const thumb = document.createElement('i');
+  thumb.className = 'ovs-thumb';
+  track.appendChild(thumb);
+  document.body.appendChild(track);
+  const bar = { track, thumb, area, len: 0, thumbLen: 0, sig: '', grab: null };
+  area.bar = bar;
+  ovsTracks.set(track, bar);
+
+  track.addEventListener('pointerenter', () => { area.hot = true; ovsSchedule(area); });
+  track.addEventListener('pointerleave', () => { area.hot = false; ovsTouch(area); });
+  // Нажатие на бегунок (его зовёт общий перехват ниже, а не он сам): пройденный
+  // им путь пересчитывается в путь области. Мышь ловит только бегунок, поэтому
+  // сюда доходит лишь он. Захват — на нём же: события идут ему, куда бы мышь ни
+  // ушла, и всплывают к дорожке, где их слушают.
+  bar.down = (e) => {
+    if (e.button !== 0) return;
+    bar.grab = { at: e.clientY, from: box.scrollTop, k: (box.scrollHeight - box.clientHeight) / Math.max(1, bar.len - bar.thumbLen) };
+    area.drag = true;
+    track.classList.add('drag');
+    document.body.classList.add('ovs-dragging');
+    thumb.setPointerCapture(e.pointerId);
+  };
+  track.addEventListener('pointermove', (e) => {
+    if (bar.grab) box.scrollTop = bar.grab.from + (e.clientY - bar.grab.at) * bar.grab.k;
+  });
+  const release = () => {
+    if (!bar.grab) return;
+    bar.grab = null;
+    area.drag = false;
+    track.classList.remove('drag');
+    document.body.classList.remove('ovs-dragging');
+    ovsTouch(area);
+  };
+  track.addEventListener('pointerup', release);
+  track.addEventListener('pointercancel', release);
+  track.addEventListener('lostpointercapture', release);
+  // Колесо над бегунком — не над областью, и само оно её не покрутит.
+  track.addEventListener('wheel', (e) => {
+    const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? box.clientHeight : 1;
+    box.scrollBy(e.deltaX * unit, e.deltaY * unit);
+  }, { passive: true });
+  return bar;
+}
+
+/** Положение и размер дорожки области. Пока её не показывают — ничего не мерит. */
+function ovsSync(area) {
+  const { box } = area;
+  const live = box.isConnected && (area.drag || area.hot || performance.now() < area.until);
+  const len = box.clientHeight;
+  let on = live && box.scrollHeight - len > 1 && len > 0;
+  let x = 0;
+  let y = 0;
+  if (on) {
+    if (!ovsThick) ovsThick = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sb')) || 10;
+    const r = box.getBoundingClientRect();
+    x = r.left + box.clientLeft + box.clientWidth - ovsThick;
+    y = r.top + box.clientTop;
+    const hit = document.elementFromPoint(x - 2, y + len / 2);
+    on = !!hit && box.contains(hit);
+  }
+  if (!on) {
+    if (area.bar) area.bar.track.classList.remove('on');
+    ovsShown.delete(area);
+    return;
+  }
+  const bar = ovsBar(area);
+  const full = box.scrollHeight;
+  const range = full - len;
+  const thumbLen = Math.min(len, Math.max(OVS_MIN_THUMB, Math.round(len * len / full)));
+  const off = Math.round(Math.min(1, Math.max(0, box.scrollTop / range)) * (len - thumbLen));
+  bar.len = len;
+  bar.thumbLen = thumbLen;
+  const sig = [x, y, len, thumbLen, off].map(Math.round).join();
+  const moved = sig !== bar.sig;
+  if (moved) {
+    bar.sig = sig;
+    bar.track.style.left = `${Math.round(x)}px`;
+    bar.track.style.top = `${Math.round(y)}px`;
+    bar.track.style.height = `${Math.round(len)}px`;
+    bar.thumb.style.height = `${thumbLen}px`;
+    bar.thumb.style.transform = `translateY(${off}px)`;
+  }
+  bar.track.classList.add('on');
+  ovsShown.add(area);
+  // Дорожку что-то сдвинуло (прокрутка, анимация окна) — посмотрим и в следующем кадре.
+  if (moved) ovsSchedule();
+}
+
+/** Подключить области, что уже есть на странице, и следить за новыми (меню, окна).
+ *  Зовётся первым делом в init(): до этого нативная полоса успела бы мелькнуть. */
+function watchOverlayAreas() {
+  const find = (root) => {
+    if (root.matches(OVS_AREAS)) attachOverlayScroll(root);
+    // Внутри — ни одного элемента: искать в поддереве нечего.
+    if (root.firstElementChild) root.querySelectorAll(OVS_AREAS).forEach(attachOverlayScroll);
+  };
+  find(document.body);
+  new MutationObserver((list) => {
+    for (const m of list) {
+      for (const n of m.addedNodes) {
+        // Текстовые узлы и собственные дорожки (они лежат в <body> и областью
+        // быть не могут) не разбираем.
+        if (n.nodeType === 1 && !ovsTracks.has(n)) find(n);
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+}
+
+// Мышь над областью или над её дорожкой — показать область и всех прокручиваемых
+// предков: вложенный список лежит в странице, и у каждого своя полоса.
+document.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'touch') return;
+  let n = e.target instanceof Element ? e.target : null;
+  const own = n && n.closest('.ovs-track');
+  if (own) n = ovsTracks.get(own)?.area.box || null;
+  for (; n; n = n.parentElement) {
+    const area = ovsAreas.get(n);
+    if (area) ovsTouch(area, false);
+  }
 }, { passive: true });
-document.documentElement.addEventListener('mouseleave', () => markScrollHover([]));
-const scrollIdle = new WeakMap();
+// Меню, подсказки и пикеры закрываются щелчком «снаружи», а дорожка лежит в
+// <body>, а не в них: схватить бегунок меню значило бы его закрыть. Поэтому
+// события бегунка гасятся раньше всех (захват на window), а его нажатие
+// обрабатывается тут же. Фокус щелчок по бегунку не уводит.
+for (const type of ['pointerdown', 'mousedown', 'mouseup', 'click', 'dblclick']) {
+  window.addEventListener(type, (e) => {
+    const bar = e.target instanceof Element && ovsTracks.get(e.target.closest('.ovs-track'));
+    if (!bar) return;
+    e.stopPropagation();
+    if (type === 'mousedown') e.preventDefault();
+    if (type === 'pointerdown') bar.down(e);
+  }, true);
+}
+// scroll не всплывает — слушаем на погружении, один обработчик на все области.
+// Прокрутка предка двигает и вложенные области: показанные пересчитываем все.
 document.addEventListener('scroll', (e) => {
-  const box = e.target === document ? document.documentElement : e.target;
-  if (!(box instanceof Element)) return;
-  box.classList.add('is-scrolling');
-  clearTimeout(scrollIdle.get(box));
-  scrollIdle.set(box, setTimeout(() => box.classList.remove('is-scrolling'), 1000));
+  const area = ovsAreas.get(e.target);
+  if (area) ovsTouch(area);
+  if (ovsShown.size) ovsSchedule();
 }, { capture: true, passive: true });
+window.addEventListener('resize', () => { if (ovsShown.size) ovsSchedule(); });
+
+// ---------- Края лент ----------
+// Вбок листаются три области: лента карточек «Проектов», дорожки доски и
+// переключатель режимов «Времени» на узкой ширине. Полосы вбок у них нет —
+// ни накладной, ни нативной. Вместо неё край, за которым есть что листать,
+// растворяется (маска на самой ленте), а у края стоит кнопка-стрелка на
+// подложке; вид — «Край ленты» в styles.css. attachScrollEdges ставит на ленту
+// класс .edge-scroll и атрибут data-edge — «l», «r» или «l r», с какой стороны
+// есть что листать (нечего — атрибута нет) — и, если лента лежит в обёртке
+// .edge-host, вписывает в неё кнопки: стрелка листает на одну карточку или
+// колонку. Колесо с Shift, тачпад и перетаскивание остаются нативной
+// прокруткой. Что любая лента с overflow-x есть в этом списке, сторожит
+// tests/unit/overlay-scroll.test.js.
+const EDGE_AREAS = [
+  { box: '.projects-deck', item: '.ptile', arrows: true },
+  { box: '.board-cols', item: '.board-col', arrows: true },
+  { box: '.time-modes', arrows: false },
+];
+const edgeAreas = new Map();   // лента → её состояние
+const edgePending = new Set(); // ленты, которые пересчитать в ближайшем кадре
+let edgeFrame = 0;
+
+/** Кнопка-стрелка у края ленты. side — 'l' или 'r'. Подпись переводится вместе
+ *  со всей разметкой (data-i18n-aria). */
+function edgeButton(side) {
+  const key = side === 'l' ? 'common.scroll_left' : 'common.scroll_right';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'edge-btn';
+  btn.dataset.side = side;
+  btn.dataset.i18nAria = key;
+  btn.setAttribute('aria-label', t(key));
+  btn.innerHTML = icon(side === 'l' ? 'chevron-left' : 'chevron-right');
+  return btn;
+}
+
+function attachScrollEdges(box, { item = '', arrows = false } = {}) {
+  if (edgeAreas.has(box)) return;
+  const area = { box, item, prev: null, next: null };
+  box.classList.add('edge-scroll');
+  const host = arrows && box.parentElement && box.parentElement.classList.contains('edge-host') ? box.parentElement : null;
+  if (host) {
+    area.prev = edgeButton('l');
+    area.next = edgeButton('r');
+    area.prev.addEventListener('click', () => edgeStep(area, -1));
+    area.next.addEventListener('click', () => edgeStep(area, 1));
+    host.insertBefore(area.prev, box);
+    host.appendChild(area.next);
+  }
+  // Размер ленты или её содержимого поменялся (окно, боковая панель, новые
+  // карточки) или её листают — края пересчитать.
+  new ResizeObserver(() => edgeSchedule(area)).observe(box);
+  new MutationObserver(() => edgeSchedule(area)).observe(box, { childList: true });
+  box.addEventListener('scroll', () => edgeSchedule(area), { passive: true });
+  edgeAreas.set(box, area);
+  edgeSchedule(area);
+}
+
+/** Пересчёт — раз в кадр, сколько бы событий ни пришло. */
+function edgeSchedule(area) {
+  edgePending.add(area);
+  if (edgeFrame) return;
+  edgeFrame = requestAnimationFrame(() => {
+    edgeFrame = 0;
+    const todo = [...edgePending];
+    edgePending.clear();
+    todo.forEach(edgeSync);
+  });
+}
+
+/** С каких сторон есть что листать: атрибут на ленте (от него маска) и
+ *  кнопки (видна та, за которой есть карточки). */
+function edgeSync(area) {
+  const { box } = area;
+  const room = box.scrollWidth - box.clientWidth;
+  const left = room > 1 && box.scrollLeft > 1;
+  const right = room > 1 && box.scrollLeft < room - 1;
+  const sides = left && right ? 'l r' : left ? 'l' : right ? 'r' : '';
+  if (sides) { if (box.dataset.edge !== sides) box.dataset.edge = sides; } else box.removeAttribute('data-edge');
+  if (!area.prev) return;
+  const focused = document.activeElement;
+  area.prev.classList.toggle('on', left);
+  area.next.classList.toggle('on', right);
+  // Долистали — стрелка гаснет, а фокус с клавиатуры не должен пропасть вместе
+  // с ней: он переходит к стрелке в обратную сторону.
+  if (focused === area.next && !right && left) area.prev.focus({ preventScroll: true });
+  else if (focused === area.prev && !left && right) area.next.focus({ preventScroll: true });
+}
+
+/** Листнуть ленту на одну карточку (колонку): к ближайшему левому краю
+ *  карточки за текущим сдвигом, с тем же полем слева, что у ленты. */
+function edgeStep(area, dir) {
+  const { box } = area;
+  const room = box.scrollWidth - box.clientWidth;
+  const inner = box.getBoundingClientRect().left + box.clientLeft + (parseFloat(getComputedStyle(box).paddingLeft) || 0);
+  const here = box.scrollLeft;
+  // Левые края карточек — в координатах прокрутки; у доски с дорожками в
+  // каждой дорожке свои столбцы, но стоят они в одних и тех же местах. У
+  // свёрнутой дорожки столбцов на экране нет (display: none) — они не в счёт.
+  const shown = [...box.querySelectorAll(area.item)].filter((n) => n.getClientRects().length);
+  const stops = [...new Set(shown.map((n) => Math.round(n.getBoundingClientRect().left - inner + here)))].sort((a, b) => a - b);
+  const stop = dir > 0 ? stops.find((x) => x > here + 4) : stops.reverse().find((x) => x < here - 4);
+  const to = stop === undefined ? here + dir * box.clientWidth * 0.8 : stop;
+  box.scrollTo({ left: Math.min(room, Math.max(0, to)), behavior: reducedMotion() ? 'auto' : 'smooth' });
+}
+
+/** Подключить ленты, что лежат на странице. Зовётся первым делом в init():
+ *  до этого нативная полоса успела бы мелькнуть. */
+function watchScrollEdges() {
+  for (const { box, ...opts } of EDGE_AREAS) {
+    const n = document.querySelector(box);
+    if (n) attachScrollEdges(n, opts);
+  }
+}
 setInterval(checkReminders, 30000);
 
-/** Дата и время дедлайна — одним окном. Пока даты нет, время по умолчанию
- *  18:00: срок обычно «к концу дня», а не к полуночи. */
+/** Строка «Дедлайн» — дата и время одним окном. Пока даты нет, время по
+ *  умолчанию 18:00: срок обычно «к концу дня», а не к полуночи. «Убрать
+ *  дедлайн» — в том же окне, рядом с «Готово». */
 el.dueDateBtn.addEventListener('click', () => {
   const task = getTask(selectedId);
   if (!task) return;
@@ -5387,95 +6854,49 @@ el.dueDateBtn.addEventListener('click', () => {
       task.dueAt = d.toISOString();
       touchTask(task);
     },
+    // Напоминания «до дедлайна» остаются в списке и ждут нового срока
+    // (строка тише); «один раз» и «повторять» от срока не зависят.
+    onClear: cur ? () => { task.dueAt = null; touchTask(task); } : null,
   });
 });
-el.dpHours.addEventListener('change', dpCommitTime);
-el.dpMinutes.addEventListener('change', dpCommitTime);
-for (const input of [el.dpHours, el.dpMinutes]) {
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { dpCommitTime(); closeDatePicker(); } });
-}
-el.dpHoursPick.addEventListener('click', () => dpPickFrom(el.dpHoursPick, el.dpHours, Array.from({ length: 24 }, (_, i) => i)));
-el.dpMinutesPick.addEventListener('click', () => dpPickFrom(el.dpMinutesPick, el.dpMinutes, Array.from({ length: 12 }, (_, i) => i * 5)));
-el.dpDone.addEventListener('click', () => { dpCommitTime(); closeDatePicker(); });
-el.dueClearBtn.addEventListener('click', () => {
-  const task = getTask(selectedId);
-  if (!task) return;
-  task.dueAt = null;
-  task.remindAt = null;
-  task.remindOffsetMin = null;
-  touchTask(task);
-});
-/** Ключ текущего варианта напоминания: 'null' | 'custom' | число минут. */
-const remindKey = Core.remindKey;
-function applyRemind(task, v) {
-  if (v !== 'null') ensureNotifPermission();
-  if (v === 'custom') {
-    task.remindOffsetMin = null;
-    task.remindAt = task.remindAt || new Date(new Date(task.dueAt).getTime() - 3600000).toISOString();
-  } else if (v === 'null') {
-    task.remindOffsetMin = null;
-    task.remindAt = null;
-  } else {
-    task.remindOffsetMin = Number(v);
-    task.remindAt = null;
-  }
-  touchTask(task);
-}
-el.dueRemind.addEventListener('click', () => {
-  const task = getTask(selectedId);
-  if (!task || !task.dueAt) return;
-  const current = remindKey(task);
-  openMenu(el.dueRemind, REMIND_PRESETS.map((p) => ({
-    label: t(REMIND_LABEL[String(p)]),
-    selected: String(p) === current,
-    onClick: () => applyRemind(task, String(p)),
-  })));
-});
-el.remindDateBtn.addEventListener('click', () => {
-  const task = getTask(selectedId);
-  if (!task || !task.remindAt) return;
-  const cur = new Date(task.remindAt);
-  openDatePicker(el.remindDateBtn, dayKey(cur), (key) => {
-    const prev = new Date(task.remindAt);
-    const d = keyToDate(key);
-    d.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
-    task.remindAt = d.toISOString();
-    touchTask(task);
-  }, {
-    time: `${pad2(cur.getHours())}:${pad2(cur.getMinutes())}`,
-    onTime: (val) => {
-      const [h, m] = val.split(':').map(Number);
-      const d = new Date(task.remindAt);
-      d.setHours(h, m, 0, 0);
-      task.remindAt = d.toISOString();
-      touchTask(task);
-    },
+el.dpTimeBtn.addEventListener('click', () => {
+  if (!dp.open || !dp.onTime) return;
+  openTimePicker(el.dpTimeBtn, el.dpTimeBtn.textContent, (val) => {
+    el.dpTimeBtn.textContent = val;
+    dp.onTime(val);
   });
+});
+el.dpDone.addEventListener('click', closeDatePicker);
+el.dpClear.addEventListener('click', () => {
+  const clear = dp.onClear;
+  closeDatePicker();
+  if (clear) clear();
 });
 el.exportProjectBtn.addEventListener('click', exportProject);
 el.exportCalendarBtn.addEventListener('click', exportCalendar);
 el.exportPeriodBtn.addEventListener('click', openExportPeriodDialog);
 el.addSessionBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openSessionDialog(getTask(selectedId), null); });
 
-
-el.taskStatus.addEventListener('click', () => {
+/** Строка «Ставка» — маленьким окном (общее окно ввода): своя ставка задачи
+ *  числом; пусто — как у проекта или общая из настроек, это и написано в
+ *  поле серым. */
+el.rateRow.addEventListener('click', async () => {
   const task = getTask(selectedId);
   if (!task) return;
-  openMenu(el.taskStatus, orderedStatuses(task.projectId).map((st) => ({
-    label: st.name,
-    selected: st.id === task.statusId,
-    onClick: () => { setTaskStatus(task, st.id); render(); scheduleSave(); },
-  })));
-});
-
-el.taskRate.addEventListener('input', () => {
-  const task = getTask(selectedId);
-  if (!task) return;
-  const v = el.taskRate.value.trim();
+  const unit = `${symOf(currencyOf(task.projectId))}${t('rate.per_hour')}`;
+  const inherited = { ...task, rate: null };
+  const res = await promptDialog({
+    label: t('task.rate_dialog', { unit }),
+    value: hasOwnRate(task) ? String(task.rate) : '',
+    placeholder: rateValueText(inherited),
+    okLabel: t('common.save'),
+    validate: (v) => (v.trim() === '' || /^\d[\d\s]*([.,]\d+)?$/.test(v.trim()) ? null : t('remind.bad_number')),
+  });
+  if (!res || !getTask(task.id)) return;
+  const v = res.value.trim();
   task.rate = v === '' ? null : parseNum(v);
   task.updatedAt = new Date().toISOString();
-  renderMoney(task);
-  renderProjectHeader();
+  render();
   scheduleSave();
 });
 
@@ -5505,8 +6926,14 @@ el.sdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.sdlgBackd
 
 document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
-  if (e.key === 'Escape' && dp.open) { closeDatePicker(); return; }
+  // Выбор времени бывает открыт поверх окна даты — закрывается верхний.
   if (e.key === 'Escape' && tp.open) { closeTimePicker(); return; }
+  if (e.key === 'Escape' && dp.open) { closeDatePicker(); return; }
+  // Окно повторения лежит поверх окна времени работы, а оно — поверх окна
+  // задачи: закрывается самое верхнее.
+  if (e.key === 'Escape' && !el.rpdlgBackdrop.hidden) { closeRepeatDialog(); return; }
+  if (e.key === 'Escape' && !el.rmdlgBackdrop.hidden) { closeReminderDialog(); return; }
+  if (e.key === 'Escape' && !el.sldlgBackdrop.hidden) { closeSlotDialog(); return; }
   if (e.key === 'Escape' && !el.tmdlgBackdrop.hidden) { closeTaskModal(true); return; }
   // Ctrl+F внутри редактора — его собственный поиск по тексту (он уже
   // обработал клавишу и отменил действие по умолчанию).
@@ -5542,16 +6969,13 @@ function openCurrencyMenu(anchor) {
       render();
       scheduleSave();
     },
-  })));
+  })), { toggle: true });
 }
 
-/** Обе кнопки показывают одно и то же — валюта в приложении одна. */
+/** Строка «Валюта · RUB ₽» в настройках — та же строка-кнопка, что «Язык»
+ *  (13 октября 2026): значение справа, щелчок открывает тот же список. */
 function renderCurrency() {
-  const label = currencyLabel(state.settings.currency);
-  for (const btn of [el.settingsCurrency]) {
-    btn.textContent = label;
-    btn.title = t('currency.title');
-  }
+  el.settingsCurrencyValue.textContent = currencyLabel(state.settings.currency);
 }
 
 // Сама миграция живёт в core/migrate.js и покрыта тестами: она трогает все
@@ -5578,6 +7002,10 @@ function migrate() {
 }
 
 async function init() {
+  watchOverlayAreas();
+  watchScrollEdges();
+  watchSegmented();
+  setupLiquid();
   setupEditor();
   setupDocsView();
   renderCurrency();
@@ -5592,17 +7020,21 @@ async function init() {
   }
 
   migrate();
+  reopenDueTasks(Date.now());
   el.langLabel.textContent = LANG_NAMES[state.settings.lang] || state.settings.lang;
   applyStaticTranslations();
+  paintArt();
   applyTheme();
   renderCurrency();
   renderAccountBtn();
   recoverActiveTimer();
+  // Пока адрес не разобран, на экране «Сегодня»: сохранённый когда-то вид не
+  // должен мелькнуть и не должен подсунуть задачу, которой уже нет.
   state.ui.view = 'home';
   selectedId = null;
   setCalMode(calState.mode);
   scheduleSave();
-  render();
+  await startRoute(); // открывает экран из адреса и рисует его
 
   const skeleton = $('app-skeleton');
   if (skeleton) {
@@ -5616,16 +7048,29 @@ async function init() {
 // «v1.2» одного проекта не имеет ничего общего с «v1.2» другого. Поэтому и
 // настраиваются версии там же, где статусы, — по шестерёнке на доске.
 
-/** Версия задачи в редакторе. Строка прячется, пока в проекте нет ни одной
- *  версии: пустой выбор в каждой задаче только занимал бы место, а завести
- *  версию всё равно можно только в настройках проекта. */
+/** Версия задачи — чипами, как на телефоне: «Без версии» и версии проекта,
+ *  выбранная отмечена. Группа прячется, пока в проекте нет ни одной версии:
+ *  пустой выбор в каждой задаче только занимал бы место, а завести версию
+ *  можно только в настройках проекта. У вышедшей версии дата — подсказкой. */
 function renderTaskVersion(task) {
   const list = versionsOf(task.projectId);
   el.taskVersionRow.hidden = !list.length;
+  el.taskVersionLabel.hidden = !list.length;
+  el.taskVersionRow.innerHTML = '';
   if (!list.length) return;
-  const cur = task.versionId ? getVersion(task.versionId) : null;
-  el.taskVersion.textContent = cur ? (cur.name || t('task.no_name')) : t('version.none');
-  el.taskVersion.classList.toggle('unset', !cur);
+  const chip = (label, id, title) => {
+    const on = (task.versionId || null) === id;
+    const b = elt('button', `dp-btn${on ? ' on' : ''}${id ? '' : ' unset'}`);
+    b.type = 'button';
+    b.dataset.versionId = id || '';
+    b.setAttribute('aria-pressed', String(on));
+    if (title) b.title = title;
+    b.append(elt('span', 'tp-chip-name', label));
+    b.addEventListener('click', () => setTaskVersion(task, id));
+    el.taskVersionRow.appendChild(b);
+  };
+  chip(t('version.none'), null);
+  for (const v of list) chip(v.name || t('task.no_name'), v.id, v.releasedAt ? versionLabel(v) : '');
 }
 
 function setTaskVersion(task, versionId) {
@@ -5641,35 +7086,14 @@ function versionLabel(v) {
   return v.releasedAt ? `${name} · ${t('version.released_on', { date: fmtDateShort(v.releasedAt) })}` : name;
 }
 
-el.taskVersion.addEventListener('click', () => {
-  const task = getTask(selectedId);
-  if (!task) return;
-  const items = [{
-    label: t('version.none'),
-    selected: !task.versionId,
-    onClick: () => setTaskVersion(task, null),
-  }];
-  for (const v of versionsOf(task.projectId)) {
-    items.push({ label: versionLabel(v), selected: v.id === task.versionId, onClick: () => setTaskVersion(task, v.id) });
-  }
-  items.push({ sep: true });
-  items.push({
-    label: t('version.manage'),
-    onClick: () => openProjectDialog(getProject(task.projectId), 'versions'),
-  });
-  openMenu(el.taskVersion, items);
-});
-
 function renderVersionDialog() {
   const pid = pdlgProjectId();
   const list = versionsOf(pid);
   el.verList.innerHTML = '';
 
   if (!list.length) {
-    const hint = document.createElement('div');
-    hint.className = 'st-hint muted';
-    hint.textContent = t('version.empty_hint');
-    el.verList.appendChild(hint);
+    // В строку: «Новая версия» стоит сразу под списком.
+    el.verList.appendChild(emptyState({ art: 'versions', title: t('empty.versions_title'), text: t('empty.versions_text'), row: true }));
     return;
   }
 
@@ -5678,7 +7102,7 @@ function renderVersionDialog() {
     row.className = 'st-row ver-row';
     const used = versionUsage(v.id);
     row.innerHTML = `
-      <input class="st-name" type="text" value="${escapeHtml(v.name)}" data-i18n-ph="version.name_ph" placeholder="Название версии" />
+      <input class="field-sm st-name" type="text" value="${escapeHtml(v.name)}" data-i18n-ph="version.name_ph" placeholder="Название версии" />
       <button type="button" class="dp-btn ver-rel${v.releasedAt ? ' released' : ''}" data-act="rel">${escapeHtml(v.releasedAt ? t('version.released_on', { date: fmtDateShort(v.releasedAt) }) : t('version.in_progress'))}</button>
       <span class="ver-use muted">${escapeHtml(t('version.tasks_n', { n: used }))}</span>
       <button type="button" class="icon-btn" data-act="up" ${i === 0 ? 'disabled' : ''} data-i18n-title="common.back" title="Выше">
@@ -5904,7 +7328,7 @@ function renderFilterBar(nodes, filter, onChange) {
     // смысл, и оставить её значило бы показать пустой экран.
     filter.versionId = 'all';
     onChange();
-  }));
+  }), { width: pickerWidth(nodes.project) });
   nodes.version.onclick = () => openMenu(nodes.version, versionMenuItems(filter.projectId, filter.versionId, (id) => {
     filter.versionId = id;
     onChange();
@@ -5935,10 +7359,16 @@ const calSessionPairs = () => Core.allSessionPairs(statsTasks());
  *  способ смотреть, в данных ему делать нечего. */
 const calGroupsClosed = new Set();
 
-function toggleCalGroup(projectId) {
-  if (calGroupsClosed.has(projectId)) calGroupsClosed.delete(projectId);
-  else calGroupsClosed.add(projectId);
-  renderCalDayPanel();
+/** Сворачивает проект на месте, без перерисовки списка: новые узлы переход
+ *  не играют (им не из чего), и группа схлопнулась бы рывком. Перерисовка
+ *  же — смена дня, периода, новые данные — берёт состояние из набора и
+ *  рисует сразу итог, без движения. */
+function toggleCalGroup(projectId, node, head) {
+  const shut = !calGroupsClosed.has(projectId);
+  if (shut) calGroupsClosed.add(projectId);
+  else calGroupsClosed.delete(projectId);
+  node.classList.toggle('closed', shut);
+  head.setAttribute('aria-expanded', String(!shut));
 }
 
 function renderCalDayPanel() {
@@ -5962,26 +7392,29 @@ function groupByProject(rows) {
   return [...groups.values()];
 }
 
-/** Заголовок проекта в правой панели — он же кнопка сворачивания. */
+/** Заголовок проекта в правой панели — он же кнопка сворачивания. Цвет
+ *  проекта (--pc) приходит от обёртки группы: им же закрашена её полоса. */
 function calGroupHead(g) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = 'cdl-group-head';
-  b.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
   b.setAttribute('aria-expanded', String(!calGroupsClosed.has(g.id)));
   b.innerHTML = `
     ${icon('chevron-down', 'icon cdl-chev')}
     <span class="cdl-group-dot"></span>
     <span class="cdl-group-name">${escapeHtml(g.project ? g.project.name : t('xlsx.no_project'))}</span>
     <span class="cdl-group-tot">${fmtDur(g.ms)} · ${fmtMoney(g.money, currencyOf(g.project ? g.project.id : null))}</span>`;
-  b.addEventListener('click', () => toggleCalGroup(g.id));
+  b.addEventListener('click', () => toggleCalGroup(g.id, b.closest('.cdl-group'), b));
   return b;
 }
 
-/** Обёртка группы: заголовок плюс вложенный список её строк. */
+/** Обёртка группы: заголовок плюс вложенный список её строк. Цвет проекта —
+ *  переменной на обёртке: от него красятся и метка в заголовке, и полоса,
+ *  что связывает группу слева. */
 function calGroupNode(g, buildRow) {
   const li = document.createElement('li');
   li.className = 'cdl-group';
+  li.style.setProperty('--pc', g.project ? g.project.color : PALETTE[0]);
   li.classList.toggle('closed', calGroupsClosed.has(g.id));
   li.appendChild(calGroupHead(g));
   const inner = document.createElement('ul');
@@ -6170,6 +7603,8 @@ function renderAgendaTime() {
       line.style.top = `${ln.top}%`;
       col.appendChild(line);
     }
+    // Плановые блоки — до записей: те ложатся поверх.
+    for (const p of d.planned) col.appendChild(agendaPlan(p));
     for (const seg of d.blocks) col.appendChild(agendaBlock(seg));
     el.agCols.appendChild(col);
   }
@@ -6182,6 +7617,23 @@ function renderAgendaTime() {
     agenda.scrolled = true;
     el.agScroll.scrollTop = el.agScroll.scrollHeight * (7.5 / 24);
   }
+}
+
+/** Плановый блок «времени работы»: полоса во всю ширину столбца под записями.
+ *  Клик открывает задачу (см. agendaEndDrag): протянуть по нему можно, как по
+ *  пустому месту, — запись заведётся. */
+function agendaPlan(p) {
+  const node = document.createElement('div');
+  node.className = 'ag-plan';
+  node.style.setProperty('--pc', p.color);
+  node.style.top = `${Core.dayFraction(p.start) * 100}%`;
+  node.style.height = `${((p.end - p.start) / Core.DAY) * 100}%`;
+  node.dataset.taskId = p.taskId;
+  node.dataset.slotId = p.slotId || '';
+  const range = `${fmtTime(p.start).slice(0, 5)}–${fmtTime(p.end).slice(0, 5)}`;
+  node.title = `${t('agenda.planned')} · ${range}`;
+  node.innerHTML = `<span class="ag-plan-time">${range}</span><span class="ag-plan-name">${escapeHtml(p.title)}</span>`;
+  return node;
 }
 
 function agendaBlock(seg) {
@@ -6207,7 +7659,7 @@ function renderAgendaNow() {
   if (!AG_TIME_MODES.includes(agenda.mode)) return;
   const now = Date.now();
   const { from, days } = agendaSpan();
-  const idx = Math.floor((Core.startOfDayMs(now) - from) / Core.DAY);
+  const idx = Core.daysBetween(from, now);
   if (idx < 0 || idx >= days) return;
   const col = el.agCols.children[idx];
   if (!col) return;
@@ -6234,18 +7686,27 @@ function renderAgendaList() {
   };
   for (const dl of deadlines) put(dl.dayIndex, { kind: 'dl', at: dl.at, dl });
   for (const seg of segments) put(seg.dayIndex, { kind: 'seg', at: seg.start, seg });
+  for (const plan of Core.slotItems(tasks, from, to)) put(plan.dayIndex, { kind: 'plan', at: plan.start, plan });
 
   const keys = [...byDay.keys()].sort((a, b) => a - b);
+  el.agList.classList.toggle('is-empty', !keys.length);
   if (!keys.length) {
-    const empty = document.createElement('p');
-    empty.className = 'muted ag-empty';
-    empty.textContent = t('agenda.empty');
-    el.agList.appendChild(empty);
+    // Кнопка — та же «+ Запись», что в шапке; акцентная там, поэтому здесь
+    // тихая. Проектов нет — запись завести некуда, и кнопка заводит проект.
+    const hasProjects = state.projects.length > 0;
+    el.agList.appendChild(emptyState({
+      art: 'time',
+      title: t('agenda.empty'),
+      text: t(hasProjects ? 'agenda.empty_text' : 'agenda.no_projects'),
+      action: hasProjects
+        ? { label: t('agenda.new_entry'), soft: true, onClick: () => el.agCreate.click() }
+        : { label: t('project.new_title'), soft: true, onClick: () => openProjectDialog(null) },
+    }));
     return;
   }
 
   for (const dayIndex of keys) {
-    const d = new Date(from + dayIndex * Core.DAY);
+    const d = new Date(Core.addDaysMs(from, dayIndex));
     const group = document.createElement('div');
     group.className = 'ag-list-day';
     group.innerHTML = `<div class="ag-list-date">${escapeHtml(capFirst(d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'long' })))}</div>`;
@@ -6253,8 +7714,15 @@ function renderAgendaList() {
     for (const row of rows) {
       const line = document.createElement('button');
       line.type = 'button';
-      line.className = 'ag-list-row' + (row.kind === 'dl' ? ' dl' : '') + (row.dl && row.dl.ghost ? ' ghost' : '');
-      if (row.kind === 'dl') {
+      line.className = 'ag-list-row' + (row.kind === 'dl' ? ' dl' : '') + (row.kind === 'plan' ? ' plan' : '') + (row.dl && row.dl.ghost ? ' ghost' : '');
+      if (row.kind === 'plan') {
+        const task = getTask(row.plan.taskId);
+        line.style.setProperty('--pc', agendaProjectColor(row.plan.projectId));
+        line.innerHTML = `<span class="ag-list-time">${fmtTime(row.plan.start).slice(0, 5)}–${fmtTime(row.plan.end).slice(0, 5)}</span>`
+          + `<span class="ag-list-name">${escapeHtml(task ? (task.title || t('task.no_name')) : '')}</span>`
+          + `<span class="ag-list-tag">${escapeHtml(t('agenda.planned'))}</span>`;
+        line.addEventListener('click', () => openTaskModal(task, null));
+      } else if (row.kind === 'dl') {
         const task = getTask(row.dl.taskId);
         line.style.setProperty('--pc', agendaProjectColor(row.dl.projectId));
         line.innerHTML = `<span class="ag-list-time">${fmtTime(row.dl.at).slice(0, 5)}</span>`
@@ -6277,7 +7745,7 @@ function renderAgendaList() {
 
 // --- Перетаскивание ---------------------------------------------------------
 
-const agDrag = { kind: null, taskId: null, index: null, dayStart: 0, start: 0, end: 0, grab: 0, node: null, moved: false, pointerId: null };
+const agDrag = { kind: null, taskId: null, index: null, dayStart: 0, start: 0, end: 0, grab: 0, node: null, moved: false, pointerId: null, planTaskId: null };
 
 /** Время под курсором: столбец даёт день, высота — время внутри суток. */
 function agendaPointAt(clientX, clientY) {
@@ -6286,8 +7754,8 @@ function agendaPointAt(clientX, clientY) {
   const colW = rect.width / days;
   const dayIndex = Math.max(0, Math.min(days - 1, Math.floor((clientX - rect.left) / colW)));
   const frac = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
-  const dayStart = from + dayIndex * Core.DAY;
-  return { dayIndex, dayStart, ms: dayStart + frac * Core.DAY };
+  const dayStart = Core.addDaysMs(from, dayIndex);
+  return { dayIndex, dayStart, ms: Core.atDayFraction(dayStart, frac) };
 }
 
 function agendaPaintDrag() {
@@ -6300,7 +7768,7 @@ function agendaPaintDrag() {
   if (label) label.textContent = `${fmtTime(agDrag.start).slice(0, 5)}–${fmtTime(agDrag.end).slice(0, 5)}`;
   // Блок мог переехать в другой день — тогда он меняет столбец.
   const { from, days } = agendaSpan();
-  const idx = Math.round((day - from) / Core.DAY);
+  const idx = Core.daysBetween(from, day);
   if (idx >= 0 && idx < days && el.agCols.children[idx] && node.parentElement !== el.agCols.children[idx]) {
     el.agCols.children[idx].appendChild(node);
   }
@@ -6310,6 +7778,8 @@ el.agCols.addEventListener('pointerdown', (e) => {
   if (e.button !== 0) return;
   const point = agendaPointAt(e.clientX, e.clientY);
   const block = e.target.closest ? e.target.closest('.ag-ev') : null;
+  const plan = e.target.closest ? e.target.closest('.ag-plan') : null;
+  agDrag.planTaskId = !block && plan ? plan.dataset.taskId : null;
 
   if (block && !block.classList.contains('ag-ghost')) {
     const task = getTask(block.dataset.taskId);
@@ -6334,7 +7804,7 @@ el.agCols.addEventListener('pointerdown', (e) => {
     ghost.className = 'ag-ev ag-ghost';
     ghost.innerHTML = '<span class="ag-ev-time"></span>';
     const { from } = agendaSpan();
-    const col = el.agCols.children[Math.round((point.dayStart - from) / Core.DAY)];
+    const col = el.agCols.children[Core.daysBetween(from, point.dayStart)];
     if (!col) { agDrag.kind = null; return; }
     col.appendChild(ghost);
     agDrag.node = ghost;
@@ -6353,8 +7823,9 @@ el.agCols.addEventListener('pointermove', (e) => {
 
   if (agDrag.kind === 'create') {
     const edge = Core.snapMinutes(point.ms, AG_SNAP_MIN);
-    const a = Math.min(agDrag.dayStart + Core.DAY, Math.max(agDrag.dayStart, Math.min(edge, agDrag.start)));
-    const b = Math.min(agDrag.dayStart + Core.DAY, Math.max(edge, agDrag.start));
+    const dayEnd = Core.addDaysMs(agDrag.dayStart, 1);
+    const a = Math.min(dayEnd, Math.max(agDrag.dayStart, Math.min(edge, agDrag.start)));
+    const b = Math.min(dayEnd, Math.max(edge, agDrag.start));
     agDrag.start = a;
     agDrag.end = b;
   } else if (agDrag.kind === 'resize') {
@@ -6384,6 +7855,8 @@ function agendaEndDrag(e) {
 
   if (kind === 'create') {
     if (node) node.remove();
+    // Щелчок по плановому блоку открывает его задачу, а не заводит запись.
+    if (!moved && agDrag.planTaskId) { openTaskModal(getTask(agDrag.planTaskId), null); return; }
     let { start, end } = agDrag;
     // Простой щелчок по пустому месту — час с этой отметки, как в Google.
     if (!moved || end - start < AG_MIN_MIN * 60000) end = start + 3_600_000;
@@ -6421,7 +7894,7 @@ function newTaskOnAgenda(projectId, title) {
     id: uid(), projectId, title, done: false, notes: null,
     totalMs: 0, sessions: [], rate: null, pinnedAt: null, createdAt: now, updatedAt: now,
     statusId: defaultStatusId(projectId, false), tagIds: [], versionId: null, repeat: null, cancelled: false,
-    dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+    dueAt: null, reminders: [], remindOffsetMin: null, remindAt: null, notifiedAt: null,
   };
   state.tasks.unshift(task);
   return task;
@@ -6639,7 +8112,7 @@ el.tmdlgProj.addEventListener('click', () => {
       render();
       el.tmdlgTitle.focus();
     },
-  })));
+  })), { width: pickerWidth(el.tmdlgProj) });
 });
 
 el.tmdlgDel.addEventListener('click', () => {
@@ -6744,38 +8217,45 @@ setInterval(() => {
 
 const WEEKDAY_KEYS = ['weekday.sun', 'weekday.mon', 'weekday.tue', 'weekday.wed', 'weekday.thu', 'weekday.fri', 'weekday.sat'];
 const REPEAT_UNIT_KEY = { day: 'repeat.unit_day', week: 'repeat.unit_week', month: 'repeat.unit_month', year: 'repeat.unit_year' };
-const REPEAT_PRESET_KEY = { day: 'repeat.daily', week: 'repeat.weekly', month: 'repeat.monthly', year: 'repeat.yearly' };
 
 const weekdayName = (d) => t(WEEKDAY_KEYS[d % 7]);
 
 /** Человеческая подпись правила. Ядро отдаёт ключ и подстановки — перевод и
  *  склейка дней недели делаются здесь, где известен язык. */
 function repeatLabel(rule) {
-  const d = Core.describeRepeat(rule);
-  if (!d) return t('repeat.none');
-  const vars = { ...d.vars };
-  if (Array.isArray(vars.days)) vars.days = vars.days.map(weekdayName).join(', ');
-  return capFirst(t(d.key, vars));
+  return rule ? capFirst(repeatPhrase(rule)) : t('repeat.none');
 }
 
-/** Строка повторения в настройках задачи. Прячется без дедлайна: повторение
- *  считается от него, и предлагать его раньше было бы обманом. */
+/** То же правило словами для середины фразы: «каждую неделю», «по Пн, Ср». */
+function repeatPhrase(rule) {
+  const d = Core.describeRepeat(rule);
+  if (!d) return '';
+  const vars = { ...d.vars };
+  if (Array.isArray(vars.days)) vars.days = vars.days.map(weekdayName).join(', ');
+  return t(d.key, vars);
+}
+
+/** Строка «Повторение · Каждую неделю ›» в свойствах задачи, под значением
+ *  тихо — когда следующий раз или «Вернётся 18 окт». Дедлайн для неё не
+ *  нужен: без него отсчёт идёт от разового отрезка «времени работы», а без
+ *  отрезка — от закрытия (core/slots.js, planTaskRoll). */
 function renderTaskRepeat(task) {
-  const has = !!task.dueAt;
-  el.repeatRow.hidden = !has;
-  if (!has) return;
   const rule = Core.normalizeRepeat(task.repeat);
-  el.taskRepeat.textContent = rule ? repeatLabel(rule) : t('repeat.none');
-  // Без повторения фишка тихая — как пустой срок.
-  el.taskRepeat.classList.toggle('is-empty', !rule);
-  // Класс .on тут не годится: у dp-btn он значит «список открыт».
-  // Что повторение включено, видно по самой подписи.
+  el.repeatValue.textContent = rule ? repeatLabel(rule) : t('repeat.none');
 
   if (!rule || Core.repeatFinished(rule)) {
     el.repeatNext.hidden = true;
     return;
   }
-  const next = Core.nextDue(rule, new Date(task.dueAt).getTime());
+  // Закрытая задача без дат ждёт своего дня: «Вернётся 18 окт».
+  const back = task.done && task.reopenAt ? Date.parse(task.reopenAt) : NaN;
+  if (Number.isFinite(back)) {
+    el.repeatNext.hidden = false;
+    el.repeatNext.textContent = t('repeat.returns', { date: fmtDateShort(back) });
+    return;
+  }
+  const anchor = Core.rollAnchor(task);
+  const next = anchor ? Core.nextDue(rule, new Date(anchor).getTime()) : null;
   el.repeatNext.hidden = next == null;
   if (next != null) el.repeatNext.textContent = t('repeat.next', { date: fmtDateShort(next) });
 }
@@ -6796,46 +8276,55 @@ function presetRule(freq, weekdays) {
 
 function setTaskRepeat(task, rule) {
   task.repeat = rule ? Core.normalizeRepeat(rule) : null;
+  // Правило сняли — ждать возврата больше нечего.
+  if (!rule) task.reopenAt = null;
   task.updatedAt = new Date().toISOString();
   render();
+  // Окно повторения можно открыть из окна отрезка — оно под ним, и его
+  // подпись «повторяется вместе с задачей» должна подхватить новое правило.
+  if (!el.sldlgBackdrop.hidden) renderSlotDialog();
   scheduleSave();
 }
 
+// Строка «Повторение» открывает окно повторения задачи (#rpdlg) — с 13
+// октября 2026 сразу, без меню готовых правил: как и остальные строки
+// свойств, она открывает окно своей настройки.
 el.taskRepeat.addEventListener('click', () => {
   const task = getTask(selectedId);
-  if (!task) return;
-  if (!task.dueAt) { toast(t('repeat.needs_due')); return; }
-  const cur = Core.normalizeRepeat(task.repeat);
-  const isPreset = (freq, days) => cur && cur.freq === freq && cur.every === 1
-    && cur.ends.kind === 'never' && !cur.keepHistory && cur.from === 'schedule'
-    && JSON.stringify(cur.weekdays) === JSON.stringify(days || []);
-
-  const items = [
-    { label: t('repeat.none'), selected: !cur, onClick: () => setTaskRepeat(task, null) },
-    { label: t('repeat.daily'), selected: isPreset('day'), onClick: () => setTaskRepeat(task, presetRule('day')) },
-    { label: t('repeat.weekly'), selected: isPreset('week'), onClick: () => setTaskRepeat(task, presetRule('week')) },
-    { label: t('repeat.weekdays_preset'), selected: isPreset('week', [1, 2, 3, 4, 5]), onClick: () => setTaskRepeat(task, presetRule('week', [1, 2, 3, 4, 5])) },
-    { label: t('repeat.monthly'), selected: isPreset('month'), onClick: () => setTaskRepeat(task, presetRule('month')) },
-    { label: t('repeat.yearly'), selected: isPreset('year'), onClick: () => setTaskRepeat(task, presetRule('year')) },
-    { sep: true },
-    { label: t('repeat.custom'), onClick: () => openRepeatDialog(task) },
-  ];
-  openMenu(el.taskRepeat, items);
+  if (task) openRepeatDialog(task);
 });
 
 // --- Окно тонкой настройки --------------------------------------------------
 
-const rpdlg = { task: null, rule: null };
+// Правило одно на задачу: у отрезка «времени работы» своего повтора нет, все
+// его отрезки повторяются по правилу задачи. Окно зовут и из строки задачи, и
+// из окна отрезка (ссылка «Повторение задачи…») — тогда оно лежит поверх него.
+const rpdlg = { taskId: null, rule: null };
+
+/** Задача окна — по id, в момент действия. Окна повторения, отрезка и
+ *  напоминания держат id, а не саму задачу, как окно задачи (tmdlg): приём
+ *  облака (applyRemoteData) заменяет state.tasks целиком, и «Сохранить» после
+ *  него писало бы в объект, которого в списке уже нет. Задачи не стало —
+ *  окно закрывается с тем же тостом, что и при приёме облака.
+ *  @returns задача или null */
+function dialogTask(id, close) {
+  const task = id ? getTask(id) : null;
+  if (id && !task) {
+    close();
+    toast(t('sync.updated_toast'));
+  }
+  return task;
+}
 
 function openRepeatDialog(task) {
-  rpdlg.task = task;
+  rpdlg.taskId = task.id;
   rpdlg.rule = Core.normalizeRepeat(task.repeat) || presetRule('week');
   renderRepeatDialog();
   el.rpdlgBackdrop.hidden = false;
 }
 function closeRepeatDialog() {
   el.rpdlgBackdrop.hidden = true;
-  rpdlg.task = null;
+  rpdlg.taskId = null;
   closeDatePicker();
 }
 
@@ -6876,6 +8365,12 @@ function renderRepeatDialog() {
   markSegment(el.rpMonthSeg, 'mode', r.monthMode);
   markSegment(el.rpFromSeg, 'from', r.from);
   markSegment(el.rpEndsSeg, 'ends', r.ends.kind);
+  // «Отсчёт» осмыслен, только когда есть от чего считать: от дедлайна или
+  // отрезка «времени работы». Без них задача считает от закрытия, и выбирать
+  // нечего.
+  const task = getTask(rpdlg.taskId);
+  const anchor = task ? Core.rollAnchor(task) : null;
+  el.rpFromField.hidden = !anchor;
 
   el.rpAfter.hidden = r.ends.kind !== 'after';
   el.rpUntilRow.hidden = r.ends.kind !== 'on';
@@ -6887,7 +8382,7 @@ function renderRepeatDialog() {
 
   // Сводка: правило словами и ближайшие сроки. Без неё «каждый второй
   // вторник месяца» проверить нечем — приходится закрывать окно и смотреть.
-  const base = rpdlg.task && rpdlg.task.dueAt ? new Date(rpdlg.task.dueAt).getTime() : Date.now();
+  const base = anchor ? new Date(anchor).getTime() : Date.now();
   const soon = Core.upcomingDue(r, base, base + (400 * 86400000), 3);
   el.rpPreview.innerHTML = '<span class="rp-summary-mark">↻</span>'
     + `<span class="rp-summary-main"><b>${escapeHtml(repeatLabel(r))}</b>`
@@ -6929,7 +8424,7 @@ el.rpEndsSeg.addEventListener('click', (e) => {
   if (!b) return;
   rpdlg.rule.ends.kind = b.dataset.ends;
   if (b.dataset.ends === 'on' && !rpdlg.rule.ends.at) {
-    rpdlg.rule.ends.at = dayKey(new Date(Date.now() + (90 * 86400000)));
+    rpdlg.rule.ends.at = dayKey(new Date(Core.addDaysMs(Date.now(), 90)));
   }
   renderRepeatDialog();
 });
@@ -6944,14 +8439,19 @@ el.rpHistory.addEventListener('click', () => {
   renderRepeatDialog();
 });
 el.rpdlgCancel.addEventListener('click', closeRepeatDialog);
-el.rpdlgOff.addEventListener('click', () => { const task = rpdlg.task; closeRepeatDialog(); setTaskRepeat(task, null); });
+el.rpdlgOff.addEventListener('click', () => {
+  const task = dialogTask(rpdlg.taskId, closeRepeatDialog);
+  if (!task) return;
+  closeRepeatDialog();
+  setTaskRepeat(task, null);
+});
 el.rpdlgSave.addEventListener('click', () => {
-  const task = rpdlg.task;
-  const rule = rpdlg.rule;
+  const task = dialogTask(rpdlg.taskId, closeRepeatDialog);
+  if (!task) return;
   // Неделя без выбранных дней — это просто «раз в N недель», и такое правило
   // тоже осмысленно: пусть остаётся как есть.
   closeRepeatDialog();
-  setTaskRepeat(task, rule);
+  setTaskRepeat(task, rpdlg.rule);
 });
 el.rpdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.rpdlgBackdrop) closeRepeatDialog(); });
 
@@ -6965,11 +8465,11 @@ function afterTaskClosed(task, wasDone) {
   rollRepeat(task);
 }
 
-/** Переводит повторяющуюся задачу на следующий срок. */
-// Решение о перекате — в ядре (core/repeat.js, planRepeatRoll), общее с
+/** Переводит повторяющуюся задачу дальше. */
+// Решение о перекате — в ядре (core/slots.js, planTaskRoll), общее с
 // телефоном; здесь только применение к задаче и тосты.
 function rollRepeat(task) {
-  const plan = Core.planRepeatRoll(task.repeat, task.dueAt, Date.now());
+  const plan = Core.planTaskRoll(task, Date.now());
   if (!plan) return;
 
   if (plan.finished) {
@@ -6978,34 +8478,578 @@ function rollRepeat(task) {
     toast(t('repeat.series_done'));
     return;
   }
-  const next = plan.nextDue;
+  applyRollPlan(task, plan);
+  const date = fmtDateShort(plan.nextDue);
+  if (!plan.open) toast(t('repeat.returns', { date }));
+  else toast(t(task.dueAt ? 'repeat.moved' : 'repeat.moved_slot', { date }));
+}
 
+/** Применяет решение ядра (planTaskRoll или planReopen) к задаче на месте.
+ *  open: true — задача открывается сразу (статус по умолчанию, чистые
+ *  doneAt и notifiedAt); open: false — остаётся закрытой и ждёт reopenAt. */
+function applyRollPlan(task, plan) {
+  if (!plan.open) {
+    Object.assign(task, plan.patch);
+    task.updatedAt = new Date().toISOString();
+    return;
+  }
   if (plan.keepHistory) {
     // Выполненная копия остаётся в списке со своим временем, а сама задача
-    // уезжает на следующий срок с чистого листа.
-    const copy = {
-      ...task,
-      id: uid(),
-      repeat: null,
-      tagIds: [...(task.tagIds || [])],
-      sessions: (task.sessions || []).map((s) => ({ ...s })),
-      pinnedAt: null,
-      updatedAt: new Date().toISOString(),
-    };
-    state.tasks.push(copy);
+    // возвращается с чистого листа.
+    state.tasks.push(Core.historyCopy(task, uid(), Date.now()));
     task.sessions = [];
     task.totalMs = 0;
   }
-
-  task.repeat = plan.repeat;
-  task.dueAt = new Date(next).toISOString();
+  Object.assign(task, plan.patch);
   task.doneAt = null;
   task.notifiedAt = null;
   const back = defaultStatusId(task.projectId, false);
   if (back) setTaskStatus(task, back);
   else { task.done = false; task.cancelled = false; }
   task.updatedAt = new Date().toISOString();
-  toast(t('repeat.moved', { date: fmtDateShort(next) }));
+}
+
+/** Возвращает закрытые повторяющиеся задачи, чей день настал (core/slots.js,
+ *  planReopen). Зовётся на старте, по таймеру и после приёма облака; true —
+ *  что-то изменилось, и пора перерисовать и сохранить. */
+function reopenDueTasks(now) {
+  const plans = Core.planReopen(state.tasks, now);
+  for (const plan of plans) {
+    const task = getTask(plan.taskId);
+    if (task) applyRollPlan(task, plan);
+  }
+  return plans.length > 0;
+}
+
+// --- Время работы -----------------------------------------------------------
+// Дедлайн — срок закрытия, а «время работы» — когда этим заниматься: у задачи
+// может быть несколько отрезков (task.slots, core/slots.js). Свой повтор у
+// отрезка не хранится: правило одно, task.repeat, и если оно есть, каждый
+// отрезок повторяется по нему вместе с задачей. На календаре они лежат
+// полосами под записями времени, а напоминание срабатывает на каждое
+// вхождение.
+
+const hhmm = (ms) => `${pad2(new Date(ms).getHours())}:${pad2(new Date(ms).getMinutes())}`;
+
+/** Подпись отрезка в списке отрезков: день недели с датой и часы. Повтор
+ *  здесь не пишется — он общий у задачи и виден в строке «Повторение». */
+function slotLabel(slot) {
+  const day = capFirst(new Date(slot.start).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' }));
+  return `${day} · ${hhmm(Date.parse(slot.start))}–${hhmm(Date.parse(slot.end))}`;
+}
+
+/** Время работы одной строкой — значение строки «Время работы»: первый
+ *  отрезок и сколько ещё («Пн, Ср 10:00–12:00 +1», «Сб, 17 окт. 10:00–12:00»).
+ *  Как на телефоне (slotsSummary в mobile/src/lib/slotText.js): у задачи,
+ *  что повторяется каждую неделю по дням, — дни, иначе дата первого отрезка;
+ *  само правило видно своей строкой «Повторение». */
+function slotsSummary(slots, rule) {
+  const first = slots[0];
+  const weekly = rule && rule.freq === 'week' && (rule.every || 1) === 1 && rule.weekdays && rule.weekdays.length;
+  const when = weekly
+    ? mondayFirst(rule.weekdays).map(weekdayName).join(', ')
+    : capFirst(new Date(first.start).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' }));
+  const more = slots.length > 1 ? ` +${slots.length - 1}` : '';
+  return `${when} ${hhmm(Date.parse(first.start))}–${hhmm(Date.parse(first.end))}${more}`;
+}
+
+function renderTaskSlots(task) {
+  const slots = Core.slotsOf(task);
+  el.slotsValue.textContent = slots.length ? slotsSummary(slots, Core.slotRule(task)) : t('slot.none');
+}
+
+/** Строка «Время работы»: отрезков нет — сразу окно нового; есть — их список
+ *  (как лист списка отрезков на телефоне) и «Добавить время». Отрезок в
+ *  списке открывает своё окно, там же он и удаляется. */
+function openSlotsList(task) {
+  if (!task) return;
+  const slots = Core.slotsOf(task);
+  if (!slots.length) { openSlotDialog(task, null); return; }
+  openMenu(el.slotsRow, [
+    ...slots.map((slot) => ({ label: slotLabel(slot), onClick: () => openSlotDialog(task, slot) })),
+    { sep: true },
+    { label: t('slot.add'), icon: 'plus', onClick: () => openSlotDialog(task, null) },
+  ], { toggle: true });
+}
+el.slotsRow.addEventListener('click', () => openSlotsList(getTask(selectedId)));
+
+/** Записывает отрезки в задачу: хранится то, что лежало, а заменяется или
+ *  добавляется только свой — чужие и непонятные записи не теряются. */
+function putSlot(task, slot) {
+  const raw = Array.isArray(task.slots) ? task.slots : [];
+  const at = raw.findIndex((x) => x && x.id === slot.id);
+  task.slots = at >= 0 ? raw.map((x, i) => (i === at ? slot : x)) : [...raw, slot];
+  task.updatedAt = new Date().toISOString();
+  render();
+  scheduleSave();
+}
+
+function deleteSlot(task, id) {
+  task.slots = (Array.isArray(task.slots) ? task.slots : []).filter((x) => !(x && x.id === id));
+  task.updatedAt = new Date().toISOString();
+  render();
+  scheduleSave();
+}
+
+// Окно отрезка — как лист отрезка на телефоне (13 октября 2026): строки
+// «Дата», «Начало», «Конец» (под концом — длительность) и ниже «Повторение
+// задачи». start и end — числа (первое вхождение); правит их окно, а в задачу
+// они попадают на «Сохранить». Повтора у отрезка нет — строка говорит,
+// повторяется ли задача, и открывает её окно повторения. Напоминания о начале —
+// общий список задачи (см. «Напоминания» ниже).
+// Задача — по id (dialogTask): приём облака заменяет state.tasks целиком.
+const sldlg = { taskId: null, old: null, id: null, start: 0, end: 0 };
+
+function openSlotDialog(task, slot) {
+  if (!task) return;
+  sldlg.taskId = task.id;
+  sldlg.old = slot || null;
+  sldlg.id = (slot && slot.id) || uid();
+  if (slot) {
+    sldlg.start = Date.parse(slot.start);
+    sldlg.end = Date.parse(slot.end);
+  } else {
+    // Новый отрезок — ближайший ровный час, на час.
+    const d = new Date(Date.now());
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    sldlg.start = d.getTime();
+    sldlg.end = sldlg.start + 3600000;
+  }
+  el.sldlgDelete.hidden = !slot;
+  renderSlotDialog();
+  el.sldlgBackdrop.hidden = false;
+}
+
+function closeSlotDialog() {
+  el.sldlgBackdrop.hidden = true;
+  sldlg.taskId = null;
+  closeDatePicker();
+  closeTimePicker();
+}
+
+function renderSlotDialog() {
+  el.sldlgDate.textContent = fmtDpBtn(dayKey(new Date(sldlg.start)));
+  el.sldlgStart.textContent = hhmm(sldlg.start);
+  el.sldlgEnd.textContent = hhmm(sldlg.end);
+  const ok = sldlg.end > sldlg.start;
+  el.sldlgDur.textContent = ok ? t('sdlg.duration', { time: fmtClock(sldlg.end - sldlg.start) }) : t('slot.end_before_start');
+  el.sldlgDur.classList.toggle('bad', !ok);
+  // Отрезок повторяется только вместе с задачей: правило берём у неё, ровно
+  // то же, по которому он ложится на календарь (серия кончилась — разовый).
+  const rule = Core.slotRule(getTask(sldlg.taskId));
+  el.sldlgRepeatNote.textContent = rule ? t('slot.with_task_repeat', { rule: repeatPhrase(rule) }) : t('repeat.none');
+}
+
+function saveSlotDialog() {
+  const task = dialogTask(sldlg.taskId, closeSlotDialog);
+  if (!task) return;
+  if (!(sldlg.end > sldlg.start)) { toast(t('slot.end_before_start')); return; }
+  const slot = Core.normalizeSlot({
+    ...(sldlg.old || {}),
+    id: sldlg.id,
+    start: new Date(sldlg.start).toISOString(),
+    end: new Date(sldlg.end).toISOString(),
+  });
+  closeSlotDialog();
+  putSlot(task, slot);
+}
+
+el.sldlgSave.addEventListener('click', saveSlotDialog);
+el.sldlgCancel.addEventListener('click', closeSlotDialog);
+el.sldlgDelete.addEventListener('click', () => {
+  const task = dialogTask(sldlg.taskId, closeSlotDialog);
+  if (!task) return;
+  const { id } = sldlg;
+  closeSlotDialog();
+  deleteSlot(task, id);
+});
+el.sldlgBackdrop.addEventListener('click', (e) => { if (e.target === el.sldlgBackdrop) closeSlotDialog(); });
+
+/** Начало и конец отрезка — в часах и минутах от полуночи его дня. */
+const slotDayAt = (val) => {
+  const [h, m] = val.split(':').map(Number);
+  const d = new Date(sldlg.start);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+};
+// Дата двигает весь отрезок: часы и длительность остаются, как в календарях.
+el.sldlgDateBtn.addEventListener('click', () => openDatePicker(el.sldlgDateBtn, dayKey(new Date(sldlg.start)), (key) => {
+  const d = keyToDate(key);
+  const cur = new Date(sldlg.start);
+  d.setHours(cur.getHours(), cur.getMinutes(), 0, 0);
+  const dur = sldlg.end - sldlg.start;
+  sldlg.start = d.getTime();
+  sldlg.end = sldlg.start + dur;
+  renderSlotDialog();
+}));
+// Сдвиг начала двигает и конец: длительность остаётся.
+el.sldlgStartBtn.addEventListener('click', () => openTimePicker(el.sldlgStartBtn, hhmm(sldlg.start), (val) => {
+  const dur = sldlg.end - sldlg.start;
+  sldlg.start = slotDayAt(val);
+  sldlg.end = sldlg.start + dur;
+  renderSlotDialog();
+}));
+// Конец — только время: он в тот же день, что и начало, а позже начала быть
+// обязан (slot.end_before_start).
+el.sldlgEndBtn.addEventListener('click', () => openTimePicker(el.sldlgEndBtn, hhmm(sldlg.end), (val) => {
+  sldlg.end = slotDayAt(val);
+  renderSlotDialog();
+}));
+// Правило — задачи, а не отрезка: окно повторения задачи ложится поверх окна
+// отрезка (слой 102 над 101), черновик отрезка под ним не теряется.
+el.sldlgRepeatRow.addEventListener('click', () => {
+  const task = dialogTask(sldlg.taskId, closeSlotDialog);
+  if (task) openRepeatDialog(task);
+});
+
+// --- Напоминания ------------------------------------------------------------
+// У задачи их список (task.reminders, core/reminders.js): «до начала» и «до
+// дедлайна» (за N мин, ч, дн.), «один раз» в своё время и «повторять» по дням,
+// неделям и месяцам. Список читается только через Core.remindersOf и правится
+// только через Core.withReminders: его патч несёт и зеркало старых полей — для
+// приложений прежних версий. Окно одно на все три вида (#rmdlg-backdrop).
+
+const REMIND_UNIT_KEY = { min: 'remind.unit_min', hour: 'remind.unit_hour', day: 'remind.unit_day' };
+/** Единица смещения рядом с числом: «мин» и «ч» сокращены, дни — словом по
+ *  числу («1 день», «2 дня», «5 дней»). Переключатель единиц в окне берёт
+ *  сокращения напрямую, без числа. */
+const remindUnit = (unit, n) => (unit === 'day' ? pluralForm(n, 'plural.day') : t(REMIND_UNIT_KEY[unit]));
+
+/** Дни недели с понедельника — как во всём приложении (0 — воскресенье). */
+const mondayFirst = (days) => [...days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+
+/** Подпись напоминания в свойствах: «За 15 мин до начала», «В момент
+ *  дедлайна», «12 июн., 09:00», «По Пн, Ср в 09:00», «Каждый день в 09:00»,
+ *  «Каждый месяц 5-го в 09:00». Ядро отдаёт структуру, слова — здесь. */
+function remindLabel(rem) {
+  const d = Core.describeReminder(rem);
+  if (!d) return '';
+  if (d.kind === 'before') {
+    const side = d.anchor === 'start' ? 'start' : 'due';
+    if (d.offsetMin === 0) return t(`remind.at_${side}`);
+    return t(`remind.before_${side}_n`, { n: d.n, unit: remindUnit(d.unit, d.n) });
+  }
+  if (d.kind === 'at') {
+    const sameYear = new Date(d.at).getFullYear() === new Date().getFullYear();
+    return `${sameYear ? fmtDateShort(d.at) : fmtDpBtn(dayKey(new Date(d.at)))}, ${hhmm(d.at)}`;
+  }
+  if (d.freq === 'day') return t('remind.daily_at', { time: d.time });
+  if (d.freq === 'week') {
+    const days = d.weekdays.length ? d.weekdays : [new Date(rem.start).getDay()];
+    return t('remind.weekly_at', { days: mondayFirst(days).map(weekdayName).join(', '), time: d.time });
+  }
+  if (d.freq === 'month') return t('remind.monthly_at', { day: d.monthDay, time: d.time });
+  return `${repeatLabel(rem.rule)}, ${d.time}`;
+}
+
+/** Группа «Напоминания» в свойствах: строка на каждое (щелчок — его окно,
+ *  там же и удаление) и последней «Добавить». «До начала» без времени работы
+ *  и «до дедлайна» без дедлайна ничего не дождутся — строка у них тише, а
+ *  вернётся срок — заговорят. */
+function renderTaskReminders(task) {
+  el.remindRow.innerHTML = '';
+  const live = { start: Core.slotsOf(task).length > 0, due: !!task.dueAt };
+  for (const rem of Core.remindersOf(task)) {
+    const idle = rem.kind === 'before' && !live[rem.anchor];
+    const row = elt('button', `srow remind-item${idle ? ' dim' : ''}`);
+    row.type = 'button';
+    row.dataset.reminderId = rem.id;
+    if (idle) row.title = t('remind.need_anchor');
+    row.innerHTML = `${icon('bell')}<span class="srow-label">${escapeHtml(remindLabel(rem))}</span>${icon('chevron-right', 'icon srow-chev')}`;
+    row.addEventListener('click', () => openReminderDialog(task, rem));
+    el.remindRow.appendChild(row);
+  }
+  const add = elt('button', 'srow srow-add');
+  add.type = 'button';
+  add.id = 'remind-add';
+  add.innerHTML = `${icon('plus')}<span class="srow-label">${escapeHtml(t('remind.add'))}</span>`;
+  add.addEventListener('click', () => openReminderDialog(task, null));
+  el.remindRow.appendChild(add);
+}
+
+/** Записывает новый список целиком: ядро решает, какие отметки «уже
+ *  напомнили» остаются, и дописывает зеркало старых полей. */
+function applyReminders(task, list) {
+  Object.assign(task, Core.withReminders(task, list));
+  task.updatedAt = new Date().toISOString();
+  render();
+  scheduleSave();
+}
+
+function deleteReminder(task, id) {
+  applyReminders(task, Core.remindersOf(task).filter((r) => r.id !== id));
+}
+
+// Окно напоминания. Поля черновика живут здесь, в задачу они попадают на
+// «Сохранить». n — число из поля как строка (его печатают), unit — единица.
+// Задача — по id (dialogTask): приём облака заменяет state.tasks целиком.
+const rmdlg = {
+  taskId: null, old: null, id: null, live: { start: false, due: false },
+  kind: 'before', anchor: 'start', n: '15', unit: 'min', over: false,
+  at: 0, freq: 'day', weekdays: [], monthDay: '1', time: '09:00',
+};
+
+/** Минуты смещения из полей окна; null — число не разобрано. */
+function rmOffset() {
+  const raw = String(rmdlg.n).replace(',', '.').trim();
+  return raw === '' ? null : Core.toOffsetMin(raw, rmdlg.unit);
+}
+
+/** Больше предела (60 суток) прижимается к нему, и окно говорит об этом —
+ *  до следующей правки: renderReminderDialog зовёт это при каждой отрисовке. */
+function rmCapOffset() {
+  const v = Number(String(rmdlg.n).replace(',', '.'));
+  const mult = Core.REMIND_UNITS[rmdlg.unit];
+  rmdlg.over = Number.isFinite(v) && v * mult > Core.REMIND_MAX_OFFSET_MIN;
+  if (rmdlg.over) rmdlg.n = String(Core.REMIND_MAX_OFFSET_MIN / mult);
+}
+
+const rmMonthDayOk = () => { const n = Number(rmdlg.monthDay); return Number.isInteger(n) && n >= 1 && n <= 31; };
+
+function openReminderDialog(task, rem) {
+  if (!task) return;
+  const d = rem ? Core.describeReminder(rem) : null;
+  const before = d && d.kind === 'before' ? d : null;
+  const rep = d && d.kind === 'repeat' ? d : null;
+  const now = new Date();
+  rmdlg.taskId = task.id;
+  rmdlg.old = rem || null;
+  rmdlg.id = rem ? rem.id : uid();
+  // Якоря, которого у задачи сейчас нет, новое напоминание не получит; у
+  // заведённого он остаётся, чтобы его можно было поправить.
+  rmdlg.live = { start: Core.slotsOf(task).length > 0, due: !!task.dueAt };
+  if (before) rmdlg.live[before.anchor] = true;
+  rmdlg.kind = d ? d.kind : (rmdlg.live.start || rmdlg.live.due ? 'before' : 'at');
+  rmdlg.anchor = before ? before.anchor : (rmdlg.live.start ? 'start' : 'due');
+  rmdlg.n = before ? String(before.n) : '15';
+  rmdlg.unit = before ? before.unit : 'min';
+  // Новое «один раз» — ближайший ровный час.
+  const hour = new Date(now);
+  hour.setHours(now.getHours() + 1, 0, 0, 0);
+  rmdlg.at = d && d.kind === 'at' ? d.at : hour.getTime();
+  rmdlg.freq = rep && ['day', 'week', 'month'].includes(rep.freq) ? rep.freq : 'day';
+  rmdlg.weekdays = rep && rep.weekdays.length ? rep.weekdays.slice() : [rep ? new Date(rem.start).getDay() : now.getDay()];
+  rmdlg.monthDay = String(rep && rep.monthDay ? rep.monthDay : now.getDate());
+  rmdlg.time = rep ? rep.time : '09:00';
+  el.rmdlgDelete.hidden = !rem;
+  renderReminderDialog();
+  el.rmdlgBackdrop.hidden = false;
+  const on = el.rmKindSeg.querySelector('button.on');
+  if (on) on.focus();
+}
+
+function closeReminderDialog() {
+  el.rmdlgBackdrop.hidden = true;
+  rmdlg.taskId = null;
+  closeDatePicker();
+  closeTimePicker();
+}
+
+function renderReminderDialog() {
+  rmCapOffset();
+  const live = rmdlg.live;
+  const noAnchor = !live.start && !live.due;
+  markSegment(el.rmKindSeg, 'kind', rmdlg.kind);
+  // «До…» без якоря не от чего отсчитывать: вид гаснет, под ним подсказка.
+  el.rmKindSeg.querySelector('[data-kind="before"]').disabled = noAnchor;
+  el.rmNeedAnchor.hidden = !noAnchor;
+  el.rmBefore.hidden = rmdlg.kind !== 'before';
+  el.rmAt.hidden = rmdlg.kind !== 'at';
+  el.rmRepeat.hidden = rmdlg.kind !== 'repeat';
+
+  // «До…»: показывается только тот якорь, что есть у задачи.
+  el.rmAnchorSeg.querySelectorAll('button').forEach((b) => { b.hidden = !live[b.dataset.anchor]; });
+  markSegment(el.rmAnchorSeg, 'anchor', rmdlg.anchor);
+  markSegment(el.rmUnitSeg, 'unit', rmdlg.unit);
+  const off = rmOffset();
+  // Кнопки создаются один раз, дальше меняются на месте: перерисованная
+  // кнопка теряла бы фокус, и с клавиатуры не выбрать два значения подряд.
+  if (el.rmPresets.children.length !== Core.REMIND_PRESETS.length) {
+    el.rmPresets.innerHTML = '';
+    for (const p of Core.REMIND_PRESETS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.min = String(p);
+      el.rmPresets.appendChild(b);
+    }
+  }
+  Core.REMIND_PRESETS.forEach((p, i) => {
+    const b = el.rmPresets.children[i];
+    const s = Core.splitOffset(p);
+    b.className = `dp-btn${off === p ? ' on' : ''}`;
+    b.textContent = p === 0 ? t(`remind.at_${rmdlg.anchor}`) : `${s.n} ${remindUnit(s.unit, s.n)}`;
+  });
+  if (el.rmN.value !== rmdlg.n) el.rmN.value = rmdlg.n;
+
+  // «Один раз».
+  el.rmAtBtn.textContent = `${fmtDpBtn(dayKey(new Date(rmdlg.at)))}, ${hhmm(rmdlg.at)}`;
+
+  // «Повторять».
+  markSegment(el.rmFreqSeg, 'freq', rmdlg.freq);
+  el.rmDays.hidden = rmdlg.freq !== 'week';
+  if (rmdlg.freq === 'week') {
+    if (!el.rmDays.children.length) {
+      for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.day = String(d);
+        el.rmDays.appendChild(b);
+      }
+    }
+    for (const b of el.rmDays.children) {
+      const d = Number(b.dataset.day);
+      b.className = `rp-day${rmdlg.weekdays.includes(d) ? ' on' : ''}`;
+      b.textContent = weekdayName(d);
+    }
+  }
+  el.rmMonthLine.hidden = rmdlg.freq !== 'month';
+  if (el.rmMonthDay.value !== rmdlg.monthDay) el.rmMonthDay.value = rmdlg.monthDay;
+  el.rmTimeBtn.textContent = rmdlg.time;
+
+  // Что не так с полями: сохранить можно, только когда всё разобрано. Число
+  // больше предела уже прижато — сказать об этом, но не мешать.
+  const bad = (rmdlg.kind === 'before' && off === null)
+    || (rmdlg.kind === 'repeat' && rmdlg.freq === 'month' && !rmMonthDayOk());
+  const note = bad ? t('remind.bad_number') : (rmdlg.kind === 'before' && rmdlg.over ? t('remind.too_long') : '');
+  el.rmError.textContent = note;
+  el.rmError.hidden = !note;
+  el.rmdlgSave.disabled = bad;
+}
+
+/** От какого момента считается правило «повторять». Каждый день и неделю —
+ *  с этой минуты: сегодняшнее время, уже прошедшее, молчит. Каждый месяц — с
+ *  ближайшей даты с нужным числом (31-го бывает не в каждом месяце). Пока
+ *  правило то же, прежняя точка отсчёта остаётся — иначе отметка «уже
+ *  напомнили» сбросилась бы зря. */
+function remindRepeatStart(rule) {
+  const old = rmdlg.old;
+  const day = Number(rmdlg.monthDay);
+  if (old && old.kind === 'repeat' && old.time === rmdlg.time && JSON.stringify(old.rule) === JSON.stringify(rule)
+    && (rule.freq !== 'month' || new Date(old.start).getDate() === day)) return old.start;
+  const now = new Date();
+  if (rule.freq !== 'month') return now.toISOString();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  for (let k = 0; k < 14; k += 1) {
+    const c = new Date(now.getFullYear(), now.getMonth() + k, day);
+    if (c.getDate() !== day || c.getTime() < today) continue;
+    return (c.getTime() === today ? now : c).toISOString();
+  }
+  return now.toISOString();
+}
+
+/** Напоминание из полей окна; null — поля не разобраны. */
+function reminderFromDialog() {
+  if (rmdlg.kind === 'before') {
+    const off = rmOffset();
+    return off === null ? null : { kind: 'before', anchor: rmdlg.anchor, offsetMin: off, unit: rmdlg.unit };
+  }
+  if (rmdlg.kind === 'at') return { kind: 'at', at: new Date(rmdlg.at).toISOString() };
+  if (rmdlg.freq === 'month' && !rmMonthDayOk()) return null;
+  const rule = Core.normalizeRepeat(presetRule(rmdlg.freq, rmdlg.freq === 'week' ? rmdlg.weekdays : []));
+  return { kind: 'repeat', rule, time: rmdlg.time, start: remindRepeatStart(rule) };
+}
+
+function saveReminderDialog() {
+  const task = dialogTask(rmdlg.taskId, closeReminderDialog);
+  const rem = task ? reminderFromDialog() : null;
+  if (!rem) return;
+  // Чужие ключи остаются, пока вид тот же; отметки «уже напомнили» решает
+  // withReminders по времени срабатывания.
+  const old = rmdlg.old;
+  const next = { ...(old && old.kind === rem.kind ? old : {}), ...rem, id: rmdlg.id };
+  const list = Core.remindersOf(task);
+  const at = list.findIndex((r) => r.id === rmdlg.id);
+  ensureNotifPermission();
+  closeReminderDialog();
+  applyReminders(task, at >= 0 ? list.map((r, i) => (i === at ? next : r)) : [...list, next]);
+}
+
+el.rmdlgSave.addEventListener('click', saveReminderDialog);
+el.rmdlgCancel.addEventListener('click', closeReminderDialog);
+el.rmdlgDelete.addEventListener('click', () => {
+  const task = dialogTask(rmdlg.taskId, closeReminderDialog);
+  if (!task) return;
+  const { id } = rmdlg;
+  closeReminderDialog();
+  deleteReminder(task, id);
+});
+el.rmdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.rmdlgBackdrop) closeReminderDialog(); });
+
+el.rmKindSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-kind]');
+  if (!b || b.disabled) return;
+  rmdlg.kind = b.dataset.kind;
+  renderReminderDialog();
+});
+el.rmAnchorSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-anchor]');
+  if (!b) return;
+  rmdlg.anchor = b.dataset.anchor;
+  renderReminderDialog();
+});
+el.rmPresets.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-min]');
+  if (!b) return;
+  const s = Core.splitOffset(Number(b.dataset.min));
+  rmdlg.n = String(s.n);
+  rmdlg.unit = s.unit;
+  renderReminderDialog();
+});
+el.rmN.addEventListener('input', () => {
+  rmdlg.n = el.rmN.value.replace(/[^\d.,]/g, '');
+  renderReminderDialog();
+});
+el.rmUnitSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-unit]');
+  if (!b) return;
+  rmdlg.unit = b.dataset.unit;
+  renderReminderDialog();
+});
+
+el.rmAtBtn.addEventListener('click', () => {
+  const move = (d) => { rmdlg.at = d.getTime(); renderReminderDialog(); };
+  openDatePicker(el.rmAtBtn, dayKey(new Date(rmdlg.at)), (key) => {
+    const d = keyToDate(key);
+    const cur = new Date(rmdlg.at);
+    d.setHours(cur.getHours(), cur.getMinutes(), 0, 0);
+    move(d);
+  }, {
+    time: hhmm(rmdlg.at),
+    onTime: (val) => {
+      const [h, m] = val.split(':').map(Number);
+      const d = new Date(rmdlg.at);
+      d.setHours(h, m, 0, 0);
+      move(d);
+    },
+  });
+});
+
+el.rmFreqSeg.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-freq]');
+  if (!b) return;
+  rmdlg.freq = b.dataset.freq;
+  renderReminderDialog();
+});
+el.rmDays.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-day]');
+  if (!b) return;
+  const d = Number(b.dataset.day);
+  // Хотя бы один день остаётся: неделя без дней — не «раз в неделю», а ничего.
+  if (!rmdlg.weekdays.includes(d)) rmdlg.weekdays = [...rmdlg.weekdays, d].sort((a, c) => a - c);
+  else if (rmdlg.weekdays.length > 1) rmdlg.weekdays = rmdlg.weekdays.filter((x) => x !== d);
+  renderReminderDialog();
+});
+el.rmMonthDay.addEventListener('input', () => {
+  const digits = el.rmMonthDay.value.replace(/\D/g, '').slice(0, 2);
+  rmdlg.monthDay = Number(digits) > 31 ? '31' : digits;
+  renderReminderDialog();
+});
+el.rmTimeBtn.addEventListener('click', () => openTimePicker(el.rmTimeBtn, rmdlg.time, (val) => {
+  rmdlg.time = val;
+  renderReminderDialog();
+}));
+for (const input of [el.rmN, el.rmMonthDay]) {
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveReminderDialog(); } });
 }
 
 /** Будущие сроки повторений — призраками на календаре (core/agenda.js). */

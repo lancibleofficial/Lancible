@@ -105,3 +105,64 @@ test('ни одна модалка не раскладывает себя сам
   }
   assert.deepEqual(own, [], 'модалки со своими правилами раскладки');
 });
+
+// --- перетаскивание окна ------------------------------------------------------
+
+/** Значение -webkit-app-region у селектора — из правил без @media. */
+function appRegionOf(selector) {
+  const values = rules
+    .filter((r) => !r.at && r.sel.split(',').map((s) => s.trim()).includes(selector))
+    .map((r) => declarations(r.body)['-webkit-app-region'])
+    .filter(Boolean);
+  return values[values.length - 1];
+}
+
+test('слои поверх шапки — no-drag: зона перетаскивания под ними мышь не отдаёт', () => {
+  // #titlebar — drag, и Chromium собирает зону из разметки, а не из того, что
+  // видно: полноэкранный редактор, лёгший на шапку, оставляет под собой живую
+  // зону окна. В Electron на Windows она перехватывает настоящие щелчки по
+  // кнопкам панели (программный .click() при этом проходит и ничего не
+  // замечает). Значение в настоящем окне меряет scripts/smoke.js; здесь —
+  // что оно записано в стилях за каждым слоем, который может лечь на шапку.
+  assert.equal(appRegionOf('#titlebar'), 'drag', 'шапка тянет окно');
+  const layers = ['.led.led-fullscreen', '.ctx-menu', '#notif-panel', '.tag-pop', '.tp-pop', '.dp-pop', '.color-pop', '.modal'];
+  const wrong = layers.filter((sel) => appRegionOf(sel) !== 'no-drag');
+  assert.deepEqual(wrong, [], 'слои без no-drag: щелчок по ним уйдёт окну, если они лягут на шапку');
+});
+
+test('drag есть только у частей шапки', () => {
+  // Новая зона перетаскивания где-то ещё превратила бы кусок страницы в
+  // «заголовок окна», на котором ничего не нажимается.
+  const header = new Set(['#titlebar', 'body.platform-mac .tb-nav-strip', '.tb-logo']);
+  const found = rules
+    .filter((r) => declarations(r.body)['-webkit-app-region'] === 'drag')
+    .flatMap((r) => r.sel.split(',').map((s) => s.trim()))
+    .filter((sel) => !header.has(sel));
+  assert.deepEqual(found, [], 'drag вне шапки');
+});
+
+// --- данные в атрибутах разметки ---------------------------------------------
+
+test('данные в style="…" разметки — только через escapeHtml', () => {
+  // Цвет проекта, тега и статуса приходит из облака, а пишет его любое
+  // устройство аккаунта. Подставленный в атрибут как есть, он закрывает
+  // кавычку и вставляет свою разметку. Без escapeHtml допустимы только числа.
+  const NUMERIC = /^(pct|r\.total \? Math\.round\(.*\) : 0)$/;
+  const raw = [];
+  for (const [, attr] of code.matchAll(/style="([^"]*)"/g)) {
+    for (const [, expr] of attr.matchAll(/\$\{([^}]*)\}/g)) {
+      if (!expr.startsWith('escapeHtml(') && !NUMERIC.test(expr)) raw.push(expr);
+    }
+  }
+  assert.deepEqual(raw, [], 'подстановки в style="…" без escapeHtml');
+});
+
+test('чужой цвет проекта не вставляет разметку в точку проекта', () => {
+  const { escapeHtml } = require('../../src/renderer/core/format.js');
+  const m = code.match(/const projHtml = (`[^`]*`);/);
+  assert.ok(m, 'в app.js нет точки проекта (renderNowIsland)');
+  const hostile = { color: '"><img src=x onerror="alert(1)"><i x="', name: 'P' };
+  const out = new Function('p', 'PALETTE', 'escapeHtml', `return ${m[1]};`)(hostile, ['#000'], escapeHtml);
+  assert.doesNotMatch(out, /<img/, 'цвет закрыл атрибут и вставил тег');
+  assert.equal(out.match(/</g).length, 2, 'только своя точка: <i …></i>');
+});

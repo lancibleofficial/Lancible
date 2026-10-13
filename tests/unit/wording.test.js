@@ -93,12 +93,23 @@ const clean = (lang, s) => (NOT_IMPERATIVE[lang] || []).reduce((acc, re) => acc.
 
 const POLITE = { ru: '«вы»', uk: '«ви»', kk: '«сіз»' };
 
+/** Исключение из «вы/ви»: шутливые фразы у правого края колоды «Проектов»
+ *  (`deck.phrase_*`) — на «ты» по решению пользователя 11.10.2026. К ним же
+ *  относятся фразы пасхалки (`deck.egg_*`): сильно оттянутая плашка меняет
+ *  цвет и говорит «Тебе делать нечего?» — тоже по слову пользователя, он
+ *  продиктовал русский текст. Только обращение: остальные правила (в т.ч.
+ *  «дедлайн» вместо «срок») на них действуют по-прежнему. Узко — по ключам и
+ *  только ru/uk; казахский в исключении не нуждается, его фразы (и пасхалки
+ *  тоже) на «сіз» или без обращения. */
+const CASUAL = { ru: /^deck\.(phrase|egg)_\d+$/, uk: /^deck\.(phrase|egg)_\d+$/ };
+
 for (const lang of Object.keys(INFORMAL)) {
   test(`приложение обращается на ${POLITE[lang]} (${lang})`, () => {
     const re = word(INFORMAL[lang]);
     const bad = [];
     for (const [who, dict] of DICTS) {
       for (const [key, s] of strings(dict, lang)) {
+        if (CASUAL[lang] && CASUAL[lang].test(key)) continue;
         if (re.test(clean(lang, s))) bad.push(`${who} ${lang} / ${key}: ${JSON.stringify(s)}`);
       }
     }

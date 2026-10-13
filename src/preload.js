@@ -7,10 +7,12 @@ contextBridge.exposeInMainWorld('api', {
   save: (data) => ipcRenderer.invoke('data:save', data),
   exportXlsx: (payload) => ipcRenderer.invoke('export:xlsx', payload),
   copy: (text) => ipcRenderer.invoke('clipboard:write', text),
-  setTitlebarOverlay: (theme) => ipcRenderer.invoke('theme:set-overlay', theme),
+  setTitlebarOverlay: (theme, colors) => ipcRenderer.invoke('theme:set-overlay', theme, colors),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
   openNotificationSettings: () => ipcRenderer.invoke('shell:open-notification-settings'),
   onOAuthCallback: (cb) => ipcRenderer.on('auth:oauth-callback', (_e, data) => cb(data)),
+  // lancible://project/<id> и подобные: главный процесс присылает маршрут.
+  onRouteOpen: (cb) => ipcRenderer.on('route:open', (_e, data) => cb(data)),
 
   getVersion: () => ipcRenderer.invoke('app:version'),
   checkForUpdate: () => ipcRenderer.invoke('update:check'),

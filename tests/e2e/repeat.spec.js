@@ -63,27 +63,135 @@ const taskState = (page, title) => page.evaluate((title) => {
   };
 }, title);
 
-test('строка повторения есть только у задачи со сроком', async ({ page }) => {
-  // Повторение считается от дедлайна — предлагать его раньше было бы обманом.
+test('строка повторения есть и у задачи без дедлайна', async ({ page }) => {
+  // С 11 октября дедлайн повторению не нужен: без него оно считается от
+  // разового отрезка «времени работы», а без отрезка — от закрытия.
   const ids = await seed(page);
-  await expect(page.locator('#repeat-row')).toBeVisible();
-  await expect(page.locator('#task-repeat')).toHaveText('Не повторяется');
+  await expect(page.locator('#task-repeat')).toBeVisible();
+  await expect(page.locator('#repeat-value')).toHaveText('Не повторяется');
 
   await openTask(page, ids.noDue);
-  await expect(page.locator('#repeat-row')).toBeHidden();
+  await expect(page.locator('#task-repeat')).toBeVisible();
+  await page.locator('#task-repeat').click();
+  // Окно повторения открылось, а не тост «сначала поставьте дедлайн».
+  await expect(page.locator('#rpdlg-backdrop')).toBeVisible();
+  await expect(page.locator('#toast')).toBeHidden();
 });
 
-test('готовые правила из меню ставятся и подписываются словами', async ({ page }) => {
+test('повторяющаяся задача без дат остаётся выполненной и возвращается в свой день', async ({ page }) => {
+  const ids = await seed(page);
+  await openTask(page, ids.noDue);
+  await page.locator('#task-repeat').click();
+  await page.locator('#rpdlg-save').click();
+  await expect(page.locator('#repeat-value')).toHaveText('Каждую неделю');
+  // Без дат считать «следующий раз» не от чего.
+  await expect(page.locator('#repeat-next')).toBeHidden();
+
+  await page.evaluate((id) => { setTaskDone(getTask(id), true); render(); }, ids.noDue);
+  const closed = await page.evaluate((id) => {
+    const task = getTask(id);
+    return { done: task.done, reopenAt: task.reopenAt, repeatDone: task.repeat.done, dueAt: task.dueAt };
+  }, ids.noDue);
+  expect(closed.done, 'задача остаётся выполненной до своего дня').toBe(true);
+  expect(closed.dueAt, 'дедлайн не появляется').toBe(null);
+  expect(closed.repeatDone).toBe(1);
+  // Часы прибиты на среду 10 июня 12:00: через неделю — 17 июня, с полуночи.
+  expect(new Date(closed.reopenAt).getTime(), 'вернётся с полуночи через неделю')
+    .toBe(new Date(2026, 5, 17, 0, 0, 0, 0).getTime());
+  await expect(page.locator('#repeat-next')).toHaveText(/^Вернётся 17 июн/);
+  await expect(page.locator('#toast')).toContainText('Вернётся');
+
+  // До своего дня проход ничего не трогает.
+  await page.clock.setFixedTime(new Date(2026, 5, 16, 23, 0, 0));
+  await page.evaluate(() => checkReminders());
+  expect(await page.evaluate((id) => getTask(id).done, ids.noDue)).toBe(true);
+
+  // Пришёл день — задача открывается сама, статус по умолчанию.
+  await page.clock.setFixedTime(new Date(2026, 5, 17, 9, 0, 0));
+  await page.evaluate(() => checkReminders());
+  const back = await page.evaluate((id) => {
+    const task = getTask(id);
+    return { done: task.done, reopenAt: task.reopenAt, doneAt: task.doneAt, repeatDone: task.repeat.done, status: getStatus(task.statusId).kind };
+  }, ids.noDue);
+  expect(back.done, 'в свой день задача открылась').toBe(false);
+  expect(back.reopenAt).toBe(null);
+  expect(back.doneAt).toBe(null);
+  expect(back.repeatDone, 'счёт серии сохранился').toBe(1);
+  expect(back.status).not.toBe('done');
+  await expect(page.locator('#repeat-next')).toBeHidden();
+});
+
+test('открыть вручную задачу, что ждёт своего дня, — значит снять ожидание', async ({ page }) => {
+  const ids = await seed(page);
+  const got = await page.evaluate((id) => {
+    const task = getTask(id);
+    task.repeat = Core.normalizeRepeat({ freq: 'day', every: 3 });
+    setTaskDone(task, true);
+    const waiting = task.reopenAt;
+    const counted = task.repeat.done;
+    setTaskDone(task, false);
+    const unticked = task.repeat.done;
+    // То же через статус (меню статуса, перенос на доске).
+    setTaskDone(task, true);
+    setTaskStatus(task, orderedStatuses(task.projectId).find((s) => s.kind !== 'done' && s.kind !== 'cancelled').id);
+    return { waiting, after: task.reopenAt, done: task.done, counted, unticked, byStatus: task.repeat.done };
+  }, ids.noDue);
+  expect(got.waiting).not.toBe(null);
+  expect(got.done).toBe(false);
+  expect(got.after, 'вернули руками — ждать нечего').toBe(null);
+  expect(got.counted).toBe(1);
+  expect(got.unticked, 'закрытие отменено — и его раз серии тоже').toBe(0);
+  expect(got.byStatus).toBe(0);
+});
+
+test('своё время напоминания уезжает на день возврата, а не срабатывает снова', async ({ page }) => {
+  const ids = await seed(page);
+  const got = await page.evaluate((id) => {
+    const task = getTask(id);
+    task.repeat = Core.normalizeRepeat({ freq: 'week', every: 1 });
+    // Часы прибиты на среду 10 июня 12:00: напоминание утром уже было.
+    task.remindAt = new Date(2026, 5, 10, 9, 0).toISOString();
+    setTaskDone(task, true);
+    const at = Core.remindersOf(task).find((r) => r.kind === 'at');
+    return { remindAt: task.remindAt, reopenAt: task.reopenAt, listed: at && at.at };
+  }, ids.noDue);
+  expect(new Date(got.reopenAt).getTime()).toBe(new Date(2026, 5, 17).getTime());
+  expect(new Date(got.remindAt).getTime(), 'в день возврата, в своё время').toBe(new Date(2026, 5, 17, 9, 0).getTime());
+  // И в списке напоминаний — то же самое, не только в зеркале старых полей.
+  expect(got.listed).toBe(got.remindAt);
+});
+
+test('возврат задачи при приёме облака уходит обратно в облако', async ({ page }) => {
+  // Отпечаток «что уже в облаке» снимался после возврата: возврат считался
+  // отправленным, и второе устройство продолжало видеть задачу закрытой.
+  const ids = await seed(page);
+  const got = await page.evaluate((id) => {
+    const task = getTask(id);
+    task.repeat = Core.normalizeRepeat({ freq: 'day', every: 1 });
+    setTaskDone(task, true);
+    // С другого устройства пришло то же, а день возврата уже наступил.
+    const remote = JSON.parse(JSON.stringify(syncPayload()));
+    remote.tasks.find((x) => x.id === id).reopenAt = new Date(Date.now() - 60000).toISOString();
+    applyRemoteData(remote);
+    const synced = JSON.parse(lastSyncedJSON).tasks.find((x) => x.id === id);
+    return { open: !getTask(id).done, syncedDone: synced.done, pending: lastSyncedJSON !== JSON.stringify(syncPayload()) };
+  }, ids.noDue);
+  expect(got.open, 'задача вернулась').toBe(true);
+  expect(got.syncedDone, 'отпечаток — то, что пришло').toBe(true);
+  expect(got.pending, 'возврат ждёт отправки').toBe(true);
+});
+
+test('строка «Повторение» открывает окно повторения задачи; правило подписывается словами', async ({ page }) => {
+  // С 13 октября 2026 меню готовых правил нет: строка, как и остальные
+  // строки свойств, открывает окно своей настройки. Неделя — по умолчанию.
   await seed(page);
   await page.locator('#task-repeat').click();
-  const items = await page.locator('#ctx-menu .ctx-item').allTextContents();
-  expect(items).toEqual([
-    'Не повторяется', 'Каждый день', 'Каждую неделю', 'По будням, Пн–Пт',
-    'Каждый месяц', 'Каждый год', 'Настроить…',
-  ]);
+  await expect(page.locator('#ctx-menu')).toBeHidden();
+  await expect(page.locator('#rpdlg-backdrop')).toBeVisible();
+  await expect(page.locator('#rp-freq-seg button.on')).toHaveAttribute('data-freq', 'week');
 
-  await page.locator('#ctx-menu .ctx-item', { hasText: 'Каждую неделю' }).click();
-  await expect(page.locator('#task-repeat')).toHaveText('Каждую неделю');
+  await page.locator('#rpdlg-save').click();
+  await expect(page.locator('#repeat-value')).toHaveText('Каждую неделю');
   await expect(page.locator('#repeat-next')).toBeVisible();
   // Значок в списке: повторяющуюся задачу видно, не открывая её.
   await page.locator('#task-back').click();
@@ -93,7 +201,7 @@ test('готовые правила из меню ставятся и подпи
 test('закрытие переносит срок вперёд, а задача снова открывается', async ({ page }) => {
   await seed(page);
   await page.locator('#task-repeat').click();
-  await page.locator('#ctx-menu .ctx-item', { hasText: 'Каждую неделю' }).click();
+  await page.locator('#rpdlg-save').click();
 
   const before = await taskState(page, 'Отчёт клиенту');
   await page.evaluate(() => { setTaskDone(state.tasks.find((t) => t.title === 'Отчёт клиенту'), true); render(); });
@@ -169,7 +277,6 @@ test('повторение срабатывает и при переносе н�
 test('окно тонкой настройки собирает правило и показывает ближайшие сроки', async ({ page }) => {
   await seed(page);
   await page.locator('#task-repeat').click();
-  await page.locator('#ctx-menu .ctx-item', { hasText: 'Настроить' }).click();
   await expect(page.locator('#rpdlg-backdrop')).toBeVisible();
 
   // Неделя начинается с понедельника — как во всём приложении.
@@ -198,7 +305,7 @@ test('окно тонкой настройки собирает правило �
   expect(rule.weekdays).toEqual([1, 4]);
   expect(rule.ends).toMatchObject({ kind: 'after', count: 4 });
   expect(rule.keepHistory).toBe(true);
-  await expect(page.locator('#task-repeat')).toHaveText('Каждые 2 нед., по Пн, Чт');
+  await expect(page.locator('#repeat-value')).toHaveText('Каждые 2 нед., по Пн, Чт');
 });
 
 test('«Не повторяется» из окна снимает правило', async ({ page }) => {
@@ -209,9 +316,8 @@ test('«Не повторяется» из окна снимает правил�
     render();
   });
   await page.locator('#task-repeat').click();
-  await page.locator('#ctx-menu .ctx-item', { hasText: 'Настроить' }).click();
   await page.locator('#rpdlg-off').click();
-  await expect(page.locator('#task-repeat')).toHaveText('Не повторяется');
+  await expect(page.locator('#repeat-value')).toHaveText('Не повторяется');
   expect(await page.evaluate(() => state.tasks.find((t) => t.title === 'Отчёт клиенту').repeat)).toBe(null);
 });
 

@@ -3,8 +3,9 @@
 //
 // С 9 октября 2026 карточка — как колода на телефоне: шапка (цвет, название,
 // «✓ готово/всего» и ближайший дедлайн), время и деньги за всё время,
-// прогресс, поле новой задачи, невыполненные задачи со своей прокруткой
-// (галочка, мета, плей), внизу «Перейти в проект». Карточки стоят рядом и
+// прогресс, поле новой задачи, задачи со своей прокруткой (галочка, мета,
+// плей; с 13 октября 2026 под открытыми — выполненные, серые и зачёркнутые,
+// а в самом низу отменённые), внизу «Перейти в проект». Карточки стоят рядом и
 // листаются вбок. Ниже — таблица недавних задач, как и была.
 const { test, expect } = require('@playwright/test');
 const { pinClock } = require('./clock');
@@ -69,7 +70,7 @@ test('карточки: закреплённые первыми, у каждой
   await expect(page.locator('#ph-name')).toHaveText('Приложение');
 });
 
-test('в карточке — невыполненные задачи, свежие сверху, со статусом, сроком и временем', async ({ page }) => {
+test('в карточке — открытые задачи, свежие сверху, со статусом, сроком и временем', async ({ page }) => {
   await seed(page);
   const site = page.locator('.ptile', { hasText: 'Сайт' });
   await expect(site.locator('.ptile-task .rl-name')).toHaveText(['Вёрстка', 'Форма']);
@@ -79,8 +80,12 @@ test('в карточке — невыполненные задачи, свеж�
   await expect(first.locator('.task-time')).toHaveText('1ч');
   await expect(site.locator('.ptile-task').nth(1).locator('.task-time'), 'без времени — без нуля').toHaveCount(0);
   const coffee = page.locator('.ptile', { hasText: 'Кофейня' });
-  await expect(coffee.locator('.ptile-task'), 'выполненной в карточке нет').toHaveCount(0);
-  await expect(coffee.locator('.ptile-empty')).toHaveText('Задач пока нет');
+  // Выполненная — внизу карточки, тихой строкой; пустого экрана при ней нет.
+  await expect(coffee.locator('.ptile-task')).toHaveCount(1);
+  await expect(coffee.locator('.ptile-task')).toHaveClass(/\bdone\b/);
+  await expect(coffee.locator('.ptile-empty')).toHaveCount(0);
+  await page.evaluate(() => { state.tasks = state.tasks.filter((t) => t.projectId !== 'p3'); render(); });
+  await expect(coffee.locator('.ptile-empty .empty-state-title')).toHaveText('Задач пока нет');
   await first.click();
   expect(await page.evaluate(() => [state.ui.view, selectedId])).toEqual(['task', 't1']);
 });
@@ -115,14 +120,76 @@ test('идущая на входе стоит в своей карточке п�
   await expect(page.locator('.ptile', { hasText: 'Сайт' }).locator('.ptile-task .rl-name')).toHaveText(['Форма', 'Вёрстка']);
 });
 
-test('галочка закрывает задачу, и она уходит из карточки', async ({ page }) => {
+test('галочка закрывает задачу, и она уезжает вниз карточки, к выполненным', async ({ page }) => {
   await seed(page);
   const site = page.locator('.ptile', { hasText: 'Сайт' });
+  await page.evaluate(() => { getTask('t4').updatedAt = new Date(Date.now() - 7_200_000).toISOString(); render(); });
+  await expect(site.locator('.ptile-task .rl-name')).toHaveText(['Вёрстка', 'Форма']);
   await site.locator('.ptile-task', { hasText: 'Форма' }).locator('.task-done').check();
   expect(await page.evaluate(() => state.ui.view), 'галочка не открывает задачу').toBe('projects');
-  await expect(site.locator('.ptile-task .rl-name')).toHaveText(['Вёрстка']);
+  await expect(site.locator('.ptile-task:not(.done) .rl-name')).toHaveText(['Вёрстка']);
+  await expect(site.locator('.ptile-task.done .rl-name')).toHaveText(['Форма']);
   expect(await page.evaluate(() => getTask('t4').done)).toBe(true);
   await expect(site.locator('.ptile-count')).toHaveText('1/2');
+  // Снятая галочка возвращает задачу в работу — наверх, к открытым.
+  await site.locator('.ptile-task.done', { hasText: 'Форма' }).locator('.task-done').uncheck();
+  await expect(site.locator('.ptile-task.done')).toHaveCount(0);
+  expect(await page.evaluate(() => getTask('t4').done)).toBe(false);
+});
+
+test('выполненные — под открытыми, серые и зачёркнутые; отменённые — в самом низу, с крестиком', async ({ page }) => {
+  // Как на телефоне (cardDoneTasks, cardCancelledTasks): закрытые не пропадают
+  // из карточки, а уходят вниз и звучат тише; у них нет плея.
+  await seed(page);
+  await page.evaluate(() => {
+    const at = (min) => new Date(Date.now() - min * 60000).toISOString();
+    const status = (kind) => orderedStatuses('p1').find((x) => x.kind === kind).id;
+    const add = (id, title, extra) => state.tasks.push({
+      id, projectId: 'p1', title, done: false, notes: null, totalMs: 0, sessions: [], rate: null, pinnedAt: null,
+      createdAt: at(300), updatedAt: at(10), statusId: status('todo'), tagIds: [], versionId: null, repeat: null,
+      dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null, ...extra,
+    });
+    add('d1', 'Старый макет', { done: true, statusId: status('done'), updatedAt: at(120) });
+    add('d2', 'Свежий макет', { done: true, statusId: status('done'), updatedAt: at(5) });
+    add('c1', 'Отменённый баннер', { cancelled: true, statusId: status('cancelled') });
+    render();
+  });
+  const site = page.locator('.ptile', { hasText: 'Сайт' });
+  await expect(site.locator('.ptile-task .rl-name')).toHaveText(['Вёрстка', 'Форма', 'Свежий макет', 'Старый макет', 'Отменённый баннер']);
+  await expect(site.locator('.ptile-task.done')).toHaveCount(2);
+  await expect(site.locator('.ptile-task.cancelled')).toHaveCount(1);
+
+  const m = await page.evaluate(() => {
+    const paint = (token) => {
+      const probe = document.createElement('i');
+      probe.style.color = `var(${token})`;
+      document.body.appendChild(probe);
+      const c = getComputedStyle(probe).color;
+      probe.remove();
+      return c;
+    };
+    const row = (title) => [...document.querySelectorAll('.ptile-task')].find((n) => n.querySelector('.rl-name').textContent === title);
+    const name = (title) => getComputedStyle(row(title).querySelector('.rl-name'));
+    return {
+      faint: paint('--text-faint'), text: paint('--text'),
+      open: { color: name('Форма').color, line: name('Форма').textDecorationLine },
+      done: { color: name('Свежий макет').color, line: name('Свежий макет').textDecorationLine, checked: row('Свежий макет').querySelector('.task-done').checked, play: row('Свежий макет').querySelectorAll('.rl-play').length },
+      cancelled: { color: name('Отменённый баннер').color, line: name('Отменённый баннер').textDecorationLine, cross: !!row('Отменённый баннер').querySelector('.ptile-x svg'), box: !!row('Отменённый баннер').querySelector('.task-done'), play: row('Отменённый баннер').querySelectorAll('.rl-play').length },
+    };
+  });
+  expect(m.open.line).toBe('none');
+  expect(m.done.color, 'выполненная — серая').toBe(m.faint);
+  expect(m.done.line, 'и зачёркнутая').toBe('line-through');
+  expect(m.done.checked).toBe(true);
+  expect(m.done.play, 'без плея').toBe(0);
+  expect(m.cancelled.color, 'отменённая — серая').toBe(m.faint);
+  expect(m.cancelled.line, 'без зачёркивания').toBe('none');
+  expect(m.cancelled.cross, 'на месте галочки — крестик').toBe(true);
+  expect(m.cancelled.box).toBe(false);
+  expect(m.cancelled.play).toBe(0);
+  // Закрытая строка открывает задачу, как и открытая.
+  await site.locator('.ptile-task', { hasText: 'Отменённый баннер' }).click();
+  expect(await page.evaluate(() => [state.ui.view, selectedId])).toEqual(['task', 'c1']);
 });
 
 test('поле новой задачи заводит её в этом проекте и открывает её страницу', async ({ page }) => {
@@ -158,7 +225,7 @@ test('перерисовка не теряет набранное, фокус и
   expect(await page.evaluate(() => document.getElementById('projects-track').scrollLeft)).toBe(before);
 });
 
-test('карточки стоят в ряд одной высоты и листаются стрелками', async ({ page }) => {
+test('карточки стоят в ряд одной высоты и листаются стрелками по краям', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => {
     for (let i = 0; i < 5; i++) {
@@ -175,11 +242,15 @@ test('карточки стоят в ряд одной высоты и лист�
   expect(boxes[0].width).toBe(320);
   expect(boxes[0].height).toBeGreaterThanOrEqual(440);
   const scrollX = () => page.evaluate(() => document.getElementById('projects-track').scrollLeft);
-  await expect(page.locator('#deck-prev')).toBeDisabled();
-  await page.locator('#deck-next').click();
+  // Стрелки — по краям ряда (в обёртке .edge-host), а не в шапке страницы.
+  const prev = page.locator('.projects-deck-host .edge-btn[data-side="l"]');
+  const next = page.locator('.projects-deck-host .edge-btn[data-side="r"]');
+  await expect(prev, 'в начале ряда листать влево некуда').toBeHidden();
+  await expect(next).toBeVisible();
+  await next.click();
   await expect.poll(scrollX).toBeGreaterThan(300);
-  await expect(page.locator('#deck-prev')).toBeEnabled();
-  await page.locator('#deck-prev').click();
+  await expect(prev).toBeVisible();
+  await prev.click();
   await expect.poll(scrollX).toBe(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'страница вбок не едет').toBe(true);
   // Ряд доходит до правого края окна: карточку справа не обрезает в воздухе.
@@ -203,9 +274,11 @@ test('карточки стоят в ряд одной высоты и лист�
   expect(end).toBe(12);
   await page.evaluate(() => { const track = document.getElementById('projects-track'); track.style.scrollSnapType = ''; track.scrollLeft = 0; });
 
-  // Влезли все — стрелок нет.
+  // Влезли все — стрелок нет, как нет и растворения края.
   await page.evaluate(() => { state.projects = state.projects.slice(0, 2); render(); });
-  await expect(page.locator('#deck-next')).toBeHidden();
+  await expect(next).toBeHidden();
+  await expect(prev).toBeHidden();
+  await expect(page.locator('#projects-track')).not.toHaveAttribute('data-edge', /./);
 });
 
 test('таблица недавних задач: плей в строке запускает таймер, строка открывает задачу', async ({ page }) => {
@@ -224,9 +297,10 @@ test('таблица недавних задач: плей в строке за�
 
 // Пустой экран (9 октября 2026): по центру картинка пустой карточки,
 // «У вас пока нет проектов», пояснение и единственная акцентная кнопка —
-// кнопка в шапке на это время прячется.
+// кнопка в шапке на это время прячется. С 10 октября картинка — сценка из
+// core/illustrations.js, а кнопка — «Новый проект» (empty-states.spec.js).
 for (const scheme of ['dark', 'light']) {
-  test(`${scheme}: без проектов — пустой экран по центру с одной кнопкой «Создать проект»`, async ({ page }) => {
+  test(`${scheme}: без проектов — пустой экран по центру с одной кнопкой «Новый проект»`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await page.setViewportSize({ width: 1280, height: 900 });
     await pinClock(page);
@@ -246,11 +320,12 @@ for (const scheme of ['dark', 'light']) {
       const view = document.getElementById('projects-view').getBoundingClientRect();
       const head = document.querySelector('#projects-view .page-head').getBoundingClientRect();
       const box = document.querySelector('#home-empty').getBoundingClientRect();
-      const card = getComputedStyle(document.querySelector('.es-front')).backgroundColor;
+      // Сценка — инлайн-SVG из core/illustrations.js; лист красится токеном.
+      const card = getComputedStyle(document.querySelector('#home-empty .es-art .es-sheet')).fill;
       const probe = document.createElement('div');
-      probe.style.background = 'var(--panel)';
+      probe.style.color = 'var(--art-sheet)';
       document.body.appendChild(probe);
-      const panelColor = getComputedStyle(probe).backgroundColor;
+      const panelColor = getComputedStyle(probe).color;
       probe.remove();
       return {
         dx: Math.abs((box.left + box.right) / 2 - (view.left + view.right - 12) / 2),
@@ -320,7 +395,7 @@ test('узкий веб — колода, как на телефоне: карт
   expect(got.peek, 'от следующей карточки видно 40 px — до края экрана').toBe(40);
   expect(got.snap).toBe('x mandatory');
   expect(got.pageX, 'страница вбок не едет').toBe(true);
-  await expect(page.locator('#deck-prev')).toBeHidden();
-  await expect(page.locator('#deck-next')).toBeHidden();
+  await expect(page.locator('.projects-deck-host .edge-btn[data-side="l"]'), 'стрелок у краёв нет: ленту листают жестом').toHaveCSS('display', 'none');
+  await expect(page.locator('.projects-deck-host .edge-btn[data-side="r"]')).toHaveCSS('display', 'none');
   await expect(page.locator('.ptile').first().locator('.ptile-menu'), 'меню без наведения видно').toHaveCSS('opacity', '1');
 });

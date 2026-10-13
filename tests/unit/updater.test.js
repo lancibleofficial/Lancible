@@ -45,6 +45,7 @@ async function boot({ packaged = true } = {}) {
     destroyed: false,
     isDestroyed() { return this.destroyed; },
     loadFile() {},
+    once() {}, on() {}, show() {},
     webContents: {
       on() {}, once() {}, setWindowOpenHandler() {},
       send: (channel, payload) => sent.push([channel, payload]),

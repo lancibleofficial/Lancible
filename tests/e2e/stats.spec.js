@@ -328,3 +328,58 @@ test('имя выгрузки называет фильтр, а сама выг�
   expect(got.filtered.titles, 'а задачи из v1.3 остаются').toContain('Вёрстка карточек');
   expect(got.period.defaultName).toMatch(/Сайт клиента · v1\.3/);
 });
+
+test('фильтр проекта в статистике: меню не шире разумного, длинное название — в одну строку с точкой', async ({ page }) => {
+  // Меню под узкой кнопкой «Проект · Все проекты» растягивалось по самому
+  // длинному названию проекта — «километровое». Теперь ширина — как у кнопки,
+  // но не меньше 220 и не больше 320 px (pickerWidth).
+  const LONG = 'Очень длинное название проекта, которое никак не должно растянуть меню выбора на пол-экрана';
+  await seed(page);
+  await page.evaluate((LONG) => {
+    const id = uid();
+    state.projects.push({ id, name: LONG, color: '#f5c451', description: '', pinnedAt: null, createdAt: new Date().toISOString(), tagIds: [] });
+    seedProjectStatuses(id);
+    state.ui.view = 'time';
+    render();
+  }, LONG);
+  const btn = page.locator('#sf-project');
+  const menu = page.locator('#ctx-menu');
+  await expect(btn).toBeVisible();
+  await btn.click();
+  await expect(menu).toBeVisible();
+  // Меню въезжает 120 мс (popIn, с масштабом): рамка до конца анимации неточна.
+  await page.waitForTimeout(250);
+
+  const got = await page.evaluate(() => {
+    const m = document.getElementById('ctx-menu');
+    const mb = m.getBoundingClientRect();
+    const bb = document.getElementById('sf-project').getBoundingClientRect();
+    const item = [...m.querySelectorAll('.ctx-item')].find((n) => n.textContent.includes('Очень длинное'));
+    const label = item.querySelector('.ctx-label');
+    const dot = item.querySelector('.ctx-dot');
+    const l = label.getBoundingClientRect();
+    const d = dot.getBoundingClientRect();
+    return {
+      width: mb.width, btnW: bb.width, right: mb.right, win: window.innerWidth, left: mb.left,
+      cut: label.scrollWidth > label.clientWidth, overflow: getComputedStyle(label).textOverflow,
+      nowrap: getComputedStyle(label).whiteSpace, labelRight: l.right, dotW: d.width, dotRight: d.right, labelLeft: l.left,
+      itemH: item.getBoundingClientRect().height,
+    };
+  });
+  expect(got.width, 'не уже 220').toBeGreaterThanOrEqual(219);
+  expect(got.width, 'не шире 320').toBeLessThanOrEqual(321);
+  expect(got.width, 'ширина кнопки, если она в пределах').toBeCloseTo(Math.min(320, Math.max(220, got.btnW)), 0);
+  expect(got.left, 'в окне слева').toBeGreaterThanOrEqual(0);
+  expect(got.right, 'и справа').toBeLessThanOrEqual(got.win);
+  expect(got.cut, 'длинное название обрезано').toBe(true);
+  expect(got.overflow).toBe('ellipsis');
+  expect(got.nowrap, 'в одну строку').toBe('nowrap');
+  expect(got.labelRight, 'название не вылезает из меню').toBeLessThanOrEqual(got.right);
+  expect(got.dotW, 'цветная точка на месте').toBeGreaterThan(5);
+  expect(got.dotRight, 'точка левее названия').toBeLessThanOrEqual(got.labelLeft);
+  expect(got.itemH, 'пункт в одну строку').toBeLessThan(40);
+
+  // Выбор работает: фильтр переключился на длинный проект.
+  await menu.locator('.ctx-item', { hasText: 'Очень длинное' }).click();
+  expect(await page.evaluate((LONG) => getProject(statsFilter.projectId).name === LONG, LONG)).toBe(true);
+});

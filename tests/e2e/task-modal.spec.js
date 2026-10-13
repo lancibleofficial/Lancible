@@ -106,17 +106,17 @@ test('параметры переезжают в модалку и возвра�
 
   // И страница задачи после этого работает как прежде.
   await page.evaluate((id) => { openProject(state.projects[0].id); selectTask(id); }, ids.withEntry);
-  await expect(page.locator('#task-props #task-status')).toBeVisible();
+  await expect(page.locator('#task-props #task-statuses')).toBeVisible();
 });
 
 test('статус, поменянный в модалке, доходит до задачи', async ({ page }) => {
   await seed(page);
   await clickBlock(page, 'Главная страница');
 
-  await page.locator('#tmdlg-params #task-status').click();
-  await page.locator('#ctx-menu .ctx-item', { hasText: 'Done' }).click();
+  // Статус — чипами (13 октября 2026), в окне те же, что в панели задачи.
+  await page.locator('#tmdlg-params #task-statuses .dp-btn', { hasText: 'Done' }).click();
 
-  await expect(page.locator('#tmdlg-params #task-status')).toHaveText('Done');
+  await expect(page.locator('#tmdlg-params #task-statuses .dp-btn.on')).toHaveText('Done');
   const task = await taskOf(page, 'Главная страница');
   expect(task.status).toBe('done');
   expect(task.done).toBe(true);
@@ -128,8 +128,9 @@ test('время записи правится прямо в модалке', as
 
   await page.locator('#tmdlg-end').click();
   await expect(page.locator('#tp-pop')).toBeVisible();
-  await page.locator('#tp-pop .tp-col').first().locator('button', { hasText: /^14$/ }).click();
-  await page.locator('#tp-pop .tp-col').nth(1).locator('button', { hasText: /^00$/ }).click();
+  // Общий выбор времени: вписать и Enter (13 октября 2026, вместо колёс).
+  await page.locator('#tp-input').fill('14:00');
+  await page.keyboard.press('Enter');
 
   await expect(page.locator('#tmdlg-dur')).toHaveText('4ч');
   const task = await taskOf(page, 'Главная страница');

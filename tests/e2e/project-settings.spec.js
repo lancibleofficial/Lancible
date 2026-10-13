@@ -57,7 +57,8 @@ test('общий итог — только в основной валюте, п�
   await expect(page.locator('#project-earned')).toContainText('50 $');
   await page.evaluate(() => selectTask('t-usd'));
   await expect(page.locator('#timer-earned')).toHaveText(/50 \$/);
-  await expect(page.locator('#rate-unit')).toHaveText('$/ч');
+  // Строка «Ставка» — ставка проекта в его валюте.
+  await expect(page.locator('#rate-value')).toHaveText(/^как у проекта — 50 \$\/ч$/);
 });
 
 test('статистика: все проекты — в основной валюте, выбранный — в своей', async ({ page }) => {
@@ -68,10 +69,11 @@ test('статистика: все проекты — в основной вал
   await expect(page.locator('#sp-money')).toHaveText(/50 \$/);
 });
 
-test('окно проекта: разделы, ставка и валюта сохраняются кнопкой', async ({ page }) => {
+test('окно проекта: ставка и валюта сохраняются кнопкой', async ({ page }) => {
   await seed(page);
   await page.evaluate(() => { openProject('p-rub'); openProjectDialog(getProject('p-rub'), 'money'); });
-  await expect(page.locator('#pdlg-tabs button.on')).toHaveText('Ставка и валюта');
+  await expect(page.locator('#pdlg-sec-money .pjdlg-head')).toHaveText('Ставка и валюта');
+  await expect(page.locator('#pdlg-rate')).toBeVisible();
   await expect(page.locator('#pdlg-rate')).toHaveValue('');
   await expect(page.locator('#pdlg-rate')).toHaveAttribute('placeholder', '1000');
   await expect(page.locator('#pdlg-currency')).toHaveText(/Как в настройках \(RUB ₽\)/);
@@ -94,6 +96,7 @@ test('ставка задачи сильнее ставки проекта', asy
   await seed(page);
   await page.evaluate(() => { getTask('t-usd').rate = 80; openProject('p-usd'); selectTask('t-usd'); });
   await expect(page.locator('#timer-earned')).toHaveText(/80 \$/);
+  await expect(page.locator('#rate-value')).toHaveText('80 $/ч');
 });
 
 test('в задаче видны общие теги и теги её проекта, чужие — нет', async ({ page }) => {
@@ -126,13 +129,99 @@ test('в настройках приложения — только общие �
   await expect(page.locator('#pdlg-tag-list .settings-row-label')).toHaveText(['Invoice', 'Макет']);
 });
 
-test('у нового проекта только «Основное» и «Ставка и валюта»', async ({ page }) => {
+test('окно проекта без вкладок: все поля одним списком, середина прокручивается, кнопки на месте', async ({ page }) => {
+  // До 11 октября разделы окна переключались вкладками «Основное / Ставка и
+  // валюта / …». Теперь, как на телефоне, всё — одним списком с
+  // подзаголовками; прокручивается середина, «Отмена» и «Сохранить» стоят
+  // внизу окна.
   await seed(page);
+  await page.setViewportSize({ width: 1440, height: 520 });
   await page.evaluate(() => openProjectDialog(null));
-  const visible = await page.locator('#pdlg-tabs button:visible').allTextContents();
-  expect(visible).toEqual(['Основное', 'Ставка и валюта']);
+  const modal = page.locator('#pdlg-backdrop .modal');
+  await expect(modal).toBeVisible();
+  await expect(page.locator('#pdlg-title')).toHaveText('Новый проект');
+
+  // Вкладок нет — ни разметки, ни переключателя в окне.
+  await expect(page.locator('#pdlg-tabs')).toHaveCount(0);
+  await expect(modal.locator('.segmented')).toHaveCount(0);
+
+  // У нового проекта — основное и «Ставка и валюта», остальное — после создания.
+  await expect(modal.locator('.pjdlg-head:visible')).toHaveText(['Ставка и валюта']);
   await expect(page.locator('#pdlg-later')).toBeVisible();
-  // Поля во всю ширину окна — как в прежнем окне проекта.
-  const w = await page.evaluate(() => ({ name: document.getElementById('pdlg-name').getBoundingClientRect().width, modal: document.querySelector('#pdlg-backdrop .modal').clientWidth }));
-  expect(w.name).toBeGreaterThan(w.modal * 0.8);
+
+  // Окно помещается в экран, середина прокручивается, кнопки внизу.
+  const m = () => page.evaluate(() => {
+    const body = document.getElementById('pdlg-body');
+    const box = document.querySelector('#pdlg-backdrop .modal').getBoundingClientRect();
+    const btns = document.querySelector('#pdlg-backdrop .modal-buttons').getBoundingClientRect();
+    const save = document.getElementById('pdlg-save').getBoundingClientRect();
+    const cs = getComputedStyle(body);
+    return {
+      top: box.top, bottom: box.bottom, btnTop: btns.top, btnBottom: btns.bottom, saveW: save.width,
+      win: window.innerHeight, scroll: body.scrollTop, over: body.scrollHeight - body.clientHeight,
+      bar: body.offsetWidth - body.clientWidth - 2 * body.clientLeft, overflowY: cs.overflowY,
+    };
+  });
+  // Окно въезжает с масштабом (popIn): рамки меряем после него.
+  await page.waitForTimeout(300);
+  const before = await m();
+  expect(before.bottom, 'окно не вылезает за низ экрана').toBeLessThanOrEqual(before.win);
+  expect(before.top, 'и за верх').toBeGreaterThanOrEqual(0);
+  expect(before.over, 'середина длиннее окна — прокручивается').toBeGreaterThan(20);
+  expect(before.overflowY).toBe('auto');
+  expect(before.bar, 'полоса накладная: места в окне не занимает').toBe(0);
+  await page.evaluate(() => { document.getElementById('pdlg-body').scrollTop = 1e6; });
+  const after = await m();
+  expect(after.scroll, 'середина прокрутилась').toBeGreaterThan(0);
+  expect(Math.abs(after.btnTop - before.btnTop), 'кнопки не сдвинулись').toBeLessThanOrEqual(0.5);
+  expect(after.btnBottom, 'кнопки в окне').toBeLessThanOrEqual(after.win);
+  expect(after.saveW, '«Сохранить» видна').toBeGreaterThan(0);
+
+  // Все поля — без переключений: есть, доступны и видны (после прокрутки).
+  await page.evaluate(() => { document.getElementById('pdlg-body').scrollTop = 0; });
+  for (const sel of ['#pdlg-name', '#pdlg-desc', '#pdlg-swatches', '#pdlg-tags-add', '#pdlg-rate', '#pdlg-currency']) {
+    await page.locator(sel).scrollIntoViewIfNeeded();
+    await expect(page.locator(sel), sel).toBeVisible();
+  }
+
+  // Сохранение работает: название, описание, цвет, ставка, валюта.
+  await page.locator('#pdlg-body').evaluate((n) => { n.scrollTop = 0; });
+  await page.locator('#pdlg-name').fill('Новый заказ');
+  await page.locator('#pdlg-desc').fill('Описание проекта');
+  await page.locator('#pdlg-swatches .swatch').nth(3).click();
+  await page.locator('#pdlg-rate').fill('1500');
+  await page.locator('#pdlg-currency').click();
+  await page.locator('#ctx-menu .ctx-item', { hasText: 'EUR' }).click();
+  await page.locator('#pdlg-save').click();
+  await expect(page.locator('#pdlg-backdrop')).toBeHidden();
+  const made = await page.evaluate(() => {
+    const p = state.projects.find((x) => x.name === 'Новый заказ');
+    return p && { description: p.description, color: p.color, rate: p.rate, currency: p.currency, swatch: PALETTE[3] };
+  });
+  expect(made).toEqual({ description: 'Описание проекта', color: made.swatch, rate: 1500, currency: 'EUR', swatch: made.swatch });
+});
+
+test('настройки проекта: разделы одним списком в порядке телефона, нужный — сразу под рукой', async ({ page }) => {
+  await seed(page);
+  await page.setViewportSize({ width: 1440, height: 520 });
+  await page.evaluate(() => openProjectDialog(getProject('p-rub')));
+  await expect(page.locator('#pdlg-title')).toHaveText('Настройки проекта');
+  await expect(page.locator('#pdlg-tabs')).toHaveCount(0);
+  await expect(page.locator('#pdlg-backdrop .pjdlg-head:visible')).toHaveText(['Ставка и валюта', 'Теги', 'Версии', 'Статусы']);
+  await expect(page.locator('#pdlg-later')).toBeHidden();
+
+  // Закрыли и открыли на статусах — окно прокручено к ним, «Статусы» видны.
+  await page.locator('#pdlg-cancel').click();
+  await page.evaluate(() => openProjectDialog(getProject('p-rub'), 'statuses'));
+  await expect(page.locator('#st-list .st-row').first()).toBeVisible();
+  await page.waitForTimeout(300);
+  const at = await page.evaluate(() => {
+    const body = document.getElementById('pdlg-body');
+    const head = document.querySelector('#pdlg-sec-statuses .pjdlg-head').getBoundingClientRect();
+    const box = body.getBoundingClientRect();
+    return { scrolled: body.scrollTop, headTop: head.top - box.top, headBottom: head.bottom - box.top, bodyH: box.height };
+  });
+  expect(at.scrolled, 'окно прокручено к статусам').toBeGreaterThan(0);
+  expect(at.headTop, 'подзаголовок «Статусы» в окне').toBeGreaterThanOrEqual(-1);
+  expect(at.headBottom, 'и не за нижним краем середины').toBeLessThanOrEqual(at.bodyH);
 });

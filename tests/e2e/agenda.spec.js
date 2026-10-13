@@ -322,16 +322,15 @@ test('выделенная зона открывает окно создания
   await expect(page.locator('#tmdlg-open')).toHaveText('Отмена');
   await expect(page.locator('#tmdlg-done')).toHaveText('Создать');
   // Настройки — те же, что во вкладке задачи: узел переехал сюда целиком.
-  await expect(page.locator('#tmdlg-params #task-status')).toBeVisible();
+  await expect(page.locator('#tmdlg-params #task-statuses')).toBeVisible();
   await expect(page.locator('#tmdlg-params #task-tags-add')).toBeVisible();
-  await expect(page.locator('#tmdlg-params #task-rate')).toBeVisible();
+  await expect(page.locator('#tmdlg-params #rate-row')).toBeVisible();
   await expect(page.locator('#tmdlg-params #due-date-btn')).toBeVisible();
   expect(await page.evaluate(() => state.tasks.length), 'черновик уже в списке').toBe(before + 1);
 
   await page.locator('#tmdlg-title').fill('Созвон с командой');
   // Статус ставится прямо здесь, до создания.
-  await page.locator('#tmdlg-params #task-status').click();
-  await page.locator('#ctx-menu .ctx-item', { hasText: 'In progress' }).click();
+  await page.locator('#tmdlg-params #task-statuses .dp-btn', { hasText: 'In progress' }).click();
   await page.locator('#tmdlg-done').click();
   await expect(dlg).toBeHidden();
 

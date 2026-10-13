@@ -81,3 +81,21 @@ test('блоки светлой темы дают одинаковые токе�
     tokens('  :root:not([data-theme="dark"]):not([data-theme="light"]) {'),
   );
 });
+
+for (const [name, head] of Object.entries(THEMES)) {
+  test(`${name} тема: --danger-dim — это --danger на 85% поверх --panel, и он читается на панели`, () => {
+    // Опасный пункт меню в покое. Раньше его красил color-mix на месте, то есть
+    // оттенок жил вне палитры; теперь это токен, посчитанный вперёд, и тест
+    // следит, что он не разошёлся с формулой, по которой его считали.
+    const t = tokens(head);
+    assert.ok(t['--danger-dim'], 'в блоке нет --danger-dim');
+    const chan = (hex, i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+    for (let i = 0; i < 3; i += 1) {
+      const mixed = chan(t['--danger'], i) * 0.85 + chan(t['--panel'], i) * 0.15;
+      assert.ok(Math.abs(chan(t['--danger-dim'], i) - mixed) <= 1, `канал ${i}: ${chan(t['--danger-dim'], i)} против смеси ${mixed.toFixed(1)}`);
+    }
+    const r = ratio(t['--danger-dim'], t['--panel']);
+    assert.ok(r >= 4.5, `--danger-dim на --panel: ${r.toFixed(2)}`);
+    assert.notEqual(t['--danger-dim'], t['--danger'], 'в покое он приглушён, а не равен --danger');
+  });
+}

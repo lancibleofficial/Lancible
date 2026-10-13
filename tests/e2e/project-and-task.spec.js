@@ -161,3 +161,50 @@ test('шапка задачи — одно название; теги и уда�
   await page.locator('#confirm-ok').click();
   expect(await page.evaluate((tid) => state.tasks.some((x) => x.id === tid), id)).toBe(false);
 });
+
+test('длинное название задачи вне фокуса — одной строкой с многоточием, в фокусе — обычное поле', async ({ page }) => {
+  const LONG = 'Очень длинное название задачи, которое не поместится в поле заголовка ни на десктопе, ни на телефоне, сколько ни расширяй окно';
+  await page.evaluate((LONG) => {
+    const now = new Date().toISOString();
+    const pid = uid();
+    state.projects.push({ id: pid, name: 'Сайт', color: '#87ff65', description: '', pinnedAt: null, createdAt: now, tagIds: [] });
+    seedProjectStatuses(pid);
+    const tid = uid();
+    state.tasks.push({
+      id: tid, projectId: pid, title: LONG, done: false, notes: null, totalMs: 0, sessions: [], rate: null, pinnedAt: null,
+      createdAt: now, updatedAt: now, statusId: orderedStatuses(pid)[1].id, tagIds: [], versionId: null, repeat: null, cancelled: false,
+      dueAt: null, remindOffsetMin: null, remindAt: null, notifiedAt: null,
+    });
+    openProject(pid);
+    selectTask(tid);
+  }, LONG);
+
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    const m = await page.evaluate(() => {
+      const n = document.getElementById('task-title');
+      const s = getComputedStyle(n);
+      const doc = document.documentElement;
+      return {
+        overflow: s.textOverflow, wide: n.scrollWidth > n.clientWidth,
+        focused: document.activeElement === n, pageW: doc.scrollWidth, winW: doc.clientWidth,
+      };
+    });
+    expect(m.focused, `${width}: поле не в фокусе`).toBe(false);
+    expect(m.overflow, `${width}: многоточие`).toBe('ellipsis');
+    expect(m.wide, `${width}: название длиннее поля`).toBe(true);
+    expect(m.pageW, `${width}: страница не прокручивается вбок`).toBeLessThanOrEqual(m.winW);
+  }
+
+  // В фокусе — обычное редактирование: многоточия на месте курсора нет, текст
+  // дописывается, страницу вбок по-прежнему не утащить.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const title = page.locator('#task-title');
+  await title.focus();
+  expect(await title.evaluate((n) => getComputedStyle(n).textOverflow), 'в фокусе — без многоточия').not.toBe('ellipsis');
+  await page.keyboard.press('End');
+  await page.keyboard.type(' ХВОСТ');
+  expect(await page.evaluate(() => state.tasks[0].title.endsWith(' ХВОСТ'))).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});

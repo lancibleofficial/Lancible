@@ -146,3 +146,213 @@ test('«Открыть день» ведёт в календарь на сего
   await page.locator('#day-open').click();
   expect(await page.evaluate(() => [state.ui.view, state.ui.timeMode, agenda.mode])).toEqual(['time', 'day', 'day']);
 });
+
+// --- полоса дня: цвета проектов -------------------------------------------------
+//
+// С 11 октября 2026 запись на ленте — цветом проекта своей задачи, а не
+// серой. Как событие в панели «Время» (.ag-ev): полоса слева — чистый цвет
+// проекта (--pc), заливка и подпись смешаны из него и из земли (--tag-ink
+// подобран под обе темы). Идущая запись остаётся акцентом: она одна на ленте.
+
+/** Контраст по WCAG. Браузер отдаёт цвет то как "rgb(r, g, b)", то — для
+ *  color-mix — как "color(srgb r g b)" с долями от 0 до 1. */
+const ratio = (fg, bg) => {
+  const lum = (c) => {
+    const scale = c.startsWith('color(') ? 255 : 1;
+    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map((v) => {
+      const x = (Number(v) * scale) / 255;
+      return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [hi, lo] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+const rgb = (hex) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+
+/** Токен темы → вычисленный цвет: ровно то, что видит человек. */
+const token = (page, name) => page.evaluate((n) => {
+  const probe = document.createElement('div');
+  probe.style.color = `var(${n})`;
+  document.body.append(probe);
+  const c = getComputedStyle(probe).color;
+  probe.remove();
+  return c;
+}, name);
+
+const COLORS = { 'Вёрстка': '#87ff65', 'Экран входа': '#5ec8f2', 'Логотип': '#f5c451' };
+
+for (const theme of ['dark', 'light']) {
+  test(`полоса дня (${theme}): запись — цветом проекта своей задачи, разные проекты — разные цвета`, async ({ page }) => {
+    await seed(page);
+    await page.evaluate((th) => { state.settings.theme = th; applyTheme(); }, theme);
+    const raise = await token(page, '--raise');
+    const blocks = await page.evaluate(() => [...document.querySelectorAll('.day-blk')].map((b) => {
+      const s = getComputedStyle(b);
+      return { name: b.title.split(' · ')[0], edge: s.borderLeftColor, edgeWidth: s.borderLeftWidth, bg: s.backgroundColor, color: s.color, pc: b.style.getPropertyValue('--pc') };
+    }));
+    expect(blocks.map((b) => b.name).sort()).toEqual(Object.keys(COLORS).sort());
+    for (const b of blocks) {
+      expect(b.pc, `${b.name}: цвет проекта пришёл в --pc`).toBe(COLORS[b.name]);
+      expect(b.edge, `${b.name}: полоса слева — цвет проекта`).toBe(rgb(COLORS[b.name]));
+      expect(b.edgeWidth).toBe('3px');
+      expect(b.bg, `${b.name}: заливка уже не серая подложка`).not.toBe(raise);
+      expect(ratio(b.color, b.bg), `${b.name}: подпись читается на заливке (AA, 4.5)`).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(new Set(blocks.map((b) => b.edge)).size, 'три проекта — три цвета полосы').toBe(3);
+    expect(new Set(blocks.map((b) => b.bg)).size, 'и три заливки').toBe(3);
+  });
+}
+
+test('полоса дня: цвет проекта сменили — запись перекрасилась; идущая — по-прежнему акцентом', async ({ page }) => {
+  await seed(page);
+  await page.evaluate(() => {
+    state.projects.find((p) => p.id === 'p1').color = '#ff5a5a';
+    const d = new Date();
+    d.setHours(11, 30, 0, 0);
+    state.activeTimer = { taskId: 't2', startedAt: d.toISOString(), heartbeatAt: d.toISOString() };
+    renderDayIsland();
+  });
+  const edge = (title) => page.evaluate((t) => getComputedStyle([...document.querySelectorAll('.day-blk')].find((b) => b.title.startsWith(t))).borderLeftColor, title);
+  expect(await edge('Вёрстка')).toBe(rgb('#ff5a5a'));
+  const run = await page.evaluate(() => {
+    const s = getComputedStyle(document.querySelector('.day-blk.run'));
+    return { bg: s.backgroundColor, color: s.color, edge: s.borderLeftWidth };
+  });
+  expect(run.bg, 'идущая — фон акцента').toBe(await token(page, '--accent'));
+  expect(run.color).toBe(await token(page, '--accent-text'));
+  expect(run.edge, 'у идущей полосы цвета проекта нет').toBe('0px');
+  await expect(page.locator('.day-now'), 'красная линия «сейчас» на месте').toHaveCount(1);
+});
+
+// --- тик «Сегодня» и наблюдатели за <body> ---------------------------------------
+//
+// Замечание ревью 11 октября 2026. Пока на «Сегодня» идёт таймер, тик каждые
+// 250 мс звал renderDayIsland, и та стирала и заводила заново ленту дня, часы
+// над ней и строку «записано» — десяток узлов четыре раза в секунду; на каждый
+// из них наблюдатели за <body> гоняли поиск накладных полос и сегментных
+// переключателей по ~30 селекторам. Теперь рисуемое сначала описывается и в
+// DOM уходит, только если описание изменилось; а наблюдатели не ищут в узлах,
+// где искать нечего.
+
+/** Идёт задача t2 с 11:30; время страницы прибито к полудню (clock.js). */
+async function runTimer(page) {
+  await page.evaluate(() => {
+    const d = new Date();
+    d.setHours(11, 30, 0, 0);
+    state.activeTimer = { taskId: 't2', startedAt: d.toISOString(), heartbeatAt: d.toISOString() };
+    render();
+  });
+  await page.waitForTimeout(500);
+}
+
+test('идущий таймер: лента дня, часы и строка «записано» не пересобираются на каждом тике', async ({ page }) => {
+  await seed(page);
+  await runTimer(page);
+  await page.evaluate(() => {
+    window.__rebuilt = [];
+    for (const id of ['day-track', 'day-hours', 'day-sub', 'now-proj']) {
+      new MutationObserver(() => window.__rebuilt.push(id)).observe(document.getElementById(id), { childList: true });
+    }
+  });
+  await page.waitForTimeout(1300); // пять тиков
+  expect(await page.evaluate(() => window.__rebuilt), 'рисовать нечего нового — DOM не трогают').toEqual([]);
+
+  // А время идёт: ушло на полчаса вперёд — красная линия поехала, у идущей записи выросла подпись.
+  const left = () => page.evaluate(() => document.querySelector('.day-now').style.left);
+  const before = await left();
+  await page.clock.setFixedTime(new Date('2026-06-10T12:30:00'));
+  await expect.poll(left, { message: 'линия «сейчас» поехала' }).not.toBe(before);
+  await expect.poll(() => page.evaluate(() => document.querySelector('.day-blk.run').textContent), { message: 'идущая запись выросла: на ней подпись с временем' }).toContain('1ч');
+  expect(await page.evaluate(() => window.__rebuilt.length), 'перестройка была, когда изменилось рисуемое').toBeGreaterThan(0);
+});
+
+test('наблюдатели за <body>: узлы без вложенных элементов и собственные дорожки поиск областей не гоняют, новые области и переключатели находятся', async ({ page }) => {
+  await seed(page);
+  const r = await page.evaluate(async () => {
+    const hits = { areas: 0, seg: 0 };
+    const qsa = Element.prototype.querySelectorAll;
+    Element.prototype.querySelectorAll = function patched(sel) {
+      if (typeof sel === 'string' && sel.includes('.nav-projects')) hits.areas += 1;
+      return qsa.call(this, sel);
+    };
+    const gebc = Element.prototype.getElementsByClassName;
+    Element.prototype.getElementsByClassName = function patched(name) {
+      if (name === 'segmented') hits.seg += 1;
+      return gebc.call(this, name);
+    };
+    const wait = () => new Promise((res) => setTimeout(res, 60));
+    const out = {};
+    const run = async (name, fn) => {
+      hits.areas = 0;
+      hits.seg = 0;
+      fn();
+      await wait();
+      out[name] = { areas: hits.areas, seg: hits.seg };
+    };
+    const el = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
+
+    await run('leaf', () => document.body.appendChild(document.createElement('i')));
+    await run('text', () => document.body.appendChild(document.createTextNode('текст')));
+    await run('subtree', () => document.body.appendChild(el('<div><i></i></div>')));
+
+    // Область со списком, у которой тут же заводится дорожка: она ложится в <body>
+    // с бегунком внутри, но областью быть не может.
+    const box = el('<div class="doc-list" style="height:50px;overflow:auto"><div style="height:500px"></div></div>');
+    await run('area', () => document.body.appendChild(box));
+    out.areaAttached = box.hasAttribute('data-ovs');
+    await run('track', () => ovsBar(ovsAreas.get(box)));
+    out.trackAdded = !!document.querySelector('.ovs-track');
+
+    // Область и переключатель в обёртке: находятся, хотя сами узлом не добавлялись.
+    const wrap = el('<div><div class="task-side"><i></i></div><div class="segmented"><button class="on">А</button><button>Б</button></div></div>');
+    await run('nested', () => document.body.appendChild(wrap));
+    out.nestedArea = wrap.querySelector('.task-side').hasAttribute('data-ovs');
+    out.nestedSeg = wrap.querySelector('.segmented').classList.contains('seg-glide');
+
+    // Внутрь переключателя вставили узел с детьми: переключатели в нём не ищут.
+    const seg = wrap.querySelector('.segmented');
+    await run('inSeg', () => seg.appendChild(el('<span><b></b></span>')));
+    return out;
+  });
+
+  expect(r.leaf, 'элемент без детей: поиска в поддереве нет').toEqual({ areas: 0, seg: 0 });
+  expect(r.text, 'текстовый узел не разбирается').toEqual({ areas: 0, seg: 0 });
+  expect(r.subtree.areas, 'элемент с детьми: поддерево просмотрено (счётчик живой)').toBeGreaterThan(0);
+  expect(r.subtree.seg).toBeGreaterThan(0);
+  expect(r.areaAttached, 'область подключилась').toBe(true);
+  expect(r.trackAdded, 'дорожка появилась').toBe(true);
+  expect(r.track, 'собственная дорожка в <body> областью не считается и не ищется').toEqual({ areas: 0, seg: 0 });
+  expect(r.nestedArea, 'область внутри обёртки найдена').toBe(true);
+  expect(r.nestedSeg, 'переключатель внутри обёртки найден').toBe(true);
+  expect(r.inSeg.seg, 'внутри переключателя других переключателей не ищут').toBe(0);
+});
+
+test('кнопки записи скруглены крупнее — --radius: квадрат таймера, «Запись», «Открыть день», «Открыть»', async ({ page }) => {
+  // 13 октября 2026: кнопки строки записи были со скруглением --radius-sm
+  // (квадрат таймера — даже --radius-xs) и смотрелись острыми рядом с
+  // островом. Теперь у них скругление острова — --radius. Общие поля и
+  // текстовые кнопки остались --radius-sm.
+  await seed(page);
+  const radius = (token) => page.evaluate((token) => {
+    const probe = document.createElement('i');
+    probe.style.borderRadius = `var(${token})`;
+    document.body.appendChild(probe);
+    const r = getComputedStyle(probe).borderTopLeftRadius;
+    probe.remove();
+    return r;
+  }, token);
+  const big = await radius('--radius');
+  const small = await radius('--radius-sm');
+  expect(big).toBe('14px');
+  const of = (sel) => page.locator(sel).first().evaluate((n) => getComputedStyle(n).borderTopLeftRadius);
+  for (const sel of ['#now-btn', '#day-add-entry', '#day-open', '#now-open']) expect(await of(sel), sel).toBe(big);
+  await page.evaluate(() => selectTask('t1'));
+  for (const sel of ['#timer-btn']) expect(await of(sel), sel).toBe(big);
+  await page.locator('#task-tabs button[data-tab="history"]').click();
+  for (const sel of ['#add-session-btn', '#export-task-btn']) expect(await of(sel), sel).toBe(big);
+  // Общий вид прочих мест не тронут: «Создать» в карточке и поле — --radius-sm.
+  await page.evaluate(() => openView('projects'));
+  expect(await of('.ptile-qa .btn-soft')).toBe(small);
+  expect(await of('.ptile-qa .field')).toBe(small);
+});

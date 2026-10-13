@@ -66,6 +66,9 @@
   --border: var(--line);
   --border-soft: var(--line);
   --border-strong: #45474f;
+  /* Полоса прокрутки — приглушённая, а под курсором чуть ярче. */
+  --scrollbar: #3b3d44;
+  --scrollbar-hover: #5b5e68;
   /* Рейл и пилюли шапки — острова, как всё остальное. */
   --rail: #1a1b1f;
   --pill: #232428;
@@ -78,16 +81,21 @@
   /* Акцент — только у главного: кнопка действия, квадрат стоп/плей у
      идущего таймера, точка капсулы, «сегодня». Деньги и сроки — обычный
      текст. Акцент текстом — отдельный токен: на белом неон не читается. */
-  --accent: #87ff65;
-  --accent-hover: #aceb98;
-  --accent-text: #16220e;
-  --accent-ink: #87ff65;
+  --accent: #69d345;
+  --accent-hover: #7add58;
+  --accent-text: #0d1a07;
+  --accent-ink: #69d345;
 
   --link: #5ec8f2;
   --danger: #ef7a72;
-  --running: #aceb98;
-  /* Белое поверх насыщенной заливки: текст опасной кнопки, цифра в значке,
-     бегунок включённого переключателя. В обеих темах одно и то же. */
+  /* Приглушённый красный: опасный пункт меню в покое. Смесь --danger с
+     --panel на 85%, посчитанная вперёд — токеном, а не color-mix на месте, как
+     и все остальные цвета. Читается на --panel (tests/unit/contrast.test.js). */
+  --danger-dim: #cf6c66;
+  --running: #7add58;
+  /* Белое поверх насыщенной заливки: текст опасной кнопки, цифра в значке.
+     В обеих темах одно и то же. Бегунок включённого переключателя — не
+     здесь: на зелёной дорожке белый не виден, он берёт --accent-text. */
   --text-on-color: #fff;
   /* Затемнение под модалкой и фон блока кода в редакторе тёмные в обеих
      темах: код читается светлым по тёмному и в светлой теме. */
@@ -97,7 +105,15 @@
   --tab-active-bg: #2a2b31;
   --nav-active-bg: #232428;
   /* Выделенный период на сетке месяца, столбец «сегодня» в неделе. */
-  --sel: rgba(135, 255, 101, 0.10);
+  --sel: rgba(105, 211, 69, 0.10);
+
+  /* Иллюстрации пустых экранов (core/illustrations.js): подложка-круг, лист
+     поверх неё и линии на листе. Подложка отличается и от земли, и от
+     острова, поэтому сценка одна и та же на любом из них. Акцент — свой,
+     --accent. */
+  --art-plate: var(--panel-2);
+  --art-sheet: #34363e;
+  --art-ink: #4c4f58;
 
   /* Тени только у того, что парит над страницей: меню, пикеры, модалки.
      Острова и пилюли теней не носят. */
@@ -105,9 +121,22 @@
   --shadow-pop: 0 10px 28px rgba(0, 0, 0, 0.5);
   --shadow-modal: 0 16px 44px rgba(0, 0, 0, 0.55);
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Пружины для «жидких» анимаций (linear() — Chromium 113+). --spring —
+     затухающая пружина с перехлёстом ~20%: капля, галочка, значок, который
+     выпрыгивает. --spring-soft — подложка вкладок: к середине пути ещё в
+     пути, у самого конца мягкий перехлёст ~3% и возврат. */
+  --spring: linear(0, 0.043, 0.153, 0.306, 0.479, 0.652, 0.812, 0.949, 1.057, 1.134, 1.182, 1.203, 1.203, 1.186, 1.158, 1.124, 1.088, 1.053, 1.023, 0.998, 0.979, 0.967, 0.96, 0.958, 0.96, 0.965, 0.971, 0.978, 0.986, 0.992, 0.998, 1.003, 1.006, 1.008, 1.009, 1.009, 1.008, 1.007, 1.005, 1.004, 1);
+  --spring-soft: linear(0, 0.143, 0.271, 0.386, 0.489, 0.579, 0.66, 0.73, 0.791, 0.844, 0.89, 0.929, 0.961, 0.986, 1.006, 1.02, 1.028, 1.03, 1.026, 1.016, 1);
   --radius: 14px;
   --radius-sm: 10px;
+  /* Кнопка запуска и галочка задачи — один скруглённый квадрат во всех
+     местах. Треть самой мелкой стороны (галочка 16 px): галочка читается
+     квадратом, а не кругом, и кнопки 28–44 px не выглядят острыми. */
+  --radius-xs: 5px;
   --gap: 12px;
+  /* Ширина зоны полосы прокрутки: полоса накладная (см. «Скроллбар»), места в
+     раскладке не занимает; бегунок внутри зоны — 4 px, под курсором 8 px. */
+  --sb: 10px;
   --nav-w: 184px;
   --nav-w-collapsed: 52px;
   /* Ширина зоны под нативные кнопки окна macOS в шапке. Не связана с рейлом:
@@ -158,23 +187,29 @@
     --tag-ink: 40%;
     --line: rgba(10, 10, 12, 0.07);
     --border-strong: #9d9da5;
+    --scrollbar: #c8c8cf;
+    --scrollbar-hover: #a4a4ad;
     --rail: #ffffff;
     --pill: #ffffff;
     --text: #0a0a0c;
     --text-dim: #45454d;
     --text-faint: #6a6a73;
     --icon: #55555d;
-    --accent: #62d841;
-    --accent-hover: #52c932;
+    --accent: #63c841;
+    --accent-hover: #56b337;
     --accent-text: #0d1a07;
-    --accent-ink: #157308;
+    --accent-ink: #1f7a12;
     --link: #1764a3;
     --danger: #c22a1d;
-    --running: #3da324;
+    --danger-dim: #cb4a3f;
+    --running: #49982f;
     --code-bg: #232428;
     --tab-active-bg: #ffffff;
     --nav-active-bg: #f1f2f4;
-    --sel: rgba(98, 216, 65, 0.14);
+    --sel: rgba(99, 200, 65, 0.14);
+    --art-plate: #e3e5e9;
+    --art-sheet: #ffffff;
+    --art-ink: #c9ccd3;
     --shadow-pop: 0 8px 24px rgba(9, 9, 11, 0.16);
     --shadow-modal: 0 18px 48px rgba(9, 9, 11, 0.22);
     --led-c-gray: #5f6670;
@@ -210,23 +245,29 @@
   --tag-ink: 40%;
   --line: rgba(10, 10, 12, 0.07);
   --border-strong: #9d9da5;
+  --scrollbar: #c8c8cf;
+  --scrollbar-hover: #a4a4ad;
   --rail: #ffffff;
   --pill: #ffffff;
   --text: #0a0a0c;
   --text-dim: #45454d;
   --text-faint: #6a6a73;
   --icon: #55555d;
-  --accent: #62d841;
-  --accent-hover: #52c932;
+  --accent: #63c841;
+  --accent-hover: #56b337;
   --accent-text: #0d1a07;
-  --accent-ink: #157308;
+  --accent-ink: #1f7a12;
   --link: #1764a3;
   --danger: #c22a1d;
-  --running: #3da324;
+  --danger-dim: #cb4a3f;
+  --running: #49982f;
   --code-bg: #232428;
   --tab-active-bg: #ffffff;
   --nav-active-bg: #f1f2f4;
-  --sel: rgba(98, 216, 65, 0.14);
+  --sel: rgba(99, 200, 65, 0.14);
+  --art-plate: #e3e5e9;
+  --art-sheet: #ffffff;
+  --art-ink: #c9ccd3;
   --shadow-pop: 0 8px 24px rgba(9, 9, 11, 0.16);
   --shadow-modal: 0 18px 48px rgba(9, 9, 11, 0.22);
   --led-c-gray: #5f6670;
@@ -272,31 +313,63 @@ input, select, button, textarea { font-family: inherit; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* ---------- Скроллбар: тонкий, минималистичный, в цветах темы ----------
-   Только webkit-псевдоэлементы, БЕЗ scrollbar-width/scrollbar-color: в Chromium
-   если на элементе заданы обе группы свойств одновременно, побеждают
-   стандартные scrollbar-width/scrollbar-color и весь webkit-кастом (в т.ч.
-   ::-webkit-scrollbar-button) молча игнорируется — скроллбар откатывается на
-   вид по умолчанию (широкий, со стрелками, без скругления), хотя getComputedStyle
-   по пseudo-элементам при этом всё равно возвращает "нужные" значения (это и
-   ввело в заблуждение при предыдущей проверке). Приложение — Electron/Chromium
-   only, кроссбраузерный fallback не нужен. */
-*::-webkit-scrollbar { width: 10px; height: 10px; }
+/* ---------- Скроллбар: накладной, тонкий, в цветах темы ----------
+   Полоса места не занимает и содержимое не двигает: у прокручиваемых областей
+   приложения (атрибут data-ovs — его ставит attachOverlayScroll в app.js)
+   нативная полоса скрыта, а поверх содержимого, у правого края области,
+   рисуется своя: дорожка .ovs-track с бегунком .ovs-thumb. Дорожки лежат в
+   <body> и в разметку областей не вмешиваются. Вбок полосы нет совсем —
+   ни накладной, ни нативной: ленты, что листаются вбок, показывают свой край
+   растворением и кнопкой-стрелкой (компонент «Край ленты», слой «Компоненты»). Видна, пока область
+   крутят или над ней мышь, и гаснет через секунду тишины; под самой дорожкой
+   бегунок толще и ярче. Размер и положение бегунка считает app.js — от
+   scrollHeight, clientHeight и scrollTop; здесь — только вид. Цвет — токены
+   --scrollbar и --scrollbar-hover, зона дорожки — --sb. Отступов под полосу
+   и scrollbar-gutter нет нигде: их нет и в раскладке экранов.
+
+   Нативная полоса осталась там, куда накладной ещё нет хода: внутри текста
+   редактора (блоки кода, таблицы) и его подсказок. Она тонкая и в тех же
+   цветах, но место занимает. Только webkit-псевдоэлементы, БЕЗ
+   scrollbar-width/scrollbar-color: в Chromium если на элементе заданы обе
+   группы свойств одновременно, побеждают стандартные и весь webkit-кастом (в
+   т.ч. ::-webkit-scrollbar-button) молча игнорируется — полоса откатывается на
+   вид по умолчанию (широкий, со стрелками, без скругления). Исключение —
+   [data-ovs]: там полоса скрыта целиком, и оба способа говорят одно. */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 *::-webkit-scrollbar-track { background: transparent; }
-/* Полоса прячется, пока область не трогают: видна, когда над ней мышь
-   (.scroll-hover) или её крутят (.is-scrolling, ещё секунду после). Оба
-   класса ставит app.js: на :hover Chromium стиль полосы меняет, а на экране
-   оставляет прежнюю. Место под полосой остаётся — содержимое не прыгает. */
 *::-webkit-scrollbar-thumb {
-  background-color: transparent;
+  background-color: var(--scrollbar);
   background-clip: padding-box;
-  border: 3px solid transparent;
+  border: 2px solid transparent;
   border-radius: 9px;
 }
-.scroll-hover::-webkit-scrollbar-thumb, .is-scrolling::-webkit-scrollbar-thumb { background-color: var(--border-strong); }
-*::-webkit-scrollbar-thumb:hover { background-color: var(--icon); background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-hover); background-clip: padding-box; }
 *::-webkit-scrollbar-corner { background: transparent; }
+/* Вбок область не едет, пока у неё самой не сказано иное: лента карточек
+   проектов (.projects-deck) и дорожки доски (.board-cols) объявляют свой
+   overflow-x ниже и подключены к «Краю ленты». Страница или колонка, чьё
+   содержимое чуть шире, обрежет его, а не обзаведётся полосой снизу. */
+[data-ovs] { scrollbar-width: none; overflow-x: hidden; }
+[data-ovs]::-webkit-scrollbar { display: none; width: 0; height: 0; }
+/* Дорожка не видна и не ловит мышь, пока область не трогают. visibility
+   меняется после затухания, а при появлении — сразу. Пока видна, мышь она
+   тоже не ловит (pointer-events: none): лежит поверх содержимого, и щелчок в
+   правых 10 px строки списка или пункта меню должен дойти до строки. Ловит
+   только бегунок — его ширина, а не вся зона --sb. */
+.ovs-track {
+  position: fixed; z-index: 500; box-sizing: border-box;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.18s var(--ease), visibility 0s linear 0.18s;
+  width: var(--sb); user-select: none; touch-action: none; pointer-events: none;
+}
+.ovs-track.on { opacity: 1; visibility: visible; transition: opacity 0.12s var(--ease), visibility 0s; }
+.ovs-thumb { position: absolute; top: 0; right: calc((var(--sb) - 4px) / 2); width: 4px; border-radius: 99px; background: var(--scrollbar); pointer-events: auto; transition: background-color 0.12s var(--ease), width 0.12s var(--ease), right 0.12s var(--ease); }
+.ovs-track:hover .ovs-thumb, .ovs-track.drag .ovs-thumb { right: calc((var(--sb) - 8px) / 2); width: 8px; background: var(--scrollbar-hover); }
+body.ovs-dragging { user-select: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ovs-track, .ovs-track.on, .ovs-thumb { transition: none; }
+}
 
 html, body { margin: 0; height: 100%; overflow: hidden; }
 body {
@@ -334,6 +407,128 @@ b, strong { font-weight: 600; }
 @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* Строка переезжает на новое место (app.js, «Порядок строк»): остановили
+   задачу, и она встала первой в «Недавних», в карточке, в «Проектах» на
+   «Сегодня». Код замеряет, где строка стояла и где встала, и кладёт разницу
+   в --flip-x/--flip-y; строка едет из прежнего места в новое. Перерисовка
+   посреди переезда доигрывает его с того же момента (--flip-t —
+   отрицательная задержка). Остановленная (.flip-lead) идёт над остальными
+   на подложке — как поднятая карточка, а не текст по тексту. Без движения
+   код класс не ставит. */
+@keyframes flipMove { from { transform: translate(var(--flip-x, 0), var(--flip-y, 0)); } }
+.flip-move { position: relative; animation: flipMove 0.4s var(--ease) var(--flip-t, 0s) both; }
+.flip-move.flip-lead { z-index: 1; background: var(--panel-2); }
+
+/* «Жидкий» старт таймера (см. «Кнопка запуска» и «Таймер в правом верхнем
+   углу»). Желе — упругое колебание формы: сплющило ударом капли,
+   растеклось, качнулось обратно и улеглось; амплитуда тает к концу. */
+@keyframes liqJelly {
+  0% { transform: none; }
+  14% { transform: scale(0.86, 1.1); }
+  34% { transform: scale(1.12, 0.9); }
+  52% { transform: scale(0.95, 1.05); }
+  70% { transform: scale(1.03, 0.98); }
+  86% { transform: scale(0.99, 1.01); }
+  100% { transform: none; }
+}
+/* Слив мягче налива: форма проседает и выпрямляется. */
+@keyframes liqSag {
+  0% { transform: none; }
+  30% { transform: scale(1.06, 0.92); }
+  58% { transform: scale(0.98, 1.03); }
+  80% { transform: scale(1.01, 0.99); }
+  100% { transform: none; }
+}
+/* Жидкость в кнопке — большой скруглённый квадрат: пока он поднимается и
+   поворачивается, его край над кнопкой ходит волной. Конец подъёма
+   накрывает кнопку целиком при любом повороте. */
+@keyframes liqRise {
+  from { transform: translate(-50%, 0) rotate(0deg); }
+  to { transform: translate(-50%, -54%) rotate(200deg); }
+}
+@keyframes liqFall {
+  from { transform: translate(-50%, -46%) rotate(0deg); }
+  to { transform: translate(-50%, 2%) rotate(-170deg); }
+}
+@keyframes liqRing { from, 70% { border-color: var(--panel-2); } to { border-color: var(--accent); } }
+@keyframes liqPop { from { transform: scale(0.2); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes liqFadeIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+@keyframes liqFadeOut { to { opacity: 0; } }
+/* Капсула шапки: проявляется справа налево от места «Старта» (край —
+   полукруг, как у пилюли) и обратно стекает в него. */
+@keyframes liqReveal {
+  from { clip-path: inset(0 0 0 calc(100% - var(--liq-from, 34px)) round 999px); }
+  to { clip-path: inset(0 0 0 0 round 999px); }
+}
+@keyframes liqDrain {
+  from { clip-path: inset(0 0 0 0 round 999px); }
+  to { clip-path: inset(0 0 0 calc(100% - var(--liq-from, 34px)) round 999px); }
+}
+/* Капсула растягивается — тоньше, перехлёст — толще; качается у правого края. */
+@keyframes liqStretch {
+  0% { transform: none; }
+  12% { transform: scale(1, 1.1); }
+  40% { transform: scale(1.015, 0.9); }
+  60% { transform: scale(0.995, 1.05); }
+  78% { transform: scale(1.004, 0.98); }
+  100% { transform: none; }
+}
+/* Зелёная капля «Стопа»: набухает из точки и вздрагивает, пока не встанет. */
+@keyframes liqDropIn {
+  0% { transform: scale(0.3, 0.55); }
+  30% { transform: scale(1.12, 0.84); }
+  50% { transform: scale(0.94, 1.1); }
+  70% { transform: scale(1.03, 0.96); }
+  85% { transform: scale(0.99, 1.01); }
+  100% { transform: none; }
+}
+@keyframes liqDropOut {
+  0%, 46% { transform: none; }
+  62% { transform: scale(1.1, 0.9); }
+  100% { transform: scale(0.2, 0.4); }
+}
+/* Бусина — капля, что отрывается от «Стопа» перемычкой (фильтр #liq-goo) и
+   катится к точке «идёт» слева; на обратном пути — вливается назад. */
+@keyframes liqBeadOut {
+  0% { transform: scale(0.5); }
+  18% { transform: scale(1); }
+  30% { transform: translateX(calc(var(--liq-run, 0px) * 0.12)) scale(1, 0.86); }
+  68% { transform: translateX(var(--liq-run, 0px)) scale(1.12, 0.9); }
+  84%, 100% { transform: translateX(var(--liq-run, 0px)) scale(0); }
+}
+@keyframes liqBeadIn {
+  0%, 8% { transform: translateX(var(--liq-run, 0px)) scale(0.7); }
+  50% { transform: translateX(calc(var(--liq-run, 0px) * 0.1)) scale(1, 0.86); }
+  62%, 100% { transform: scale(0.4); }
+}
+/* «Старт» выходит из стёкшей капсулы и вздрагивает, как улёгшаяся капля. */
+@keyframes liqSettle {
+  0%, 70% { opacity: 0; transform: none; }
+  80% { opacity: 1; transform: scale(1.06, 0.9); }
+  91% { transform: scale(0.98, 1.03); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Колокольчик звенит: короткий звон с затуханием и длинная пауза в одном
+   периоде. Язычок (первый контур иконки) отстаёт и бьёт в другую сторону. */
+@keyframes bellRing {
+  0%, 15%, 100% { transform: none; }
+  2% { transform: rotate(16deg); }
+  4.5% { transform: rotate(-13deg); }
+  7% { transform: rotate(9deg); }
+  9.5% { transform: rotate(-6deg); }
+  12% { transform: rotate(3deg); }
+}
+@keyframes bellClapper {
+  0%, 16%, 100% { transform: none; }
+  3% { transform: translateX(-2.5px); }
+  5.5% { transform: translateX(2px); }
+  8% { transform: translateX(-1.5px); }
+  10.5% { transform: translateX(1px); }
+  13% { transform: translateX(-0.5px); }
+}
+@keyframes badgeBump { 0%, 6%, 100% { transform: none; } 1.5% { transform: scale(1.2); } }
 
 .view.anim { animation: viewIn 0.22s var(--ease); }
 /* Строки и карточки въезжают лесенкой только вместе с экраном; на осевшем
@@ -382,6 +577,52 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .icon-btn-accent .icon { color: var(--accent-text); }
 .icon-btn-accent:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-text); }
 
+/* Край ленты — 11 октября. Вбок листаются три области: лента карточек
+   «Проектов», дорожки доски и переключатель режимов «Времени» на узкой
+   ширине. Полосы вбок у них нет — ни накладной, ни нативной: край, за которым
+   есть что листать, растворяется (маска на самой ленте), а на подложке у края
+   стоит кнопка-стрелка. Подключает attachScrollEdges в app.js: ставит на ленту
+   класс .edge-scroll и атрибут data-edge — «l», «r» или «l r», с какой стороны
+   есть что листать (нечего — атрибута нет, маски тоже), а кнопки вписывает в
+   .edge-host, обёртку ленты: она держит их на месте, пока страница
+   прокручивается. У ленты без обёртки (переключатель) кнопок нет, только
+   растворение. Ширина растворения — --edge-size. */
+@property --edge-l { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --edge-r { syntax: '<length>'; inherits: false; initial-value: 0px; }
+.edge-host { position: relative; }
+.edge-scroll { --edge-size: 56px; scrollbar-width: none; }
+.edge-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+/* Маска читает только прозрачность, цвета в ней нет: black — «виден целиком». */
+.edge-scroll[data-edge] {
+  mask-image: linear-gradient(to right, transparent, black var(--edge-l), black calc(100% - var(--edge-r)), transparent);
+  transition: --edge-l 0.2s var(--ease), --edge-r 0.2s var(--ease);
+}
+.edge-scroll[data-edge~="l"] { --edge-l: var(--edge-size); }
+.edge-scroll[data-edge~="r"] { --edge-r: var(--edge-size); }
+.edge-btn {
+  position: absolute; top: 50%; z-index: 2;
+  width: 36px; height: 36px; margin-top: -18px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  /* Обводки нет (13 октября 2026): от ленты кнопку отбивает тень. */
+  border: 0; border-radius: 50%;
+  background: color-mix(in srgb, var(--raise) 88%, transparent);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-pop);
+  color: var(--text-dim); cursor: pointer;
+  opacity: 0; visibility: hidden; transform: scale(0.85);
+  transition: opacity 0.18s var(--ease), transform 0.18s var(--ease), visibility 0s linear 0.18s, background-color 0.12s var(--ease), color 0.12s var(--ease);
+}
+.edge-btn[data-side="l"] { left: 12px; }
+.edge-btn[data-side="r"] { right: 12px; }
+.edge-btn.on { opacity: 1; visibility: visible; transform: scale(1); transition: opacity 0.12s var(--ease), transform 0.12s var(--ease), visibility 0s, background-color 0.12s var(--ease), color 0.12s var(--ease); }
+.edge-btn:hover { background: var(--raise); color: var(--text); }
+.edge-btn.on:active { transform: scale(0.92); }
+.edge-btn:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.edge-btn .icon { width: 16px; height: 16px; color: inherit; vertical-align: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .edge-scroll[data-edge], .edge-btn, .edge-btn.on { transition: none; }
+}
+
 .dp-btn {
   min-width: 116px;
   text-align: left;
@@ -404,6 +645,16 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .dp-btn.is-empty:hover { color: var(--text); }
 /* Строка версии в редакторе задачи: «Без версии» звучит тише выбранной. */
 .dp-btn.unset { color: var(--text-faint); }
+/* Кнопка-выпадашка на всю ширину (.dp-btn.dp-select): название слева, стрелка
+   вниз справа — по ней видно, что кнопка раскрывается; длинное название
+   кончается многоточием, а не растягивает кнопку. Меню под ней — той же
+   ширины (openMenu, opts.width). Фильтр документов, период и проекты в окне
+   экспорта. */
+.dp-select { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-width: 0; padding: 7px 10px; font-size: 13px; }
+.dp-select-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dp-select .icon { width: 12px; height: 12px; flex: none; color: var(--text-faint); transition: transform 0.12s var(--ease); }
+.dp-select:hover .icon { color: var(--text-dim); }
+.dp-select.open .icon { transform: rotate(180deg); }
 
 /* Вторичная кнопка: заметнее ссылки, но без акцентной заливки — «Сегодня»
    не должна спорить по весу с зелёными действиями. */
@@ -469,32 +720,38 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   width: 30px;
   height: 17px;
   border-radius: 9px;
-  background: var(--panel-2);
+  /* Выключенная дорожка — ступень темнее разделителя, а не --panel-2: на
+     карточке (--panel) та была неотличима (1.1:1), и переключатель
+     читался как одиноко висящий кружок. */
+  background: var(--border-strong);
   border: 0;
   flex: none;
   transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
 }
+/* Кружок отступает от дорожки на 2 px со всех сторон — и сверху, и снизу, и
+   от торца в обоих положениях. Раньше было 1 px сверху и 3 снизу, и кружок
+   казался съехавшим вниз. */
 .switch-thumb {
   position: absolute;
-  top: 1px;
-  left: 1px;
+  top: 2px;
+  left: 2px;
   width: 13px;
   height: 13px;
   border-radius: 50%;
   background: var(--text-dim);
   transition: transform 0.15s var(--ease), background 0.15s var(--ease);
 }
-/* Включённый свитчер: дорожка целиком акцентная, бегунок белый — так же, как
-   у системного переключателя в мобильных приложениях. Раньше дорожка
-   заливалась акцентом на 30% поверх --panel-2: на тёмной теме это читалось,
-   а на светлой давало почти белую полоску с зелёной точкой, по которой было
-   не понять, включено ли что-нибудь вообще. */
+/* Включённый свитчер: дорожка — акцент, кружок — цветом текста на акцентной
+   кнопке (--accent-text), то есть тем, что на этом зелёном и так читается.
+   Белый кружок на зелёной дорожке давал 1.3:1 в тёмной теме и 1.8:1 в
+   светлой — его не было видно. Контраст кружка к дорожке в обоих
+   состояниях и обеих темах не ниже 3:1 держит tests/e2e/switch.spec.js. */
 .switch[aria-pressed='true'] .switch-track { background: var(--accent); border-color: var(--accent); }
-.switch[aria-pressed='true'] .switch-thumb { transform: translateX(13px); background: var(--text-on-color); }
+.switch[aria-pressed='true'] .switch-thumb { transform: translateX(13px); background: var(--accent-text); }
 
 /* ---------- Сегментный переключатель ----------
    Один вид на все места: режимы календаря и расписания, вкладки задачи,
-   сетка повторения, выбор темы, вкладки экспорта. Компактный (.segmented-sm) — где места мало: фильтр
+   сетка повторения, выбор темы. Компактный (.segmented-sm) — где места мало: фильтр
    статусов в узкой боковой панели проекта. До 6 октября это были семь своих копий с
    разными отступами, шрифтом и скруглением. */
 .segmented { display: flex; gap: 2px; padding: 2px; background: var(--panel-2); border-radius: var(--radius-sm); }
@@ -505,11 +762,35 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
    «Версии» стояли вплотную к своим значкам. Кнопка из одного значка (выбор
    темы) отступа не получает. */
 .segmented > button > .icon:not(:last-child), .segmented-row > button > .icon:not(:last-child) { margin-right: 6px; }
-/* Несколько рядов на одной подложке — пресеты экспорта, 3 + 4. */
+/* Несколько рядов на одной подложке. Пресеты экспорта, ради которых они
+   заводились, с 11 октября выпадашка; правила остались, пока их не снесёт
+   пересборка редактора: селекторы .segmented* входят в его хэш. */
 .segmented-rows { flex-direction: column; }
 .segmented-row { display: flex; gap: 3px; }
 .segmented-sm { gap: 2px; padding: 2px; border-radius: 7px; }
 .segmented-sm > button { font-size: 12px; padding: 4px 6px; border-radius: 5px; }
+/* Подложка, которая переезжает. Переключатель с ней (.seg-glide — ставит
+   attachSegGlide в app.js) не красит выбранную кнопку сам: под ней едет
+   один общий .seg-pill — положение и ширину выбранной кнопки ему задаёт
+   код, вид — здесь. Новая выбранная — подложка переезжает пружиной;
+   первая отрисовка, смена языка или ширины — встаёт на место без
+   анимации (.still). Селекторы начинаются не с .segmented нарочно: те
+   уезжают в сборку редактора телефона (scripts/build-editor.js), а
+   подложку телефон не рисует. */
+.seg-glide { position: relative; }
+.seg-glide > button { position: relative; }
+.seg-glide > button.on { background: none; }
+.seg-pill {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+  border-radius: 8px; background: var(--tab-active-bg); pointer-events: none;
+  transition: transform 0.42s var(--spring-soft), width 0.42s var(--spring-soft), height 0.42s var(--spring-soft);
+}
+.seg-glide.segmented-sm > .seg-pill { border-radius: 5px; }
+.seg-pill.still { transition: none; }
+.seg-pill.none { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .seg-pill { transition: none; }
+}
 
 /* ---------- Шапка периода ----------
    Календарь и статистика листают время одной шапкой: слева «Сегодня»,
@@ -561,18 +842,58 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .ctx-item {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   width: 100%; text-align: left; border: none; background: none;
-  color: var(--text); font-family: inherit; font-size: 13px; padding: 7px 9px;
-  border-radius: 6px; cursor: pointer; transition: background 0.1s var(--ease);
+  color: var(--text-dim); font-family: inherit; font-size: 13px; padding: 7px 9px;
+  border-radius: 6px; cursor: pointer; transition: color 0.1s var(--ease);
 }
-.ctx-item:hover { background: var(--panel-2); }
-.ctx-item.danger { color: var(--danger); border: none; padding: 7px 9px; }
+/* Подложки у пунктов нет нигде: наведение и стрелки (.led-cur — курсор в меню
+   редактора) видны только цветом. Клавиатурному фокусу одного цвета мало —
+   у соседних пунктов разница в оттенок, — поэтому к цвету добавляется контур
+   (без заливки), как у остальных элементов с :focus-visible. Токен
+   --accent-ink, а не --accent: на белой панели светлой темы неон не виден. */
+.ctx-item:hover, .ctx-item:focus-visible, .ctx-item.led-cur { color: var(--text); }
+.ctx-item:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -2px; }
+/* background: none — общая button.danger красит кнопку подложкой, пункту меню она не нужна. */
+.ctx-item.danger { color: var(--danger-dim); background: none; border: none; padding: 7px 9px; }
+.ctx-item.danger:hover, .ctx-item.danger:focus-visible, .ctx-item.danger.led-cur { color: var(--danger); }
 .ctx-item.sel { color: var(--accent-ink); font-weight: 500; }
 .ctx-item .ctx-check { color: var(--accent-ink); flex: none; }
+/* Значок пункта (openMenu, it.icon) — справа, на месте галочки: подписи
+   остаются в один столбец у пунктов со значком и без. Цвет тот же, что у
+   подписи: тусклый в покое, яркий под указателем. Через #ctx-menu, а не
+   .ctx-item: правила на .ctx-* уезжают в стили редактора телефона, и этому
+   значку там делать нечего. */
+#ctx-menu .ctx-icon { flex: none; width: 14px; height: 14px; }
 .ctx-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* Меню шириной с кнопку (openMenu, opts.width): ширину задаёт кнопка, а не
+   самое длинное название, и название, что не поместилось, кончается
+   многоточием. Цветная точка проекта и галочка выбранного остаются на месте.
+   Селектор через #ctx-menu, а не .ctx-menu: правила на .ctx-* попадают в стили
+   редактора телефона (scripts/build-editor.js), а этому меню там делать нечего. */
+#ctx-menu.fit { min-width: 0; }
+#ctx-menu.fit .ctx-item { min-width: 0; }
+#ctx-menu.fit .ctx-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ctx-dot { flex: none; width: 9px; height: 9px; border-radius: 3px; background: var(--sc, var(--accent)); }
 .ctx-sep { height: 1px; background: var(--border); margin: 4px 6px; }
 
-#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop, #ledmodal-backdrop, .led-sheet-backdrop {
+/* Слои поверх шапки (#titlebar — drag, см. слой «Каркас»). Зона перетаскивания
+   не «закрывается» тем, что нарисовано поверх неё: Chromium собирает её из разметки, а не из того, что видно, и
+   под наложенным элементом она остаётся зоной окна. В Electron на Windows она
+   забирает и настоящие щелчки мыши — кнопка под ней не нажимается, хотя
+   программный .click() проходит. Поэтому всё, что может лечь на верхние 52 px,
+   объявляется no-drag: полноэкранный редактор целиком (панель, меню и окна
+   внутри него), меню и всплывающие панели (они прижимаются к краю окна, когда
+   места мало) и коробки диалогов. Подложка диалога — не в списке: за её
+   пределами окно как перетаскивалось, так и перетаскивается. Порядок в
+   разметке важен: no-drag вычитает из drag только то, что идёт в документе
+   позже шапки, а все эти слои — после неё. Сторожит tests/unit/ui-rules.test.js,
+   вычисленное значение в настоящем окне — scripts/smoke.js. */
+.led.led-fullscreen,
+.ctx-menu, #notif-panel, .tag-pop, .tp-pop, .dp-pop, .color-pop,
+.modal {
+  -webkit-app-region: no-drag;
+}
+
+#modal-backdrop, #pdlg-backdrop, #sdlg-backdrop, #confirm-backdrop, #auth-backdrop, #tmdlg-backdrop, #expdlg-backdrop, #tagdlg-backdrop, #rpdlg-backdrop, #sldlg-backdrop, #rmdlg-backdrop, #ledmodal-backdrop, .led-sheet-backdrop {
   position: fixed; inset: 0; background: var(--scrim);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: backdropIn 0.13s var(--ease);
@@ -581,6 +902,16 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
    спрашивают из окна тега, и вопрос, спрятавшийся под ним, выглядел бы как
    зависшее приложение. */
 #confirm-backdrop { z-index: 110; }
+/* Окно времени работы зовут из окна задачи (оно на 100), а окно повторения —
+   уже из окна времени работы: каждое следующее поверх предыдущего. */
+#sldlg-backdrop { z-index: 101; }
+/* Окно напоминания зовут из свойств задачи (в том числе из её окна с
+   календаря) — на слое окна времени работы. */
+#rmdlg-backdrop { z-index: 101; }
+#rpdlg-backdrop { z-index: 102; }
+/* Окно ввода (одно поле) зовут и из свойств задачи — ставку, — в том числе
+   из окна задачи с календаря: оно встаёт поверх любого из них. */
+#modal-backdrop { z-index: 103; }
 /* Окно тега зовут из окна проекта (раздел «Теги», пикер при создании), и на
    одном слое с ним оно оказывалось снизу: окно проекта стоит в разметке
    позже. Ниже подтверждения — удаление тега спрашивают из этого окна. */
@@ -622,7 +953,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 }
 .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 .auth-error { margin: 8px 0 0; font-size: 12px; color: var(--danger); }
-#auth-signup-offer { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
+/* Строка-переключатель «Нет аккаунта? Создать аккаунт» под кнопками окна входа. */
+.auth-switch { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 14px; font-size: 12px; }
+.auth-switch .linklike { color: var(--accent-ink); }
+.auth-switch .linklike:hover { color: var(--text); }
 .auth-usecases { display: flex; flex-wrap: wrap; gap: 6px; }
 .auth-usecase {
   border: 0; background: var(--panel-2); color: var(--text-dim);
@@ -661,6 +995,8 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .swatch:hover { transform: scale(1.1); }
 .swatch.sel { border-color: var(--text); }
 
+/* Ряд из двух подписанных кнопок: начало и конец записи; он же — «с» и «по»
+   своего периода в окне экспорта. */
 .sdlg-times { display: flex; gap: 10px; }
 .sdlg-times > div { flex: 1; }
 .sdlg-times .dp-btn { width: 100%; min-width: 0; }
@@ -682,27 +1018,91 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .island-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; }
 .island-title { font-weight: 600; font-size: 14px; }
 .island-note { font-size: 12px; color: var(--text-faint); }
-.island-empty { margin: 8px 0 0; font-size: 12.5px; }
+/* ---------- Группа строк-настроек ----------
+   13 октября: как на телефоне (SettingRow и RowGroup в Island.js). Всё, у
+   чего свои параметры, — строкой «название · значение ›» на острове-группе;
+   значение словами, нажатие открывает окно этой настройки. Подпись группы —
+   над островом (.sgroup-label), тихо и обычными буквами. Остров — вторая
+   ступень (--panel-2): группы стоят на острове панели. Стоят в правой панели
+   задачи и в окне «Время работы». Экран подстраивает их своим классом. */
+.sgroup-label { margin: 14px 2px 6px; font-size: 12px; color: var(--text-faint); }
+.sgroup { display: flex; flex-direction: column; background: var(--panel-2); border-radius: var(--radius); overflow: hidden; }
+.sgroup[hidden], .sgroup-label[hidden] { display: none; }
+.srow {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; min-height: 40px;
+  padding: 7px 12px; margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0;
+  background: none; color: var(--text); font-family: inherit; font-size: 13px; text-align: left;
+  cursor: pointer; transition: background 0.1s var(--ease);
+}
+.srow:first-child { border-top: 0; }
+.srow[hidden] { display: none; }
+.srow:hover { background: var(--raise); }
+.srow:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -2px; }
+.srow > .icon { width: 15px; height: 15px; flex: none; color: var(--icon); }
+.srow-label { flex: none; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Значение и подстрока под ним — справа, в одну колонку; длинное кончается
+   многоточием, а не растягивает строку. */
+.srow-box { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.srow-value { max-width: 100%; color: var(--text-dim); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.srow-sub { max-width: 100%; color: var(--text-faint); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.srow-sub[hidden] { display: none; }
+.srow-chev { flex: none; width: 12px; height: 12px; color: var(--text-faint); }
+.srow:hover .srow-chev { color: var(--text-dim); }
+/* Строка-действие («Добавить напоминание»): тихая, без значения и шеврона. */
+.srow.srow-add { color: var(--text-dim); }
+.srow.srow-add:hover { color: var(--text); }
+.srow.srow-add .srow-label { flex: 1; max-width: none; }
+/* Настройка, которая сейчас ни на что не действует (напоминание «до начала»
+   без времени работы): строка тише. */
+.srow.dim .srow-label { color: var(--text-faint); }
 /* ---------- Пустой экран ----------
-   Когда показать нечего: по центру картинка, заголовок, пояснение и одна
-   акцентная кнопка. «Проекты» и «Документы». Картинка — пустая карточка
-   проекта из токенов темы: свои цвета ей не нужны, и она верна обеим
-   темам. Экран добавляет свою картинку и место, но не вид. */
+   Когда показать нечего: по центру сценка, заголовок, одна строка пояснения
+   и, если действие очевидно, одна акцентная кнопка («Проекты», «Документы»,
+   «Время»). Сценка — инлайн-SVG из core/illustrations.js (.es-art), формы
+   красятся здесь из токенов --art-* и --accent, поэтому верны обеим темам и
+   любой подложке. Экран добавляет своё место, но не вид.
+   Компактный (.empty-state-sm) — для панелей, списков и выпадашек: сценка
+   56 × 40, заголовок обычным шрифтом, текст мельче, кнопка — тихая, а
+   акцентная только там, где другой на экране нет («Сегодня» без проектов).
+   В строку (.empty-state-row) — компактный для выпадашек и списков в окне,
+   где строка создания стоит сразу под ним: сценка слева, слова справа. */
 .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; max-width: 420px; margin: 0 auto; line-height: 1.55; }
-.empty-state-title { margin: 6px 0 0; font-family: var(--font-display); font-weight: var(--fw-display); font-size: 20px; line-height: 1.3; }
-.empty-state-text { margin: 0 0 6px; color: var(--text-dim); font-size: 13.5px; }
-.es-art { position: relative; width: 168px; height: 132px; margin-bottom: 4px; }
-.es-card { position: absolute; top: 10px; left: 34px; width: 100px; height: 116px; border-radius: 12px; background: var(--panel); }
-.es-back { transform: rotate(-11deg) translateX(-20px); opacity: 0.45; }
-.es-mid { transform: rotate(8deg) translateX(20px); opacity: 0.7; }
-.es-front { display: flex; flex-direction: column; gap: 7px; padding: 12px; box-shadow: var(--shadow-pop); }
-.es-front i { display: block; border-radius: 3px; background: var(--panel-2); }
-.es-front .es-dot { width: 9px; height: 9px; border-radius: 3px; background: var(--accent); }
-.es-line { width: 64px; height: 7px; }
-.es-line.es-short { width: 40px; }
-.es-progress { height: 3px; margin: 2px 0; }
-.es-row { height: 14px; border: 1.5px dashed var(--border-strong); background: none !important; }
-.page-head { display: flex; align-items: center; gap: 10px; padding: 4px 4px 0; flex: none; }
+.empty-state-title { margin: 6px 0 0; font-family: var(--font-display); font-weight: var(--fw-display); font-size: 20px; line-height: 1.3; text-wrap: balance; }
+.empty-state-text { margin: 0 0 6px; color: var(--text-dim); font-size: 13.5px; text-wrap: pretty; }
+.empty-state-sm { flex: none; gap: 6px; padding: 20px 14px; max-width: 300px; line-height: 1.45; }
+.empty-state-sm .es-art { width: 56px; height: 40px; margin-bottom: 4px; }
+.empty-state-sm .empty-state-title { margin: 0; font-family: var(--font-ui); font-weight: 600; font-size: 13.5px; line-height: 1.35; }
+.empty-state-sm .empty-state-text { margin: 0; font-size: 12.5px; }
+.empty-state-sm .btn-soft, .empty-state-sm .btn-accent { margin-top: 6px; }
+.empty-state-row { flex-direction: row; justify-content: flex-start; gap: 12px; max-width: none; margin: 0; padding: 10px 12px; text-align: left; }
+.empty-state-row .es-art { margin-bottom: 0; }
+.empty-state-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* Сценка: появляется вместе с экраном, акцент — на миг позже. */
+.es-art { display: block; flex: none; width: 120px; height: 88px; overflow: visible; animation: popIn 0.32s var(--ease) both; }
+.es-plate { fill: var(--art-plate); }
+.es-sheet { fill: var(--art-sheet); }
+.es-sheet.es-back { opacity: 0.6; }
+.es-ink { fill: var(--art-ink); }
+.es-ink-soft { fill: var(--art-ink); opacity: 0.55; }
+.es-dash { fill: none; stroke: var(--art-ink); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.es-mark { fill: var(--accent); transform-box: fill-box; transform-origin: center; animation: esMark 0.4s 0.16s var(--ease) both; }
+.es-mark.es-caret { animation: esMark 0.4s 0.16s var(--ease) both, esCaret 1.1s 0.6s steps(1) infinite; }
+.es-on-mark { fill: var(--accent-text); transform-box: fill-box; transform-origin: center; animation: esMark 0.4s 0.16s var(--ease) both; }
+@keyframes esMark { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
+@keyframes esCaret { 50% { opacity: 0; } }
+/* Без движения курсор просто стоит: общее правило «Основы» сжимает
+   длительность, а бесконечное мигание от этого стало бы мельканием. */
+@media (prefers-reduced-motion: reduce) {
+  .es-mark.es-caret { animation: none; }
+}
+/* Заголовок страницы не уезжает при прокрутке: страница («Проекты»,
+   «Настройки») прокручивается целиком, а строка с названием и кнопками
+   остаётся сверху — липкая, на земле (--bg), чтобы содержимое уходило под
+   неё, а не просвечивало. Полоса ::after — зазор под строкой того же цвета:
+   без неё острова упирались бы в низ заголовка вплотную. Там, где страница
+   сама не прокручивается, sticky ничего не меняет. */
+.page-head { display: flex; align-items: center; gap: 10px; padding: 4px 4px 0; flex: none; position: sticky; top: 0; z-index: 3; background: var(--bg); }
+.page-head::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: var(--gap); background: var(--bg); pointer-events: none; }
 .page-title { margin: 0; font-size: 20px; font-weight: var(--fw-display); font-family: var(--font-display); }
 .page-title .h-count { font-family: var(--font-ui); }
 .row-list { list-style: none; margin: 4px 0 0; padding: 0; }
@@ -714,13 +1114,81 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .rl-dot { width: 7px; height: 7px; border-radius: 2px; flex: none; background: var(--pc, var(--accent)); }
 .rl-when { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
 .rl-when.overdue { color: var(--danger); }
-.rl-play { flex: none; }
-/* Квадрат таймера: плей, когда стоит; стоп на акценте, когда идёт. */
-.sq-btn { width: 44px; height: 44px; border-radius: 12px; border: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; background: var(--panel-2); color: var(--text); transition: background 0.12s var(--ease); }
+/* ---------- Кнопка запуска ----------
+   Плей/стоп в строках задач (.rl-play: «Сегодня», карточки и «Недавние
+   задачи» на «Проектах») и квадрат таймера (.sq-btn: «Сейчас идёт», страница
+   задачи). Форма везде одна — скруглённый квадрат --radius-xs, размеры у
+   мест свои. Идёт — заливка акцентом. .icon-btn.rl-play — потому что узкий
+   веб (web/responsive.css) переписывает скругление .icon-btn. */
+.rl-play, .icon-btn.rl-play { flex: none; border-radius: var(--radius-xs); }
+.rl-play.run { background: var(--accent); color: var(--accent-text); }
+.rl-play.run .icon { color: inherit; }
+.rl-play.run:hover { background: var(--accent-hover); }
+/* Квадрат таймера: плей, когда стоит; стоп на акценте, когда идёт. С 13
+   октября 2026 скругление крупнее — --radius, как у острова вокруг: кнопки
+   записи (квадрат, «Запись», «Открыть») скруглены одинаково. Маленькая
+   .rl-play в строках остаётся --radius-xs. */
+.sq-btn { width: 44px; height: 44px; border-radius: var(--radius); border: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; background: var(--panel-2); color: var(--text); transition: background 0.12s var(--ease); }
 .sq-btn:hover { background: var(--raise); }
 .sq-btn.run { background: var(--accent); color: var(--accent-text); }
 .sq-btn.run:hover { background: var(--accent-hover); }
 .sq-btn .icon { width: 16px; height: 16px; color: inherit; }
+
+/* Налив и слив. Запустили — кнопка «наливается»: снизу волной поднимается
+   акцент, форма вздрагивает желе, значок «стоп» выпрыгивает; остановили —
+   акцент стекает вниз. Класс на время анимации ставит и снимает liqMark в
+   app.js (одна функция на все места); --liq-t — сколько анимации уже прошло,
+   если строку перерисовали посреди неё. ::before — прежняя подложка (под
+   ней уже акцент кнопки, которая идёт), ::after — сама жидкость. */
+.liq-fill, .liq-drain { position: relative; overflow: hidden; isolation: isolate; }
+/* liqRing: под прозрачной рамкой .icon-btn акцент кнопки проглядывал бы
+   кольцом, пока жидкость не поднялась, — рамка до тех пор цвета подложки. */
+.liq-fill { animation: liqJelly 0.62s var(--ease) var(--liq-t, 0s) both, liqRing 0.52s linear var(--liq-t, 0s) both; }
+.liq-drain { animation: liqSag 0.52s var(--ease) var(--liq-t, 0s) both; }
+.liq-fill::before, .liq-fill::after, .liq-drain::after {
+  content: ''; position: absolute; z-index: -1; pointer-events: none;
+}
+.liq-fill::before { inset: 0; background: var(--panel-2); }
+.liq-fill::after, .liq-drain::after {
+  left: 50%; top: 100%; width: 240%; aspect-ratio: 1; border-radius: 40%;
+  background: var(--accent);
+}
+.liq-fill::after { animation: liqRise 0.52s var(--ease) var(--liq-t, 0s) both; }
+.liq-drain::after { animation: liqFall 0.46s cubic-bezier(0.45, 0, 0.55, 1) var(--liq-t, 0s) both; }
+.liq-fill .icon { animation: liqPop 0.42s var(--spring) calc(var(--liq-t, 0s) + 0.18s) both; }
+.liq-drain .icon { animation: liqPop 0.4s var(--spring) calc(var(--liq-t, 0s) + 0.22s) both; }
+@media (prefers-reduced-motion: reduce) {
+  .liq-fill, .liq-drain, .liq-fill .icon, .liq-drain .icon { animation: none; }
+  .liq-fill::before, .liq-fill::after, .liq-drain::after { display: none; }
+}
+
+/* ---------- Галочка задачи ----------
+   Списки задач и карточки проектов. Тот же скруглённый квадрат, что у
+   кнопки запуска рядом: пустая — обводка, выполнено — заливка акцентом и
+   галочка цветом надписи на акценте. Переход — заливкой и выпрыгивающей
+   галочкой, без рывка. Галочка — ::before с clip-path: у нативной
+   отметки нет ни нашего скругления, ни наших цветов. */
+.task-done {
+  appearance: none; display: inline-grid; place-content: center; flex: none;
+  width: 16px; height: 16px; margin: 0; border: 0; border-radius: var(--radius-xs);
+  background: transparent; box-shadow: inset 0 0 0 1.5px var(--border-strong); cursor: pointer;
+  transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+.task-done::before {
+  content: ''; width: 10px; height: 10px; background: var(--accent-text);
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  transform: scale(0); transition: transform 0.36s var(--spring);
+}
+.task-done:hover { box-shadow: inset 0 0 0 1.5px var(--text-dim); }
+.task-done:checked { background: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.task-done:checked::before { transform: none; }
+.task-done:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+/* В режиме высокой контрастности тени и заливки снимает система — галочке
+   нечем было бы рисоваться. Там она снова нативная. */
+@media (forced-colors: active) {
+  .task-done { appearance: auto; box-shadow: none; }
+  .task-done::before { display: none; }
+}
 
 /* ---------- Toast ---------- */
 
@@ -754,20 +1222,27 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
   font-size: 12px; font-weight: 600; line-height: 1.5;
   color: color-mix(in srgb, var(--sc) var(--tag-ink), var(--text));
   background: color-mix(in srgb, var(--sc) 16%, transparent);
-  border-radius: 5px; padding: 1px 7px;
+  border-radius: 5px; padding: 1px 7px; position: relative;
 }
 .tag-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--sc, var(--accent)); flex: none; display: inline-block; }
 .tag-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Значок удаления. Плашка при этом не меняется: поля слева и справа равны
+   всегда (padding у .tag-chip), и по наведению она не дёргается. Значок —
+   маленький круг поверх правого верхнего угла плашки: в покое его нет (и он
+   не ловит щелчки), по наведению и по клавиатурному фокусу он появляется.
+   Рамки нет — круг отличается от плашки цветом (--panel-2), как и всё остальное. */
 .tag-chip-x {
-  border: none; background: none; padding: 0; margin: 0 -3px 0 4px;
-  width: 12px; height: 12px; flex: none; cursor: pointer;
-  color: var(--text-faint); opacity: 0; transition: opacity 0.12s var(--ease), color 0.12s var(--ease);
+  position: absolute; top: -6px; right: -6px;
+  display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; padding: 0; margin: 0; flex: none;
+  border: none; border-radius: 50%; cursor: pointer;
+  background: var(--panel-2); color: var(--text-dim);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.12s var(--ease), color 0.12s var(--ease);
 }
 .tag-chip-x .icon { width: 9px; height: 9px; }
-/* Крестик появляется по наведению на чип: в спокойном состоянии он шумел бы
-   в каждой строке, а без него снять тег было бы нечем. */
-.tag-chip:hover .tag-chip-x { opacity: 1; }
-.tag-chip-x:hover { color: var(--text); opacity: 1; }
+.tag-chip:hover .tag-chip-x, .tag-chip:focus-within .tag-chip-x { opacity: 1; pointer-events: auto; }
+.tag-chip-x:hover { color: var(--text); }
 .tag-chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; min-width: 0; }
 
 .tag-add-btn {
@@ -779,8 +1254,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .tag-add-btn:hover { border-color: var(--accent); color: var(--text); border-style: solid; }
 .tag-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .bc-tags { margin-top: 6px; }
-.tags-empty .settings-row-label { font-size: 12px; line-height: 1.5; white-space: normal; }
 .tagdlg-error { margin: -6px 0 10px; font-size: 12px; color: var(--danger); }
+/* Поле названия — общее (.field, как в окне проекта); окно узкое, поле во всю
+   его ширину. */
+#tagdlg-name { width: 100%; margin-bottom: 12px; }
 
 /* Пикер тегов — поиск и он же вход в создание. */
 .tag-pop {
@@ -803,10 +1280,14 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .tag-pop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Выбранный тег помечен галочкой справа, а не заливкой: заливка спорила бы с
    наведением, и было бы непонятно, что выбрано, а что под курсором. */
-.tag-pop-item.sel::after { content: '✓'; margin-left: auto; color: var(--accent-ink); font-size: 12px; }
+/* Строка тега — сеткой (13 октября 2026): точка · имя · подпись «общий» ·
+   галочка. Подпись и галочка — колонками постоянной ширины у правого края:
+   у всех строк они стоят друг под другом, есть они у строки или нет. */
+.tag-pop-item { display: grid; grid-template-columns: 8px minmax(0, 1fr) 60px 12px; align-items: center; column-gap: 7px; }
+.tag-pop-item::after { content: ''; }
+.tag-pop-item.sel::after { content: '✓'; color: var(--accent-ink); font-size: 12px; text-align: center; }
 .tag-pop-create { color: var(--text-dim); border-top: 1px solid var(--border-soft); border-radius: 0; margin-top: 4px; padding-top: 9px; }
 .tag-pop-create:hover { color: var(--text); }
-.tag-pop-empty { padding: 10px 9px; font-size: 12px; line-height: 1.5; }
 
 /* Воздух между полосой вкладок и содержимым вкладки настроек: карточка
    параметров начиналась вплотную под ними. */
@@ -831,6 +1312,13 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 
 .led {
   --led-size: 16px;
+  /* Масштаб текста (setZoom): 0.8–2, только шрифт страницы. Телефон его не
+     шлёт с 13 октября 2026 — щипка там больше нет; остался для десктопа. */
+  --led-zoom: 1;
+  /* Квадрат галочки чек-листа (24 с 13 октября 2026, было 28) и кнопка
+     вокруг него — зона пальца 44. */
+  --led-task: 24px;
+  --led-task-hit: 44px;
   --led-page: 760px;
   --led-serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, 'PT Serif', serif;
   --led-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
@@ -851,20 +1339,38 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .led.led-w-full { --led-page: 100%; }
 .led.led-fullscreen { position: fixed; inset: 0; z-index: 145; background: var(--bg); height: auto; }
 .led.led-fullscreen .led-scroll { background: var(--panel); }
+/* Развёрнутый редактор закрывает шапку, а вместе с ней и место, которое она
+   оставляла под нативные кнопки окна: на Windows и Linux они справа поверх
+   страницы (titleBarOverlay), на маке «светофор» слева. Без отступа кнопка
+   «Выйти из полного экрана», стоящая у правого края панели, оказывалась под
+   кнопками окна, и нажать её было нельзя. Отступы берутся так же, как у
+   #titlebar: env(titlebar-area-*) даёт полосу без кнопок, в браузере её нет,
+   и фолбэки обнуляют всё это. Высота панели доводится до полосы кнопок: те
+   стоят по центру 52 px, и кнопки панели — по центру с ними. */
+.led.led-fullscreen .led-toolbar {
+  padding-left: calc(8px + env(titlebar-area-x, 0px));
+  padding-right: calc(8px + 100% - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100%));
+  padding-block: max(6px, calc((env(titlebar-area-height, 0px) - 30px) / 2));
+}
+body.platform-mac .led.led-fullscreen .led-toolbar {
+  padding-left: var(--traffic-w);
+  padding-block: 11px;
+}
 
 /* --- панели --- */
 .led-toolbar {
-  flex: none; display: flex; align-items: flex-start; gap: 2px;
+  flex: none; display: flex; align-items: center; gap: 2px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--line);
 }
-/* На десктопе панель переносится на вторую строку, а не уезжает за край:
-   картинка, график и рисунок должны быть видны, а не прятаться прокруткой.
-   На телефоне — одна строка с прокруткой (.led-mobile ниже). */
-.led-toolbar-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; flex-wrap: wrap; row-gap: 4px; overflow-x: auto; overflow-y: hidden; }
-.led-mobile .led-toolbar-main { flex-wrap: nowrap; }
-.led-toolbar-main::-webkit-scrollbar { height: 0; }
-/* «Во весь экран» — у правого края всегда, вне прокрутки (круг 4). */
+/* Панель — одна строка везде (11 октября 2026): не переносится и не
+   прокручивается. Что не влезло по ширине, toolbar.js убирает в меню групп
+   («Формат», «Вставить», «…»); overflow: hidden — только страховка на долю
+   пикселя. Расстояние между кучками кнопок — их собственный отступ и черта
+   (.led-group), своего зазора у строки нет: так раскладка считается теми же
+   числами, что видны. */
+.led-toolbar-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0; flex-wrap: nowrap; overflow: hidden; }
+/* «Во весь экран» — у правого края всегда, вне строки и её раскладки (круг 4). */
 .led-toolbar-end { flex: none; display: flex; align-items: center; padding-left: 4px; border-left: 1px solid var(--line); }
 /* Остров таблицы — тем же видом, что панель над выделением: плавает под
    таблицей, пока в ней курсор (положение — из JS, editor placeTableBar). */
@@ -884,9 +1390,14 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 }
 .led-tgear:hover { background: var(--accent); color: var(--accent-text); }
 .led-toolbar::-webkit-scrollbar, .led-tablebar::-webkit-scrollbar { height: 0; }
-.led-group { display: flex; align-items: center; gap: 1px; flex: none; padding-right: 5px; margin-right: 3px; border-right: 1px solid var(--line); }
+.led-group { display: flex; align-items: center; gap: 1px; flex: none; padding-right: 4px; margin-right: 4px; border-right: 1px solid var(--line); }
 .led-group:last-child { border-right: 0; padding-right: 0; margin-right: 0; }
 .led-spacer { flex: 1 1 8px; min-width: 8px; }
+/* Узкая панель (toolbar.js, шаг «dense»; телефон — сразу): без черт между
+   кучками и без зазора перед «…» — на эти пиксели помещается ещё кнопка. */
+.led-toolbar.led-dense .led-group { padding-right: 0; margin-right: 1px; border-right: 0; }
+.led-toolbar.led-dense .led-group:last-child { margin-right: 0; }
+.led-toolbar.led-dense .led-spacer { min-width: 0; }
 .led-btn {
   position: relative; flex: none;
   height: 30px; min-width: 30px; padding: 0 6px;
@@ -899,6 +1410,10 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .led-btn.on { background: var(--sel); color: var(--accent-ink); }
 .led-btn:disabled { opacity: 0.35; cursor: default; background: none; }
 .led-btn.danger { color: var(--danger); }
+/* Фокус с клавиатуры — контуром внутрь, как у пунктов меню: строка панели
+   обрезает всё, что за её краем. Кнопка с открытым меню — подложкой. */
+.led-btn:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: -2px; }
+.led-btn[aria-expanded='true'] { background: var(--panel-2); color: var(--text); }
 .led-btn[data-count]:not([data-count=''])::after {
   content: attr(data-count); position: absolute; top: 1px; right: 0;
   min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px;
@@ -906,8 +1421,25 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 }
 .led-text-btn { color: var(--text-dim); }
 .led-icon { display: block; flex: none; }
-.led-block-btn { min-width: 124px; justify-content: space-between; color: var(--text); }
+/* Ширина постоянная, а не по подписи: «Текст» и «Заголовок 2» иначе разной
+   ширины, и строка панели перестраивалась бы от движения курсора. */
+.led-block-btn { width: 124px; justify-content: space-between; color: var(--text); }
 .led-block-label, .led-turn-label { white-space: nowrap; }
+.led-block-btn .led-block-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Кнопка группы (toolbar.js: «Формат», «Вставить», списки): подпись и
+   галочка, сжатая (.led-compact) — значок и галочка. */
+.led-drop { gap: 2px; padding: 0 4px 0 7px; }
+.led-drop.led-compact { gap: 1px; padding: 0 2px 0 5px; }
+.led-drop.led-compact .led-drop-chev { width: 10px; height: 10px; }
+/* Подпись — цветом текста, как «Текст ▾»; через :where, чтобы наведение и
+   «включено» (.led-btn:hover, .on) перекрашивали её как любую кнопку. */
+.led-drop:where(:not(.led-compact)) { color: var(--text); }
+.led-drop:not(.led-compact) .led-drop-icon, .led-drop.led-compact .led-drop-label { display: none; }
+.led-drop-label { white-space: nowrap; }
+.led-drop-chev { color: var(--text-faint); }
+.led-drop.on .led-drop-chev, .led-drop:hover .led-drop-chev { color: inherit; }
+/* Пункт меню, за которым следующее меню (цвет, таблица, группа). */
+.led-menu-sub { flex: none; color: var(--text-faint); transform: rotate(-90deg); }
 .led-bar-sep { width: 1px; align-self: stretch; margin: 4px 3px; background: var(--line); flex: none; }
 .led-mini {
   display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0;
@@ -927,14 +1459,14 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 .led-page { position: relative; }
 .led-pm {
   position: relative; outline: none; min-height: 160px;
-  font-size: var(--led-size); line-height: 1.65; font-weight: var(--fw-text);
+  font-size: calc(var(--led-size) * var(--led-zoom)); line-height: 1.65; font-weight: var(--fw-text);
   white-space: pre-wrap; white-space: break-spaces; word-wrap: break-word; overflow-wrap: anywhere;
   font-variant-ligatures: none; font-feature-settings: "liga" 0;
   caret-color: var(--accent-ink);
   -webkit-font-smoothing: antialiased;
 }
 .led-f-serif .led-pm { font-family: var(--led-serif); }
-.led-f-mono .led-pm { font-family: var(--led-mono); font-size: calc(var(--led-size) * 0.92); }
+.led-f-mono .led-pm { font-family: var(--led-mono); font-size: calc(var(--led-size) * 0.92 * var(--led-zoom)); }
 /* Размер и гарнитура выделенного текста (метки fontSize, fontFamily —
    schema.js): ступени от размера текста, гарнитуры — те же, что в «Виде». */
 .led-ff-sans { font-family: var(--font-ui); }
@@ -1006,21 +1538,65 @@ button.danger:active, button.ghost:active { transform: scale(0.97); }
 /* Чек-лист */
 .led-pm ul.led-tasks { list-style: none; padding-left: 0.2em; }
 .led-pm ul.led-tasks ul.led-tasks { padding-left: 1.5em; }
-.led-pm .led-task { display: flex; align-items: flex-start; gap: 0.55em; }
+.led-pm .led-task { display: flex; align-items: flex-start; gap: 10px; }
 .led-task-text { flex: 1; min-width: 0; }
 .led-pm .led-task-text > p { margin: 0; }
+/* Галочка: квадрат --led-task (24 px с 13 октября 2026, было 28) по
+   центру первой строки, кнопка вокруг — --led-task-hit (44 px), зона
+   пальца. Лишнее съедают отрицательные поля (слева --led-task-x, справа
+   4 px — к тексту зона почти не заходит; сверху и снизу --led-task-y), так
+   что строка не растёт. Квадрат — ::before, галочка — ::after. Отметили
+   — квадрат наливается акцентом снизу, как жидкостью (круг растёт от
+   нижнего края: background-size), галочка проявляется; у только что
+   отмеченного пункта (.led-just-checked, views.js) квадрат пружинит, а
+   галочка дорисовывается штрихом — сначала короткая черта, потом длинная. */
 .led-task-box {
-  flex: none; position: relative; width: 1.05em; height: 1.05em; margin-top: calc((1.65em - 1.05em) / 2);
-  padding: 0; border: 1.5px solid var(--border-strong); border-radius: 0.3em; background: none; cursor: pointer;
-  transition: background 0.12s var(--ease), border-color 0.12s var(--ease);
+  --led-task-x: calc(var(--led-task-hit) - var(--led-task) - 4px);
+  --led-task-y: calc((var(--led-task-hit) - var(--led-task)) / 2);
+  flex: none; position: relative; box-sizing: border-box;
+  width: var(--led-task-hit); height: var(--led-task-hit);
+  margin: calc((1.65em - var(--led-task-hit)) / 2) -4px calc(0px - var(--led-task-y)) calc(0px - var(--led-task-x));
+  padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.led-task-box:hover { border-color: var(--accent); }
-.led-task[data-checked='true'] > .led-task-box { background: var(--accent); border-color: var(--accent); }
-.led-task[data-checked='true'] > .led-task-box::after {
-  content: ''; position: absolute; left: 32%; top: 12%; width: 28%; height: 52%;
-  border: solid var(--accent-text); border-width: 0 2px 2px 0; transform: rotate(45deg);
+.led-task-box::before {
+  content: ''; position: absolute; left: var(--led-task-x); top: var(--led-task-y); box-sizing: border-box;
+  width: var(--led-task); height: var(--led-task);
+  border: 2px solid var(--border-strong); border-radius: 7px;
+  background: radial-gradient(circle at 50% 100%, var(--accent) 0 62%, transparent 63%) 50% 100% / 0% 0% no-repeat;
+  transition: background-size 0.38s cubic-bezier(0.3, 1.2, 0.5, 1), border-color 0.18s var(--ease);
 }
+.led-task-box::after {
+  content: ''; position: absolute; box-sizing: border-box;
+  left: calc(var(--led-task-x) + var(--led-task) * 0.37); top: calc(var(--led-task-y) + var(--led-task) * 0.19);
+  width: calc(var(--led-task) * 0.26); height: calc(var(--led-task) * 0.46);
+  border: solid var(--accent-text); border-width: 0 3px 3px 0; transform: rotate(45deg);
+  opacity: 0; transition: opacity 0.12s var(--ease);
+}
+.led-task-box:hover::before { border-color: var(--accent); }
+.led-task-box:focus-visible { outline: none; }
+.led-task-box:focus-visible::before { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent-ink); }
+.led-task[data-checked='true'] > .led-task-box::before { border-color: var(--accent); background-size: 300% 300%; }
+.led-task[data-checked='true'] > .led-task-box::after { opacity: 1; }
+.led-task.led-just-checked > .led-task-box::before { animation: ledTaskPop 0.42s var(--ease); }
+.led-task.led-just-checked > .led-task-box::after { animation: ledTaskTick 0.34s 0.12s var(--ease) both; }
+@keyframes ledTaskPop {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.84); }
+  65% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes ledTaskTick {
+  0% { clip-path: inset(100% 100% 0 0); }
+  40% { clip-path: inset(calc(100% - 3px) 0 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+.led-task > .led-task-text > p:first-child { transition: color 0.2s var(--ease); }
 .led-task[data-checked='true'] > .led-task-text > p:first-child { color: var(--text-faint); text-decoration: line-through; text-decoration-color: var(--border-strong); }
+@media (prefers-reduced-motion: reduce) {
+  .led-task-box::before, .led-task-box::after, .led-task > .led-task-text > p:first-child { transition: none; }
+  .led-task.led-just-checked > .led-task-box::before, .led-task.led-just-checked > .led-task-box::after { animation: none; }
+}
 
 /* Таблицы (prosemirror-tables) */
 /* Сверху места больше: туда встаёт шестерёнка столбца (tablehandles.js). */
@@ -1257,7 +1833,6 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
 .led-pop { max-height: min(70vh, 520px); overflow: auto; }
 .led-pop-wide { width: min(360px, 90vw); }
 .led-slash { width: 270px; max-height: 330px; overflow: auto; }
-.ctx-item.led-cur { background: var(--panel-2); }
 .led-colors { display: grid; grid-template-columns: repeat(5, 28px); gap: 6px; padding: 4px; }
 .led-swatch { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 7px; background: var(--panel-2); color: var(--text); font: 700 14px var(--font-ui); cursor: pointer; }
 .led-swatch.on { box-shadow: inset 0 0 0 2px var(--accent); }
@@ -1387,13 +1962,24 @@ span.led-series-key.led-series-7 { background: var(--led-c-red); }
    Вычитаются панель (46) и поле страницы сверху (16) с запасом. */
 .led-mobile .led-pm { min-height: calc(100vh - 78px); }
 .led-mobile .led-status { display: none; }
+/* Панель над выделением на телефоне — четыре кнопки под палец (menus.js). */
+.led-mobile .led-bubble-touch { padding: 3px; border-radius: 14px; }
+.led-mobile .led-bubble-touch .led-btn { height: 44px; min-width: 44px; }
+/* Высота по тексту (opts.autoHeight — живой редактор на странице задачи
+   телефона): прокручивает экран вокруг, а редактор сообщает свою высоту
+   (сообщение height). Поле «не ниже экрана» и запас в полэкрана снизу здесь
+   растили бы WebView сами себя. */
+.led.led-autoheight { flex: none; height: auto; }
+.led-autoheight .led-body { flex: none; }
+.led-autoheight .led-scroll { overflow: visible; }
+.led-autoheight .led-pm, .led-mobile.led-autoheight .led-pm { min-height: 3.3em; }
+.led-mobile.led-autoheight .led-page-wrap { padding-bottom: 16px; }
 
 /* ---------- Статус задачи в интерфейсе ---------- */
 
 /* Квадратик цвета статуса — один и тот же приём в списке, в редакторе и на
    доске, чтобы статус узнавался по цвету, а не только по подписи. */
 .st-swatch { width: 8px; height: 8px; border-radius: 3px; background: var(--sc, var(--accent)); flex: none; display: inline-block; }
-.status-bar .st-swatch { margin-right: -2px; }
 /* Метка статуса в строке задачи — рядом со сроком, тем же весом. */
 .task-status {
   display: inline-flex; align-items: center; gap: 5px; flex: none;
@@ -1453,8 +2039,19 @@ body.platform-mac .tb-nav-strip {
   -webkit-app-region: drag;
 }
 
+/* Шапка — сетка из пяти колонок: лого · поиск · колокольчик · распорка ·
+   таймер (или «Старт»). Колонки заданы вперёд, а не раздаются остатком, как в
+   прежнем flex-ряду: там поиск и распорка делили то, что осталось от таймера,
+   и стоило «Старту» стать капсулой с названием и «Стоп», как поле слева
+   ужималось на глазах. Теперь правому блоку отведена полоса, не зависящая от
+   того, что в ней лежит, и поиск считается только от ширины окна: до 400 px (+16
+   отступа слева), а в тесном окне — сколько осталось за вычетом этой полосы.
+   Полоса — 30% строки, но не уже 150 и не шире 380 px (капсула с самым
+   длинным названием): в узком окне капсула ужимает название, а не поиск. */
 .tb-rest {
-  display: flex;
+  --tb-right-w: clamp(150px, 30%, 380px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 416px) auto minmax(12px, 1fr) var(--tb-right-w);
   align-items: center;
   height: 100%;
   margin-left: 0;
@@ -1462,18 +2059,11 @@ body.platform-mac .tb-nav-strip {
 }
 body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
 
-/* Распорка после колокольчика: она и отодвигает таймер к правому краю,
-   оставляя лого, поиск и колокольчик одной группой слева. Порядок
-   лого · поиск · колокольчик · распорка · таймер (или «Старт»). */
-.tb-gap { flex: 1; min-width: 12px; }
-
 /* Поиск — пилюля того же цвета, что острова: на земле она предмет. */
 .tb-search {
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 400px;
   min-width: 0;
   /* Справа отступ меньше: колокольчик относится к поиску и стоит вплотную к
      нему, а не висит сам по себе посреди шапки. */
@@ -1500,7 +2090,8 @@ body.platform-mac .tb-rest { margin-left: var(--traffic-w); }
   user-select: none;
   -webkit-app-region: drag;
 }
-.tb-logo-mark { width: 22px; height: 22px; flex: none; color: var(--accent-ink); }
+/* Знак шире, чем высок: рамка в разметке впритык (4:3), высота = ширина × 0.75. */
+.tb-logo-mark { width: 22px; height: 16.5px; flex: none; color: var(--accent-ink); }
 /* Вес и разрядка подобраны замером под прежний логотип (Basique Pro Bold,
    16 px, разрядка 0.4): у Onest 800 та же «краска» (352 против 349 px²) и
    высота заглавной (12.3 px), а разрядка −0.1 возвращает ширину слова
@@ -1681,7 +2272,6 @@ body.nav-collapsed .nav-pcount { opacity: 0; }
 .sr-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sr-sub { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sr-meta { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; flex: none; }
-.sr-empty { padding: 16px; color: var(--text-dim); font-size: 13px; }
 
 /* ---------- Основная область ---------- */
 
@@ -1717,6 +2307,11 @@ body.nav-collapsed #main { margin-left: calc(var(--nav-w-collapsed) + var(--gap)
    ряд карточек ниже может уйти до самого края, а не обрываться в воздухе
    за 12 px до него. Шапка и таблица недавних стоят на прежних местах. */
 #projects-view { display: flex; flex-direction: column; gap: var(--gap); overflow-y: auto; margin-right: calc(var(--gap) * -1); padding-right: var(--gap); }
+/* Строка стоит на прежнем месте (поле справа — как было), а закрашенная ею
+   земля доходит до края окна, как ряд карточек под ней: иначе сквозь поле
+   справа от строки просвечивала бы карточка, ушедшая вверх. Закраска — тенью
+   без размытия: в отличие от рамки она не растягивает прокручиваемую область. */
+#projects-view .page-head, #projects-view .page-head::after { box-shadow: var(--gap) 0 0 var(--bg); }
 
 /* ---------- Скелетон начальной загрузки ---------- */
 
@@ -1798,16 +2393,25 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
    Виден на каждом экране. Идёт — капсула: точка, задача, время, «Стоп»;
    капсула ведёт на страницу задачи, «Стоп» — отдельная кнопка внутри.
    Стоит — на её месте компактная «▶ Старт» (последняя задача). */
+/* Капсула и «Старт» стоят в одной клетке сетки шапки: обычно видна одна из
+   них, а пока капсула стекает обратно в «Старт» (.liq-shrink), они на
+   миг лежат друг на друге — и соседи шапки об этом не знают. */
+.tb-timer, .tb-start { grid-column: 5; grid-row: 1; }
 .tb-timer {
   -webkit-app-region: no-drag;
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: 9px;
-  flex: none;
+  /* Стоит у правого края своей колонки шапки и не шире её: в узком окне
+     название задачи (.tb-timer-name) ужимается, а колонка поиска не трогается. */
+  justify-self: end;
+  min-width: 0;
   height: 34px;
   margin: auto 0;
   padding: 0 4px 0 12px;
-  max-width: 380px;
+  max-width: 100%;
   background: var(--pill);
   border: 0;
   border-radius: 999px;
@@ -1831,7 +2435,7 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .tb-timer-stop:hover { background: var(--accent-hover); }
 .tb-start {
   -webkit-app-region: no-drag;
-  display: flex; align-items: center; gap: 6px; flex: none;
+  display: flex; align-items: center; gap: 6px; justify-self: end;
   height: 34px; margin: auto 0; padding: 0 14px 0 12px;
   background: var(--pill); border: 0; border-radius: 999px;
   color: var(--text); font-family: inherit; font-size: 13px; font-weight: 500;
@@ -1840,6 +2444,46 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 }
 .tb-start:hover { background: var(--panel-2); }
 .tb-start .icon { width: 13px; height: 13px; color: inherit; }
+
+/* Жидкий перелив «Старт» ↔ капсула. Запустили: капсула проявляется справа
+   налево из места «Старта» и качается желе у правого края; зелёная капля
+   «Стопа» набухает из точки, от неё отрывается бусина и катится влево —
+   там она становится точкой «идёт». Остановили: бусина катится назад и
+   вливается в каплю, капсула стекает в размер «Старта», капля
+   втягивается, и «Старт» вздрагивает, выходя из-под неё.
+   Капля и бусина — слой .liq-goo под содержимым капсулы с SVG-фильтром
+   #liq-goo (размытие и резкий порог по прозрачности): два близких пятна
+   сливаются перемычкой, как капли воды. Слой и фильтр создаёт setupLiquid,
+   классы и координаты (--liq-from — ширина «Старта», --liq-run — путь
+   бусины, место капли — под «Стопом») ставит tbPour в app.js. */
+.liq-goo { display: none; position: absolute; inset: 0; z-index: -1; pointer-events: none; filter: url(#liq-goo); }
+.liq-drop, .liq-bead { position: absolute; display: block; background: var(--accent); border-radius: 999px; }
+.liq-bead { width: 12px; height: 12px; }
+.liq-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.tb-timer.liq-grow .liq-goo, .tb-timer.liq-shrink .liq-goo { display: block; }
+.tb-timer.liq-grow .tb-timer-stop, .tb-timer.liq-shrink .tb-timer-stop { background: transparent; }
+.tb-timer.liq-grow {
+  transform-origin: right center;
+  animation: liqReveal 0.5s var(--ease) both, liqStretch 0.62s var(--ease) both;
+}
+.tb-timer.liq-grow .liq-drop { animation: liqDropIn 0.56s var(--ease) both; }
+.tb-timer.liq-grow .liq-bead { animation: liqBeadOut 0.62s var(--ease) both; }
+.tb-timer.liq-grow .tb-timer-name, .tb-timer.liq-grow .tb-timer-time { animation: liqFadeIn 0.32s var(--ease) 0.2s both; }
+.tb-timer.liq-grow .tb-timer-stop > * { animation: liqFadeIn 0.24s var(--ease) 0.24s both; }
+.tb-timer.liq-grow .tb-timer-dot { animation: liqPop 0.26s var(--spring) 0.38s both; }
+.tb-timer.liq-shrink {
+  pointer-events: none;
+  animation: liqDrain 0.46s cubic-bezier(0.55, 0, 0.75, 0.4) both, liqFadeOut 0.1s linear 0.42s both;
+}
+.tb-timer.liq-shrink .liq-drop { animation: liqDropOut 0.46s var(--ease) both; }
+.tb-timer.liq-shrink .liq-bead { animation: liqBeadIn 0.46s var(--ease) both; }
+.tb-timer.liq-shrink .tb-timer-name, .tb-timer.liq-shrink .tb-timer-time,
+.tb-timer.liq-shrink .tb-timer-dot, .tb-timer.liq-shrink .tb-timer-stop > * { animation: liqFadeOut 0.14s var(--ease) both; }
+.tb-start.liq-settle { animation: liqSettle 0.62s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) {
+  .tb-timer.liq-grow, .tb-timer.liq-shrink, .tb-start.liq-settle,
+  .tb-timer.liq-grow *, .tb-timer.liq-shrink * { animation: none; }
+}
 
 /* ---------- Колокольчик и панель уведомлений ---------- */
 
@@ -1860,8 +2504,19 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
   cursor: pointer;
 }
 .tb-notif:hover .icon { color: var(--text); }
-.tb-notif .icon { width: 15px; height: 15px; color: var(--icon); }
+.tb-notif .icon { width: 15px; height: 15px; color: var(--icon); transform-origin: 50% 8%; }
 .tb-notif.on .icon { color: var(--text); }
+/* Есть непрочитанные — колокольчик звенит: качнулся вокруг верхней точки с
+   затуханием (~1 с), потом шесть секунд тишины; так три раза, и всё. Снова
+   — только когда непрочитанных стало больше (класс .ring ставит ringBell в
+   app.js). Язычок отстаёт и бьёт в другую сторону, кружок с числом
+   вздрагивает на первом ударе. */
+.tb-notif.ring .icon { animation: bellRing 7s var(--ease) 3; }
+.tb-notif.ring .icon path:first-child { animation: bellClapper 7s var(--ease) 3; }
+.tb-notif.ring .notif-badge { animation: badgeBump 7s var(--ease) 3; }
+@media (prefers-reduced-motion: reduce) {
+  .tb-notif.ring .icon, .tb-notif.ring .icon path, .tb-notif.ring .notif-badge { animation: none; }
+}
 .notif-badge {
   position: absolute;
   top: -5px;
@@ -1923,7 +2578,6 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .notif-when { flex: none; font-size: 12px; border-radius: 999px; padding: 2px 7px; background: var(--panel-2); color: var(--text-dim); white-space: nowrap; }
 .notif-when.overdue { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
 .notif-when.soon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-ink); }
-.notif-empty { padding: 26px 14px; text-align: center; font-size: 13px; }
 
 /* ========== Слой: Экраны ========== */
 
@@ -2018,12 +2672,13 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 
 /* Доска и версии — острова во всю ширину под шапкой. */
 .proj-board { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px; }
-.proj-versions { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px; }
+/* Столбиком: пустой экран вкладки (.empty-state, flex: 1) встаёт по центру
+   того, что осталось под шапкой. */
+.proj-versions { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; }
 /* Документы проекта (круг 5): строки — общие .doc-item из раздела «Документы». */
-.proj-docs { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px; }
+.proj-docs { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; }
 .pdoc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; max-width: 760px; }
 .pdoc-list { display: flex; flex-direction: column; gap: 2px; max-width: 760px; }
-.pdoc-empty { margin: 6px 0 0; }
 .pver-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
 .pver-row { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--panel-2); cursor: pointer; transition: background 0.12s var(--ease); }
 .pver-row:hover { background: var(--raise); }
@@ -2034,7 +2689,6 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .pver-fill { display: block; height: 100%; border-radius: 3px; background: var(--text-dim); }
 .pver-meta { display: flex; gap: 16px; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .pver-meta .kpi-money { margin-left: auto; font-weight: 600; color: var(--text); }
-.pver-empty { max-width: 560px; font-size: 13px; line-height: 1.5; }
 
 /* ---------- Список задач проекта ----------
    Колонки: галочка, задача (ниже версия, точки тегов, повтор), срок,
@@ -2054,7 +2708,6 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 }
 .task-group + .task-item { border-top: 0; }
 .task-item:hover { background: var(--panel-2); }
-.task-item .task-done { width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: var(--accent); }
 .ti-main { min-width: 0; display: flex; flex-direction: column; }
 .ti-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .task-item .task-name { flex: 1; min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2094,7 +2747,11 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .tg-time, .tg-money { font-weight: 500; color: var(--text-faint); text-align: right; font-variant-numeric: tabular-nums; }
 .tg-time { grid-column: 4; }
 .tg-money { grid-column: 5; }
-#sidebar-empty { padding: 8px 12px 4px; font-size: 13px; line-height: 1.5; }
+/* Пусто — заголовки колонок и сам список уступают место пустому экрану. */
+#sidebar:has(> #sidebar-empty:not([hidden])) > .tl-head,
+#sidebar-empty:not([hidden]) ~ #task-list { display: none; }
+/* Компактный (фильтр мимо) — тоже посередине острова, как большой. */
+#sidebar > .empty-state-sm { flex: 1; }
 
 /* ---------- Страница задачи ----------
    Крошки сверху; слева остров с названием, тегами и редактором; справа
@@ -2113,9 +2770,12 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 #task-title {
   flex: 1; min-width: 140px; font-size: 22px; font-weight: var(--fw-display);
   border: none; background: transparent; color: var(--text); padding: 2px 0; outline: none;
+  /* Длинное название вне фокуса — одной строкой с многоточием, а не обрезанное
+     по краю поля. В фокусе поле обычное: иначе на месте курсора стояло бы
+     многоточие, а не конец текста. */
+  text-overflow: ellipsis;
 }
-/* Теги — строкой свойств (круг 4): чипы переносятся под подпись. */
-.task-tags-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#task-title:focus { text-overflow: clip; }
 .tab-panel { display: flex; flex-direction: column; min-height: 0; flex: 1; }
 #tab-history { overflow-y: auto; }
 .task-side { display: flex; flex-direction: column; gap: var(--gap); min-height: 0; overflow-y: auto; }
@@ -2138,39 +2798,69 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .task-tabs button { flex: 1; justify-content: center; }
 #task-props { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 #task-props[hidden] { display: none; }
-/* Свойства — строками: подпись слева, управление справа. Тот же узел в окне
-   задачи с календаря раскладывается так же. */
-.task-params { display: flex; flex-direction: column; margin-top: 8px; }
-.task-params > div { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); min-height: 26px; flex-wrap: wrap; }
-.task-params > div:first-child { border-top: 0; }
-.task-params > div[hidden] { display: none; }
-.task-params > div > .icon { display: none; }
-.task-params .due-label, .task-params .money-bar label { color: var(--text-faint); font-size: 12.5px; flex: 1; }
-.task-params .dp-btn { min-width: 0; height: 26px; padding: 0 9px; font-size: 12.5px; }
-.task-params #task-rate {
-  width: 72px; height: 26px; padding: 0 8px; text-align: right; font-size: 12.5px; border-radius: 8px;
-  background: var(--panel-2); border: 0; color: var(--text); outline: none; font-variant-numeric: tabular-nums;
+/* Свойства — как на телефоне (13 октября): статус и версия чипами, теги
+   бейджами и «+ теги», дальше группы строк «название · значение ›» —
+   «Когда», «Напоминания», «Ещё» (.sgroup, .srow в компонентах). Разметку
+   собирает app.js (taskParamsHtml); тот же узел одалживает окно задачи с
+   календаря — там он такой же. */
+.task-params { display: flex; flex-direction: column; padding-bottom: 12px; }
+.task-params > .sgroup-label:first-child { margin-top: 12px; }
+.tp-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.tp-chips[hidden] { display: none; }
+.tp-chips .dp-btn { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; height: 28px; padding: 0 10px; font-size: 12.5px; }
+.tp-chip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Колонка узкая (300 px): «Пн, Ср 10:00–12:00 +1» или «как у проекта —
+   5 000 ₽/ч» в одну строку рядом с названием не помещаются — значение и
+   подстрока переносятся на вторую строку, а не режутся многоточием посреди
+   времени. Дальше двух строк — многоточием. */
+.task-params .srow-value, .task-params .srow-sub {
+  white-space: normal; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
 }
-.task-params #task-rate:focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
-.task-params #rate-unit { font-size: 12px; color: var(--text-faint); }
-.task-params .money-calc { flex-basis: 100%; font-size: 12px; color: var(--text-faint); margin: 0; white-space: normal; }
-.task-params .money-calc b { font-weight: 600; }
-.task-params .due-state { margin-left: 2px; }
-.task-params .repeat-next { flex-basis: 100%; font-size: 12px; color: var(--text-faint); }
-.task-actions { display: flex; gap: 6px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
-.task-actions .ghost, .task-actions .danger { flex: 1; }
-#tmdlg-params .task-params { margin: 2px 0 12px; }
-/* В окне подписи одной ширины — управление встаёт в одну колонку. */
-#tmdlg-params .task-params .due-label, #tmdlg-params .task-params .money-bar label { flex: 0 0 96px; }
-#tmdlg-params .status-bar .st-swatch { display: none; }
+/* Бейджи тегов стоят в том же ряду, что и «+ теги»: обёртка ряду не мешает. */
+.tp-chips > .tag-chips { display: contents; }
+/* «+ теги» — чип, как на телефоне: слово строчными (подпись группы над ним
+   с заглавной). */
+.tp-chips .tp-tag-add .icon { width: 11px; height: 11px; flex: none; }
+.tp-tag-add span { text-transform: lowercase; }
+/* Срок жирным и цветом своего состояния, как в строках задач: просрочен —
+   --danger, в пределах суток — --accent-ink. */
+#due-value.set { color: var(--text); font-weight: 600; }
+#due-value.soon { color: var(--accent-ink); }
+#due-value.overdue { color: var(--danger); }
+/* «Выполнено» и «Удалить задачу» — парой внизу панели. Дублировать — в меню
+   «⋯» задачи (крошки сверху), как в меню на строке списка. */
+.task-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
+.task-actions .ghost, .task-actions .danger { flex: 1 1 calc(50% - 3px); }
+/* Меню задачи — у правого края строки крошек. */
+.task-crumbs .task-more { margin-left: auto; flex: none; }
+/* Галочка чек-листа в редакторе на десктопе и в вебе под мышью — 22 px в
+   кнопке 36 px (13 октября 2026): 24/44 — размер под палец, под курсором
+   он крупный. Телефон (и веб на сенсорном экране) остаются 24/44: сборка
+   телефона берёт только раздел «Редактор», куда это правило не входит. */
+@media (pointer: fine) {
+  #editor-wrap .led, #doc-editor-wrap .led { --led-task: 22px; --led-task-hit: 36px; }
+}
 
 /* ---------- История записей (правая панель задачи) ---------- */
 .history-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
 .history-head h2 { margin: 0; font-size: 13px; font-weight: var(--fw-display); }
 .history-head .h-count { font-size: 12px; font-weight: 500; color: var(--text-faint); margin-left: 4px; }
+/* Обе кнопки — один класс .btn-soft: «+ Запись» и «Excel» были разной высоты и
+   вида (вторая — серая .ghost без иконки), и в одной строке это читалось как
+   случайность. */
 .history-actions { display: flex; gap: 6px; }
-.history-actions .btn-soft { display: inline-flex; align-items: center; gap: 5px; }
+/* Кнопки записи скруглены крупнее (--radius, 13 октября 2026) — как квадрат
+   таймера над ними. Общий .btn-soft не трогается: он скруглён, как поля. */
+.history-actions .btn-soft { display: inline-flex; align-items: center; gap: 5px; border-radius: var(--radius); }
 .history-actions .btn-soft .icon { width: 12px; height: 12px; }
+/* Недоступная кнопка (у задачи нет записей — выгружать нечего) гаснет, как гасла
+   серая .ghost. Правило не общее, а по месту: селектор `.btn-soft` попадает в
+   стили редактора телефона (scripts/build-editor.js), и ради гаснущей кнопки
+   истории пересобирать редактор незачем. */
+.history-actions .btn-soft:disabled { opacity: 0.45; cursor: default; }
+.history-actions .btn-soft:disabled:hover { background: var(--panel-2); }
+.history-actions .btn-soft:disabled:active { transform: none; }
 #session-list { list-style: none; margin: 0; padding: 0; }
 .session-item {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -2193,9 +2883,12 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 /* Узкое окно: правые колонки встают под основное, список и задача — одним
    столбцом. */
 @media (max-width: 900px) {
-  #home-view, .proj-list, .task-grid, .docs-grid { grid-template-columns: minmax(0, 1fr); }
+  /* #docs-view — не для красоты: раздел «Документы» описан ниже, и голый
+     .docs-grid перебивался его же правилом — сетка не складывалась, и
+     пустой экран на телефоне уезжал за край. */
+  #home-view, .proj-list, .task-grid, #docs-view .docs-grid { grid-template-columns: minmax(0, 1fr); }
   .docs-side { max-height: 40vh; }
-  .home-side, .proj-side, .task-side { overflow: visible; }
+  .home-side, .proj-side, .task-side { overflow: visible; margin-right: 0; }
   .tl-head, .task-item, .task-group { grid-template-columns: 22px minmax(0, 1fr) 72px; }
   .tl-head span:nth-child(3), .ti-due, .tl-head span:nth-child(5), .ti-money, .tg-money { display: none; }
   .tg-time { grid-column: 3; }
@@ -2210,8 +2903,11 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .docs-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; padding: 16px 12px 12px; }
 .docs-side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; }
 .docs-side-head .page-title { font-size: 20px; }
-.docs-search { width: 100%; box-sizing: border-box; }
-.docs-filter { align-self: flex-start; }
+/* Поиск: лупа внутри поля слева (та же иконка, что в поиске шапки), текст
+   отступает под неё. Лупа не ловит щелчки — они идут в поле. */
+.docs-search-box { position: relative; }
+.docs-search-box .icon { position: absolute; left: 9px; top: 50%; width: 14px; height: 14px; margin-top: -7px; color: var(--icon); pointer-events: none; }
+.docs-search { width: 100%; box-sizing: border-box; padding-left: 30px; }
 .doc-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding: 0 4px; }
 .doc-item { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: background 0.1s var(--ease); }
 .doc-item:hover { background: var(--panel-2); }
@@ -2219,7 +2915,8 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .doc-item-title { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .doc-pin { width: 12px; height: 12px; color: var(--text-faint); flex: none; }
 .doc-item-meta { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.doc-list-empty { padding: 12px 6px; font-size: 12.5px; }
+/* Поиск мимо — список пуст и уступает место пустому экрану под фильтром. */
+.doc-list:empty { display: none; }
 .docs-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 0; overflow: hidden; }
 .docs-doc { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .docs-doc[hidden] { display: none; }
@@ -2251,18 +2948,26 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .day-actions { display: flex; gap: 6px; flex: none; }
 .day-actions .btn-soft { display: inline-flex; align-items: center; gap: 5px; }
 .day-actions .btn-soft .icon { width: 12px; height: 12px; }
+/* «Запись» и «Открыть день» — кнопки записи: скругление --radius, как у
+   квадрата таймера (13 октября 2026). */
+.day-actions .btn-soft, .day-actions .ghost { border-radius: var(--radius); }
 .day-track { position: relative; height: 54px; border-radius: var(--radius-sm); background: var(--panel-2); margin-top: 12px; overflow: hidden; }
 .day-grid { position: absolute; inset: 0; display: flex; }
 .day-grid i { flex: 1; border-right: 1px solid var(--line); }
 .day-grid i:last-child { border-right: 0; }
+/* Запись — цветом своего проекта (--pc ставит renderDayIsland), как событие в
+   панели «Время» (.ag-ev): полоса слева чистым цветом, заливка и подпись — из
+   него же, смешанные с землёй (--tag-ink подобран под обе темы). Чистый неон
+   заливкой смешался бы с идущей записью — та одна на ленте и зелёная. */
 .day-blk {
   position: absolute; top: 7px; bottom: 7px; min-width: 3px;
-  border: 0; border-radius: 7px; padding: 0 8px;
-  background: var(--raise); color: var(--text);
+  border: 0; border-left: 3px solid var(--pc, var(--accent)); border-radius: 7px; padding: 0 8px;
+  background: color-mix(in srgb, var(--pc, var(--accent)) 22%, var(--panel-2));
+  color: color-mix(in srgb, var(--pc, var(--accent)) var(--tag-ink), var(--text));
   font-family: inherit; font-size: 12px; font-weight: 600; text-align: left;
   display: flex; align-items: center; white-space: nowrap; overflow: hidden; cursor: pointer;
 }
-.day-blk.run { background: var(--accent); color: var(--accent-text); }
+.day-blk.run { border-left: 0; background: var(--accent); color: var(--accent-text); }
 .day-now { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--danger); border-radius: 1px; pointer-events: none; }
 .day-hours { display: flex; margin-top: 6px; }
 .day-hours span { flex: 1; font-size: 12px; color: var(--text-faint); }
@@ -2299,6 +3004,7 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 /* Плей, время и «Открыть» — одной строкой: на Onest цифры шире, чем были
    на Basique, и с переносом «Открыть» уезжала под время. */
 .now-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.now-row .btn-soft { border-radius: var(--radius); }
 .now-figures { min-width: 0; }
 .now-time { font-family: var(--font-display); font-weight: var(--fw-display); font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .now-money { font-family: var(--font-display); font-weight: var(--fw-display); font-size: 13px; color: var(--text-dim); margin-top: 3px; font-variant-numeric: tabular-nums; }
@@ -2306,22 +3012,26 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 /* ---------- Проекты ---------- */
 
 /* Ряд больших карточек, как колода на телефоне: карточка — проект со
-   своими задачами. Не влезли — ряд листается вбок (стрелки в шапке,
-   тачпад, Shift+колесо) и встаёт по краю карточки. Высота ряда — экран
-   без шапки и строки таблицы недавних, но не ниже, чем нужно на пять
+   своими задачами. Не влезли — ряд листается вбок (стрелки по краям,
+   тачпад, Shift+колесо) и встаёт по краю карточки; край, за которым есть
+   ещё карточки, растворяется — «Край ленты» в компонентах. Высота ряда —
+   экран без шапки и строки таблицы недавних, но не ниже, чем нужно на пять
    задач. */
+/* Ряд — до края окна: карточка, ушедшая вправо, видна до самого края, а
+   в конце ряда последняя карточка встаёт с полем --gap. Это отступ
+   обёртки, а не ряда: стрелка справа встаёт на поле ряда, а не на край окна. */
+.projects-deck-host { flex: none; margin-right: calc(var(--gap) * -1); }
+.projects-deck-host .edge-btn[data-side="r"] { right: calc(var(--gap) + 12px); }
+.projects-deck-host:has(> .projects-deck:empty) { display: none; }
 .projects-deck {
-  display: flex; gap: var(--gap); flex: none;
-  /* Ряд — до края окна: карточка, ушедшая вправо, видна до самого края, а
-     в конце ряда последняя карточка встаёт с полем --gap. */
-  margin-right: calc(var(--gap) * -1); padding-right: var(--gap);
+  display: flex; gap: var(--gap);
+  padding-right: var(--gap);
   height: clamp(440px, calc(100vh - 230px), 680px);
   overflow-x: auto; overflow-y: hidden;
   scroll-snap-type: x proximity; scroll-padding-inline: 0;
   overscroll-behavior-x: contain;
 }
 .projects-deck:empty { display: none; }
-#deck-prev[hidden], #deck-next[hidden] { display: none; }
 .ptile {
   flex: 0 0 320px;
   scroll-snap-align: start;
@@ -2360,24 +3070,35 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .ptile-qa { display: flex; gap: 6px; margin: 12px 10px 4px; flex: none; }
 .ptile-qa .field { flex: 1; min-width: 0; font-size: 13.5px; }
 /* Задачи — своей прокруткой; строка — общий список строк (.row-list). */
-.ptile-tasks { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0 6px; }
+.ptile-tasks { flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0 0 0 6px; }
 .ptile-tasks li { padding: 8px 8px 8px 10px; border-radius: var(--radius-sm); transition: opacity 0.24s var(--ease), transform 0.24s var(--ease); }
 .ptile-tasks li:hover { background: var(--panel-2); }
 .ptile-tasks li + li { border-top-color: var(--line); }
 .ptile-tasks li.leaving { opacity: 0; transform: scale(0.9); }
-.ptile-tasks li.ptile-empty { justify-content: center; padding: 24px 0; color: var(--text-faint); font-size: 12.5px; cursor: default; }
+/* Задач нет — компактный пустой экран по центру поля задач. */
+.ptile-tasks li.ptile-empty { justify-content: center; min-height: 100%; padding: 0; cursor: default; }
 .ptile-tasks li.ptile-empty:hover { background: none; }
-.ptile-task .task-done { width: 16px; height: 16px; margin: 0; flex: none; cursor: pointer; accent-color: var(--accent); }
+/* Карточки собираются заново на каждую перерисовку; осевший экран
+   (.settled) сценку не проигрывает — как и сами карточки. */
+.view.settled .ptile-empty .es-art, .view.settled .ptile-empty .es-mark, .view.settled .ptile-empty .es-on-mark { animation: none; }
 .ptile-task .rl-name { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .ptile-task .rl-sub { margin-top: 2px; gap: 5px; }
 .ptile-status { display: inline-flex; align-items: center; gap: 5px; color: var(--text-dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .ptile-running { color: var(--accent-ink); font-weight: 600; }
 .ptile-sep { color: var(--text-faint); }
 .ptile-task .task-time { color: var(--text-faint); font-variant-numeric: tabular-nums; }
-.ptile-task .rl-play { width: 34px; height: 34px; border-radius: 999px; background: var(--panel-2); color: var(--text); }
+.ptile-task .rl-play { width: 34px; height: 34px; background: var(--panel-2); color: var(--text); }
 .ptile-task .rl-play:hover { background: var(--raise); }
 .ptile-task .rl-play.run { background: var(--accent); color: var(--accent-text); }
 .ptile-task .rl-play.run .icon { color: inherit; }
+/* Закрытые задачи — под открытыми, как на телефоне (13 октября 2026):
+   выполненные серые и зачёркнутые, с отмеченной галочкой; отменённые — в
+   самом низу, серые без зачёркивания, на месте галочки серый крестик. */
+.ptile-task.done .rl-name { color: var(--text-faint); text-decoration: line-through; }
+.ptile-task.cancelled .rl-name { color: var(--text-faint); }
+.ptile-task.done .rl-sub, .ptile-task.cancelled .rl-sub { opacity: 0.7; }
+.ptile-x { display: inline-grid; place-content: center; flex: none; width: 16px; height: 16px; color: var(--text-faint); }
+.ptile-x .icon { width: 10px; height: 10px; color: inherit; }
 .ptile-open {
   flex: none; display: flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 44px; border: 0; border-top: 1px solid var(--line); background: none;
@@ -2400,8 +3121,6 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .recent-when.run { color: var(--accent-ink); }
 .recent-num { font-family: var(--font-display); font-weight: var(--fw-display); font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
 .recent-num.money { color: var(--text-dim); }
-.recent-row .icon-btn.run { background: var(--accent); color: var(--accent-text); }
-.recent-row .icon-btn.run .icon { color: inherit; }
 
 /* ---------- Полный календарь ---------- */
 
@@ -2472,26 +3191,30 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 
 @keyframes rangeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
+/* Выбор времени — 13 октября 2026: поле и под ним подсказки, один на все
+   места (запись, отрезок, напоминание, дедлайн). Поле — общее компактное
+   (.field-sm); подсказки — колонка через 15 минут вокруг значения, своей
+   прокруткой; выбранная — как выбранный день, под стрелками — как под
+   указателем. Окно встаёт над окном даты, если его открыли оттуда. */
 .tp-pop {
   position: fixed;
   z-index: 120;
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 6px;
+  width: 132px;
   background: var(--panel);
   border: 0;
   border-radius: 12px;
+  box-shadow: var(--shadow-pop);
   padding: 8px;
   animation: popIn 0.14s var(--ease);
 }
-.tp-col {
-  width: 52px;
-  max-height: 190px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.tp-col button {
+.tp-input { width: 100%; text-align: center; font-variant-numeric: tabular-nums; }
+.tp-input.bad { box-shadow: inset 0 0 0 1.5px var(--danger); }
+.tp-list { position: relative; max-height: 196px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.tp-opt {
+  flex: none;
   border: none;
   background: none;
   color: var(--text);
@@ -2504,8 +3227,8 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
   text-align: center;
   transition: background 0.1s var(--ease), color 0.1s var(--ease);
 }
-.tp-col button:hover { background: var(--panel-2); }
-.tp-col button.sel { background: var(--accent); color: var(--accent-text); font-weight: 500; }
+.tp-opt:hover, .tp-opt.cur { background: var(--panel-2); }
+.tp-opt.sel { background: var(--accent); color: var(--accent-text); font-weight: 500; }
 
 .dp-pop {
   position: fixed;
@@ -2538,19 +3261,18 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .dp-day:hover:not(.empty) { background: var(--border); }
 .dp-day.today { outline: 1px solid var(--accent); }
 .dp-day.sel { background: var(--accent); color: var(--accent-text); font-weight: 500; }
-/* Время под календарём: часы и минуты — два поля с кнопкой-списком. */
-.dp-time { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
-.dp-time-label { font-size: 12px; color: var(--text-dim); margin-right: 4px; }
-.dp-time-colon { color: var(--text-dim); }
-.dp-combo { display: inline-flex; align-items: center; gap: 1px; }
-/* Поле — обычное компактное (.field-sm), ему здесь только ширина. */
-.dp-tf { width: 40px; padding-left: 4px; padding-right: 4px; text-align: center; font-variant-numeric: tabular-nums; }
-.dp-combo-btn { width: 18px; height: 26px; border: none; background: none; color: var(--icon); cursor: pointer; display: grid; place-items: center; padding: 0; }
-.dp-combo-btn .icon { width: 11px; height: 11px; color: inherit; }
-.dp-combo-btn:hover { color: var(--text); }
-/* «Готово» — своей строкой во всю ширину: рядом со временем она не
-   помещалась и вылезала за край окна. */
-.dp-done { flex-basis: 100%; margin-top: 8px; border: none; border-radius: 8px; padding: 7px 10px; background: var(--accent); color: var(--accent-text); font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+/* Время под календарём: кнопка с часами открывает общий выбор времени
+   (.tp-pop) поверх окна даты. «Готово» и «Убрать» (только у дедлайна) —
+   строкой во всю ширину под ней. */
+.dp-time { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+.dp-time-label { font-size: 12px; color: var(--text-dim); }
+.dp-time .dp-time-btn { min-width: 0; margin-left: auto; padding: 5px 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.dp-time-actions { flex-basis: 100%; display: flex; gap: 6px; margin-top: 2px; }
+.dp-done, .dp-clear { flex: 1; border: none; border-radius: 8px; padding: 7px 10px; font-family: inherit; font-size: 12.5px; cursor: pointer; }
+.dp-done { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.dp-clear { background: var(--panel-2); color: var(--text-dim); }
+.dp-clear:hover { color: var(--text); }
+.dp-clear[hidden] { display: none; }
 .dp-done:hover { background: var(--accent-hover); }
 .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 12px; color: var(--text-dim); padding: 0 2px 6px; }
 .cal-days {
@@ -2666,27 +3388,29 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .period-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .period-list li {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   border: 0;
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   cursor: pointer;
   font-size: 12px;
-  transition: border-color 0.1s var(--ease);
+  transition: background 0.1s var(--ease);
   animation: tileIn 0.18s var(--ease) backwards;
 }
-.period-list li:hover { border-color: var(--border-strong); }
+.period-list li:hover { background: var(--panel-2); }
 .pl-check { color: var(--icon); flex: none; }
 .pl-check.done { color: var(--accent-ink); }
 .pl-check .icon { width: 13px; height: 13px; }
-.pl-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-name { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-proj { display: block; font-weight: var(--fw-text); color: var(--text-dim); font-size: 12px; margin-top: 1px; }
 .pl-proj::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 2px; background: var(--pc, var(--accent)); margin-right: 4px; }
-.pl-right { text-align: right; }
-.pl-money { color: var(--accent-ink); font-weight: 500; display: block; }
-.pl-time { color: var(--text-dim); font-size: 12px; }
+/* Справа, как в записях дня: длительность основным цветом, под ней деньги
+   приглушённо. Деньги — обычным текстом, не акцентом. */
+.pl-right { text-align: right; font-variant-numeric: tabular-nums; }
+.pl-time { display: block; font-weight: 500; }
+.pl-money { display: block; color: var(--text-dim); }
 
 .cal-day {
   padding: 14px 16px;
@@ -2726,72 +3450,61 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
    зелёные цифры на светлой теме читались хуже чёрных. */
 .cal-view-tot.period { background: var(--sel); }
 .cal-view-tot b { color: var(--text); font-size: 13.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.cal-day-head { font-size: 16px; font-weight: 500; }
-.cal-day-tot { font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; margin: 4px 0 12px; }
+/* День: заголовок слева, итог справа — одной строкой. Длинному заголовку
+   уступает место многоточие, а не итог: он не переносится и не уезжает. */
+.cal-day-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+.cal-day-head { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 500; }
+.cal-day-tot { flex: none; white-space: nowrap; font-size: 13px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .cal-day-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+/* Строка записи — две строки: задача и длительность, под ними интервал и
+   деньги приглушённо. Подсвечивается заливкой: обводки у строк нет. */
 .cal-day-list li {
-  display: grid; grid-template-columns: 1fr auto; gap: 2px 10px;
-  border: 0; border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 12px;
-  transition: border-color 0.1s var(--ease);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 12px;
+  border: 0; border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 12px;
+  transition: background 0.1s var(--ease);
   animation: tileIn 0.18s var(--ease) backwards;
 }
-.cal-day-list li:hover { border-color: var(--border-strong); }
-.cdl-time { color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.cdl-dur { font-variant-numeric: tabular-nums; font-weight: 500; }
-.cdl-task { grid-column: 1; font-weight: 500; }
-.cdl-money { grid-column: 2; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.cal-day-list li:hover { background: var(--panel-2); }
+/* Название задачи в записи — не больше трёх строк, дальше многоточие: длинное
+   название раздувало запись на пол-панели и оттесняло остальные. */
+.cdl-task {
+  min-width: 0; font-size: 12.5px; font-weight: var(--fw-text); overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+.cdl-dur { font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; text-align: right; }
+.cdl-time { color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cdl-money { text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cdl-proj { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-weight: var(--fw-text); color: var(--text-dim); font-size: 12px; }
 .cdl-proj::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--pc, var(--accent)); }
 
-/* ---------- Срок и напоминание у задачи ---------- */
+/* ---------- Срок задачи ---------- */
 
-/* Перенос обязателен: когда у задачи наступает срок, в строку добавляется
-   плашка «просрочено»/«скоро», и содержимое перестаёт помещаться — при
-   nowrap кнопка напоминания и крестик уезжали за правый край панели, а сама
-   кнопка ломалась на две строки. */
-.due-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  row-gap: 6px;
-  margin-top: 10px;
-  font-size: 13px;
-}
-/* .due-gap растягивается только когда всё уместилось в одну строку; после
-   переноса он не должен рвать ряд пополам. */
-.due-bar > .due-gap { min-width: 0; }
-.due-bar > .icon { color: var(--icon); flex: none; }
-.due-label { color: var(--text-dim); flex: none; }
-.due-gap { flex: 1; }
-.due-custom { padding-left: 24px; }
-.due-state { flex: none; font-size: 12px; border-radius: 999px; padding: 3px 9px; background: var(--panel-2); color: var(--text-dim); }
-.due-state.soon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-ink); }
-.due-state.overdue { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
-
-/* Метка срока в списке задач — тот же цветовой код, что у .due-state. */
+/* Метка срока в списке задач: просрочено — --danger, в пределах суток —
+   --accent-ink (тот же код, что у значения дедлайна в свойствах, #due-value). */
 .task-due { flex: none; font-size: 12px; border-radius: 999px; padding: 2px 7px; background: var(--panel-2); color: var(--text-dim); white-space: nowrap; }
 .task-due.soon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-ink); }
 .task-due.overdue { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
 
-/* ---------- Диалог выбора периода экспорта ---------- */
+/* ---------- Окно «Экспорт в Excel» ----------
+   Два поля друг под другом — период и проекты, обе выпадашки на всю ширину
+   (.dp-select) — и сводка того, что уйдёт в файл. Пара дат своего периода —
+   тот же ряд из двух кнопок, что у времени записи (.sdlg-times). */
 
-/* Пресеты периода — два ряда на одной подложке, 3 сверху и 4 снизу, как в
-   мобильном приложении. Семь вариантов в одну строку не помещаются читаемо,
-   а перенос вразнобой выглядел бы случайным. */
-.exp-pills { margin-bottom: 12px; }
-.exp-tab { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.exp-range { display: flex; flex-direction: column; gap: 10px; }
-.exp-range-vals { display: flex; align-items: center; gap: 8px; }
-.exp-range-vals .cal-range-val { flex: 1; text-align: center; }
-/* Подсвечена та граница, которую задаст следующий клик по календарю. */
-.cal-range-val.active { border-color: var(--accent); }
-/* Календарь встроен в модалку, а не всплывает поверх неё. */
-.exp-cal { background: var(--panel-2); border: 0; border-radius: 10px; padding: 8px; }
-.exp-cal .dp-head { margin-bottom: 4px; }
-/* Дни между границами диапазона. */
-.dp-day.in-range { background: color-mix(in srgb, var(--accent) 16%, transparent); border-radius: 0; }
+/* Точные даты выбранного периода под полем. Строка занимает место и
+   пустой: иначе окно прыгало бы на «Всём времени», когда записей ещё нет. */
+.exp-hint { min-height: 18px; margin-top: 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.exp-dates { margin-bottom: 2px; }
+/* Сводка отделена чертой: это итог выбора, а не третье поле. Место под две
+   строки закреплено: «Записей нет…» на узком окне переносится, и окно, растя
+   посреди выбора, уезжало бы из-под открытого меню проектов. */
+.exp-summary { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.4; box-sizing: content-box; min-height: 2.8em; color: var(--text); }
+.exp-summary.empty { color: var(--text-dim); }
+/* «Экспорт» без записей гаснет. Правило по id, а не общим .modal-buttons:
+   такие селекторы попадают в стили редактора телефона, и ради одного окна
+   пришлось бы пересобирать редактор. */
+#expdlg-ok:disabled { opacity: 0.45; cursor: default; }
+#expdlg-ok:disabled:hover { background: var(--accent); border-color: var(--accent); }
+#expdlg-ok:disabled:active { transform: none; }
 
 /* ---------- Страница статистики ---------- */
 
@@ -2885,10 +3598,13 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 
 /* ---------- Проект: доска ---------- */
 
-.board-empty { padding: 40px 16px; text-align: center; font-size: 13px; }
 /* Колонки без собственной рамки и подложки: видимую форму держат карточки,
    а колонка — это только заголовок и отступ. Так доска остаётся спокойной
    при большом числе статусов, где сетка из рамок начинала бы рябить. */
+/* Обёртка дорожек: держит стрелки «Края ленты» и занимает то, что занимали
+   сами дорожки. Нет проекта — дорожки спрятаны, и обёртка тоже. */
+.board-host { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.board-host:has(> .board-cols[hidden]) { display: none; }
 .board-cols {
   flex: 1;
   min-height: 0;
@@ -2990,27 +3706,29 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 /* ---------- Настройка статусов проекта ---------- */
 
 .modal-wide { width: min(560px, calc(100vw - 32px)); }
-/* Окно проекта: разделы переключаются сегментным переключателем, высота
-   держится, чтобы окно не прыгало при смене раздела. */
-.pjdlg-tabs { margin-bottom: 14px; }
-.pjdlg-sec { min-height: 236px; }
+/* Окно проекта: все разделы одним списком с подзаголовками, как на телефоне.
+   Окно — колонка: заголовок, середина (.pjdlg-body — её и прокручивают) и
+   кнопки внизу, которые стоят на месте. Место под полосу вынесено в поле
+   окна (margin-right), чтобы поля не сужались, когда полоса появляется. */
+.pjdlg { display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
+.pjdlg-body { position: relative; flex: 1; min-height: 0; overflow-y: auto; }
+.pjdlg .modal-title, .pjdlg .modal-buttons { flex: none; }
 .pjdlg-sec > label:first-child { margin-top: 0; }
+.pjdlg-sec + .pjdlg-sec { margin-top: 22px; }
+.pjdlg-head { margin: 0 0 6px; }
 .pjdlg-hint { margin: 8px 0 0; font-size: 12px; line-height: 1.5; }
 .pjdlg .rate-row { display: flex; align-items: center; gap: 8px; }
 .pjdlg .rate-row .field { width: 140px; }
-.tag-pop-scope { margin-left: auto; font-size: 12px; color: var(--text-faint); }
+.tag-pop-scope { min-width: 0; text-align: right; font-size: 12px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
 .st-row { display: flex; align-items: center; gap: 6px; }
 .st-color {
   flex: none; width: 22px; height: 22px; border-radius: 6px;
   border: 0; background: var(--sc, var(--accent)); cursor: pointer;
 }
-.st-name {
-  flex: 1; min-width: 0;
-  background: var(--panel-2); border: 0; border-radius: 6px;
-  padding: 5px 8px; color: var(--text); font-family: inherit; font-size: 13px; outline: none;
-}
-.st-name:focus { border-color: var(--accent); }
+/* Поле названия — общее компактное (.field-sm): своего вида у него нет,
+   здесь только место в строке. */
+.st-name { flex: 1; min-width: 0; }
 .st-kind { flex: none; max-width: 170px; }
 .st-del .icon { color: var(--danger); }
 .st-row .icon-btn[disabled] { opacity: 0.35; cursor: default; }
@@ -3170,7 +3888,6 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .board-lane-head.released .lane-name { color: var(--text-dim); font-weight: 600; }
 
 /* Настройки проекта: два раздела в одном окне — статусы и версии. */
-.st-hint { font-size: 12px; line-height: 1.5; }
 /* У версии нет цвета, зато есть выпуск и счётчик задач — остальное такое же,
    как у строки статуса, и раскладку она берёт оттуда же. */
 /* Пустое место под кружок цвета, которого у версии нет: без него поля
@@ -3186,7 +3903,7 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .ver-use { flex: none; min-width: 58px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Одинаковые названия не запрещаем — только показываем: двух «v1.2» в одном
    проекте всё равно не различить на глаз. */
-.ver-row.dup .st-name { border-color: var(--danger); }
+.ver-row.dup .st-name { box-shadow: inset 0 0 0 1.5px var(--danger); }
 
 /* ---------- Дорожки доски: плотнее и на своей поверхности ---------- */
 /* Заголовок стоял на цвете страницы и читался висящим в воздухе. Теперь он
@@ -3244,34 +3961,73 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .ph-version.on { color: var(--text); font-weight: 600; }
 
 /* ---------- Правая панель: записи по проектам ---------- */
-/* Обёртка группы — не карточка: карточками остаются строки внутри неё. */
+/* Обёртка группы — не карточка. Группу связывает слева полоса цвета проекта
+   (--pc приходит из calGroupNode), под заголовком с отступом лежат записи.
+   Полоса ::before привязана к низу обёртки, поэтому при складывании едет
+   вместе с её высотой. */
 .cal-day-list > li.cdl-group,
 .period-list > li.cdl-group {
   display: block;
-  padding: 0;
+  position: relative;
+  padding: 0 0 0 12px;
   border: none;
   background: none;
+  cursor: default;
 }
 .cal-day-list > li.cdl-group:hover,
-.period-list > li.cdl-group:hover { border-color: transparent; }
+.period-list > li.cdl-group:hover { background: none; }
 .cal-day-list > li.cdl-group + li.cdl-group,
-.period-list > li.cdl-group + li.cdl-group { margin-top: 12px; }
+.period-list > li.cdl-group + li.cdl-group { margin-top: 10px; }
+.cdl-group::before {
+  content: '';
+  position: absolute; left: 0; top: 2px; bottom: 2px;
+  width: 3px; border-radius: 2px;
+  background: var(--pc, var(--accent));
+}
 
+/* Имя проекта — главное в группе: основным цветом и полужирным, а не
+   приглушённым, как итог справа. Длинное имя — многоточием, итог остаётся. */
 .cdl-group-head {
-  display: flex; align-items: center; gap: 7px; width: 100%;
+  display: flex; align-items: center; gap: 8px; width: 100%;
   border: none; background: none; cursor: pointer;
-  padding: 3px 2px 7px;
-  color: var(--text); font-family: inherit; font-size: 12px; font-weight: 600;
+  padding: 2px 0 6px;
+  color: var(--text); font-family: inherit; font-size: 13.5px; font-weight: 600;
   text-align: left;
 }
 .cdl-group-head:hover .cdl-group-name { color: var(--accent-ink); }
-.cdl-chev { flex: none; width: 13px; height: 13px; color: var(--text-faint); transition: transform 0.14s var(--ease); }
+.cdl-chev { flex: none; width: 13px; height: 13px; color: var(--text-faint); transition: transform var(--cdl-t) var(--ease); }
 .cdl-group.closed .cdl-chev { transform: rotate(-90deg); }
-.cdl-group-dot { flex: none; width: 8px; height: 8px; border-radius: 3px; background: var(--pc, var(--accent)); }
+.cdl-group-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--pc, var(--accent)); }
 .cdl-group-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cdl-group-tot { margin-left: auto; flex: none; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
-.cdl-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.cdl-group.closed .cdl-rows { display: none; }
+.cdl-group-tot { margin-left: auto; flex: none; font-size: 12px; font-weight: var(--fw-text); color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Складывание записей: высота идёт от auto к 0, и это умеет только
+   interpolate-size (Chromium 129+, то есть Electron 33 и Chrome). Приём
+   «grid-template-rows: 1fr → 0fr» проверен и не годится: Chromium делит
+   дробные доли дважды, и записи сжимаются по квадрату, пока высота группы —
+   а с ней и полоса слева — идёт по прямой; полоса уезжала бы ниже записей.
+   Где interpolate-size нет, группа просто складывается сразу — как раньше.
+   Длительность одна на всё (--cdl-t): высота, проявление записей и поворот
+   стрелки. */
+.cdl-group { --cdl-t: 0.2s; interpolate-size: allow-keywords; }
+/* Без движения — сразу: нулевое время обнуляет и задержку скрытия записей. */
+@media (prefers-reduced-motion: reduce) {
+  .cdl-group { --cdl-t: 0s; }
+}
+/* Левый отступ равен шеврону с зазором: текст записей начинается там же,
+   где метка проекта в заголовке. overflow: hidden обрезает записи по
+   убывающей высоте. */
+.cdl-rows {
+  list-style: none; margin: 0; padding: 0 0 0 11px; display: flex; flex-direction: column; gap: 2px;
+  height: auto; overflow: hidden;
+  transition: height var(--cdl-t) var(--ease), opacity var(--cdl-t) var(--ease), visibility 0s;
+}
+/* Записи проявляются и гаснут вместе со складыванием. visibility уходит в
+   конце: свёрнутые записи не должны ни получать фокус, ни читаться
+   скринридером — как при прежнем display: none. */
+.cdl-group.closed .cdl-rows {
+  height: 0; opacity: 0; visibility: hidden;
+  transition: height var(--cdl-t) var(--ease), opacity var(--cdl-t) var(--ease), visibility 0s linear var(--cdl-t);
+}
 
 /* ---------- Календарь-расписание ----------
    Часовая сетка внутри раздела «Время»: записи времени блоками, дедлайны
@@ -3445,6 +4201,8 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 
 /* Расписание */
 .ag-list { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 24px; }
+/* Пустой период — пустой экран посреди острова. */
+.ag-list.is-empty { display: flex; flex-direction: column; }
 .ag-list-day { margin-bottom: 14px; }
 .ag-list-date { font-size: 12px; font-weight: 700; color: var(--text-dim); margin-bottom: 6px; }
 .ag-list-row {
@@ -3462,14 +4220,10 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
 .ag-list-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ag-list-dur { flex: none; color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 12px; }
 .ag-list-tag { flex: none; font-size: 12px; color: color-mix(in srgb, var(--pc) var(--tag-ink), var(--text)); background: color-mix(in srgb, var(--pc) 18%, transparent); border-radius: 5px; padding: 1px 7px; }
-.ag-empty { padding: 30px 4px; font-size: 13px; }
 
 /* Выбор задачи для новой записи — тот же попап, что у тегов. */
 
 /* ---------- Повторение задач ---------- */
-/* Строка повторения стоит под сроком — это соседние по смыслу настройки, и
-   считается повторение как раз от дедлайна. */
-.repeat-next { font-size: 12px; font-variant-numeric: tabular-nums; }
 /* Значок в списке задач: повторяющуюся задачу видно, не открывая её. */
 .task-repeat-mark {
   flex: none; font-size: 12px; color: var(--text-faint); cursor: default;
@@ -3551,5 +4305,68 @@ body.platform-mac .skel-topbar { padding-left: calc(var(--traffic-w) + 16px); }
   border: 1px dashed color-mix(in srgb, var(--pc) 55%, transparent);
   color: var(--text-dim);
 }
-.ag-list-row.ghost { background: none; border: 1px dashed var(--border-strong); border-left: 3px dashed var(--pc, var(--accent)); }
-.ag-list-row.ghost .ag-list-name { color: var(--text-dim); }
+.ag-list-row.ghost, .ag-list-row.plan { background: none; border: 1px dashed var(--border-strong); border-left: 3px dashed var(--pc, var(--accent)); }
+.ag-list-row.ghost .ag-list-name, .ag-list-row.plan .ag-list-name { color: var(--text-dim); }
+
+/* ---------- Время работы ---------- */
+/* В свойствах задачи — строка «Время работы · Пн, Ср 10:00–12:00 +1 ›» в
+   группе «Когда» (.srow): отрезков нет — щелчок сразу открывает окно нового,
+   есть — список отрезков (.ctx-menu) и «Добавить время». */
+
+/* Окно времени работы — строки на острове, как лист отрезка на телефоне
+   (13 октября 2026). Длительность — тихой подстрокой под «Концом»; конец не
+   позже начала — та же подстрока красным, и «Сохранить» окно не закрывает.
+   «Повторение задачи» — своим островом ниже: значение словами («Повторяется
+   каждую неделю вместе с задачей») переносится, а не режется. «Удалить»
+   стоит слева, подальше от «Сохранить». */
+.sldlg .sldlg-repeat { margin-top: 10px; }
+.sldlg .sldlg-repeat .srow-value { white-space: normal; }
+.sldlg #sldlg-dur.bad { color: var(--danger); }
+.sldlg .sldlg-delete { margin-right: auto; }
+
+/* ---------- Напоминания ---------- */
+/* В свойствах задачи — группа «Напоминания»: строка на каждое (.srow с
+   колокольчиком, щелчок — окно этого напоминания) и «Добавить» последней.
+   Подпись напоминания длинная — строке без значения отдана вся ширина. */
+.remind-item .srow-label { flex: 1; max-width: none; }
+
+/* Окно напоминания — окно повторения (.rpdlg), в котором те же сегменты, ряд
+   дней недели и поле числа. Свои тут только мелочи. Сегменты бывают с
+   разным числом кнопок, а у «До начала / до дедлайна» одну могут спрятать:
+   колонки делятся поровну по тем, что остались. */
+.rm-seg { grid-auto-flow: column; grid-auto-columns: 1fr; }
+.rm-seg > button:disabled { opacity: 0.45; cursor: default; }
+.rp-line .rm-seg { flex: none; }
+.rmdlg .rp-line { flex-wrap: wrap; }
+.rm-panel { display: flex; flex-direction: column; gap: 14px; }
+/* Подпись над кнопкой даты — тесно, как в окне записи времени. */
+#rm-at { gap: 6px; }
+#rm-at > label { margin: 0; }
+/* Быстрые смещения — чипы в несколько рядов: «В момент начала» длиннее
+   остальных, и в одну строку они на узком окне не встанут. */
+.rm-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.rm-presets .dp-btn { min-width: 0; }
+.rm-error { font-size: 12px; color: var(--danger); }
+/* «Удалить» слева, подальше от «Сохранить»; без заполненных полей «Сохранить»
+   гаснет. Правило по id, как у «Экспорта»: общий .modal-buttons попал бы в
+   стили редактора телефона. */
+.rmdlg .rmdlg-delete { margin-right: auto; }
+#rmdlg-save:disabled { opacity: 0.45; cursor: default; }
+#rmdlg-save:disabled:hover { background: var(--accent); border-color: var(--accent); }
+#rmdlg-save:disabled:active { transform: none; }
+
+/* Плановый блок на часовой сетке: полоса во всю ширину столбца, под записями
+   времени. Из семейства призраков (.ag-dl.ghost): контур цветом проекта и
+   лёгкая подкладка, без заливки записи — это план, а не сделанное. */
+.ag-plan {
+  position: absolute; left: 1px; right: 1px; box-sizing: border-box;
+  border: 1px dashed color-mix(in srgb, var(--pc) 55%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--pc) 7%, transparent);
+  color: var(--text-dim);
+  padding: 2px 6px 0; overflow: hidden; cursor: pointer;
+  font-size: 12px; line-height: 1.3;
+}
+.ag-plan:hover { background: color-mix(in srgb, var(--pc) 12%, transparent); }
+.ag-plan-time { display: block; font-variant-numeric: tabular-nums; }
+.ag-plan-name { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

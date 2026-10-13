@@ -173,6 +173,37 @@ test('заголовок дорожки — полоса во всю видим�
   }
 });
 
+test('дорожки шире окна: стрелка у края листает доску на столбец, заголовки дорожек не уезжают', async ({ page }) => {
+  // Доска с дорожками листается вбок целиком, а не каждая дорожка своей
+  // полосой: край, за которым есть что листать, растворяется, а у края стоит
+  // стрелка — та же, что у ряда карточек (attachScrollEdges в app.js).
+  await seed(page);
+  await openBoard(page);
+  await page.waitForTimeout(300);
+  const next = page.locator('.board-host .edge-btn[data-side="r"]');
+  const prev = page.locator('.board-host .edge-btn[data-side="l"]');
+  const box = () => page.evaluate(() => {
+    const b = document.getElementById('board-cols');
+    return { x: b.scrollLeft, edge: b.dataset.edge ?? null, head: document.querySelector('.board-lane-head').getBoundingClientRect().left };
+  });
+  const step = await page.evaluate(() => {
+    const cols = document.querySelector('.board-lane').querySelectorAll('.board-col');
+    return cols[1].offsetLeft - cols[0].offsetLeft;
+  });
+  expect((await box()).edge, 'в начале есть что листать только вправо').toBe('r');
+  await expect(prev).toBeHidden();
+  await expect(next).toBeVisible();
+  const head = (await box()).head;
+  await next.click();
+  await expect.poll(async () => (await box()).x, { message: 'на столбец' }).toBeCloseTo(step, -1);
+  await expect(prev).toBeVisible();
+  expect((await box()).edge).toBe('l r');
+  expect((await box()).head, 'заголовок дорожки остался на месте').toBeCloseTo(head, 0);
+  await prev.click();
+  await expect.poll(async () => (await box()).x, { message: 'и назад' }).toBe(0);
+  expect((await box()).edge).toBe('r');
+});
+
 test('у выпущенной версии в заголовке стоит дата', async ({ page }) => {
   await seed(page);
   await openBoard(page);
@@ -239,7 +270,7 @@ test('версия задачи видна в списке и в её настр
   });
 
   await expect(page.locator('#task-version-row')).toBeVisible();
-  await expect(page.locator('#task-version')).toHaveText('v1.3');
+  await expect(page.locator('#task-version-row .dp-btn.on')).toHaveText('v1.3');
 
   // Строки ищем по названию: с 6 октября 2026 список сгруппирован по
   // статусам, и порядок строк — это порядок столбцов доски. Список — на
@@ -280,24 +311,25 @@ test('без версий в проекте строка версии в зад�
   await expect(page.locator('#task-version-row')).toBeHidden();
 });
 
-test('выбор версии — свой выпадающий список, без системного select', async ({ page }) => {
+test('выбор версии — чипами, как на телефоне, без системного select', async ({ page }) => {
+  // С 13 октября 2026 версия — короткий список чипами прямо в панели:
+  // «Без версии» и версии проекта, выбранная отмечена.
   await seed(page);
   await page.evaluate(() => {
     const task = state.tasks.find((t) => t.title === 'API отчётов');
     selectTask(task.id);
   });
-  await page.locator('#task-version').click();
-
-  const items = page.locator('#ctx-menu .ctx-item');
-  await expect(items.first()).toHaveText('Без версии');
-  await expect(items).toHaveCount(6); // «Без версии» + четыре версии + «Настроить версии…»
+  const chips = page.locator('#task-version-row .dp-btn');
+  await expect(chips.first()).toHaveText('Без версии');
+  await expect(chips).toHaveCount(5); // «Без версии» + четыре версии
   await expect(page.locator('#task-props select')).toHaveCount(0);
 
-  await items.nth(4).click(); // v1.4
-  await expect(page.locator('#task-version')).toHaveText('v1.4');
+  await chips.nth(4).click(); // v1.4
+  await expect(page.locator('#task-version-row .dp-btn.on')).toHaveText('v1.4');
+  await expect(page.locator('#task-version-row .dp-btn.on')).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('настройки проекта: статусы и версии — разделы одного окна, поля на одной линии', async ({ page }) => {
+test('настройки проекта: статусы и версии — разделы одного списка, поля на одной линии', async ({ page }) => {
   // С 7 октября 2026 окно «Статусы и версии» влилось в окно проекта:
   // шестерёнка открывает его сразу на статусах, версии — соседний раздел.
   await seed(page);
@@ -305,12 +337,10 @@ test('настройки проекта: статусы и версии — ра
   await page.locator('#board-statuses').click();
 
   await expect(page.locator('#pdlg-backdrop .modal-title')).toHaveText('Настройки проекта');
-  const tabs = page.locator('#pdlg-tabs button');
-  await expect(tabs).toHaveText(['Основное', 'Ставка и валюта', 'Теги', 'Статусы', 'Версии']);
-  await expect(page.locator('#pdlg-tabs button.on')).toHaveText('Статусы');
+  // Вкладок нет: разделы — подзаголовки одного списка, статусы и версии рядом.
+  await expect(page.locator('#pdlg-backdrop .pjdlg-head:visible')).toHaveText(['Ставка и валюта', 'Теги', 'Версии', 'Статусы']);
   await expect(page.locator('#st-list .st-row').first()).toBeVisible();
-
-  await tabs.filter({ hasText: 'Версии' }).click();
+  await expect(page.locator('#ver-list .ver-row').first()).toBeAttached();
   await expect(page.locator('#ver-list .ver-row')).toHaveCount(4);
   await expect(page.locator('#ver-list .ver-row').nth(0).locator('.ver-rel')).toHaveText(/28 авг/);
   await expect(page.locator('#ver-list .ver-row').nth(2).locator('.ver-rel')).toHaveText('в работе');
@@ -318,9 +348,11 @@ test('настройки проекта: статусы и версии — ра
 
   // Два списка в соседних разделах должны читаться как один: у версии нет
   // кружка цвета, и без выравнивания её поля стояли на 27 пикселей левее.
+  // Окно въезжает с масштабом (popIn): пока оно не встало, левые края плывут и
+  // два замера подряд могут разойтись на пиксель сами по себе.
+  await page.waitForTimeout(300);
   const left = (sel) => page.evaluate((s) => Math.round(document.querySelector(s).getBoundingClientRect().left), sel);
   const lefts = { version: await left('#ver-list .ver-row .st-name'), versionDel: await left('#ver-list .ver-row .st-del') };
-  await tabs.filter({ hasText: 'Статусы' }).click();
   lefts.status = await left('#st-list .st-row .st-name');
   lefts.statusDel = await left('#st-list .st-row .st-del');
   expect(lefts.version, `поля разошлись на ${lefts.version - lefts.status}px`).toBe(lefts.status);
@@ -333,7 +365,6 @@ test('удалённая версия снимается с задач, а за�
   await seed(page);
   await openBoard(page);
   await page.locator('#board-statuses').click();
-  await page.locator('#pdlg-tabs button', { hasText: 'Версии' }).click();
 
   await page.locator('#ver-list .ver-row').nth(2).locator('.st-del').click();
   await expect(page.locator('#confirm-backdrop')).toBeVisible();

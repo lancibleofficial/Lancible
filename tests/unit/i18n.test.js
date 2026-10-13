@@ -113,3 +113,11 @@ test('склонения казахского: форма всегда одна'
   assert.equal(form(5), one);
   assert.equal(form(21), one);
 });
+
+test('«день» в подписях напоминаний: по числу и на всех четырёх языках', () => {
+  const day = (lang, n) => L.pluralForm(I.T, lang, n, 'plural.day');
+  assert.deepEqual([1, 2, 5, 11, 21, 22].map((n) => day('ru', n)), ['день', 'дня', 'дней', 'дней', 'день', 'дня']);
+  assert.deepEqual([1, 2, 5].map((n) => day('uk', n)), ['день', 'дні', 'днів']);
+  assert.deepEqual([1, 2].map((n) => day('en', n)), ['day', 'days']);
+  assert.deepEqual([1, 2, 5].map((n) => day('kk', n)), ['күн', 'күн', 'күн']);
+});

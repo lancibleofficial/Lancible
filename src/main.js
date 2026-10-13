@@ -3,6 +3,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 const { buildWorkbook } = require('./xlsx');
+const { deepLinkRoute } = require('./renderer/core/route.js');
 
 // Скачивание — только по явному запросу из рендерера (кнопка "Обновить"),
 // не автоматически в фоне.
@@ -17,6 +18,8 @@ autoUpdater.autoInstallOnAppQuit = false;
 const DATA_FILE = path.join(app.getPath('userData'), 'data.json');
 const LEGACY_DATA_FILE = path.join(app.getPath('appData'), 'task-timer', 'data.json');
 const EMPTY_STATE = { tasks: [], activeTimer: null };
+// Цвета кнопок окна, которые страница прислала в прошлый запуск (см. ниже).
+const WINDOW_COLORS_FILE = path.join(app.getPath('userData'), 'window-colors.json');
 
 function loadData() {
   try {
@@ -62,16 +65,51 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient('lancible');
 }
 
-function handleAuthCallbackUrl(url) {
-  if (!mainWindow) return;
-  mainWindow.webContents.send('auth:oauth-callback', { url });
-  if (mainWindow.isMinimized()) mainWindow.restore();
-  mainWindow.focus();
+// URL lancible://, которому некуда прийти: приложение запустили холодным
+// стартом (окна ещё нет) или, на маке, закрыли окно, оставив процесс, и
+// ссылка пришла после этого. createWindow() отдаёт его странице, когда та
+// загрузится, откуда бы окно ни появилось: на старте или по activate.
+let pendingDeepLink = process.argv.find((arg) => arg.startsWith('lancible://')) || null;
+
+// Тот же протокол несёт и ссылки на содержимое: lancible://project/<id>,
+// lancible://task/<id>, lancible://doc/<id> открывают приложение сразу на
+// нужном проекте, задаче или документе. Маршрут разбирает core/route.js, окну
+// он уходит каналом route:open. Всё остальное — вход через Google
+// (lancible://auth-callback?code=…) и незнакомые пути — идёт по-старому
+// колбэком входа: страница берёт из него код и чужое игнорирует.
+function handleDeepLink(url) {
+  const win = mainWindow;
+  if (!win || win.isDestroyed()) {
+    pendingDeepLink = url;
+    return;
+  }
+  // Страница ещё грузится (окно создано, но слушателей в ней нет): сообщение,
+  // отправленное сейчас, пропало бы. Отдаём его, когда загрузка закончится.
+  if (win.webContents.isLoading()) {
+    win.webContents.once('did-finish-load', () => deliverDeepLink(win, url));
+    return;
+  }
+  deliverDeepLink(win, url);
 }
 
-// URL, с которым приложение запустили холодным стартом (до создания окна) —
-// разбирается один раз в app.whenReady() ниже, откуда бы он ни пришёл.
-let pendingAuthUrl = process.argv.find((arg) => arg.startsWith('lancible://')) || null;
+function deliverDeepLink(win, url) {
+  if (win.isDestroyed()) {
+    pendingDeepLink = url;
+    return;
+  }
+  const route = deepLinkRoute(url);
+  if (route) win.webContents.send('route:open', { route });
+  else win.webContents.send('auth:oauth-callback', { url });
+  // Окно, которое ещё не показали (ждёт первой картинки и цветов кнопок),
+  // не трогаем: reveal() покажет его сам, а focus() на маке вывел бы его
+  // раньше, чем придут цвета, — с тем самым миганием, которое reveal() и
+  // предотвращает. Спрашиваем reveal, а не win.isVisible(): на маке isVisible()
+  // ложно и у свёрнутого, и у закрытого другим приложением окна, а их-то и
+  // нужно вывести вперёд.
+  if (pendingReveal.has(win)) return;
+  if (win.isMinimized()) win.restore();
+  win.focus();
+}
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
@@ -83,7 +121,7 @@ if (!gotSingleInstanceLock) {
   // срабатывает вообще — там за это отвечает open-url (см. ниже).
   app.on('second-instance', (_event, argv) => {
     const url = argv.find((arg) => arg.startsWith('lancible://'));
-    if (url) handleAuthCallbackUrl(url);
+    if (url) handleDeepLink(url);
   });
 }
 
@@ -92,24 +130,89 @@ if (!gotSingleInstanceLock) {
 // app.whenReady(), если оно пришло раньше), и пока приложение уже открыто.
 app.on('open-url', (event, url) => {
   event.preventDefault();
-  if (mainWindow) handleAuthCallbackUrl(url);
-  else pendingAuthUrl = url;
+  handleDeepLink(url);
 });
 
-// Цвета нативных кнопок окна (minimize/maximize/close), рисуемых Windows поверх
-// страницы через titleBarOverlay, — должны совпадать с --bg/--text-dim темы,
-// иначе в светлой теме там остаётся тёмный "огрызок" тёмной темы. На маке
-// titleBarOverlay (с цветом/symbolColor) не поддерживается вообще —
+// Нативные кнопки окна (minimize/maximize/close) Windows рисует поверх
+// страницы через titleBarOverlay, и их подложка обязана совпадать с тем, что
+// лежит под ними: иначе в светлой теме там остаётся тёмный «огрызок», а после
+// редизайна 7 октября цвета в этом файле разошлись с шапкой совсем. Поэтому
+// цветов здесь нет: окно само читает фон поверхности под кнопками (шапка или
+// панель полноэкранного редактора) и цвет текста из токенов styles.css и
+// присылает их в theme:set-overlay — при старте, смене темы и входе в
+// полноэкранный режим. Тут — только высота полосы, та же, что у #titlebar, и
+// файл window-colors.json в данных пользователя: последние присланные цвета
+// по теме. Они нужны одному — создать окно сразу с верной подложкой
+// (backgroundColor и кнопки), чтобы на медленном холодном старте оно не было
+// белым, пока страница не прислала свои. На самом первом запуске файла ещё нет,
+// и окно берёт системную подложку: констант с цветами в этом файле нет.
+//
+// На маке titleBarOverlay (с цветом/symbolColor) не поддерживается вообще —
 // Electron рисует там нативные трафик-лайты без возможности перекрасить их
 // фон, только позиция (см. trafficLightPosition ниже); подгонка под тему
 // там — через nativeTheme.themeSource (applyNativeTheme), а не через overlay.
-const TITLEBAR_DARK = { color: '#2a2b2e', symbolColor: '#b9bbc1', height: 52 };
-const TITLEBAR_LIGHT = { color: '#e7ecf1', symbolColor: '#4a5560', height: 52 };
+const TITLEBAR_HEIGHT = 52;
 const IS_MAC = process.platform === 'darwin';
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
-function resolveTitlebarOverlay(theme) {
-  const isDark = theme === 'dark' ? true : theme === 'light' ? false : nativeTheme.shouldUseDarkColors;
-  return isDark ? TITLEBAR_DARK : TITLEBAR_LIGHT;
+/** Цвета от окна — или null, если пришло что-то кроме #rrggbb: в нативный
+ *  вызов уходит только проверенное. */
+function overlayFromWindow(colors) {
+  const hex = (v) => typeof v === 'string' && HEX_COLOR.test(v);
+  if (!colors || !hex(colors.color) || !hex(colors.symbolColor)) return null;
+  return { color: colors.color, symbolColor: colors.symbolColor, height: TITLEBAR_HEIGHT };
+}
+
+/** Какой темой нарисовано окно: явный выбор человека или то, что сейчас у
+ *  системы. Звать после applyNativeTheme(): themeSource уже выставлен. */
+function appearanceOf(theme) {
+  if (theme === 'dark' || theme === 'light') return theme;
+  return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+}
+
+function loadWindowColors() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(WINDOW_COLORS_FILE, 'utf-8'));
+    return saved && typeof saved === 'object' ? saved : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Запомнить присланные цвета для следующего запуска. Это подложка, а не
+ *  данные: не записалось — ничего страшного, окно возьмёт системную. */
+function rememberWindowColors(theme, overlay) {
+  const appearance = appearanceOf(theme);
+  const saved = loadWindowColors();
+  const prev = saved[appearance];
+  if (prev && prev.color === overlay.color && prev.symbolColor === overlay.symbolColor) return;
+  saved[appearance] = { color: overlay.color, symbolColor: overlay.symbolColor };
+  try {
+    fs.writeFileSync(WINDOW_COLORS_FILE, JSON.stringify(saved), 'utf-8');
+  } catch {
+    /* нет места или прав — не страшно */
+  }
+}
+
+// Окно не показывается, пока не нарисована первая страница и не пришли цвета
+// кнопок: без них оно открылось бы с системной подложкой кнопок и мигнуло бы
+// чужим цветом на тёмной теме. Два запасных выхода, потому что ждём двух разных
+// вещей. Цвета — не дольше COLORS_WAIT_MS: не пришли, кнопки останутся с
+// запомненной (или системной) подложкой, но окно из-за них не держим. Первую
+// картинку ждём дальше, до жёсткого потолка PAINT_CEILING_MS: показать окно
+// раньше значило бы показать пустую заливку вместо приложения; потолок нужен,
+// чтобы сломанная страница не оставила человека вовсе без окна.
+const COLORS_WAIT_MS = 3000;
+const PAINT_CEILING_MS = 8000;
+const pendingReveal = new WeakMap();
+function reveal(win, what) {
+  const waiting = pendingReveal.get(win);
+  if (!waiting) return;
+  waiting.delete(what);
+  if (waiting.size === 0) {
+    pendingReveal.delete(win);
+    if (!win.isDestroyed()) win.show();
+  }
 }
 
 // nativeTheme.themeSource — глобальный переключатель, которым на маке
@@ -123,18 +226,22 @@ function applyNativeTheme(theme) {
 function createWindow(initialData) {
   const theme = (initialData && initialData.settings && initialData.settings.theme) || 'system';
   applyNativeTheme(theme);
+  // Цвета прошлого запуска для этой же темы — или null (первый запуск, чужой
+  // файл): тогда окно без своей подложки, как на самом первом запуске.
+  const remembered = overlayFromWindow(loadWindowColors()[appearanceOf(theme)]);
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 780,
     minWidth: 760,
     minHeight: 500,
     title: 'Lancible',
-    backgroundColor: resolveTitlebarOverlay(theme).color,
+    show: false,
+    ...(remembered ? { backgroundColor: remembered.color } : {}),
     titleBarStyle: 'hidden',
     // Трафик-лайты позиционируем вручную (обычная высота хедера тут 52px, не
     // системная ~28px) — сдвиг под них на странице см. body.platform-mac
     // в src/renderer/styles.css.
-    ...(IS_MAC ? { trafficLightPosition: { x: 14, y: 18 } } : { titleBarOverlay: resolveTitlebarOverlay(theme) }),
+    ...(IS_MAC ? { trafficLightPosition: { x: 14, y: 18 } } : { titleBarOverlay: remembered || { height: TITLEBAR_HEIGHT } }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -142,6 +249,26 @@ function createWindow(initialData) {
       spellcheck: true,
     },
   });
+
+  const win = mainWindow;
+  // Закрытое окно не остаётся в mainWindow: на маке процесс живёт и без окна, и
+  // open-url, пришедший после закрытия, писал бы в уничтоженный объект.
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
+  pendingReveal.set(win, new Set(['paint', 'colors']));
+  win.once('ready-to-show', () => reveal(win, 'paint'));
+  setTimeout(() => reveal(win, 'colors'), COLORS_WAIT_MS);
+  setTimeout(() => {
+    if (pendingReveal.delete(win) && !win.isDestroyed()) win.show();
+  }, PAINT_CEILING_MS);
+
+  // Ссылка, ждавшая окна, уходит странице, когда та загрузилась и слушает.
+  if (pendingDeepLink) {
+    const url = pendingDeepLink;
+    pendingDeepLink = null;
+    win.webContents.once('did-finish-load', () => deliverDeepLink(win, url));
+  }
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
@@ -295,14 +422,23 @@ app.whenReady().then(() => {
     clipboard.writeText(String(text ?? ''));
     return true;
   });
-  ipcMain.handle('theme:set-overlay', (event, theme) => {
+  ipcMain.handle('theme:set-overlay', (event, theme, colors) => {
     applyNativeTheme(theme);
-    // setTitleBarOverlay существует только на Windows/Linux — на маке самого
-    // метода нет смысла звать, цвет трафик-лайтов там даёт themeSource выше.
-    if (!IS_MAC) {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (win) win.setTitleBarOverlay(resolveTitlebarOverlay(theme));
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return true;
+    // В системный вызов уходит только проверенное #rrggbb. А вот ждать цвета
+    // после любого ответа окна незачем: прислало что-то другое (полупрозрачный
+    // фон даёт не #rrggbb, а запись с прозрачностью) — значит, оно живо и
+    // лучшего не пришлёт.
+    const overlay = overlayFromWindow(colors);
+    if (overlay) {
+      win.setBackgroundColor(overlay.color);
+      // setTitleBarOverlay существует только на Windows/Linux — на маке самого
+      // метода нет смысла звать, цвет трафик-лайтов там даёт themeSource выше.
+      if (!IS_MAC) win.setTitleBarOverlay(overlay);
+      rememberWindowColors(theme, overlay);
     }
+    reveal(win, 'colors');
     return true;
   });
   // Отдельный канал, а не shell:open-external: тот намеренно пропускает
@@ -342,10 +478,6 @@ app.whenReady().then(() => {
   setupAutoUpdater();
 
   createWindow(loadData());
-  if (pendingAuthUrl) {
-    const url = pendingAuthUrl;
-    mainWindow.webContents.once('did-finish-load', () => handleAuthCallbackUrl(url));
-  }
   if (app.isPackaged) {
     const quietCheck = () => checkForUpdate().catch((err) => console.error('[autoUpdater] check:', err.message));
     // Небольшая задержка, чтобы не мешать первому рендеру окна.
