@@ -223,3 +223,35 @@ test('тексты листа — как на вебе, на четырёх яз
     for (const key of ['plural.entry', 'plural.project']) expect({ lang, key, forms: pluralForm(lang, 5, key) }).toEqual({ lang, key, forms: web[lang][key][2] });
   }
 });
+
+// Режимы (17 октября 2026): «личное» не выгружает деньги. Лист не режет
+// колонки сам — он говорит построителям { money }, а форма листов с деньгами
+// и без — в ядре (tests/unit/reports.test.js). Настоящие построители, без
+// подмены, — в exportMoney.test.js.
+describe('режим: деньги в файле', () => {
+  afterEach(() => { useAppStore.setState((st) => ({ settings: { ...st.settings, mode: 'freelance' } })); });
+
+  test.each([
+    ['фрилансер', 'freelance', true],
+    ['личное', 'personal', false],
+  ])('%s: сводка по проектам и лист записей зовутся с { money: %s }', async (_name, mode, money) => {
+    useAppStore.setState((st) => ({ settings: { ...st.settings, mode } }));
+    // «Всё время» — сводка по проектам.
+    const all = await show({ projectId: 'p1' });
+    await fireEvent.press(exportBtn(all));
+    expect(buildAllProjectsSheets).toHaveBeenCalledTimes(1);
+    expect(buildAllProjectsSheets.mock.calls[0][5]).toEqual({ money });
+    await all.unmount();
+    useSheetStore.setState({ content: null, header: null, footer: null });
+    // Месяц — один лист записей.
+    const month = await show();
+    await fireEvent.press(month.getByTestId('export-period'));
+    await fireEvent.press(within(month.getByTestId('export-periods')).getByText(t('ru', 'export.period_month')));
+    await fireEvent.press(exportBtn(month));
+    expect(buildPeriodSheets).toHaveBeenCalledTimes(1);
+    expect(buildPeriodSheets.mock.calls[0][6]).toEqual({ money });
+    // Режим возвращается после того, как лист снят: иначе смена настроек
+    // перерисует ещё живой лист вне act.
+    await month.unmount();
+  });
+});

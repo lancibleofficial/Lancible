@@ -27,8 +27,11 @@ const E = (() => {
     "export * as plugins from './plugins.js';",
     "export * as C from './commands.js';",
     "export { schema } from './schema.js';",
-    "export { EditorState, TextSelection } from 'prosemirror-state';",
-    "export { history } from 'prosemirror-history';",
+    "export * as G from './pdfgeom.js';",
+    "export { EditorState, TextSelection, NodeSelection } from 'prosemirror-state';",
+    "export { history, undo } from 'prosemirror-history';",
+    "export { GapCursor } from 'prosemirror-gapcursor';",
+    "export { CellSelection } from 'prosemirror-tables';",
   ].join('\n');
   const out = esbuild.buildSync({
     stdin: { contents: entry, resolveDir: SRC, sourcefile: 'editor-host-test.js' },
@@ -40,7 +43,7 @@ const E = (() => {
   return mod.exports;
 })();
 
-const { host, plugins, C, schema, EditorState, TextSelection, history } = E;
+const { host, plugins, C, G, schema, EditorState, TextSelection, NodeSelection, history, undo, GapCursor, CellSelection } = E;
 const N = schema.nodes;
 
 // --- подставной view: правила ввода и клавиши ------------------------------------
@@ -181,6 +184,60 @@ test('мост: format и caret — сразу, повтор того же — �
   assert.deepEqual(sent.filter((m) => m.type === 'height'), [{ type: 'height', px: 320, height: 320 }]);
   bridge.ink();
   assert.deepEqual(sent.pop(), { type: 'ink', on: false, tool: 'pen', shape: 'line', color: 'ink', size: 3, recent: ['ink'], selected: 0 });
+  bridge.destroy();
+});
+
+// 19 октября 2026, эмулятор: картинка в заметках догружается и растит документ,
+// курсор под ней уезжает вниз, а хозяин держал прокрутку по старому caret —
+// последняя строка уходила под парящую панель. Поменялась высота — курсор
+// шлём заново; без фокуса и тот же — нет.
+test('мост: высота поменялась — курсор заново, без фокуса и тот же — нет', async () => {
+  const v = makeView(null);
+  v.type('под картинкой');
+  const sent = [];
+  let at = { top: 40, bottom: 60 };
+  let focus = true;
+  const ed = fakeEd(v);
+  ed.view.hasFocus = () => focus;
+  ed.view.coordsAtPos = () => at;
+  const bridge = new host.HostBridge(ed, (m) => sent.push(m));
+  const carets = () => sent.filter((m) => m.type === 'caret');
+  bridge.height(300);
+  assert.equal(sent.length, 1, 'первая высота — не перемена: шлётся только height');
+  bridge.schedule();
+  assert.deepEqual(carets(), [{ type: 'caret', top: 40, bottom: 60 }]);
+  await new Promise((r) => setTimeout(r, host.THROTTLE_MS + 30));
+  // Картинка выше курсора догрузилась: документ вырос, курсор ушёл вниз.
+  at = { top: 240, bottom: 260 };
+  bridge.height(500);
+  assert.deepEqual(carets().pop(), { type: 'caret', top: 240, bottom: 260 }, 'вырос — caret с новым bottom');
+  assert.ok(carets().pop().bottom > carets()[0].bottom, 'bottom ниже прежнего');
+  assert.equal(carets().length, 2);
+  // Высота ещё поменялась, а курсор там же — второй раз то же не шлётся.
+  await new Promise((r) => setTimeout(r, host.THROTTLE_MS + 30));
+  bridge.height(540);
+  await new Promise((r) => setTimeout(r, host.THROTTLE_MS + 30));
+  assert.equal(carets().length, 2, 'курсор не сдвинулся — повтора нет');
+  // Внутри окна прореживания: хвост уходит по таймеру, а не теряется.
+  bridge.schedule();
+  at = { top: 300, bottom: 320 };
+  bridge.height(600);
+  assert.equal(carets().length, 2, 'окно прореживания ещё не кончилось');
+  await new Promise((r) => setTimeout(r, host.THROTTLE_MS + 30));
+  assert.deepEqual(carets().pop(), { type: 'caret', top: 300, bottom: 320 });
+  assert.equal(carets().length, 3);
+  // Без фокуса в тексте курсор хозяину не нужен — ни при росте, ни при убыли.
+  focus = false;
+  at = { top: 500, bottom: 520 };
+  bridge.height(900);
+  await new Promise((r) => setTimeout(r, host.THROTTLE_MS + 30));
+  bridge.height(700);
+  await new Promise((r) => setTimeout(r, host.THROTTLE_MS + 30));
+  assert.equal(carets().length, 3, 'без фокуса caret не шлётся');
+  // Фокус вернулся — курсор снова приходит, даже если высота та же.
+  focus = true;
+  bridge.height(800);
+  assert.deepEqual(carets().pop(), { type: 'caret', top: 500, bottom: 520 });
   bridge.destroy();
 });
 
@@ -333,4 +390,303 @@ test('правка: телефону (nativeToolbar) — сразу, дескт�
   assert.equal(host.changeDelay(false), host.CHANGE_MS);
   const src = fs.readFileSync(path.join(SRC, 'index.js'), 'utf8');
   assert.match(src, /this\.emitChange = debounce\([\s\S]*?, changeDelay\(this\.host\)\);/);
+});
+
+// --- контекстная панель телефона (протокол 4, 18 октября 2026) ------------------------
+//
+// Островов у блоков на телефоне больше нет: их действия — в панели над
+// клавиатурой, которую строит хозяин. Редактор говорит, что выделено
+// (сообщение context), а кнопки панели зовут exec по именам протокола.
+
+const p = (text) => schema.node('paragraph', null, text ? [schema.text(text)] : []);
+const img = (attrs) => schema.node('image', Object.assign({ src: 'asset:a', alt: '' }, attrs || {}));
+const docOf = (...nodes) => schema.node('doc', null, nodes);
+
+/** Подставной редактор на документе, выделен узел в pos (NodeSelection). */
+function nodeEd(doc, pos, extra) {
+  const v = makeView(doc);
+  if (pos != null) v.dispatch(v.state.tr.setSelection(NodeSelection.create(v.state.doc, pos)));
+  return fakeEd(v, extra);
+}
+
+const PROTOCOL_4 = [
+  'deselect', 'deleteBlock',
+  'imageAlign', 'imageWidth', 'imageCaption', 'imageAlt', 'imageReplace', 'imageDownload',
+  'tableRowAdd', 'tableColAdd', 'tableRowDelete', 'tableColDelete', 'tableMerge', 'tableSplit', 'tableHeaderRow', 'tableChart',
+  'chartEdit', 'drawingEdit',
+  'pdfTool', 'pdfLayerColor', 'pdfLayerSize', 'pdfLayerBold', 'pdfLayerFront', 'pdfLayerBack', 'pdfLayerDelete',
+];
+const IN_PLACE = ['tableRowAdd', 'tableColAdd', 'tableRowDelete', 'tableColDelete', 'tableMerge', 'tableSplit', 'tableHeaderRow'];
+
+test('протокол 5: картинки аккаунта — assets-adopt с ids и referenced, assets-forget с ответом assets-forgotten', async () => {
+  assert.equal(host.PROTOCOL, 5);
+  const calls = [];
+  const ed = {
+    adoptGuestAssets: (userId, which) => { calls.push(['adopt', userId, which]); return Promise.resolve(0); },
+    forgetAssets: (userId) => { calls.push(['forget', userId]); return Promise.resolve(0); },
+  };
+  const bridge = new host.HostBridge(ed, () => {});
+  assert.equal(bridge.receive({ type: 'assets-adopt', userId: 'U1' }), true);
+  assert.equal(bridge.receive({ type: 'assets-adopt', userId: 'U1', ids: ['a', 'asset:b'] }), true);
+  assert.equal(bridge.receive({ type: 'assets-adopt', userId: 'U1', referenced: true }), true);
+  assert.equal(bridge.receive({ type: 'assets-forget', userId: 'U1' }), true);
+  assert.deepEqual(calls, [
+    ['adopt', 'U1', { referenced: false, ids: null }],
+    ['adopt', 'U1', { referenced: false, ids: ['a', 'asset:b'] }],
+    ['adopt', 'U1', { referenced: true, ids: null }],
+    ['forget', 'U1'],
+  ]);
+  // Имена описаны там, где описан протокол.
+  const design = fs.readFileSync(path.join(ROOT, 'DESIGN.md'), 'utf8');
+  for (const t of ["type:'assets-forget'", "type:'assets-forgotten'", 'ids:']) assert.ok(design.includes(t), `DESIGN.md: ${t}`);
+});
+
+test('протокол 4: каждое имя контекстной панели есть в exec; выделен блок — фокус не трогают', () => {
+  assert.ok(host.PROTOCOL >= 4);
+  const missing = PROTOCOL_4.filter((n) => !host.EXEC_NAMES.includes(n));
+  assert.deepEqual(missing, [], 'нет в exec (host.js: commands)');
+  for (const n of ['blockUp', 'blockDown']) assert.ok(host.EXEC_NAMES.includes(n), n);
+  // «Назад», картинка, график, рисунок, PDF — клавиатуру не открывают.
+  for (const n of PROTOCOL_4.filter((x) => !IN_PLACE.includes(x))) assert.ok(host.KEEP_FOCUS.has(n), `${n} — в KEEP_FOCUS`);
+  // Строки и столбцы — правка на месте, как rowBelow: фокус остаётся в тексте.
+  for (const n of IN_PLACE) assert.ok(!host.KEEP_FOCUS.has(n), n);
+});
+
+test('context: картинка — выравнивание, ширина в % полосы, подпись, описание', () => {
+  const doc = docOf(p('до'), img({ alt: 'фото', width: 60, align: 'left' }), p('после'));
+  const at = 4;
+  assert.equal(doc.nodeAt(at).type, N.image);
+  assert.deepEqual(host.contextState(nodeEd(doc, at)), { kind: 'image', state: { align: 'left', widthPct: 60, hasCaption: false, caption: '', alt: 'фото' } });
+  const full = docOf(p('до'), img({ align: 'full', caption: 'подпись' }), p('после'));
+  assert.deepEqual(host.contextState(nodeEd(full, at)).state, { align: 'full', widthPct: 100, hasCaption: true, caption: 'подпись', alt: '' }, 'текст подписи — хозяину: лист откроется с ним');
+  // «Как есть» — ширину меряет редактор (картинка на экране); не знает — null.
+  const natural = docOf(p('до'), img(), p('после'));
+  assert.equal(host.contextState(nodeEd(natural, at, { imageWidthPct: (pos) => (pos === at ? 37 : 0) })).state.widthPct, 37);
+  assert.equal(host.contextState(nodeEd(natural, at)).state.widthPct, null);
+  assert.equal(host.contextState(fakeEd(makeView(natural, 2))), null, 'курсор в тексте — контекста нет');
+});
+
+test('context: таблица, график, рисунок; страница PDF и её слой', () => {
+  const v = makeView(null);
+  host.commands(fakeEd(v)).table({ rows: 3, cols: 2, header: true });
+  assert.deepEqual(host.contextState(fakeEd(v)), { kind: 'table', state: { canMerge: false, canSplit: false, headerRow: true } });
+  const chart = docOf(p('a'), schema.node('chart', { chart: null }), p('b'));
+  assert.deepEqual(host.contextState(nodeEd(chart, 3)), { kind: 'chart', state: {} });
+  const drawing = docOf(p('a'), schema.node('drawing'), p('b'));
+  assert.deepEqual(host.contextState(nodeEd(drawing, 3)), { kind: 'drawing', state: {} });
+  assert.deepEqual(host.contextState(fakeEd(makeView(drawing, 1), { activeDrawing: {} })), { kind: 'drawing', state: {} }, 'рисунок в правке');
+  const page = (lines) => docOf(p('a'), schema.node('pdfpage', { src: 'asset:pdf', page: 1, w: 595, h: 842, preview: 'asset:png', overlays: [], lines }), p('b'));
+  const line = { x: 50, y: 60, w: 200, h: 14, size: 12, text: 'Строка' };
+  assert.deepEqual(host.contextState(nodeEd(page(null), 3)), { kind: 'pdfpage', state: { tool: null, hasLines: true } }, 'строки не распознаны — кнопка распознает');
+  assert.deepEqual(host.contextState(nodeEd(page([]), 3)).state, { tool: null, hasLines: false }, 'скан: заменять нечего');
+  const pv = { replacing: true, selectedLayer: () => null };
+  assert.deepEqual(host.contextState(nodeEd(page([line]), 3, { pdfPageView: () => pv })).state, { tool: 'replace', hasLines: true });
+  const text = G.normalizeOverlay({ id: 't1', type: 'text', x: 10, y: 10, w: 100, h: 20, text: 'т', font: { size: 14, weight: 'bold', color: 'red' } }, { w: 595, h: 842 });
+  const layer = { replacing: false, selectedLayer: () => text };
+  assert.deepEqual(host.contextState(nodeEd(page([line]), 3, { pdfPageView: () => layer })), {
+    kind: 'pdflayer', state: { type: 'text', color: 'red', size: 14, bold: true, sizes: G.FONT_STEPS },
+  });
+  const rect = G.normalizeOverlay({ id: 'r1', type: 'rect', x: 10, y: 10, w: 100, h: 20, stroke: { color: 'blue', width: 4 } }, { w: 595, h: 842 });
+  assert.deepEqual(G.layerContext(rect), { type: 'rect', color: 'blue', size: 4, bold: false, sizes: G.STROKE_STEPS });
+  const white = G.normalizeOverlay({ id: 'w1', type: 'whiteout', x: 10, y: 10, w: 100, h: 20 }, { w: 595, h: 842 });
+  assert.deepEqual(G.layerContext(white), { type: 'whiteout', color: null, size: null, bold: false, sizes: [] });
+});
+
+test('мост: context — при смене выделения, без повторов; ушёл — kind null; getState — заново', () => {
+  const doc = docOf(p('до'), img({ width: 50 }), p('после'));
+  const v = makeView(doc, 2);
+  const sent = [];
+  const ed = fakeEd(v);
+  const bridge = new host.HostBridge(ed, (m) => sent.push(m));
+  const contexts = () => sent.filter((m) => m.type === 'context');
+  bridge.flushState();
+  assert.deepEqual(contexts(), [], 'ничего не выделено — хозяин знает и так');
+  v.dispatch(v.state.tr.setSelection(NodeSelection.create(v.state.doc, 4)));
+  bridge.flushState();
+  bridge.flushState();
+  assert.deepEqual(contexts(), [{ type: 'context', kind: 'image', state: { align: 'center', widthPct: 50, hasCaption: false, caption: '', alt: '' } }]);
+  host.commands(ed).imageWidth(80);
+  bridge.flushState();
+  assert.equal(contexts().pop().state.widthPct, 80, 'ширина поменялась — новый context');
+  host.commands(ed).imageCaption('Новая подпись');
+  bridge.flushState();
+  assert.deepEqual(contexts().pop().state, { align: 'center', widthPct: 80, hasCaption: true, caption: 'Новая подпись', alt: '' }, 'подпись поменялась — её текст хозяину');
+  v.dispatch(v.state.tr.setSelection(TextSelection.create(v.state.doc, 2)));
+  bridge.flushState();
+  assert.deepEqual(contexts().pop(), { type: 'context', kind: null, state: null });
+  const n = contexts().length;
+  bridge.receive({ type: 'getState' });
+  assert.equal(contexts().length, n + 1, 'getState — context заново');
+  bridge.destroy();
+});
+
+test('exec картинки: выравнивание, ширина (и шире исходной), подпись, описание; выделение остаётся', () => {
+  const v = makeView(docOf(p('до'), img(), p('после')));
+  v.dispatch(v.state.tr.setSelection(NodeSelection.create(v.state.doc, 4)));
+  const cmds = host.commands(fakeEd(v));
+  const attrs = () => v.state.doc.nodeAt(4).attrs;
+  const stillSelected = () => v.state.selection instanceof NodeSelection && v.state.selection.node.type === N.image;
+  assert.equal(cmds.imageAlign('right'), true);
+  assert.equal(attrs().align, 'right');
+  assert.ok(stillSelected(), 'после кнопки картинка выделена — панель не гаснет');
+  cmds.imageWidth(150);
+  assert.equal(attrs().width, 100, 'больше полосы — полоса');
+  cmds.imageWidth(5);
+  assert.equal(attrs().width, 10, 'меньше 10 % — 10');
+  cmds.imageWidth('64.4');
+  assert.equal(attrs().width, 64);
+  assert.equal(cmds.imageWidth(null), false, 'без числа — ничего');
+  cmds.imageAlign('full');
+  assert.deepEqual([attrs().align, attrs().width], ['full', null], 'во всю ширину — ширину снимает');
+  cmds.imageWidth(70);
+  assert.deepEqual([attrs().align, attrs().width], ['center', 70], 'ширина у «во всю ширину» — по центру');
+  cmds.imageAlign('wrap-left');
+  assert.deepEqual([attrs().align, attrs().width], ['wrap-left', 40], 'обтекание — доля полосы по умолчанию');
+  cmds.imageAlign('left');
+  assert.deepEqual([attrs().align, attrs().width], ['left', null]);
+  assert.equal(cmds.imageAlign('diagonal'), false);
+  cmds.imageCaption('Подпись');
+  cmds.imageAlt('  описание  ');
+  assert.deepEqual([attrs().caption, attrs().alt], ['Подпись', 'описание']);
+  assert.ok(stillSelected());
+  undo(v.state, v.dispatch);
+  assert.deepEqual([attrs().caption, attrs().alt], ['Подпись', ''], 'каждая кнопка — свой шаг отмены');
+  // Текст под курсором — не картинка: команды картинки ничего не делают.
+  v.dispatch(v.state.tr.setSelection(TextSelection.create(v.state.doc, 2)));
+  assert.equal(cmds.imageAlign('center'), false);
+  assert.equal(cmds.imageWidth(50), false);
+});
+
+test('exec таблицы: строки, столбцы, объединить, разделить, строка заголовков', () => {
+  const v = makeView(null);
+  const ed = fakeEd(v);
+  const cmds = host.commands(ed);
+  cmds.table({ rows: 2, cols: 2, header: true });
+  const tableAt = () => { let at = -1; v.state.doc.forEach((n, pos) => { if (n.type === N.table) at = pos; }); return at; };
+  const shape = () => { const t = v.state.doc.nodeAt(tableAt()); return [t.childCount, t.firstChild.childCount]; };
+  const ctx = () => host.contextState(ed).state;
+  cmds.tableHeaderRow();
+  assert.equal(ctx().headerRow, false, 'строка заголовков снята');
+  cmds.tableHeaderRow();
+  assert.equal(ctx().headerRow, true);
+  cmds.tableRowAdd();
+  cmds.tableColAdd();
+  assert.deepEqual(shape(), [3, 3]);
+  cmds.tableRowDelete();
+  cmds.tableColDelete();
+  assert.deepEqual(shape(), [2, 2]);
+  // Две ячейки первой строки — объединить, потом разделить.
+  const at = tableAt();
+  const first = v.state.doc.resolve(at + 2);
+  const second = v.state.doc.resolve(at + 2 + v.state.doc.nodeAt(at + 2).nodeSize);
+  v.dispatch(v.state.tr.setSelection(new CellSelection(first, second)));
+  assert.equal(ctx().canMerge, true);
+  assert.equal(cmds.tableMerge(), true);
+  assert.equal(v.state.doc.nodeAt(at).firstChild.childCount, 1, 'две ячейки — одна');
+  assert.equal(ctx().canSplit, true);
+  assert.equal(cmds.tableSplit(), true);
+  assert.equal(v.state.doc.nodeAt(at).firstChild.childCount, 2);
+  assert.equal(ctx().canSplit, false);
+});
+
+test('«назад» (leaveBlock): курсор сразу за блоком; за блоком не текст — промежуток; документ цел', () => {
+  const doc = docOf(p('до'), img(), p('после'));
+  const v = makeView(doc);
+  v.dispatch(v.state.tr.setSelection(NodeSelection.create(v.state.doc, 4)));
+  assert.equal(C.leaveBlock()(v.state, v.dispatch), true);
+  assert.ok(v.state.selection instanceof TextSelection);
+  assert.equal(v.state.selection.$head.parent.textContent, 'после');
+  assert.equal(v.state.selection.$head.parentOffset, 0, 'в начало следующего абзаца');
+  assert.ok(v.state.doc.eq(doc), 'документ не изменился');
+  // Картинка последней — курсор-промежуток после неё, абзац не вставляется.
+  const last = docOf(p('до'), img());
+  const w = makeView(last);
+  w.dispatch(w.state.tr.setSelection(NodeSelection.create(w.state.doc, 4)));
+  C.leaveBlock()(w.state, w.dispatch);
+  assert.ok(w.state.selection instanceof GapCursor, 'промежуток за картинкой');
+  assert.equal(w.state.selection.from, w.state.doc.content.size);
+  assert.ok(w.state.doc.eq(last));
+  // Курсор в таблице — за таблицу.
+  const t = makeView(null);
+  host.commands(fakeEd(t)).table({ rows: 2, cols: 2, header: false });
+  assert.equal(C.leaveBlock()(t.state, t.dispatch), true);
+  assert.equal(C.tableContext(t.state), null, 'из таблицы ушли');
+  // Текст под курсором — уходить не из чего.
+  assert.equal(C.leaveBlock()(makeView(docOf(p('текст')), 2).state), false);
+});
+
+test('deleteBlock: выделенный блок — он сам, в таблице — таблица, последний — пустой абзац', () => {
+  const v = makeView(docOf(p('до'), img(), p('после')));
+  v.dispatch(v.state.tr.setSelection(NodeSelection.create(v.state.doc, 4)));
+  assert.equal(C.deleteSelectedBlock(v.state, v.dispatch), true);
+  assert.deepEqual(json(v).map((n) => n.type), ['paragraph', 'paragraph']);
+  const only = makeView(docOf(img()));
+  only.dispatch(only.state.tr.setSelection(NodeSelection.create(only.state.doc, 0)));
+  C.deleteSelectedBlock(only.state, only.dispatch);
+  assert.deepEqual(json(only).map((n) => n.type), ['paragraph'], 'документ не пустеет');
+  const t = makeView(docOf(p('до')), 2);
+  host.commands(fakeEd(t)).table({ rows: 2, cols: 2, header: false });
+  assert.ok(json(t).some((n) => n.type === 'table'));
+  C.deleteSelectedBlock(t.state, t.dispatch);
+  assert.ok(!json(t).some((n) => n.type === 'table'), 'таблица удалена целиком');
+});
+
+test('blockUp и blockDown: выделенный блок — на место выше и ниже, остаётся выделенным', () => {
+  const v = makeView(docOf(p('один'), img(), p('два')));
+  v.dispatch(v.state.tr.setSelection(NodeSelection.create(v.state.doc, 6)));
+  const cmds = host.commands(fakeEd(v));
+  const order = () => json(v).map((n) => (n.type === 'image' ? 'IMG' : n.content[0].text));
+  assert.equal(cmds.blockUp(), true);
+  assert.deepEqual(order(), ['IMG', 'один', 'два']);
+  assert.equal(v.state.selection.node && v.state.selection.node.type, N.image);
+  assert.equal(cmds.blockUp(), false, 'выше некуда');
+  cmds.blockDown();
+  cmds.blockDown();
+  assert.deepEqual(order(), ['один', 'два', 'IMG']);
+});
+
+
+// --- номера блоков (bid) ------------------------------------------------------------
+//
+// 19 октября 2026: bid вложенного графика повторялся после «Дублировать»,
+// дубля строки и вставки, и ответ хозяина по bid (receiveChart) правил первый
+// экземпляр. Теперь bid не повторяется ни у одного блока.
+
+test('bid не повторяется и у вложенных: дубль списка с графиком — у копии свои номера, у первого прежние', () => {
+  const chart = (bid) => schema.node('chart', { bid, chart: null });
+  const list = schema.node('bullet_list', { bid: 'L1' }, [schema.node('list_item', null, [schema.node('paragraph', null, schema.text('пункт')), chart('C1')])]);
+  const doc = schema.node('doc', null, [list, schema.node('paragraph', { bid: 'P1' }, schema.text('хвост'))]);
+  let state = EditorState.create({ doc, schema, plugins: [plugins.blockIds] });
+  state = state.apply(state.tr.setSelection(TextSelection.create(state.doc, 4)));
+  assert.ok(C.duplicateBlock(state, (tr) => { state = state.apply(tr); }));
+  const bids = [];
+  state.doc.descendants((n) => { if (n.attrs && n.attrs.bid) bids.push([n.type.name, n.attrs.bid]); });
+  const charts = bids.filter(([t]) => t === 'chart').map(([, b]) => b);
+  assert.equal(charts.length, 2);
+  assert.equal(charts[0], 'C1', 'первый график — с прежним номером');
+  assert.notEqual(charts[1], 'C1');
+  assert.equal(new Set(bids.map(([, b]) => b)).size, bids.length, `номера повторяются: ${JSON.stringify(bids)}`);
+  assert.equal(state.doc.firstChild.attrs.bid, 'L1', 'первый список — с прежним номером');
+});
+
+test('bid: верхний уровень первым — вложенная копия выше по документу номер блока верхнего уровня не забирает', () => {
+  const doc = schema.node('doc', null, [
+    schema.node('blockquote', { bid: 'Q1' }, [schema.node('paragraph', { bid: 'P2' }, schema.text('копия'))]),
+    schema.node('paragraph', { bid: 'P2' }, schema.text('оригинал')),
+    schema.node('table', { bid: 'T1' }, [schema.node('table_row', null, [
+      schema.node('table_cell', null, [schema.node('chart', { bid: 'C9', chart: null })]),
+      schema.node('table_cell', null, [schema.node('chart', { bid: 'C9', chart: null })]),
+    ])]),
+  ]);
+  let state = EditorState.create({ doc, schema, plugins: [plugins.blockIds] });
+  state = state.apply(state.tr.setMeta('led-init', true));
+  assert.equal(state.doc.child(1).attrs.bid, 'P2', 'абзац верхнего уровня держит свой номер (за него держатся пометки)');
+  assert.notEqual(state.doc.child(0).firstChild.attrs.bid, 'P2', 'у вложенной копии номер новый');
+  const cells = [];
+  state.doc.child(2).descendants((n) => { if (n.type.name === 'chart') cells.push(n.attrs.bid); });
+  assert.equal(cells[0], 'C9');
+  assert.ok(cells[1] && cells[1] !== 'C9', 'два графика в ячейках (дубль строки) — разные номера');
+  // Второй прогон ничего не меняет.
+  const again = state.apply(state.tr.setMeta('led-init', true));
+  assert.ok(again.doc.eq(state.doc));
 });

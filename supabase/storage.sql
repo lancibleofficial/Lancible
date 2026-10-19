@@ -14,13 +14,26 @@
 -- устройстве, где их вставили, и докачиваются в облако, как только корзина
 -- появится (assets.flush() на входе в аккаунт).
 
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('doc-assets', 'doc-assets', false, 15728640,
-        array['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp', 'image/svg+xml'])
+-- Типы и предел — те же, что выставляет supabase/storage-pdf.sql (PDF до
+-- 20 МБ, 17 октября 2026). Повторный запуск этого файла их не сужает
+-- (19 октября 2026): раньше on conflict переписывал корзину обратно на
+-- «только картинки, 15 МБ», и PDF молча переставали уходить в облако. Теперь
+-- предел берётся больший из двух, а типы — объединением; «без ограничений»
+-- (null) так и остаётся без ограничений. Сверяет
+-- tests/unit/supabase-sql.test.js.
+insert into storage.buckets as b (id, name, public, file_size_limit, allowed_mime_types)
+values ('doc-assets', 'doc-assets', false, 20971520,
+        array['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp', 'image/svg+xml', 'application/pdf'])
 on conflict (id) do update
   set public = excluded.public,
-      file_size_limit = excluded.file_size_limit,
-      allowed_mime_types = excluded.allowed_mime_types;
+      file_size_limit = case
+        when b.file_size_limit is null then null
+        else greatest(b.file_size_limit, excluded.file_size_limit)
+      end,
+      allowed_mime_types = case
+        when b.allowed_mime_types is null then null
+        else array(select distinct m from unnest(b.allowed_mime_types || excluded.allowed_mime_types) as m)
+      end;
 
 -- Политики пересоздаются, чтобы файл можно было выполнить целиком ещё раз,
 -- когда в нём что-то добавилось: create policy без drop падает на второй раз.

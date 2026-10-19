@@ -45,23 +45,27 @@ async function seed(page) {
   }, HOUR);
 }
 
-test('карточки: закреплённые первыми, у каждой время, деньги, прогресс и срок', async ({ page }) => {
+test('карточки: свежие первыми (закреплённый — не первый), у каждой время, деньги, прогресс и срок', async ({ page }) => {
   await seed(page);
   const cards = page.locator('.ptile');
   await expect(cards).toHaveCount(3);
-  await expect(cards.locator('.ptile-name')).toHaveText(['Кофейня', 'Сайт', 'Приложение']);
+  // 19 октября 2026: порядок — Core.projectsByActivity. «Приложение» — запись
+  // до 14:45, позже всех; «Сайт» и «Кофейня» — правки в 12:00, созданы
+  // одновременно — как лежат. «Кофейня» закреплена, но первой не встаёт.
+  await expect(cards.locator('.ptile-name')).toHaveText(['Приложение', 'Сайт', 'Кофейня']);
   const site = cards.filter({ hasText: 'Сайт' });
   await expect(site.locator('.ptile-time')).toHaveText('1ч');
   await expect(site.locator('.ptile-money')).toHaveText(/1\s000\s₽/);
   await expect(site.locator('.ptile-count')).toHaveText('0/2');
   await expect(site.locator('.ptile-head .ptile-due')).toHaveText('· сегодня');
   await expect(cards.filter({ hasText: 'Приложение' }).locator('.ptile-head .ptile-due'), 'без дедлайна — без подписи').toHaveCount(0);
-  // Готово 1 из 1 — полоса прогресса заполнена целиком.
-  const w = await page.evaluate(() => {
-    const bar = document.querySelector('.ptile .ptile-progress');
-    return bar.querySelector('i').getBoundingClientRect().width / bar.getBoundingClientRect().width;
-  });
-  expect(w).toBeGreaterThan(0.98);
+  // «Кофейня»: готово 1 из 1 — полоса прогресса заполнена целиком. С 18 октября 2026
+  // шкала натекает от нуля (bars.spec.js) — мерим, когда она встала.
+  await expect.poll(() => page.evaluate(() => {
+    const bar = document.querySelector('.ptile[data-id="p3"] .ptile-progress');
+    return bar.querySelector('i').getAnimations().length === 0
+      && Math.abs(bar.querySelector('i').getBoundingClientRect().width / bar.getBoundingClientRect().width - 1) < 0.02;
+  })).toBe(true);
   await site.locator('.ptile-head').click();
   await expect(page.locator('#project-view')).toBeVisible();
   await expect(page.locator('#ph-name')).toHaveText('Сайт');
@@ -131,8 +135,13 @@ test('галочка закрывает задачу, и она уезжает �
   await expect(site.locator('.ptile-task.done .rl-name')).toHaveText(['Форма']);
   expect(await page.evaluate(() => getTask('t4').done)).toBe(true);
   await expect(site.locator('.ptile-count')).toHaveText('1/2');
-  // Снятая галочка возвращает задачу в работу — наверх, к открытым.
-  await site.locator('.ptile-task.done', { hasText: 'Форма' }).locator('.task-done').uncheck();
+  // Строка ещё ~0,6 с держит место (налив и брызги, check-motion.spec.js), и
+  // галочку, пока держит, не снять. Снятая галочка возвращает задачу в
+  // работу — наверх, к открытым.
+  // Строку перерисовывают в миг щелчка, и она перестаёт быть .done — ищем её
+  // по названию, а не по классу.
+  await expect.poll(() => page.evaluate(() => rowHolds.size)).toBe(0);
+  await site.locator('.ptile-task', { hasText: 'Форма' }).locator('.task-done').uncheck();
   await expect(site.locator('.ptile-task.done')).toHaveCount(0);
   expect(await page.evaluate(() => getTask('t4').done)).toBe(false);
 });
@@ -174,7 +183,7 @@ test('выполненные — под открытыми, серые и зач
       faint: paint('--text-faint'), text: paint('--text'),
       open: { color: name('Форма').color, line: name('Форма').textDecorationLine },
       done: { color: name('Свежий макет').color, line: name('Свежий макет').textDecorationLine, checked: row('Свежий макет').querySelector('.task-done').checked, play: row('Свежий макет').querySelectorAll('.rl-play').length },
-      cancelled: { color: name('Отменённый баннер').color, line: name('Отменённый баннер').textDecorationLine, cross: !!row('Отменённый баннер').querySelector('.ptile-x svg'), box: !!row('Отменённый баннер').querySelector('.task-done'), play: row('Отменённый баннер').querySelectorAll('.rl-play').length },
+      cancelled: { color: name('Отменённый баннер').color, line: name('Отменённый баннер').textDecorationLine, cross: !!row('Отменённый баннер').querySelector('.task-x svg'), box: !!row('Отменённый баннер').querySelector('.task-done'), play: row('Отменённый баннер').querySelectorAll('.rl-play').length },
     };
   });
   expect(m.open.line).toBe('none');
@@ -359,7 +368,7 @@ test('закрепление — из меню карточки, закрепл�
   await expect(page.locator('#nav-pinned-head')).toContainText('Быстрый доступ');
   await expect(page.locator('#nav-pinned-head svg.icon'), 'у группы — значок закрепления').toBeVisible();
   await expect(quick).toHaveText(['Кофейня']);
-  await expect(rest).toHaveText(['Сайт', 'Приложение']);
+  await expect(rest, 'остальные — по свежести').toHaveText(['Приложение', 'Сайт']);
 
   const menu = async (name, item) => {
     const card = page.locator('.ptile', { hasText: name });
@@ -370,11 +379,122 @@ test('закрепление — из меню карточки, закрепл�
   await menu('Сайт', 'В быстрый доступ');
   await expect(quick, 'в порядке закрепления').toHaveText(['Кофейня', 'Сайт']);
   await expect(rest).toHaveText(['Приложение']);
+  await expect(page.locator('.ptile-name'), 'в ряду «Проектов» закрепление порядок не меняет').toHaveText(['Приложение', 'Сайт', 'Кофейня']);
 
   await menu('Кофейня', 'Убрать из быстрого доступа');
   await menu('Сайт', 'Убрать из быстрого доступа');
   await expect(page.locator('#nav-pinned-head'), 'нечего показать — группы нет').toBeHidden();
-  await expect(rest, 'вернулись к остальным, в порядке проектов').toHaveText(['Сайт', 'Приложение', 'Кофейня']);
+  await expect(rest, 'вернулись к остальным, по свежести').toHaveText(['Приложение', 'Сайт', 'Кофейня']);
+});
+
+// --- Порядок по свежести (19 октября 2026) ------------------------------------------
+//
+// «Проекты»: первым — проект с последними изменениями (в задачах или в нём
+// самом), новый — первым. Правило — ядра (Core.projectsByActivity, юниты —
+// views.test.js); здесь — что веб его зовёт, что открытый экран не
+// переставляет карточки под рукой, и где проект получает отметку свежести.
+
+const names = (page) => page.locator('.ptile-name').allTextContents();
+const updatedOf = (page, id) => page.evaluate((x) => getProject(x).updatedAt || null, id);
+const at = (hm) => new Date(`2026-06-10T${hm}:00`);
+
+test('свежие первыми: правка в проекте поднимает его; открытый экран не переставляет, вход — пересчитывает; новый — первым', async ({ page }) => {
+  await seed(page);
+  expect(await names(page)).toEqual(['Приложение', 'Сайт', 'Кофейня']);
+  const rest = page.locator('#nav-projects .nav-pname');
+  await expect(rest).toHaveText(['Приложение', 'Сайт']);
+
+  // Правка задачи «Сайта» (галочка в его карточке) в 15:00.
+  await page.clock.setFixedTime(at('15:00'));
+  await page.locator('.ptile[data-id="p1"] .ptile-task', { hasText: 'Форма' }).locator('.task-done').click();
+  await expect.poll(() => page.evaluate(() => getTask('t4').done)).toBe(true);
+  await page.evaluate(() => render());
+  expect(await names(page), 'экран открыт — карточки на местах').toEqual(['Приложение', 'Сайт', 'Кофейня']);
+  await expect(rest, 'список в левой панели — сразу по свежести').toHaveText(['Сайт', 'Приложение']);
+  await page.evaluate(() => { openView('home'); openView('projects'); });
+  expect(await names(page), 'вошли снова — «Сайт» первым').toEqual(['Сайт', 'Приложение', 'Кофейня']);
+
+  // Правка самого проекта (окно проекта, «Сохранить») в 15:10.
+  await page.clock.setFixedTime(at('15:10'));
+  await page.evaluate(() => { openProjectDialog(getProject('p3')); });
+  await page.locator('#pdlg-name').fill('Кофейня у дома');
+  await page.locator('#pdlg-save').click();
+  await expect(page.locator('#pdlg-backdrop')).toBeHidden();
+  expect(await updatedOf(page, 'p3')).toBe(at('15:10').toISOString());
+  await page.evaluate(() => { openView('home'); openView('projects'); });
+  expect(await names(page)).toEqual(['Кофейня у дома', 'Сайт', 'Приложение']);
+
+  // Новый проект — первым.
+  await page.clock.setFixedTime(at('15:20'));
+  await page.evaluate(() => openProjectDialog(null));
+  await page.locator('#pdlg-name').fill('Ремонт');
+  await page.locator('#pdlg-save').click();
+  await expect(page.locator('#project-view')).toBeVisible();
+  await page.evaluate(() => openView('projects'));
+  expect(await names(page)).toEqual(['Ремонт', 'Кофейня у дома', 'Сайт', 'Приложение']);
+  // Пока экран открыт, новый проект (с другого устройства, агентом) встаёт
+  // первым, остальные не двигаются.
+  await page.clock.setFixedTime(at('15:30'));
+  await page.evaluate(() => {
+    const now = new Date().toISOString();
+    state.projects.push({ id: 'p9', name: 'Пришёл', color: '#5ec8f2', description: '', pinnedAt: null, createdAt: now, updatedAt: now, tagIds: [] });
+    seedProjectStatuses('p9');
+    render();
+  });
+  expect(await names(page)).toEqual(['Пришёл', 'Ремонт', 'Кофейня у дома', 'Сайт', 'Приложение']);
+});
+
+test('отметка свежести проекта: окно проекта, статусы, версии и его собственные теги ставят updatedAt; общий тег и закрепление — нет', async ({ page }) => {
+  await seed(page);
+  const step = async (hm, act, id = 'p2') => {
+    await page.clock.setFixedTime(at(hm));
+    await act();
+    return updatedOf(page, id);
+  };
+  // Статусы и версии — в окне проекта.
+  expect(await step('13:00', () => page.evaluate(() => { openProjectDialog(getProject('p2'), 'statuses'); addStatus(); }))).toBe(at('13:00').toISOString());
+  expect(await step('13:05', async () => {
+    await page.locator('#st-list .st-row:last-child .st-name').fill('Ревью');
+  })).toBe(at('13:05').toISOString());
+  expect(await step('13:10', () => page.evaluate(() => addVersion()))).toBe(at('13:10').toISOString());
+  await page.evaluate(() => closeProjectDialog());
+
+  // Собственный тег проекта: завести, переименовать, перекрасить, удалить — окно тега.
+  expect(await step('13:20', async () => {
+    await page.evaluate(() => openTagDialog(null, '', null, 'p2'));
+    await page.locator('#tagdlg-name').fill('Срочно');
+    await page.locator('#tagdlg-save').click();
+  })).toBe(at('13:20').toISOString());
+  const own = await page.evaluate(() => state.tags.find((x) => x.name === 'Срочно'));
+  expect(own.projectId).toBe('p2');
+  expect(await step('13:25', async () => {
+    await page.evaluate((id) => openTagDialog(state.tags.find((x) => x.id === id)), own.id);
+    await page.locator('#tagdlg-name').fill('Очень срочно');
+    await page.locator('#tagdlg-save').click();
+  })).toBe(at('13:25').toISOString());
+  expect(await step('13:30', async () => {
+    await page.evaluate((id) => openTagDialog(state.tags.find((x) => x.id === id)), own.id);
+    await page.locator('#tagdlg-swatches .swatch:not(.sel)').first().click();
+    await page.locator('#tagdlg-save').click();
+  })).toBe(at('13:30').toISOString());
+  expect(await step('13:35', async () => {
+    await page.evaluate((id) => openTagDialog(state.tags.find((x) => x.id === id)), own.id);
+    await page.locator('#tagdlg-delete').click();
+    await page.locator('#confirm-ok').click();
+    await expect(page.locator('#tagdlg-backdrop')).toBeHidden();
+  })).toBe(at('13:35').toISOString());
+
+  // Общий тег — ничей: отметок нет ни у кого.
+  const before = await page.evaluate(() => state.projects.map((p) => p.updatedAt || null));
+  await page.clock.setFixedTime(at('13:40'));
+  await page.evaluate(() => openTagDialog(null, '', null, null));
+  await page.locator('#tagdlg-name').fill('Общий');
+  await page.locator('#tagdlg-save').click();
+  expect(await page.evaluate(() => state.projects.map((p) => p.updatedAt || null))).toEqual(before);
+
+  // Закрепление — не правка проекта.
+  expect(await step('13:45', () => page.evaluate(() => togglePinProject('p2')))).toBe(at('13:35').toISOString());
+  expect(await page.evaluate(() => !!getProject('p2').pinnedAt)).toBe(true);
 });
 
 test('узкий веб — колода, как на телефоне: карточка во всю ширину, край следующей виден', async ({ page }) => {

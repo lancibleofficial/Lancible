@@ -1,6 +1,6 @@
 // Собирает web/ из общих исходников перед деплоем на Vercel (Build Command
 // в web/package.json). Копирует общий с десктопом код (app.js/styles.css/
-// xlsx.js), собранный редактор (editor.js, scripts/build-editor.js) и
+// xlsx.js), собранный редактор (editor.js и editor-pdf.js, scripts/build-editor.js) и
 // вендорные библиотеки (Supabase UMD — из web/node_modules,
 // куда их кладёт обычный `npm install` внутри web/, т.к. Root Directory на
 // Vercel — web/, и корневой node_modules там недоступен) + закоммиченные
@@ -30,7 +30,10 @@ try {
   const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   fs.writeFileSync(path.join(webDir, 'version.js'), `window.__LANCIBLE_VERSION__ = ${JSON.stringify(version)};\n`);
   // Редактор собран заранее и лежит в репозитории — Vercel его не собирает.
+  // editor-pdf.js — pdf.js рядом с ним: редактор грузит его при первом PDF
+  // с адреса рядом с editor.js (src/editor/pdf.js), поэтому кладём рядом.
   fs.copyFileSync(path.join(root, 'src', 'renderer', 'editor.js'), path.join(webDir, 'editor.js'));
+  fs.copyFileSync(path.join(root, 'src', 'renderer', 'editor-pdf.js'), path.join(webDir, 'editor-pdf.js'));
 
   // Чистая логика из src/renderer/core — те же файлы, что тестируются в Node.
   // Копируется вся папка целиком, чтобы новый модуль не пришлось дописывать
@@ -56,7 +59,7 @@ try {
     fs.copyFileSync(path.join(fontSrc, name), path.join(fontDest, name));
   }
 
-  console.log('[sync-web-assets] app.js/styles.css/xlsx.js/editor.js/core/vendor скопированы в', webDir);
+  console.log('[sync-web-assets] app.js/styles.css/xlsx.js/editor.js/editor-pdf.js/core/vendor скопированы в', webDir);
 } catch (err) {
   console.error('[sync-web-assets] Ошибка синхронизации:', err.message);
   process.exitCode = 1;

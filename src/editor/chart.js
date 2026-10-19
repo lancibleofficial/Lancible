@@ -224,6 +224,60 @@ function legend(root, names, W, y, slices) {
   });
 }
 
+// --- данные для хозяина: нижний лист телефона --------------------------------------------
+//
+// На телефоне график правит нижний лист приложения, а не окно в WebView
+// (host.js, сообщение chart; 17 октября 2026). Листу уходит то, что он
+// правит, — spec: вид, название и строки «подпись · значение» первого ряда.
+// Остальное (легенда, подписи значений, стопка, имя ряда, другие ряды)
+// остаётся в узле и переживает правку на телефоне.
+
+/** spec ← атрибут узла attrs.chart.
+ *  { kind: CHART_TYPES[i], title: string, rows: [{ label: string, value: number }] }
+ *  kind = chart.type, title = chart.title, rows[i] = { label: labels[i], value: series[0].values[i] }. */
+export function chartSpec(chart) {
+  const c = normalizeChart(chart);
+  const first = c.series[0];
+  return { kind: c.type, title: c.title, rows: c.labels.map((label, i) => ({ label, value: first ? first.values[i] : 0 })) };
+}
+
+/** Число из ячейки листа: число как есть, строку — как ячейку таблицы
+ *  («14,5», «1 200»), мусор — 0. */
+function specNumber(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  const n = Core.parseCellNumber(String(v == null ? '' : v));
+  return n == null ? 0 : n;
+}
+
+/** attrs.chart ← spec поверх прежнего графика base (у нового — defaultChart).
+ *  Вид не из CHART_TYPES — прежний ('bars' — синоним 'bar'); название не
+ *  строка — прежнее. Строки — подписи и первый ряд; у других рядов значения
+ *  едут за своей подписью: строку удалили, переставили — числа не путаются,
+ *  новой строке — 0. */
+export function chartFromSpec(spec, base) {
+  const b = normalizeChart(base || {});
+  const sp = spec && typeof spec === 'object' ? spec : {};
+  const kind = sp.kind === 'bars' ? 'bar' : sp.kind;
+  const rows = (Array.isArray(sp.rows) ? sp.rows : []).filter((r) => r && typeof r === 'object');
+  const labels = rows.map((r) => String(r.label == null ? '' : r.label));
+  const taken = new Set();
+  const from = labels.map((l) => {
+    const i = b.labels.findIndex((x, k) => x === l && !taken.has(k));
+    if (i >= 0) taken.add(i);
+    return i;
+  });
+  const series = [
+    { name: b.series[0] ? b.series[0].name : '', values: rows.map((r) => specNumber(r.value)) },
+    ...b.series.slice(1).map((s) => ({ name: s.name, values: from.map((i) => (i >= 0 ? s.values[i] : 0)) })),
+  ];
+  return normalizeChart(Object.assign({}, b, {
+    type: CHART_TYPES.includes(kind) ? kind : b.type,
+    title: typeof sp.title === 'string' ? sp.title : b.title,
+    labels,
+    series,
+  }));
+}
+
 // --- окно правки ---------------------------------------------------------------------
 
 /** Открыть правку графика. onSave(chart) — с новыми данными. */
@@ -318,7 +372,9 @@ export function editChart(root, initial, t, onSave) {
   ], { class: 'modal-lg led-chart-modal', noFocus: false });
 }
 
-/** NodeView графика: картинка, двойной щелчок — правка. */
+/** NodeView графика: картинка, двойной щелчок — правка. На телефоне с
+ *  нативной панелью (ctx.editChart) правку ведёт хозяин нижним листом, и
+ *  открывает её касание графика — двойного касания на телефоне не ждут. */
 export class ChartView {
   constructor(node, view, getPos, ctx) {
     this.node = node;
@@ -330,10 +386,21 @@ export class ChartView {
     this.bar = h('div', { class: 'led-node-bar' },
       h('button', { type: 'button', class: 'led-btn', title: ctx.t('chart.edit'), onclick: () => this.edit() }, icon('edit', 16)),
       h('button', { type: 'button', class: 'led-btn', title: ctx.t('block.delete'), onclick: () => this.remove() }, icon('trash', 16)));
-    this.dom.append(this.body, this.bar);
-    this.dom.addEventListener('dblclick', () => this.edit());
+    // С нативной панелью (телефон, протокол 4) острова нет: «править» и
+    // «удалить» — в контекстной панели хозяина (chartEdit, deleteBlock).
+    this.dom.append(this.body);
+    if (!ctx.native) this.dom.append(this.bar);
+    if (ctx.editChart) this.dom.addEventListener('click', (e) => { if (!this.bar.contains(e.target)) this.edit(); });
+    else this.dom.addEventListener('dblclick', () => this.edit());
     this.render();
-    this.ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => this.render()) : null;
+    // Перерисовка — в следующем кадре, а не в самом колбэке: высота идёт от
+    // ширины, и перерисовка внутри колбэка меняла размер того же узла —
+    // браузер слал window.onerror «ResizeObserver loop completed with
+    // undelivered notifications» (телефон, после вставки; 17 октября 2026).
+    this.ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      cancelAnimationFrame(this.raf);
+      this.raf = requestAnimationFrame(() => this.render());
+    }) : null;
     if (this.ro) this.ro.observe(this.dom);
   }
 
@@ -347,6 +414,14 @@ export class ChartView {
 
   edit() {
     if (!this.view.editable) return;
+    if (this.ctx.editChart) {
+      // Двойное касание — два click: лист открывается один раз.
+      const now = Date.now();
+      if (this.lastEdit && now - this.lastEdit < 500) return;
+      this.lastEdit = now;
+      this.ctx.editChart(this.getPos);
+      return;
+    }
     editChart(this.ctx.root, this.node.attrs.chart, this.ctx.t, (chart) => {
       const pos = this.getPos();
       this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, Object.assign({}, this.node.attrs, { chart })));
@@ -374,5 +449,8 @@ export class ChartView {
 
   ignoreMutation() { return true; }
 
-  destroy() { if (this.ro) this.ro.disconnect(); }
+  destroy() {
+    if (this.ro) this.ro.disconnect();
+    cancelAnimationFrame(this.raf);
+  }
 }

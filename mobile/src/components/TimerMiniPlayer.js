@@ -21,8 +21,9 @@ import Pulse from './Pulse';
 import { useAppStore, getTask, getProject } from '../store/useAppStore';
 import { useRates, currencyOf } from '../hooks/useRates';
 import { useTicker } from '../hooks/useTicker';
+import { useModeFlags } from '../hooks/useModeFlags';
 import { fmtClock, fmtMoney, earnedOf, earnedShown } from '../lib/format';
-import { useColors, spacing, screenPadding, radius, fontSize, displayFamily, tabBarClearance, taskControlRadius } from '../theme';
+import { useColors, floatingShadow, spacing, screenPadding, radius, fontSize, displayFamily, tabBarClearance, taskControlRadius } from '../theme';
 import { t } from '../lib/i18n';
 
 export const MINI_PLAYER_HEIGHT = 56;
@@ -63,12 +64,16 @@ function useRunningInfo() {
   const rates = useRates();
   const task = useRunningTask();
   const lang = settings.lang;
+  // Заработок в плашке — счётчик заработка (Core.modeFlags). Сама плашка при
+  // выключенном таймере не пропадает: запустить нечем, а идущий, начатый до
+  // выключения, должно быть чем остановить.
+  const { earnings } = useModeFlags();
   useTicker(!!task);
   if (!task) return { task: null, lang, stopTimer };
   const project = getProject(projects, task.projectId);
   const elapsed = (task.totalMs || 0) + (activeTimer ? Date.now() - new Date(activeTimer.startedAt).getTime() : 0);
   const earned = earnedOf(task, rates, activeTimer);
-  const sub = [project ? project.name : null, earnedShown(task, rates, earned) ? fmtMoney(earned, lang, currencyOf(project, settings)) : null]
+  const sub = [project ? project.name : null, earnings && earnedShown(task, rates, earned) ? fmtMoney(earned, lang, currencyOf(project, settings)) : null]
     .filter(Boolean).join(' · ');
   return { task, project, elapsed, sub, lang, stopTimer };
 }
@@ -172,13 +177,14 @@ const makeStyles = (colors) => StyleSheet.create({
   pill: { justifyContent: 'center' },
   // Лежит поверх страницы: своя поверхность (белая на светлой) и мягкая
   // тень вместо серой заливки с рамкой. Тень — boxShadow, равномерно
-  // размытая со всех сторон: системная тень Android (elevation) темнела к
-  // середине нижнего края и выглядела грязно. Размер и скругление — от
-  // капли (useMorphStyles), в покое — во всю ширину, высота плашки.
+  // размытая со всех сторон (floatingShadow в theme.js, та же у панели
+  // редактора): системная тень Android (elevation) темнела к середине
+  // нижнего края и выглядела грязно. Размер и скругление — от капли
+  // (useMorphStyles), в покое — во всю ширину, высота плашки.
   plate: {
     position: 'absolute', left: 0,
     backgroundColor: colors.floating,
-    boxShadow: [{ offsetX: 0, offsetY: 4, blurRadius: 18, spreadDistance: 0, color: colors.shadow }],
+    boxShadow: floatingShadow(colors),
   },
   row: {
     height: MINI_PLAYER_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2,

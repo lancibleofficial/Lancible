@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import * as lib from 'react-native-keyboard-controller';
 import * as keyboard from '../src/lib/keyboard';
+import { render } from '@testing-library/react-native';
 
 const LINKING_ERROR = "The package 'react-native-keyboard-controller' doesn't seem to be linked.";
 
@@ -39,10 +40,23 @@ test('библиотека на месте — флаг поднят, наруж
   expect(keyboard.KeyboardAwareScrollView).toBe(lib.KeyboardAwareScrollView);
 });
 
+// KeyboardAvoidingView — своя обёртка на обоих путях (19 октября 2026): поправку
+// на место вида (automaticOffset) считает она, а внутри — библиотечный.
+test('KeyboardAvoidingView: внутри — библиотечный, свой automaticOffset ему не уходит', async () => {
+  const s = await render(<keyboard.KeyboardAvoidingView behavior="padding" automaticOffset testID="kav" />);
+  // Подмена библиотеки (jest.setup.js) — View: свойства видны на нём.
+  expect(lib.KeyboardAvoidingView).toBeTruthy();
+  const host = s.getByTestId('kav');
+  s.getByTestId('keyboard-avoid-probe', { includeHiddenElements: true });
+  expect(host.props.behavior).toBe('padding');
+  expect(host.props.automaticOffset).toBeUndefined();
+  expect(host.props.keyboardVerticalOffset).toBe(0);
+});
+
 test('импорт библиотеки бросает (Expo Go без нативной части) — флаг опущен, обёртка грузится', () => {
   const mod = loadWithoutNative();
   expect(mod.KEYBOARD_NATIVE).toBe(false);
-  for (const name of ['KeyboardProvider', 'useKeyboardAnimation', 'useReanimatedKeyboardAnimation', 'KeyboardAwareScrollView']) {
+  for (const name of ['KeyboardProvider', 'useKeyboardAnimation', 'useReanimatedKeyboardAnimation', 'KeyboardAwareScrollView', 'KeyboardAvoidingView']) {
     expect(mod[name]).toBeTruthy();
     expect(mod[name]).not.toBe(lib[name]);
   }

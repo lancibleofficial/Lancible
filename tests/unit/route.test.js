@@ -149,3 +149,27 @@ test('isAuthHash: токены входа в хэше — не маршрут, �
   assert.ok(!isAuthHash(undefined));
   assert.ok(!isAuthHash('#abc'));
 });
+
+test('настройки: раздел — часть адреса, незнакомый — список разделов', () => {
+  // 17 октября 2026 настройки разложены по разделам: у каждого своя страница
+  // и свой адрес, «назад» из раздела — в список.
+  const { ROUTE_SETTINGS_SECTIONS } = require('../../src/renderer/core/route.js');
+  assert.deepEqual(ROUTE_SETTINGS_SECTIONS, ['main', 'work', 'account', 'data', 'about', 'feedback']);
+  for (const section of ROUTE_SETTINGS_SECTIONS) {
+    assert.deepEqual(parseRoute(`#/settings/${section}`), { view: 'settings', section });
+    assert.equal(buildRoute({ view: 'settings', section }), `#/settings/${section}`);
+  }
+  assert.deepEqual(parseRoute('#/settings'), { view: 'settings' }, 'без раздела — список, поля section нет');
+  assert.deepEqual(parseRoute('#/settings/нет-такого'), { view: 'settings' });
+  assert.deepEqual(parseRoute('#/settings/Work/'), { view: 'settings', section: 'work' }, 'регистр и слэш на конце');
+  assert.equal(buildRoute({ view: 'settings', section: 'нет-такого' }), '#/settings');
+  assert.equal(buildRoute({ view: 'settings', section: null }), '#/settings');
+});
+
+test('routeKey: раздел настроек — свой экран, список разделов — другой', () => {
+  const key = (r) => routeKey(r);
+  assert.notEqual(key({ view: 'settings' }), key({ view: 'settings', section: 'main' }), 'вход в раздел — новый шаг истории');
+  assert.notEqual(key({ view: 'settings', section: 'main' }), key({ view: 'settings', section: 'work' }));
+  assert.equal(key({ view: 'settings', section: 'нет-такого' }), key({ view: 'settings' }), 'незнакомый раздел — тот же список');
+  assert.equal(key({ view: 'settings' }), 'settings:');
+});

@@ -16,6 +16,7 @@ import { deleteAccount } from '../src/lib/auth';
 import { FunctionsHttpError, FunctionsFetchError } from '@supabase/supabase-js';
 import { sb } from '../src/lib/supabaseClient';
 import { useEditorAuth } from '../src/hooks/useEditorAuth';
+import { useAuthStore } from '../src/store/useAuthStore';
 import DocEditor, { EDITOR_BASE_URL } from '../src/components/DocEditor';
 
 jest.mock('../src/lib/supabaseClient', () => {
@@ -226,6 +227,9 @@ test('прежний путь: папку стёрли, а аккаунт ост
 });
 
 test('пока идёт удаление, редактор не видит облака картинок', async () => {
+  // Облако картинок — только у текущего аккаунта (17 октября 2026): сеанс u1
+  // и открыта область u1.
+  useAuthStore.setState({ current: 'u1' });
   const { result } = await renderHook(() => useEditorAuth());
   await waitFor(() => expect(result.current && result.current.userId).toBe('u1'));
   await act(async () => state().setAssetsPaused(true));

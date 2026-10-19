@@ -119,28 +119,34 @@ const pathCache = new WeakMap();
 
 export function strokePath(stroke, smoothingBase, live) {
   if (!live && pathCache.has(stroke)) return pathCache.get(stroke);
-  const pts = stroke._pts || unpackPoints(stroke.pts);
-  let path;
-  if (stroke.tool === 'shape') {
-    path = new Path2D(shapePathD(stroke.shape, pts));
-  } else {
-    const st = TOOL_STYLE[stroke.tool] || TOOL_STYLE.pen;
-    const hasPressure = stroke.pr !== false && pts.some((p) => p[2] !== 0.5);
-    const outline = getStroke(pts, {
-      size: stroke.size * (stroke.tool === 'marker' ? 1 : 1.6),
-      thinning: hasPressure || !st.flat ? st.thinning : 0,
-      smoothing: smoothingBase == null ? st.smoothing : clamp(st.smoothing * (0.5 + smoothingBase), 0, 0.99),
-      streamline: smoothingBase == null ? st.streamline : clamp(st.streamline * (0.4 + smoothingBase * 1.2), 0, 0.95),
-      simulatePressure: !hasPressure && !st.flat,
-      last: !live,
-      start: { taper: st.flat ? 0 : 0, cap: true },
-      end: { taper: st.flat ? 0 : 0, cap: true },
-    });
-    path = new Path2D(outlinePath(outline));
-  }
+  const path = new Path2D(strokeD(stroke, smoothingBase, live));
   if (!live) pathCache.set(stroke, path);
   return path;
 }
+
+/** Штрих → SVG-путь (d) в координатах поверхности: у пера, карандаша и
+ *  маркера — контур для заливки, у фигуры — линия для обводки (её толщина —
+ *  stroke.size). Его же рисует выгрузка в PDF (pdfexport.js: inkPlan). */
+export function strokeD(stroke, smoothingBase, live) {
+  const pts = stroke._pts || unpackPoints(stroke.pts);
+  if (stroke.tool === 'shape') return shapePathD(stroke.shape, pts);
+  const st = TOOL_STYLE[stroke.tool] || TOOL_STYLE.pen;
+  const hasPressure = stroke.pr !== false && pts.some((p) => p[2] !== 0.5);
+  const outline = getStroke(pts, {
+    size: stroke.size * (stroke.tool === 'marker' ? 1 : 1.6),
+    thinning: hasPressure || !st.flat ? st.thinning : 0,
+    smoothing: smoothingBase == null ? st.smoothing : clamp(st.smoothing * (0.5 + smoothingBase), 0, 0.99),
+    streamline: smoothingBase == null ? st.streamline : clamp(st.streamline * (0.4 + smoothingBase * 1.2), 0, 0.95),
+    simulatePressure: !hasPressure && !st.flat,
+    last: !live,
+    start: { taper: st.flat ? 0 : 0, cap: true },
+    end: { taper: st.flat ? 0 : 0, cap: true },
+  });
+  return outlinePath(outline);
+}
+
+/** Прозрачность штриха: своя или у инструмента (маркер полупрозрачный). */
+export const strokeOpacity = (st) => (st.opacity != null ? st.opacity : (TOOL_STYLE[st.tool] || TOOL_STYLE.pen).opacity);
 
 function shapePathD(shape, pts) {
   if (pts.length < 2) return '';
@@ -174,7 +180,7 @@ export function drawStrokes(ctx, strokes, transform, opts) {
     ctx.setTransform(s, 0, 0, s, dx + (st._dx || 0) * s, dy + (st._dy || 0) * s);
     const color = resolveInkColor(st.color, o.el);
     const path = strokePath(st, o.smoothing, st._live);
-    ctx.globalAlpha = st.opacity != null ? st.opacity : (TOOL_STYLE[st.tool] || TOOL_STYLE.pen).opacity;
+    ctx.globalAlpha = strokeOpacity(st);
     if (st.tool === 'shape') {
       ctx.strokeStyle = color;
       ctx.lineWidth = st.size;
@@ -453,6 +459,9 @@ export class InkInput {
 
 // --- поверхность -------------------------------------------------------------------
 
+/** Точек на один холст не больше: 4096 × 4096 — предел WebView на iOS. */
+const MAX_CANVAS_PX = 4096 * 4096;
+
 /** Холст со штрихами и всей логикой инструментов. Как штрихи сохраняются и
  *  во что пересчитываются координаты — решают владельцы (блок, слой). */
 export class InkSurface {
@@ -711,10 +720,13 @@ export class InkSurface {
     this.render();
   }
 
-  /** Перерисовать холст целиком. */
+  /** Перерисовать холст целиком. Плотность — по экрану, но не больше
+   *  MAX_CANVAS_PX точек на холст: слой пометок с высотой по тексту бывает в
+   *  несколько экранов, а больший холст WebView на iOS молча не рисует. */
   render() {
     const c = this.canvas;
-    const dpr = window.devicePixelRatio || 1;
+    const area = Math.max(1, c.clientWidth * c.clientHeight);
+    const dpr = Math.min(window.devicePixelRatio || 1, Math.sqrt(MAX_CANVAS_PX / area));
     const w = Math.round(c.clientWidth * dpr);
     const hh = Math.round(c.clientHeight * dpr);
     if (c.width !== w || c.height !== hh) { c.width = w; c.height = hh; }

@@ -6,7 +6,7 @@ import { closeSheet, setSheetFooter, clearSheetFooter, useSheetHeader } from '..
 import { useColors, fontSize } from '../theme';
 
 // Содержимое нижнего листа для меню/подтверждений — замена Alert.alert(...)
-// (см. lib/dialogs.js). actions: [{label, onPress, destructive?, cancel?}].
+// (см. lib/dialogs.js). actions: [{label, onPress, destructive?, cancel?, stay?}].
 // Заголовок уходит в общую шапку листа, в содержимом остаётся пояснение.
 //
 // embedded (12 октября 2026) — подтверждение страницей внутри другого листа
@@ -14,6 +14,10 @@ import { useColors, fontSize } from '../theme';
 // открывается, иначе он закрыл бы собой этот. Заголовок и «назад» ставит
 // тот, кто держит страницу; «Отмена» возвращает к нему (onCancel), а не
 // закрывает лист. Кнопки — тот же подвал: главная, danger, серая «Отмена».
+//
+// stay у действия (18 октября 2026) — лист не закрывается, onPress сам
+// решает, куда вернуться: «Создать в то же время?» у отрезка, открытого из
+// списка отрезков, возвращает к списку, а не закрывает весь лист.
 export default function ActionSheetContent({ title, message, actions, embedded, onCancel }) {
   const colors = useColors();
   const styles = makeStyles(colors);
@@ -29,7 +33,7 @@ export default function ActionSheetContent({ title, message, actions, embedded, 
             variant={a.destructive ? 'danger' : a.cancel ? 'ghost' : 'primary'}
             onPress={() => {
               if (a.cancel && embedded) { if (onCancel) onCancel(); return; }
-              closeSheet();
+              if (!a.stay) closeSheet();
               if (a.onPress) a.onPress();
             }}
           />

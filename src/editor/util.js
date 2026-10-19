@@ -55,7 +55,7 @@ const SOLAR = {
   bold: 'text-bold', italic: 'text-italic', underline: 'text-underline', strike: 'text-strike', code: 'code',
   link: 'link', unlink: 'unlink', clear: 'eraser-square', undo: 'undo', redo: 'redo',
   tasks: 'checklist', codeblock: 'code-block', callout: 'callout', hr: 'minus',
-  image: 'image', imagePlus: 'image-add', chart: 'chart-bars', chartLine: 'chart-line', chartPie: 'chart-pie', chartArea: 'chart-area',
+  image: 'image', imagePlus: 'image-add', pdf: 'doc', chart: 'chart-bars', chartLine: 'chart-line', chartPie: 'chart-pie', chartArea: 'chart-area',
   draw: 'pen-line', pen: 'pen', annotate: 'pen-round', edit: 'pen-square', eraser: 'eraser', arrow: 'arrow-up-right',
   comment: 'comment', comments: 'comments', check: 'check', x: 'x', trash: 'trash', search: 'search',
   more: 'kebab', plus: 'plus', copy: 'copy', download: 'download', printer: 'printer',

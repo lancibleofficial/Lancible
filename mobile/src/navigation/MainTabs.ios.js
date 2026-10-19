@@ -2,9 +2,9 @@ import { View, StyleSheet, Platform } from 'react-native';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import HomeStack from './HomeStack';
 import ProjectsStack from './ProjectsStack';
 import TasksStack from './TasksStack';
+import ChatStack from './ChatStack';
 import StatsStack from './StatsStack';
 import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
@@ -15,6 +15,7 @@ import { rootHeaderLayout } from './rootHeaderLayout';
 import { useAppStore } from '../store/useAppStore';
 import { t } from '../lib/i18n';
 import { useColors, spacing } from '../theme';
+import { openTaskOnTop } from './openTask';
 
 // iOS-only: renders through UIKit's real UITabBarController (via
 // react-native-screens' native bottom-tabs integration) instead of the
@@ -51,7 +52,7 @@ const UIKIT_TAB_BAR_H = 49;
 const TAB_ICONS = {
   folder: require('../../assets/tabs/folder.png'),
   tasks: require('../../assets/tabs/tasks.png'),
-  today: require('../../assets/tabs/today.png'),
+  comments: require('../../assets/tabs/comments.png'),
   chart: require('../../assets/tabs/chart.png'),
   menu: require('../../assets/tabs/menu.png'),
 };
@@ -60,8 +61,10 @@ function tabIcon(name) {
   return { type: 'image', source: TAB_ICONS[name] };
 }
 
+/** Плашка таймера: задача поверх стека открытой вкладки, а не в какой-то
+ *  своей (navigation/openTask.js). */
 function openTask(navigation, taskId) {
-  navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } });
+  openTaskOnTop(navigation, taskId);
 }
 
 /** Фолбэк для iOS ниже 26: плашка абсолютом над таббаром. Прячется вместе
@@ -136,7 +139,7 @@ export default function MainTabs() {
     >
       <Tab.Screen name="Projects" component={ProjectsStack} options={tabOptions('nav.projects', 'folder')} />
       <Tab.Screen name="Tasks" component={TasksStack} options={tabOptions('nav.tasks', 'tasks')} />
-      <Tab.Screen name="Home" component={HomeStack} options={tabOptions('nav.home', 'today')} />
+      <Tab.Screen name="Chat" component={ChatStack} options={tabOptions('ai.tab', 'comments')} />
       <Tab.Screen name="Stats" component={StatsStack} options={tabOptions('nav.stats', 'chart')} />
       <Tab.Screen name="Menu" component={MenuStack} options={tabOptions('nav.menu', 'menu')} />
     </Tab.Navigator>

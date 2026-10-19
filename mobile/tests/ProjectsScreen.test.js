@@ -22,9 +22,17 @@
 // колоды (а не остановки на карточке). За краем: плашки «+» и с фразой —
 // уменьшенные, как соседки, и растут с оттяжкой до размера центральной и чуть
 // больше; крайняя карточка проекта на оттяжке уменьшается и не растёт.
-import { useRef } from 'react';
+//
+// Порядок карточек (круг 21) — по свежести (Core.projectsByActivity): первым —
+// проект с последними изменениями, закреплённый первым не встаёт, новый —
+// слева; в фокусе порядок держится, вне фокуса — пересчёт, а на экране та же
+// карточка (после создания — новая). Ни в одном кадре перестановки посередине
+// нет чужой карточки или пустой оболочки, карточка на экране не пересоздаётся;
+// колода, дочитывающая данные в пустую, — по свежести и на первой (жалоба
+// 19 октября: карточки проявлялись по одной).
+import { useRef, Profiler } from 'react';
 import { StyleSheet, Dimensions, processColor } from 'react-native';
-import { render, fireEvent, act, within } from '@testing-library/react-native';
+import { render, fireEvent, act, within, screen } from '@testing-library/react-native';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import { State } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
@@ -36,7 +44,9 @@ import ProjectsScreen, {
   pullAmount, deckTarget, dotsLayout, dotsStripShift, plusScale, nextPhrase, DECK_PHRASES, PULL_TRIGGER, MAX_SLOTS,
   deckAway, deckPull, deckScale, deckShift, deckDim, DeckSlot, SIDE_SCALE, SIDE_DIM, EDGE_GROW,
   edgeScale, edgeScaleY, edgeShift, PlusCard, PhraseCard, EGG_TRIGGER, DECK_EGG_PHRASES,
+  deckStart, deckNext, deckChoose, deckTouched, deckSettle, deckDrawn, DECK_KEEP,
 } from '../src/screens/ProjectsScreen';
+import * as Store from '../src/store/useAppStore';
 import DeckSparks, { SPARKS, sparkFlight, sparkState, sparkEgg, BURST_MS } from '../src/components/DeckSparks';
 import { rubberBand } from '../src/components/SwipeRow';
 import NewProjectSheet from '../src/components/NewProjectSheet';
@@ -90,10 +100,13 @@ test('карточки проектов: имя, сводка и задачи', 
 
 test('строка быстрого добавления на карточке заводит задачу в её проект и открывает её', async () => {
   const navigation = nav();
-  const { getAllByLabelText } = await render(<ProjectsScreen navigation={navigation} />);
-  const inputs = getAllByLabelText(t('ru', 'tasks.new_ph'));
-  await fireEvent.changeText(inputs[1], 'Деплой');
-  await fireEvent(inputs[1], 'submitEditing');
+  const q = await render(<ProjectsScreen navigation={navigation} />);
+  // Колода по свежести: «Бот» заведён позже «Сайта» — его карточка первая.
+  const card = q.getByTestId('deck-card-0');
+  within(card).getByText('Бот');
+  const input = within(card).getByLabelText(t('ru', 'tasks.new_ph'));
+  await fireEvent.changeText(input, 'Деплой');
+  await fireEvent(input, 'submitEditing');
   const added = useAppStore.getState().tasks.find((x) => x.title === 'Деплой');
   expect(added.projectId).toBe('p2');
   expect(added.statusId).toBe('s2');
@@ -146,6 +159,19 @@ const projectsOf = (n) => Array.from({ length: n }, (_, i) => ({
   id: `q${i + 1}`, name: `Проект ${i + 1}`, color: '#87ff65', createdAt: '2026-10-01T00:00:00.000Z',
 }));
 const dotLabel = (i) => `${t('ru', 'nav.projects')} ${i + 1}`;
+// Стиль, который считается при каждом чтении, как кадр UI-потока: полосу
+// колоды (x) двигают без отрисовки React (жест, layout-эффект), а карточки
+// под memo со сменой страницы не перерисовываются — стиль, посчитанный в
+// отрисовке, отставал бы от кадра.
+const live = (cb) => new Proxy({}, {
+  get: (_, key) => cb()[key],
+  has: (_, key) => key in cb(),
+  ownKeys: () => Reflect.ownKeys(cb()),
+  getOwnPropertyDescriptor: (_, key) => {
+    const now = cb();
+    return key in now ? { value: now[key], enumerable: true, configurable: true, writable: true } : undefined;
+  },
+});
 
 describe('точки пагинации — функция положения колоды', () => {
   test('dotsProgress: страницы от сдвига полосы, не выходят за колоду', () => {
@@ -1230,16 +1256,21 @@ describe('края колоды', () => {
   // Карусель на экране целиком. Утилита жестов сама заканчивает любой жест
   // (END), поэтому «середину» не увидеть по картинке после жеста: вместо этого
   // на каждую запись в x (первое общее значение экрана — сдвиг колоды) снимается
-  // кадр — то, что на устройстве сделал бы UI-поток: стили всех четырёх карточек
-  // пересчитываются по новому x. Значения стабильные: жест пишет в те же
-  // объекты, что читает кадр.
+  // кадр — то, что на устройстве сделал бы UI-поток: вид всех четырёх карточек
+  // (deck-card-i, настоящей или оболочки) по новому x. Стили живые (live), а
+  // значения стабильные: жест пишет в те же объекты, что читает кадр. Кадр
+  // читается с экрана по номеру карточки, а не по порядку отрисовок: карточки
+  // под memo со сменой страницы не перерисовываются.
   const carousel = async (body) => {
-    const sinks = [];
     const frames = [];
     let made = 0;
-    // Вид карточки — сдвиг и масштаб (у плашек «+» и фразы три трансформации).
-    const isLook = (r) => r && Array.isArray(r.transform) && r.transform.length === 2 && 'translateX' in r.transform[0] && 'scale' in r.transform[1];
-    const looksNow = () => sinks.map((cb) => cb()).filter(isLook).slice(-4).map((r) => Object.assign({}, ...r.transform));
+    const looksNow = () => {
+      try {
+        return [0, 1, 2, 3].map((i) => Object.assign({}, ...flatten(screen.getByTestId(`deck-card-${i}`)).transform));
+      } catch (e) {
+        return [];
+      }
+    };
     const shared = jest.spyOn(Reanimated, 'useSharedValue').mockImplementation((init) => {
       const ref = useRef(null);
       if (!ref.current) {
@@ -1255,7 +1286,7 @@ describe('края колоды', () => {
       }
       return ref.current;
     });
-    const styled = jest.spyOn(Reanimated, 'useAnimatedStyle').mockImplementation((cb) => { sinks.push(cb); return cb(); });
+    const styled = jest.spyOn(Reanimated, 'useAnimatedStyle').mockImplementation(live);
     try { await body(frames); } finally { styled.mockRestore(); shared.mockRestore(); }
   };
   const STEP_REAL = width - screenPadding - 40 + 10;
@@ -1808,5 +1839,502 @@ describe('края колоды', () => {
       expect(r.egg).toEqual([0, 1, 0]);
       expect(r.fired).toEqual([0, 2]);
     }, { still: true });
+  });
+});
+
+describe('порядок колоды — по свежести (круг 21)', () => {
+  /** Навигация с настоящими focus и blur: колода держит порядок в фокусе. */
+  const focusNav = () => {
+    const subs = {};
+    return {
+      navigate: jest.fn(),
+      setOptions: jest.fn(),
+      isFocused: () => true,
+      addListener: (name, cb) => {
+        (subs[name] = subs[name] || new Set()).add(cb);
+        return () => subs[name].delete(cb);
+      },
+      emit: (name) => act(async () => { (subs[name] || new Set()).forEach((cb) => cb()); }),
+    };
+  };
+  // Подмена reanimated заводит общие значения на каждой отрисовке заново —
+  // колода не помнила бы, куда встала. На время теста — стабильные значения, а
+  // стиль — живой (live): считается при каждом чтении, как кадр UI-потока.
+  let restore = null;
+  beforeEach(() => {
+    const shared = jest.spyOn(Reanimated, 'useSharedValue').mockImplementation((init) => {
+      const ref = useRef(null);
+      if (!ref.current) ref.current = { value: init };
+      return ref.current;
+    });
+    const styled = jest.spyOn(Reanimated, 'useAnimatedStyle').mockImplementation(live);
+    restore = () => { styled.mockRestore(); shared.mockRestore(); };
+  });
+  afterEach(() => { if (restore) restore(); restore = null; });
+  const flatten = (node) => StyleSheet.flatten(node.props.style) || {};
+  const nameAt = (q, i) => {
+    const card = q.getByTestId(`deck-card-${i}`);
+    return ['Сайт', 'Бот', 'Почта', 'Новый'].find((n) => within(card).queryByText(n));
+  };
+  /** Какая карточка в центре — в полный рост. */
+  const inView = (q, n) => Array.from({ length: n }, (_, i) => i)
+    .find((i) => Object.assign({}, ...flatten(q.getByTestId(`deck-card-${i}`)).transform).scale === 1);
+
+  test('первым — проект с последними изменениями (в задачах или в нём самом); закреплённый первым не встаёт', async () => {
+    useAppStore.setState({
+      projects: [
+        { id: 'p1', name: 'Сайт', color: '#87ff65', createdAt: '2026-10-01T00:00:00.000Z', pinnedAt: '2026-10-03T00:00:00.000Z' },
+        { id: 'p2', name: 'Бот', color: '#5ec8f2', createdAt: '2026-10-02T00:00:00.000Z' },
+        { id: 'p3', name: 'Почта', color: '#ff7a59', createdAt: '2026-09-01T00:00:00.000Z', updatedAt: '2026-10-04T00:00:00.000Z' },
+      ],
+      tasks: [task('t1', 'p1', 'Вёрстка'), task('t3', 'p2', 'Команды', { updatedAt: '2026-10-05T00:00:00.000Z' })],
+    });
+    const q = await render(<ProjectsScreen navigation={nav()} />);
+    // «Бот» — свежая задача, «Почта» — правка самого проекта, «Сайт» закреплён, но старше всех.
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Бот', 'Почта']);
+    expect(inView(q, 3)).toBe(0);
+  });
+
+  test('в фокусе порядок держится: новая задача в карточке колоду не переставляет; ушли — по свежести, на экране та же карточка', async () => {
+    const navigation = focusNav();
+    const q = await render(<ProjectsScreen navigation={navigation} />);
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Бот', 'Сайт']);
+    // Задача в «Сайт» — он теперь свежее, но под пальцем колода не прыгает.
+    const site = within(q.getByTestId('deck-card-1')).getByLabelText(t('ru', 'tasks.new_ph'));
+    await fireEvent.changeText(site, 'Футер');
+    await fireEvent(site, 'submitEditing');
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Бот', 'Сайт']);
+    expect(inView(q, 2)).toBe(0);
+    // Ушли с экрана (задача открылась поверх) — порядок заново: «Сайт» первым,
+    // а на экране всё тот же «Бот» — уже второй карточкой.
+    await navigation.emit('blur');
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Сайт', 'Бот']);
+    expect(inView(q, 2)).toBe(1);
+    await navigation.emit('focus');
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Сайт', 'Бот']);
+    expect(inView(q, 2)).toBe(1);
+  });
+
+  test('новый проект — слева; заведённый из колоды — на экране, когда к ней вернулись', async () => {
+    const navigation = focusNav();
+    const q = await render(<ProjectsScreen navigation={navigation} />);
+    await fireEvent.press(q.getByTestId('deck-plus-dot'));
+    const sheet = useSheetStore.getState().content;
+    expect(sheet.type).toBe(NewProjectSheet);
+    // Лист заводит проект и зовёт onCreated — колода открывает его страницу.
+    let made;
+    await act(async () => {
+      made = useAppStore.getState().createProject({ name: 'Новый' });
+      sheet.props.onCreated(made);
+    });
+    expect(navigation.navigate).toHaveBeenCalledWith('Project', { projectId: made.id });
+    expect(nameAt(q, 0)).toBe('Новый');
+    await navigation.emit('blur');
+    await navigation.emit('focus');
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Новый', 'Бот']);
+    expect(inView(q, 3)).toBe(0);
+  });
+
+  test('новый проект, заведённый не из колоды, тоже встаёт слева, а на экране остаётся прежняя', async () => {
+    const q = await render(<ProjectsScreen navigation={focusNav()} />);
+    await act(async () => { useAppStore.getState().createProject({ name: 'Новый' }); });
+    expect([0, 1, 2].map((i) => nameAt(q, i))).toEqual(['Новый', 'Бот', 'Сайт']);
+    expect(inView(q, 3)).toBe(1);
+  });
+
+  // --- кадры: колода не проявляется по одной (жалоба 19 октября) ---
+  //
+  // Порядок лежал в ref и менялся в отрисовке, а страницу догонял эффект после
+  // неё: на экран успевала фиксация с новым порядком и старой страницей —
+  // посередине чужая карточка, нужная — пустой оболочкой (окно ±1 на старом
+  // номере); следом её карточка пересоздавалась. На каждый шаг дочитывания
+  // данных. Кадр — то, что после фиксации (layout-эффекты прошли) на экране.
+
+  /** Какая карточка посередине (номер, имя; '_' — пустая оболочка) и какие
+   *  нарисованы настоящими. */
+  const frame = (q) => {
+    const cards = q.queryAllByTestId(/^deck-card-\d+$/);
+    const at = cards.findIndex((card) => Object.assign({}, ...(flatten(card).transform || [])).scale === 1);
+    return { at, name: at < 0 ? null : nameAt(q, at) || '_', real: cards.map((_, i) => i).filter((i) => nameAt(q, i)) };
+  };
+  /** Экран, у которого записан кадр каждой фиксации. */
+  async function watched(navigation) {
+    const frames = [];
+    let q = null;
+    q = await render(<Profiler id="deck" onRender={() => { if (q) frames.push(frame(q)); }}><ProjectsScreen navigation={navigation} /></Profiler>);
+    return { q, frames };
+  }
+  const SITE = { id: 'p1', name: 'Сайт', color: '#87ff65', createdAt: '2026-10-01T00:00:00.000Z' };
+  const BOT = { id: 'p2', name: 'Бот', color: '#5ec8f2', createdAt: '2026-10-02T00:00:00.000Z' };
+  const MAIL = { id: 'p3', name: 'Почта', color: '#ff7a59', createdAt: '2026-09-01T00:00:00.000Z' };
+  const retime = (id, at) => (s) => ({ tasks: s.tasks.map((x) => (x.id === id ? { ...x, updatedAt: at } : x)) });
+
+  test('данные дочитываются шагами в пустую колоду: в каждом кадре посередине первая, настоящие — окно вокруг неё (±DECK_KEEP), порядок по свежести шага', async () => {
+    useAppStore.setState({ projects: [], tasks: [] });
+    const navigation = focusNav();
+    const { q, frames } = await watched(navigation);
+    const steps = [
+      // Прочиталась область: два проекта с задачами.
+      [() => useAppStore.setState({ projects: [SITE, BOT], tasks: [task('t1', 'p1', 'Вёрстка'), task('t3', 'p2', 'Команды')] }), ['Бот', 'Сайт']],
+      // Первая связь: с другого устройства приехала «Почта», её правили позже.
+      [() => useAppStore.setState((s) => ({ projects: [...s.projects, { ...MAIL, updatedAt: '2026-10-04T00:00:00.000Z' }] })), ['Почта', 'Бот', 'Сайт']],
+      // Приём правок: задачу «Сайта» правили позже всех.
+      [() => useAppStore.setState(retime('t1', '2026-10-05T00:00:00.000Z')), ['Сайт', 'Почта', 'Бот']],
+      // Миграция после приёма: те же данные новыми объектами.
+      [() => useAppStore.setState((s) => ({ projects: s.projects.map((x) => ({ ...x })), tasks: s.tasks.map((x) => ({ ...x })) })), ['Сайт', 'Почта', 'Бот']],
+    ];
+    for (const [change, order] of steps) {
+      frames.length = 0;
+      await act(async () => { change(); });
+      expect(frames.length).toBeGreaterThan(0);
+      // Карточек не больше трёх — все в окне ±2 от первой.
+      for (const f of frames) expect(f).toEqual({ at: 0, name: order[0], real: order.map((_, i) => i) });
+      expect(nameAt(q, 1)).toBe(order[1]);
+    }
+    // Колоду тронули — дочитывание кончилось: дальше в фокусе порядок держится.
+    await fireEvent(q.getByTestId('deck'), 'touchStart');
+    await act(async () => { useAppStore.setState(retime('t3', '2026-10-06T00:00:00.000Z')); });
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Сайт', 'Почта']);
+    // Ушли — порядок по свежести, на экране та, что была.
+    await navigation.emit('blur');
+    expect([0, 1, 2].map((i) => nameAt(q, i))).toEqual(['Бот', 'Сайт', 'Почта']);
+    expect(frame(q)).toEqual({ at: 1, name: 'Сайт', real: [0, 1, 2] });
+  });
+
+  test('ушли с экрана, порядок сменился: в каждом кадре посередине та же карточка, она не пересоздаётся — черновик в ней цел', async () => {
+    useAppStore.setState({ projects: [SITE, BOT, MAIL] });
+    const navigation = focusNav();
+    const { q, frames } = await watched(navigation);
+    // Колода по свежести: «Бот», «Сайт», «Почта». Встали на «Почту».
+    await fireEvent.press(q.getByLabelText(dotLabel(2)));
+    expect(frame(q)).toEqual({ at: 2, name: 'Почта', real: [0, 1, 2] });
+    const draft = () => within(q.getByTestId(`deck-card-${frame(q).at}`)).getByLabelText(t('ru', 'tasks.new_ph')).props.value;
+    await fireEvent.changeText(within(q.getByTestId('deck-card-2')).getByLabelText(t('ru', 'tasks.new_ph')), 'Письмо');
+    await navigation.emit('blur');
+    // Пока экрана не видно, «Почту» переименовали на другом устройстве — она свежее всех.
+    frames.length = 0;
+    await act(async () => { useAppStore.setState((s) => ({ projects: s.projects.map((x) => (x.id === 'p3' ? { ...x, name: 'Почта', updatedAt: '2026-10-07T00:00:00.000Z' } : x)) })); });
+    expect(frames.length).toBeGreaterThan(0);
+    for (const f of frames) expect(f).toEqual({ at: 0, name: 'Почта', real: [0, 1, 2] });
+    await navigation.emit('focus');
+    expect([0, 1].map((i) => nameAt(q, i))).toEqual(['Почта', 'Бот']);
+    expect(frame(q)).toEqual({ at: 0, name: 'Почта', real: [0, 1, 2] });
+    expect(draft()).toBe('Письмо');
+  });
+
+  test('новый проект приехал, пока смотрят колоду: в каждом кадре посередине та же карточка', async () => {
+    const { q, frames } = await watched(focusNav());
+    frames.length = 0;
+    await act(async () => { useAppStore.getState().createProject({ name: 'Новый' }); });
+    expect(frames.length).toBeGreaterThan(0);
+    for (const f of frames) expect(f).toEqual({ at: 1, name: 'Бот', real: [0, 1, 2] });
+    expect(nameAt(q, 0)).toBe('Новый');
+  });
+
+  test('deckNext: удалили карточку на экране — встаёт соседняя, не за краем; ничего не поменялось — то же состояние', () => {
+    let d = deckChoose(deckStart(['a', 'b', 'c'], true), 2);
+    expect(d).toMatchObject({ page: 2, viewed: 'c', loading: false });
+    d = deckNext(d, { have: ['a', 'b'], fresh: () => ['b', 'a'], focused: true });
+    // В фокусе порядок держится: удалённая уходит, остальные на местах.
+    expect(d).toMatchObject({ ids: ['a', 'b'], page: 1, viewed: 'b' });
+    // Тот же набор — порядок свежих данных даже не спрашивается.
+    expect(deckNext(d, { have: ['b', 'a'], fresh: () => { throw new Error('не нужен'); }, focused: true })).toBe(d);
+    // Пустая колода дочитывает; тронули — уже нет.
+    const empty = deckStart([], true);
+    expect(empty.loading).toBe(true);
+    expect(deckTouched(empty)).toBe(empty);
+    const loaded = deckNext(empty, { have: ['a'], fresh: () => ['a'], focused: true });
+    expect(loaded).toMatchObject({ ids: ['a'], page: 0, viewed: null, loading: true });
+    expect(deckTouched(loaded)).toMatchObject({ loading: false });
+  });
+});
+
+// --- окно карточек (жалоба 20 октября: «прогрузка следующей карточки тормозит») ---
+//
+// С отпусканием колоды страница менялась сразу, и в тот же миг монтировалась
+// новая соседка — тяжёлая карточка (список задач, теги, поле ввода), а все
+// смонтированные перерисовывались: на новой архитектуре виды создаются на
+// UI-потоке, и пружина спотыкалась под конец хода. Теперь настоящие карточки —
+// окно ±DECK_KEEP вокруг страницы, на которой колода встала (deck.win), и
+// сдвигается оно только с остановкой пружины; видимые (страница ± 1) настоящие
+// всегда. Карточки под memo: смена страницы их не перерисовывает.
+describe('окно карточек: монтаж — когда колода встала, а не на ходу пружины', () => {
+  let springs = [];
+  let restore = null;
+  beforeEach(() => {
+    closeSheet();
+    useAppStore.setState({
+      settings: { ...useAppStore.getState().settings, lang: 'ru', theme: 'dark' },
+      projects: projectsOf(6),
+      statuses: [],
+      tasks: [],
+      activeTimer: null,
+    });
+    springs = [];
+    // Общие значения стабильные (как на устройстве), стили живые (кадр
+    // UI-потока). Пружина колоды доезжает, только когда тест скажет
+    // (finish); любая следующая запись в то же значение — новый жест,
+    // перестановка — её прерывает: колбэк получает false, как на устройстве.
+    const shared = jest.spyOn(Reanimated, 'useSharedValue').mockImplementation((init) => {
+      const ref = useRef(null);
+      if (!ref.current) {
+        ref.current = new Proxy({ value: init }, {
+          set: (target, prop, value) => {
+            if (prop === 'value') {
+              springs = springs.filter((s) => {
+                if (!s.sv && value === s.to) { s.sv = target; return true; }
+                if (s.sv === target) { s.cb(false); return false; }
+                return true;
+              });
+            }
+            target[prop] = value;
+            return true;
+          },
+        });
+      }
+      return ref.current;
+    });
+    const styled = jest.spyOn(Reanimated, 'useAnimatedStyle').mockImplementation(live);
+    const spring = jest.spyOn(Reanimated, 'withSpring').mockImplementation((to, _cfg, cb) => {
+      if (cb) springs.push({ to, cb, sv: null });
+      return to;
+    });
+    restore = () => { spring.mockRestore(); styled.mockRestore(); shared.mockRestore(); };
+  });
+  afterEach(() => { if (restore) restore(); restore = null; });
+
+  const STEP_REAL = width - screenPadding - 40 + 10;
+  const flatten = (node) => StyleSheet.flatten(node.props.style) || {};
+  /** Пружина колоды доехала. */
+  const finish = () => act(async () => { const now = springs; springs = []; now.forEach((s) => s.cb(true)); });
+  /** Жест на шаг влево (к следующей карточке) или вправо, с отпусканием. */
+  const swipe = (dx) => act(async () => {
+    fireGestureHandler(getByGestureTestId('deck-pan'), [
+      { state: State.BEGAN, translationX: 0 },
+      { state: State.ACTIVE, translationX: 0 },
+      { translationX: dx / 2 },
+      { translationX: dx },
+      { state: State.END, translationX: dx, velocityX: 0 },
+    ]);
+  });
+  const cards = (q) => q.queryAllByTestId(/^deck-card-\d+$/);
+  /** Какие карточки настоящие (у настоящей — поле новой задачи). */
+  const real = (q) => cards(q).map((card, i) => (within(card).queryByLabelText(t('ru', 'tasks.new_ph')) ? i : -1)).filter((i) => i >= 0);
+  /** Какая посередине — в полный рост (стиль живой: по нынешнему x). */
+  const center = (q) => cards(q).findIndex((card) => Object.assign({}, ...(flatten(card).transform || [])).scale === 1);
+  /** Видимые — посередине и края соседок — настоящие. */
+  const visibleReal = (q) => {
+    const c = center(q);
+    const n = cards(q).length;
+    const have = real(q);
+    return [c - 1, c, c + 1].filter((i) => i >= 0 && i < n).every((i) => have.includes(i));
+  };
+  /** Экран, у которого после каждой фиксации проверено: видимые — настоящие. */
+  async function watched(navigation = nav()) {
+    const frames = [];
+    let q = null;
+    q = await render(<Profiler id="deck" onRender={() => { if (q) frames.push({ at: center(q), real: real(q), ok: visibleReal(q) }); }}><ProjectsScreen navigation={navigation} /></Profiler>);
+    return { q, frames };
+  }
+  const allOk = (frames) => frames.every((f) => f.ok);
+
+  test('deckSettle и deckDrawn: окно идёт за остановкой, видимые — всегда; выбор страницы окна не двигает', () => {
+    expect(DECK_KEEP).toBe(2);
+    let d = deckStart(['a', 'b', 'c', 'd', 'e', 'f'], true);
+    expect(d.win).toBe(0);
+    // Отпустили на второй: страница сменилась, окно — нет.
+    d = deckChoose(d, 1);
+    expect(d).toMatchObject({ page: 1, win: 0 });
+    // Устаревшая остановка (колоду уже перелистнули дальше) ничего не делает.
+    const later = deckChoose(d, 2);
+    expect(deckSettle(later, 1)).toBe(later);
+    // Встала — окно за ней; второй раз — то же состояние.
+    d = deckSettle(d, 1);
+    expect(d).toMatchObject({ page: 1, win: 1 });
+    expect(deckSettle(d, 1)).toBe(d);
+    // Перестановка ставит полосу на место сразу: окно — вокруг новой страницы.
+    const moved = deckNext(deckChoose(deckStart(['a', 'b', 'c', 'd'], true), 3), { have: ['a', 'b', 'c', 'd', 'n'], fresh: () => ['n', 'a', 'b', 'c', 'd'], focused: true });
+    expect(moved).toMatchObject({ page: 4, win: 4, viewed: 'd' });
+    // Окно ±2 от остановки и видимые ±1 от страницы.
+    expect([0, 1, 2, 3, 4, 5].filter((i) => deckDrawn(i, 0, 0))).toEqual([0, 1, 2]);
+    expect([0, 1, 2, 3, 4, 5].filter((i) => deckDrawn(i, 1, 0))).toEqual([0, 1, 2]);
+    expect([0, 1, 2, 3, 4, 5].filter((i) => deckDrawn(i, 4, 0))).toEqual([0, 1, 2, 3, 4, 5]);
+    expect([0, 1, 2, 3, 4, 5].filter((i) => deckDrawn(i, 3, 3))).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  test('отпустили колоду — пока пружина едет, ничего не монтируется; встала — окно сдвинуто; соседка новой страницы готова заранее', async () => {
+    const { q, frames } = await watched();
+    // В покое на первой: настоящие — она, соседка и соседка соседки (готова до жеста).
+    expect(real(q)).toEqual([0, 1, 2]);
+    const third = q.getByTestId('deck-card-2');
+    frames.length = 0;
+    await swipe(-STEP_REAL);
+    // Страница сменилась сразу (посередине вторая), пружина ещё едет — и на
+    // этой фиксации ни одна карточка не смонтирована и не снята.
+    expect(center(q)).toBe(1);
+    expect(springs).toHaveLength(1);
+    expect(real(q)).toEqual([0, 1, 2]);
+    expect(q.getByTestId('deck-card-2')).toBe(third);
+    for (const f of frames) expect(f.real).toEqual([0, 1, 2]);
+    // Пружина встала — окно вокруг второй: монтируется четвёртая.
+    await finish();
+    expect(real(q)).toEqual([0, 1, 2, 3]);
+    expect(q.getByTestId('deck-card-2')).toBe(third);
+    expect(allOk(frames)).toBe(true);
+  });
+
+  test('смена страницы не перерисовывает карточки, у которых ничего не поменялось', async () => {
+    const drawn = jest.spyOn(Store, 'projectMs');
+    try {
+      await render(<ProjectsScreen navigation={nav()} />);
+      expect(drawn.mock.calls.map((c) => c[1])).toEqual(['q1', 'q2', 'q3']);
+      drawn.mockClear();
+      // Отпустили: ни одна смонтированная карточка не перерисована.
+      await swipe(-STEP_REAL);
+      expect(drawn).not.toHaveBeenCalled();
+      // Встала: рисуется только новая дальняя, прежние — нет.
+      await finish();
+      expect(drawn.mock.calls.map((c) => c[1])).toEqual(['q4']);
+      drawn.mockClear();
+      // Точка соседней страницы — то же.
+      await fireEvent.press(screen.getByLabelText(dotLabel(2)));
+      expect(drawn).not.toHaveBeenCalled();
+      await finish();
+      expect(drawn.mock.calls.map((c) => c[1])).toEqual(['q5']);
+    } finally {
+      drawn.mockRestore();
+    }
+  });
+
+  test('правка задачи и часы идущей перерисовывают только её карточку', async () => {
+    jest.useFakeTimers();
+    const drawn = jest.spyOn(Store, 'projectMs');
+    try {
+      useAppStore.setState({
+        statuses: projectsOf(6).map((p, i) => ({ id: `s${i + 1}`, projectId: p.id, name: 'В работе', color: '#5ec8f2', kind: 'progress', order: 0 })),
+        tasks: projectsOf(6).map((p, i) => task(`t${i + 1}`, p.id, `Задача ${i + 1}`, { statusId: `s${i + 1}` })),
+      });
+      await render(<ProjectsScreen navigation={nav()} />);
+      drawn.mockClear();
+      // Правка задачи второго проекта — перерисовывается только его карточка.
+      await act(async () => { useAppStore.getState().updateTask('t2', { title: 'Другое' }); });
+      expect([...new Set(drawn.mock.calls.map((c) => c[1]))]).toEqual(['q2']);
+      // Таймер идёт по задаче первого: раз в секунду тикает только её карточка.
+      await act(async () => { useAppStore.getState().startTimer('t1'); });
+      drawn.mockClear();
+      // По секунде на act: внутри одного act React сводит тики в одну отрисовку.
+      for (let k = 0; k < 3; k++) await act(async () => { jest.advanceTimersByTime(1000); });
+      const ticked = drawn.mock.calls.map((c) => c[1]);
+      expect(ticked.length).toBeGreaterThanOrEqual(3);
+      expect([...new Set(ticked)]).toEqual(['q1']);
+    } finally {
+      drawn.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  test('жесты подряд, не дав колоде встать: видимые — всегда настоящие, прерванная пружина окна не двигает', async () => {
+    const { q, frames } = await watched();
+    frames.length = 0;
+    for (let k = 1; k <= 4; k++) {
+      await swipe(-STEP_REAL);
+      expect(center(q)).toBe(k);
+      // Новый жест прервал прежнюю пружину: ждёт только последняя.
+      expect(springs).toHaveLength(1);
+    }
+    // Колода ни разу не встала — окно всё ещё у первой, а видимые у пятой
+    // настоящие: первая не снята на ходу, к пятой и её соседкам — смонтированы.
+    expect(real(q)).toEqual([0, 1, 2, 3, 4, 5]);
+    await finish();
+    expect(real(q)).toEqual([2, 3, 4, 5]);
+    expect(frames.length).toBeGreaterThan(0);
+    expect(allOk(frames)).toBe(true);
+  });
+
+  test('точка через несколько страниц: видимые у цели — сразу, окно — когда колода встала', async () => {
+    const { q, frames } = await watched();
+    frames.length = 0;
+    await fireEvent.press(q.getByLabelText(dotLabel(4)));
+    expect(center(q)).toBe(4);
+    expect(real(q)).toEqual([0, 1, 2, 3, 4, 5]);
+    await finish();
+    expect(real(q)).toEqual([2, 3, 4, 5]);
+    expect(allOk(frames)).toBe(true);
+  });
+
+  test('новый проект из колоды и удалённые проекты: окно — вокруг карточки на экране, без пустых оболочек на видимых', async () => {
+    const { q, frames } = await watched();
+    // Встали на четвёртую.
+    await fireEvent.press(q.getByLabelText(dotLabel(3)));
+    await finish();
+    expect(real(q)).toEqual([1, 2, 3, 4, 5]);
+    frames.length = 0;
+    // Удалили проект левее: та же карточка, номер на один меньше, окно — с ней.
+    await act(async () => { useAppStore.getState().deleteProject('q1'); });
+    expect(center(q)).toBe(2);
+    expect(within(q.getByTestId('deck-card-2')).getByText('Проект 4')).toBeTruthy();
+    expect(real(q)).toEqual([0, 1, 2, 3, 4]);
+    // Удалили ту, что на экране: встаёт соседняя, окно вокруг неё.
+    await act(async () => { useAppStore.getState().deleteProject('q4'); });
+    expect(center(q)).toBe(2);
+    expect(within(q.getByTestId('deck-card-2')).getByText('Проект 5')).toBeTruthy();
+    expect(real(q)).toEqual([0, 1, 2, 3]);
+    expect(allOk(frames)).toBe(true);
+    // Новый проект из колоды: он слева, на экране, окно — вокруг него.
+    frames.length = 0;
+    await fireEvent.press(q.getByTestId('deck-plus-dot'));
+    const sheet = useSheetStore.getState().content;
+    await act(async () => {
+      const made = useAppStore.getState().createProject({ name: 'Новый' });
+      sheet.props.onCreated(made);
+    });
+    expect(center(q)).toBe(0);
+    expect(within(q.getByTestId('deck-card-0')).getByText('Новый')).toBeTruthy();
+    expect(real(q)).toEqual([0, 1, 2]);
+    expect(allOk(frames)).toBe(true);
+  });
+});
+
+describe('правка проекта ставит ему свежую отметку (project.updatedAt)', () => {
+  const at = (id) => useAppStore.getState().projects.find((x) => x.id === id).updatedAt;
+  const OLD = '2026-10-01T00:00:00.000Z';
+  beforeEach(() => {
+    useAppStore.setState({
+      projects: useAppStore.getState().projects.map((x) => ({ ...x, updatedAt: OLD })),
+      versions: [{ id: 'v1', projectId: 'p1', name: '1.0', order: 0, releasedAt: null }],
+      tags: [{ id: 'g1', name: 'клиент', color: '#5ec8f2', projectId: 'p1' }, { id: 'g0', name: 'общий', color: '#87ff65', projectId: null }],
+    });
+  });
+
+  test.each([
+    ['имя, цвет, описание, ставка', (st) => st.updateProject('p1', { name: 'Сайт 2', color: '#ff7a59' })],
+    ['метки проекта', (st) => st.setProjectTags('p1', ['g0'])],
+    ['новый статус', (st) => st.addStatus('p1')],
+    ['имя статуса', (st) => st.updateStatus('s1', { name: 'Готово' })],
+    ['вид статуса', (st) => st.setStatusKind('s1', 'done')],
+    ['новая версия', (st) => st.createVersion('p1', '2.0')],
+    ['имя версии', (st) => st.renameVersion('v1', '1.1')],
+    ['выпуск версии', (st) => st.toggleVersionReleased('v1')],
+    ['удаление версии', (st) => st.deleteVersion('v1')],
+    ['свой тег проекта', (st) => st.updateTag('g1', { name: 'заказчик' })],
+    ['новый свой тег', (st) => st.createTag({ name: 'срочно', projectId: 'p1' })],
+  ])('%s', (_name, edit) => {
+    edit(useAppStore.getState());
+    expect(at('p1')).not.toBe(OLD);
+    expect(new Date(at('p1')).getTime()).toBeGreaterThan(new Date(OLD).getTime());
+    // Соседний проект не трогается.
+    expect(at('p2')).toBe(OLD);
+  });
+
+  test('закрепление и общий тег — не правка проекта', () => {
+    useAppStore.getState().togglePinProject('p1');
+    useAppStore.getState().updateTag('g0', { name: 'всем' });
+    expect(at('p1')).toBe(OLD);
+    expect(at('p2')).toBe(OLD);
+  });
+
+  test('новый проект заводится с отметкой — и встаёт первым', () => {
+    const made = useAppStore.getState().createProject({ name: 'Новый' });
+    expect(made.updatedAt).toBe(made.createdAt);
   });
 });

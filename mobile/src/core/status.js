@@ -61,12 +61,25 @@
     return !!s && CLOSING_KINDS.includes(s.kind);
   };
 
-  /** Набор по умолчанию для нового проекта. Возвращает готовые строки, но
-   *  никуда их не кладёт: имя статуса и генератор идентификаторов приходят
-   *  снаружи, потому что первое зависит от языка, а второй — от окружения. */
-  function makeProjectStatuses(projectId, nameOf, uid) {
+  /** id статуса набора по умолчанию: от проекта и ключа, а не случайный.
+   *
+   *  Почему. Проект без статусов (старый блоб, проект с другого устройства до
+   *  его статусов) получает набор на каждом устройстве сам — и со случайными
+   *  id два устройства завели бы по набору, а синхронизация журналом правок
+   *  (core/oplog.js) честно сложила бы оба: двенадцать столбцов вместо шести.
+   *  С одинаковыми id второе создание — та же сущность (правило 6 журнала:
+   *  '*' уже существующей — правка полей), дублей нет. Уже заведённые
+   *  статусы со случайными id не трогаем: на них стоят задачи. */
+  const defaultStatusKey = (projectId, key) => `${projectId}:st:${key}`;
+
+  /** Набор по умолчанию для проекта. Возвращает готовые строки, но никуда их
+   *  не кладёт: имя статуса приходит снаружи — оно зависит от языка. id —
+   *  defaultStatusKey; третий параметр (генератор id) остался от прежней
+   *  подписи, его по-прежнему передают телефон и агент, но набор по
+   *  умолчанию его больше не зовёт. */
+  function makeProjectStatuses(projectId, nameOf) {
     return DEFAULT_STATUSES.map((s, i) => ({
-      id: uid(), projectId, name: nameOf(s.key),
+      id: defaultStatusKey(projectId, s.key), projectId, name: nameOf(s.key),
       color: s.color, kind: s.kind, order: i, builtin: true,
     }));
   }
@@ -125,7 +138,7 @@
   const api = {
     STATUS_KINDS, CLOSING_KINDS, DEFAULT_STATUSES,
     orderedStatuses, getStatus, statusesOfKind, defaultStatusId, planStatusDelete, planTaskDone,
-    isDoneStatus, isClosedStatus, makeProjectStatuses,
+    isDoneStatus, isClosedStatus, makeProjectStatuses, defaultStatusKey,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

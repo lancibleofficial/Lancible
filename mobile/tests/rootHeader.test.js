@@ -109,20 +109,21 @@ test('смена вкладки: тот же экземпляр шапки, за
   btn(within(header), 'search.placeholder');
   btn(within(header), 'notif.title');
 
-  await fireEvent.press(tabButton(screen, 'nav.home'));
-  await waitBtn(within(header), 'agenda.new_entry');
-  // «Сегодня»: «+», календарь, переключатель вида; ни лупы, ни колокольчика, ни прежнего заголовка.
-  within(header).getByText(t('ru', 'nav.home'));
-  btn(within(header), 'today.pick_day');
-  noBtn(within(header), 'notif.title');
-  noBtn(within(header), 'search.placeholder');
+  await fireEvent.press(tabButton(screen, 'ai.tab'));
+  // «Чат-бот» (круг 21): своё название, лупа и колокольчик — как у других
+  // вкладок, и даже без входа; «⋯» чата и «+» здесь нет.
+  await waitFor(() => within(header).getByText(t('ru', 'ai.tab')));
+  btn(within(header), 'search.placeholder');
+  btn(within(header), 'notif.title');
+  noBtn(within(header), 'ai.menu');
+  noBtn(within(header), 'ai.new_chat');
   expect(within(header).queryByText(t('ru', 'nav.projects'))).toBeNull();
 
   await fireEvent.press(tabButton(screen, 'nav.stats'));
   await waitBtn(within(header), 'menu.export_excel');
   within(header).getByText(t('ru', 'nav.stats'));
   btn(within(header), 'filter.project');
-  expect(within(header).queryByText(t('ru', 'nav.home'))).toBeNull();
+  expect(within(header).queryByText(t('ru', 'ai.tab'))).toBeNull();
 
   await fireEvent.press(tabButton(screen, 'nav.menu'));
   await waitBtn(within(header), 'notif.title');

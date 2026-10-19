@@ -23,6 +23,26 @@ import Slots from '../core/slots.js';
 import Reminders from '../core/reminders.js';
 import Versions from '../core/versions.js';
 import DocCore from '../core/doc.js';
+import Duplicate from '../core/duplicate.js';
+import Accounts from '../core/accounts.js';
+import Ai from '../core/ai.js';
+import { unpackSync2, packSync2, freshExtra } from '../lib/oplogScope';
+
+// Списки, которые правит предложение агента (core/ai.js: aiApply, aiUndo).
+const AI_LISTS = ['projects', 'statuses', 'versions', 'tags', 'tasks', 'documents'];
+
+/** Глубокая копия списков: ядро правит state на месте, стор — только set. */
+function aiDraft(s) {
+  return JSON.parse(JSON.stringify(Object.fromEntries(AI_LISTS.map((k) => [k, s[k] || []]))));
+}
+
+/** Правленая копия → патч стора: с миграцией, как приём синхронизации
+ *  (lib/sync.js: applyBundle), — поля, которых ядро не заводит, она
+ *  достроит так же, как при загрузке. */
+function aiPatch(s, draft) {
+  const fixed = migrate({ ...s, ...draft, ui: { ...s.ui }, settings: { ...s.settings } });
+  return Object.fromEntries(AI_LISTS.map((k) => [k, fixed[k]]));
+}
 
 /** Отрезки задачи с id у каждого: пришедший из облака отрезок мог быть
  *  записан без него, а править и удалять без id нечем. */
@@ -38,11 +58,110 @@ function withReminderList(task, edit) {
   return { ...task, ...Reminders.withReminders(task, edit(Reminders.remindersOf(task))), updatedAt: new Date().toISOString() };
 }
 
+// --- область данных (несколько аккаунтов, 17 октября 2026) ---
+//
+// persist пишет в хранилище после каждого set(...), и до того, как область
+// прочитана, такая запись легла бы пустым состоянием поверх данных, а во
+// время смены аккаунта — данными прежнего поверх нового. Поэтому запись
+// закрыта, пока область не прочитана: от старта до первого openDataScope и
+// на время каждой смены.
+let scopeWrites = false;
+const scopedStorage = {
+  getItem: (key) => AsyncStorage.getItem(key),
+  setItem: (key, value) => (scopeWrites ? AsyncStorage.setItem(key, value) : Promise.resolve()),
+  removeItem: (key) => AsyncStorage.removeItem(key),
+};
+
+/** Состояние открытой области. Прочитанное ложится на пустое, а не на
+ *  прежнее: поле, которого в записи нет, не должно приехать из области
+ *  другого аккаунта. Записи нет вовсе — область открывают впервые: пустые
+ *  данные, а язык и тема — от прежней области, это выбор человека на этом
+ *  телефоне, а не данные аккаунта.
+ *  Журнал правок области (поле sync2, lib/oplogScope.js) — тоже свой и
+ *  ставится всегда: прежняя область свою пачку сюда не протащит, а чужая
+ *  (sync2.uid не тот) не читается. */
+function mergeScope(persisted, current) {
+  const base = emptyState();
+  const uid = (current && current.scopeUid) || null;
+  if (persisted && typeof persisted === 'object') {
+    const { sync2, oplog: _dev, ...rest } = persisted;
+    const { bundle, extra } = unpackSync2(sync2, rest, uid);
+    return { ...current, ...base, ...rest, oplog: bundle, syncExtra: extra };
+  }
+  const prev = (current && current.settings) || {};
+  return {
+    ...current,
+    ...base,
+    settings: { ...base.settings, ...(prev.lang ? { lang: prev.lang } : {}), ...(prev.theme ? { theme: prev.theme } : {}) },
+    oplog: null,
+    syncExtra: freshExtra(),
+  };
+}
+
+// Чтение области упало (19 октября 2026): отказ AsyncStorage (на Android —
+// строка длиннее ~2 МБ), битый JSON, исключение при разборе журнала правок.
+// persist тогда зовёт колбэк с ошибкой, а стор остаётся прежним — со
+// списками и журналом прежней области, хотя имя хранилища уже новое. Открой
+// запись в этот миг — прежние данные и их неотправленные правки легли бы
+// под ключ нового аккаунта и ушли бы в его облако; на старте пустое
+// состояние легло бы поверх нечитаемой записи. Поэтому запись открывает
+// только удачное чтение (onRehydrateStorage), а ошибка остаётся здесь.
+let readError = null;
+// Номер открытия: чтение, начатое раньше последнего открытия, ничего не
+// решает (persist его колбэк и не зовёт).
+let opens = 0;
+
+/** Открыть область данных: uid аккаунта или null — гость. Пока читается,
+ *  hasHydrated ложно (экраны ждут), запись закрыта; после чтения — миграция
+ *  и возврат закрытых повторяющихся задач (_runMigration), как на старте.
+ *  Чтение не удалось — запись остаётся закрытой (нечитаемая запись цела), в
+ *  памяти — пусто, а не прежняя область, hasHydrated ложно (синхронизация
+ *  молчит), scopeError — { uid }: RootNavigator показывает ошибку с
+ *  «Повторить». Запись открывает только удачное чтение именно этого вызова:
+ *  второе открытие, начатое поверх первого, не откроет её раньше времени.
+ *  @returns прочиталась ли область */
+export async function openDataScope(uid) {
+  const mine = (opens += 1);
+  scopeWrites = false;
+  readError = null;
+  useAppStore.setState({ hasHydrated: false, scopeUid: uid || null, scopeError: null });
+  useAppStore.persist.setOptions({ name: Accounts.mobileDataName(uid) });
+  await useAppStore.persist.rehydrate();
+  if (mine !== opens) return false; // поверх открыли снова — решает то открытие
+  if (!readError) return useAppStore.getState().hasHydrated;
+  console.error('Не удалось прочитать данные на телефоне:', readError);
+  readError = null;
+  scopeWrites = false;
+  useAppStore.setState((s) => ({ ...mergeScope(null, s), hasHydrated: false, scopeError: { uid: uid || null } }));
+  return false;
+}
+
+/** Проект поменяли — у него новое время последнего изменения (круг 21):
+ *  колода (Core.projectsByActivity) ставит свежий проект первым. Правка
+ *  проекта — имя, описание, цвет, метки, ставка и валюта, его статусы, версии
+ *  и свои теги; закрепление — не правка (оно больше не ставит проект первым).
+ *  updatedAt у журнала правок — тихое поле (core/oplog.js, QUIET). */
+export function touchProject(projects, id, now = new Date().toISOString()) {
+  if (!id) return projects;
+  return projects.map((p) => (p.id === id ? { ...p, updatedAt: now } : p));
+}
+
 export const useAppStore = create(
   persist(
     (set, get) => ({
       ...emptyState(),
+      // Журнал правок открытой области (lib/oplogScope.js, lib/sync.js):
+      // пачка — когда область связана с журналом, иначе null (гость и
+      // аккаунт до первого обмена очередь не копят); syncExtra — зеркало для
+      // старых клиентов, слепок, мост, ждущий перенос; scopeUid — чья область
+      // открыта (null — гость).
+      oplog: null,
+      syncExtra: freshExtra(),
+      scopeUid: null,
       hasHydrated: false,
+      // Область не прочиталась: { uid } — чья (null — гость), иначе null.
+      // Не сохраняется (partialize его не берёт).
+      scopeError: null,
       toastMessage: null,
       toastAction: null,
       // Облако картинок редактора на паузе — пока удаляется аккаунт
@@ -56,6 +175,13 @@ export const useAppStore = create(
       // ведёт пометка pending в IndexedDB, и выгрузит следующий flush — при
       // ближайшем входе.
       assetRequeue: [],
+      // Аккаунт, которому отдать картинки, вставленные без аккаунта (17 октября
+      // 2026): данные «Без аккаунта» перенесли в аккаунт (useAuthStore:
+      // moveGuestData), а их картинки в хранилище страницы редактора (IndexedDB)
+      // ничьи и сами в облако не уходят. Отдаёт их страница редактора
+      // (assets-adopt, src/editor/host.js) — ближайшая открытая: открытой нет —
+      // ждёт её ready. Сохраняется: редактор могут открыть и после перезапуска.
+      assetAdopt: null,
 
       _runMigration() {
         set((s) => migrate({ ...s }));
@@ -94,6 +220,7 @@ export const useAppStore = create(
           rate: rate === undefined || rate === '' ? null : rate,
           currency: currency || null,
           createdAt: now,
+          updatedAt: now,
           pinnedAt: null,
         };
         // Набор статусов заводится сразу: доска строится из них, и проект
@@ -105,7 +232,8 @@ export const useAppStore = create(
         return project;
       },
       updateProject(id, patch) {
-        set((s) => ({ projects: s.projects.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+        const now = new Date().toISOString();
+        set((s) => ({ projects: s.projects.map((p) => (p.id === id ? { ...p, ...patch, updatedAt: now } : p)) }));
       },
       togglePinProject(id) {
         set((s) => ({
@@ -178,19 +306,21 @@ export const useAppStore = create(
           color: color || PALETTE[get().tags.length % PALETTE.length],
           projectId: projectId || null,
         };
-        set((s) => ({ tags: [...s.tags, tag] }));
+        set((s) => ({ tags: [...s.tags, tag], projects: touchProject(s.projects, tag.projectId) }));
         return tag;
       },
       updateTag(id, patch) {
-        set((s) => ({ tags: s.tags.map((tg) => (tg.id === id ? { ...tg, ...patch } : tg)) }));
+        const own = (get().tags.find((tg) => tg.id === id) || {}).projectId;
+        set((s) => ({ tags: s.tags.map((tg) => (tg.id === id ? { ...tg, ...patch } : tg)), projects: touchProject(s.projects, own) }));
       },
       /** Удаление снимает тег со всех сущностей: переносить его некуда, в
        *  отличие от статуса, у которого есть соседний столбец. */
       deleteTag(id) {
+        const own = (get().tags.find((tg) => tg.id === id) || {}).projectId;
         set((s) => ({
           tags: s.tags.filter((tg) => tg.id !== id),
-          projects: s.projects.map((p) => ((p.tagIds || []).includes(id)
-            ? { ...p, tagIds: p.tagIds.filter((x) => x !== id) } : p)),
+          projects: touchProject(s.projects.map((p) => ((p.tagIds || []).includes(id)
+            ? { ...p, tagIds: p.tagIds.filter((x) => x !== id) } : p)), own),
           tasks: s.tasks.map((t) => ((t.tagIds || []).includes(id)
             ? { ...t, tagIds: t.tagIds.filter((x) => x !== id) } : t)),
         }));
@@ -202,7 +332,8 @@ export const useAppStore = create(
         }));
       },
       setProjectTags(projectId, tagIds) {
-        set((s) => ({ projects: s.projects.map((p) => (p.id === projectId ? { ...p, tagIds } : p)) }));
+        const now = new Date().toISOString();
+        set((s) => ({ projects: s.projects.map((p) => (p.id === projectId ? { ...p, tagIds, updatedAt: now } : p)) }));
       },
 
       updateTask(id, patch) {
@@ -473,25 +604,30 @@ export const useAppStore = create(
           order: own.length ? Math.max(...own.map((v) => v.order || 0)) + 1 : 0,
           releasedAt: null,
         };
-        set((s) => ({ versions: [...s.versions, version] }));
+        set((s) => ({ versions: [...s.versions, version], projects: touchProject(s.projects, projectId) }));
         return version;
       },
       renameVersion(id, name) {
         const clean = (name || "").trim();
         if (!clean) return;
-        set((s) => ({ versions: s.versions.map((v) => (v.id === id ? { ...v, name: clean } : v)) }));
+        const own = (get().versions.find((v) => v.id === id) || {}).projectId;
+        set((s) => ({ versions: s.versions.map((v) => (v.id === id ? { ...v, name: clean } : v)), projects: touchProject(s.projects, own) }));
       },
       toggleVersionReleased(id) {
+        const own = (get().versions.find((v) => v.id === id) || {}).projectId;
         set((s) => ({
           versions: s.versions.map((v) => (v.id === id
             ? { ...v, releasedAt: v.releasedAt ? null : new Date().toISOString() }
             : v)),
+          projects: touchProject(s.projects, own),
         }));
       },
       deleteVersion(id) {
         // Версию убрали — задачи остаются, просто без неё.
+        const own = (get().versions.find((v) => v.id === id) || {}).projectId;
         set((s) => ({
           versions: s.versions.filter((v) => v.id !== id),
+          projects: touchProject(s.projects, own),
           tasks: s.tasks.map((task) => (task.versionId === id
             ? { ...task, versionId: null, updatedAt: new Date().toISOString() }
             : task)),
@@ -511,6 +647,58 @@ export const useAppStore = create(
           activeTimer: s.activeTimer && s.activeTimer.taskId === id ? null : s.activeTimer,
         }));
       },
+      /** «Дублировать» (17 октября 2026). Что копируется, решает ядро
+       *  (core/duplicate.js, общее с вебом): всё, кроме записей времени и
+       *  отметки «выполнено», «(копия)» в названии на языке интерфейса. Стор
+       *  только кладёт копию сразу за оригиналом — как веб (app.js:
+       *  duplicateTask). Возвращает копию или null, если оригинала нет. */
+      duplicateTask(id) {
+        const s = get();
+        const copy = Duplicate.duplicateTask(s, id, { uid, now: new Date().toISOString(), suffix: t(s.settings.lang, 'docs.copy_suffix') });
+        if (!copy) return null;
+        set((st) => {
+          const at = st.tasks.findIndex((task) => task.id === id);
+          const tasks = st.tasks.slice();
+          tasks.splice(at < 0 ? tasks.length : at + 1, 0, copy);
+          return { tasks };
+        });
+        return copy;
+      },
+
+      // --- ИИ-агент (вкладка «Чат-бот», 18 октября 2026) ---
+      /** Предложение агента — в данные одной правкой. Что и как меняется,
+       *  решает ядро (core/ai.js: aiApply — то же, что у веба): оно правит
+       *  копию списков, копия проходит миграцию и ложится одним set. Задачи,
+       *  которые предложение закрыло, дальше идут путём галочки
+       *  (_afterTaskClosed: повтор перекатывается).
+       *  @returns ответ aiApply ({ok, created, updated, closed, undo}); при
+       *    ошибках проверки ({ok: false, errors}) стор не тронут */
+      applyAiProposal(ops) {
+        const s = get();
+        const draft = aiDraft(s);
+        const res = Ai.aiApply(draft, ops, {
+          uid, now: new Date().toISOString(), statusName: (key) => t(s.settings.lang, `status.default_${key}`),
+        });
+        if (!res || res.ok === false) return res;
+        set(aiPatch(s, draft));
+        for (const id of res.closed || []) get()._afterTaskClosed(id, false);
+        return res;
+      },
+      /** Отмена применённого предложения (Core.aiUndo) — тоже одной правкой.
+       *  Таймер задачи, которую отмена убрала, останавливается без записи,
+       *  как при удалении задачи. @param undo — undo из ответа aiApply */
+      undoAiProposal(undo) {
+        const s = get();
+        // Таймер — ядру на виду (19 октября 2026): созданную агентом задачу, по
+        // которой идёт таймер, aiUndo не удаляет (её время — не его правка), и
+        // тогда стор ниже его не останавливает.
+        const draft = { ...aiDraft(s), activeTimer: s.activeTimer ? { ...s.activeTimer } : null };
+        const res = Ai.aiUndo(draft, JSON.parse(JSON.stringify(undo)));
+        const patch = aiPatch(s, draft);
+        if (s.activeTimer && !patch.tasks.some((task) => task && task.id === s.activeTimer.taskId)) patch.activeTimer = null;
+        set(patch);
+        return res;
+      },
 
       // --- таймер ---
       startTimer(taskId) {
@@ -529,9 +717,11 @@ export const useAppStore = create(
             ? s.tasks.map((task) => (task.id === taskId
                 ? {
                     ...task,
+                    // Запись — сразу со своим id: по нему журнал правок
+                    // (core/oplog.js) узнаёт её, когда её потом подвинут.
                     sessions: [
                       ...(task.sessions || []),
-                      { start: startedAt, end: end.toISOString(), ms, rate: effectiveRate(task, ratesOf(s.settings, s.projects)) },
+                      { id: uid(), start: startedAt, end: end.toISOString(), ms, rate: effectiveRate(task, ratesOf(s.settings, s.projects)) },
                     ],
                     totalMs: (task.totalMs || 0) + ms,
                     updatedAt: end.toISOString(),
@@ -553,6 +743,12 @@ export const useAppStore = create(
         const task = get().tasks.find((t2) => t2.id === taskId);
         if (!task || !span) return;
         const upd = CoreMoney.planSessionEdit(task, index, span, ratesOf(get().settings, get().projects), Date.now());
+        // Новая запись — со своим id (правка прежней id сохраняет сама,
+        // core/money.js): журнал правок узнаёт записи по id.
+        if (index === null || index === undefined) {
+          const last = upd.sessions.length - 1;
+          if (last >= 0 && !upd.sessions[last].id) upd.sessions[last] = { ...upd.sessions[last], id: uid() };
+        }
         set((s) => ({ tasks: s.tasks.map((t2) => (t2.id === taskId ? { ...t2, ...upd } : t2)) }));
       },
 
@@ -594,7 +790,7 @@ export const useAppStore = create(
           tasks: s.tasks.map((t2) => (t2.id === taskId ? {
             ...t2,
             sessions: [...(t2.sessions || []), {
-              start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString(), ms,
+              id: uid(), start: new Date(startMs).toISOString(), end: new Date(endMs).toISOString(), ms,
               rate: effectiveRate(t2, ratesOf(s.settings, s.projects)), manual: true,
             }],
             totalMs: (t2.totalMs || 0) + ms,
@@ -621,20 +817,22 @@ export const useAppStore = create(
           order: list.length,
           builtin: false,
         };
-        set((s) => ({ statuses: [...s.statuses, row] }));
+        set((s) => ({ statuses: [...s.statuses, row], projects: touchProject(s.projects, projectId) }));
         return row.id;
       },
 
       /** Название и цвет — всё, что меняется без последствий для задач. */
       updateStatus(id, patch) {
-        set((s) => ({ statuses: s.statuses.map((st) => (st.id === id ? { ...st, ...patch } : st)) }));
+        const own = (getStatus(get().statuses, id) || {}).projectId;
+        set((s) => ({ statuses: s.statuses.map((st) => (st.id === id ? { ...st, ...patch } : st)), projects: touchProject(s.projects, own) }));
       },
 
       /** Вид решает, закрыта ли задача и считается ли она сделанной, —
        *  поэтому все задачи этого статуса надо пересчитать. Иначе доска,
        *  галочки и статистика разойдутся; в вебе тот же пересчёт. */
       setStatusKind(id, kind) {
-        set((s) => ({ statuses: s.statuses.map((st) => (st.id === id ? { ...st, kind } : st)) }));
+        const own = (getStatus(get().statuses, id) || {}).projectId;
+        set((s) => ({ statuses: s.statuses.map((st) => (st.id === id ? { ...st, kind } : st)), projects: touchProject(s.projects, own) }));
         for (const task of get().tasks.filter((t2) => t2.statusId === id)) {
           get().setTaskStatus(task.id, id);
         }
@@ -655,6 +853,7 @@ export const useAppStore = create(
             if (row.id === other.id) return { ...row, order: st.order };
             return row;
           }),
+          projects: touchProject(s.projects, st.projectId),
         }));
       },
 
@@ -670,7 +869,10 @@ export const useAppStore = create(
           // Порядок пересчитывается подряд, без дыр: иначе следующий
           // добавленный статус получит чужой номер.
           const order = new Map(orderedStatuses(rest, projectId).map((st, i) => [st.id, i]));
-          return { statuses: rest.map((st) => (order.has(st.id) ? { ...st, order: order.get(st.id) } : st)) };
+          return {
+            statuses: rest.map((st) => (order.has(st.id) ? { ...st, order: order.get(st.id) } : st)),
+            projects: touchProject(s.projects, projectId),
+          };
         });
       },
 
@@ -766,6 +968,13 @@ export const useAppStore = create(
         const done = new Set(ids);
         set((s) => ({ assetRequeue: (s.assetRequeue || []).filter((id) => !done.has(id)) }));
       },
+      queueAssetAdopt(userId) {
+        set({ assetAdopt: userId ? String(userId) : null });
+      },
+      /** Страница редактора получила assets-adopt для userId. Без аргумента — снять. */
+      clearAssetAdopt(userId) {
+        set((s) => (userId === undefined || s.assetAdopt === userId ? { assetAdopt: null } : {}));
+      },
 
       // --- настройки ---
       setSettings(patch) {
@@ -773,8 +982,14 @@ export const useAppStore = create(
       },
     }),
     {
+      // Имя — область данных (17 октября 2026): гость — lancible-data, как
+      // было до аккаунтов, аккаунт — lancible-data:<uid> (core/accounts.js).
+      // Какую область открыть, решает список аккаунтов, поэтому сам стор
+      // хранилище не читает: его открывает openDataScope.
       name: 'lancible-data',
-      storage: createJSONStorage(() => AsyncStorage),
+      skipHydration: true,
+      storage: createJSONStorage(() => scopedStorage),
+      merge: mergeScope,
       // Теги, статусы и версии — такие же пользовательские данные, как
       // проекты и задачи. Без них в этом списке они жили только в памяти:
       // после перезапуска телефон оставался без статусов и версий до
@@ -784,10 +999,22 @@ export const useAppStore = create(
         statuses: s.statuses, versions: s.versions, documents: s.documents,
         activeTimer: s.activeTimer, ui: s.ui, settings: s.settings,
         assetRequeue: s.assetRequeue,
+        assetAdopt: s.assetAdopt,
+        // Журнал правок — в той же записи, что и данные: свои неотправленные
+        // правки сохраняются вместе с ними (lib/oplogScope.js).
+        sync2: packSync2(s),
       }),
-      onRehydrateStorage: () => () => {
+      onRehydrateStorage: () => (_state, error) => {
         // Срабатывает асинхронно после чтения AsyncStorage — к этому моменту
-        // useAppStore уже точно проинициализирован.
+        // useAppStore уже точно проинициализирован. Область уже прочитана и
+        // лежит в сторе — запись открывается, и миграция ляжет в свою область.
+        // Чтение упало — в сторе прежнее: запись закрыта, миграции нет
+        // (openDataScope, readError).
+        if (error) {
+          readError = error;
+          return;
+        }
+        scopeWrites = true;
         useAppStore.getState()._runMigration();
       },
     }

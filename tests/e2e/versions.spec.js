@@ -274,8 +274,9 @@ test('версия задачи видна в списке и в её настр
 
   // Строки ищем по названию: с 6 октября 2026 список сгруппирован по
   // статусам, и порядок строк — это порядок столбцов доски. Список — на
-  // странице проекта, возвращаемся на неё.
-  await page.locator('#task-back').click();
+  // странице проекта, идём на неё крошкой: задача открыта с «Сегодня», и
+  // стрелка «назад» с 17 октября вела бы туда.
+  await page.locator('#crumb-project').click();
   const row = (title) => page.locator('#task-list .task-item', { hasText: title });
   await expect(row('Вёрстка карточек').locator('.task-version')).toHaveText('v1.3');
   await expect(row('Старый импорт').locator('.task-version')).toHaveText('v1.1');

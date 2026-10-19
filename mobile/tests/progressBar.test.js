@@ -14,8 +14,7 @@
 //    без капли, просто доползает (LIQUID.creep).
 // 4. Столбик графика поднимается той же пружиной и на ходу тоньше.
 // 5. Места: карточка колоды «Проекты», карточка цифр и полосы версий на
-//    странице проекта, «По проектам» и неделя в «Цифрах», неделя на «Сегодня» —
-//    общий компонент; своих полос нет ни у одного экрана (храповик — пустой
+//    странице проекта, «По проектам» и неделя в «Цифрах» — общий компонент; своих полос нет ни у одного экрана (храповик — пустой
 //    список).
 // 6. Вниз — как вверх: задачу вернули, значение уменьшилось — шкала так же
 //    жидко стекает (та же пружина, от того места, где заливка сейчас, капля на
@@ -34,7 +33,6 @@ import ProgressBar, { LiquidColumn } from '../src/components/ProgressBar';
 import { dropsLife } from '../src/components/Liquid';
 import StatsScreen from '../src/screens/StatsScreen';
 import ProjectScreen from '../src/screens/ProjectScreen';
-import HomeScreen from '../src/screens/HomeScreen';
 import { useAppStore } from '../src/store/useAppStore';
 import { LIQUID, CHECK_DROPS, BAR_POP_KICK, BAR_POP_DELAY, BAR_DROPS_ARC, liquidBar, liquidColumn, dropAt } from '../src/lib/liquid';
 import { t } from '../src/lib/i18n';
@@ -531,32 +529,6 @@ describe('места', () => {
     expect(flows().length).toBeGreaterThanOrEqual(2);
   });
 
-  test('«Сегодня»: столбики недели — LiquidColumn, по одному на день; день с записью — во всю высоту', async () => {
-    const today = new Date();
-    today.setHours(9, 0, 0, 0);
-    useAppStore.setState({
-      settings: { ...useAppStore.getState().settings, lang: 'ru', theme: 'dark' },
-      projects: [{ id: 'p1', name: 'Сайт', color: '#87ff65', createdAt: '2026-10-01T00:00:00.000Z' }],
-      statuses: [{ id: 's1', projectId: 'p1', name: 'В работе', color: '#5ec8f2', kind: 'progress', order: 0 }],
-      tasks: [{
-        id: 't1', projectId: 'p1', title: 'Вёрстка', statusId: 's1', done: false, totalMs: 3_600_000, tagIds: [],
-        sessions: [{ start: today.toISOString(), end: new Date(today.getTime() + 3_600_000).toISOString(), ms: 3_600_000 }],
-        dueAt: null, updatedAt: today.toISOString(),
-      }],
-      activeTimer: null,
-      ui: { ...useAppStore.getState().ui, notifSeenAt: null },
-    });
-    const navigation = { navigate: jest.fn(), setOptions: jest.fn(), setParams: jest.fn() };
-    const screen = () => <HomeScreen navigation={navigation} route={{ params: {} }} />;
-    const s = await render(screen());
-    await s.rerender(screen());
-    const bars = s.getAllByTestId(/^week-bar-/);
-    expect(bars).toHaveLength(7);
-    expect(flows().length).toBeGreaterThanOrEqual(7);
-    expect(bars.map((b) => flat(b).height).sort((a, b) => a - b)).toEqual([4, 4, 4, 4, 4, 4, 56]);
-    expect(flat(bars[0]).width).toBe('100%');
-  });
-
   // Все исходники телефона, кроме ядра и редактора; [путь от src, текст].
   function sources() {
     const root = join(__dirname, '..', 'src');
@@ -596,10 +568,9 @@ describe('места', () => {
     // Шкала доли выполненных: страница проекта (карточка и версии) и карточка колоды.
     expect(uses('screens/ProjectScreen.js', 'ProgressBar')).toBe(true);
     expect(uses('screens/ProjectsScreen.js', 'ProgressBar')).toBe(true);
-    // «Цифры»: полосы «По проектам» и столбики недели; «Сегодня»: столбики недели.
+    // «Цифры»: полосы «По проектам» и столбики недели.
     expect(uses('screens/StatsScreen.js', 'ProgressBar')).toBe(true);
     expect(uses('screens/StatsScreen.js', 'LiquidColumn')).toBe(true);
-    expect(uses('screens/HomeScreen.js', 'LiquidColumn')).toBe(true);
     // Сколько раз каждая зовёт шкалу: проект — карточка и версии, колода и «Цифры» — по одной.
     const count = (file) => (files[file].match(/<ProgressBar\b/g) || []).length;
     expect(count('screens/ProjectScreen.js')).toBe(2);

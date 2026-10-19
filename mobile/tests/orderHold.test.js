@@ -4,9 +4,8 @@
 // что на вебе (Core.holdOrder, закрыто tests/unit/views.test.js), а здесь
 // проверяется, что экраны его применяют:
 //
-// - запуск таймера порядок не меняет — ни в колоде «Проекты», ни на
-//   «Сегодня» (остров последней задачи и проекты дня), ни в ленте «Задачи»
-//   (идущая не уходит в «Сейчас»); любая правка, пока таймер идёт, тоже ждёт
+// - запуск таймера порядок не меняет — ни в колоде «Проекты», ни в ленте
+//   «Задачи» (идущая не уходит в «Сейчас»); любая правка, пока таймер идёт, тоже ждёт
 //   остановки;
 // - остановка — строки встают по обычному правилу, а у списка есть layout
 //   (itemLayoutAnimation у Animated.FlatList, layout у Animated.View): на моке
@@ -18,11 +17,10 @@
 // - страница проекта от таймера не зависит: порядок до запуска, после
 //   запуска и после остановки один.
 import { useRef } from 'react';
-import { render, renderHook, fireEvent, act, within } from '@testing-library/react-native';
+import { render, renderHook, act } from '@testing-library/react-native';
 import * as ReduceMotion from '../src/hooks/useReduceMotion';
 import { MOVE, MOVE_MS } from '../src/hooks/useOrderHold';
 import ProjectsScreen from '../src/screens/ProjectsScreen';
-import HomeScreen from '../src/screens/HomeScreen';
 import TasksScreen from '../src/screens/TasksScreen';
 import ProjectScreen from '../src/screens/ProjectScreen';
 import { useAppStore } from '../src/store/useAppStore';
@@ -266,6 +264,47 @@ describe('хук: moveSoon — второе нажатие, пока правк�
   });
 });
 
+// --- ответ хука — тот же объект, пока в нём ничего не поменялось ---------------
+//
+// Колода отдаёт hold карточкам под memo (жалоба 20 октября: смена страницы
+// перерисовывала все карточки, и пружина спотыкалась). Новый объект на каждую
+// отрисовку экрана перерисовывал бы их всё равно.
+
+describe('хук: ответ — тот же объект, пока ничего не поменялось', () => {
+  const { useOrderHold } = require('../src/hooks/useOrderHold');
+
+  test('перерисовка без перемен — тот же объект; отметка, отпускание, таймер и уход с экрана — новый', async () => {
+    const nav = makeNav();
+    const { result, rerender } = await renderHook(() => useOrderHold(nav, { always: true }));
+    const first = result.current;
+    await rerender();
+    expect(result.current).toBe(first);
+    // Галочка держит строку — ответ другой; пока держит, перерисовка его не меняет.
+    await act(async () => { result.current.markNow(() => {}, { id: 'a' }); });
+    const held = result.current;
+    expect(held).not.toBe(first);
+    expect(held.holding).toBe(true);
+    expect(held.marked('a')).toBe(true);
+    await rerender();
+    expect(result.current).toBe(held);
+    // Налив доиграл — строка отпущена и едет поверх соседей: снова новый.
+    await wait(LIQUID.check.duration + 10);
+    const released = result.current;
+    expect(released).not.toBe(held);
+    expect(released).toMatchObject({ holding: false, rising: 'a' });
+    expect(released.marked('a')).toBe(false);
+    // Таймер пошёл — заморозка: новый.
+    await run('a');
+    const running = result.current;
+    expect(running).not.toBe(released);
+    expect(running.frozen).toBe(true);
+    // Ушли с экрана — новый, и уже не в фокусе.
+    await nav.emit('blur');
+    expect(result.current).not.toBe(running);
+    expect(result.current.focused).toBe(false);
+  });
+});
+
 // --- колода «Проекты» --------------------------------------------------------
 
 describe('колода «Проекты»: задачи в карточке', () => {
@@ -340,120 +379,6 @@ describe('колода «Проекты»: задачи в карточке', ()
     expect(listLayouts(q)).toEqual([undefined]);
   });
 });
-
-// --- «Сегодня» ---------------------------------------------------------------
-
-describe('«Сегодня»: последняя задача и проекты дня', () => {
-  const task = (id, projectId, title, sessions) => ({
-    id, projectId, title, statusId: 's1', done: false, totalMs: sessions.reduce((a, s) => a + s.ms, 0), tagIds: [], dueAt: null,
-    sessions, updatedAt: sessions.length ? sessions[sessions.length - 1].end : at(8),
-  });
-  const rec = (from, to) => ({ start: at(from), end: at(to), ms: (to - from) * H });
-  const seed = (extra = []) => useAppStore.setState({
-    projects: [
-      { id: 'p1', name: 'Сайт', color: '#87ff65', createdAt: '2026-10-01T00:00:00.000Z' },
-      { id: 'p2', name: 'Бот', color: '#5ec8f2', createdAt: '2026-10-02T00:00:00.000Z' },
-    ],
-    statuses: [
-      { id: 's1', projectId: 'p1', name: 'В работе', color: '#5ec8f2', kind: 'progress', order: 0 },
-      { id: 's2', projectId: 'p2', name: 'В работе', color: '#5ec8f2', kind: 'progress', order: 0 },
-    ],
-    tags: [],
-    tasks: [
-      // Сайт — час за день, Бот — полчаса: Сайт выше. Последней шла «Команды».
-      task('t1', 'p1', 'Вёрстка', [rec(8, 9)]),
-      { ...task('t2', 'p2', 'Команды', [{ start: at(9), end: new Date(new Date(at(9)).getTime() + H / 2).toISOString(), ms: H / 2 }]), statusId: 's2' },
-      ...extra,
-    ],
-  });
-  /** Проекты дня сверху вниз — по заголовкам групп. */
-  // Имя проекта — в его группе записей: плашка проекта в «Недавних» под него не подходит.
-  const groups = (q) => q.getAllByTestId(/^day-group-/).map((g) => within(g).getAllByText(/^(Сайт|Бот)$/)[0].props.children);
-  const island = (q) => q.queryByText(t('ru', 'today.last_task'));
-  const open = (nav = makeNav()) => render(<HomeScreen navigation={nav} route={{ params: {} }} />);
-  /** Задача «Команды» получила ещё два часа за день: Бот обгоняет Сайт. */
-  const addTwoHours = () => act(async () => {
-    useAppStore.setState({
-      tasks: useAppStore.getState().tasks.map((x) => (x.id === 't2'
-        ? { ...x, sessions: [...x.sessions, { start: at(13), end: at(15), ms: 2 * H }], totalMs: x.totalMs + 2 * H }
-        : x)),
-    });
-  });
-  beforeEach(() => seed());
-
-  test('запуск с острова: задача остаётся, кнопка «стоп», проекты на местах; остановка — проект переезжает', async () => {
-    const q = await open();
-    expect(groups(q)).toEqual(['Сайт', 'Бот']);
-    await fireEvent.press(q.getAllByLabelText(t('ru', 'timer.start'))[0]);
-    expect(useAppStore.getState().activeTimer.taskId).toBe('t2');
-    // Остров на месте — с той же задачей, а не со следующей («Вёрстка» — запись
-    // дня и строка «Недавних»); кнопка стала «стоп».
-    expect(island(q)).toBeTruthy();
-    expect(q.getAllByText('Команды')).toHaveLength(3); // остров, запись дня, строка «сейчас»
-    expect(q.getAllByText('Вёрстка')).toHaveLength(2);
-    q.getByLabelText(t('ru', 'timer.stop'));
-    expect(groups(q)).toEqual(['Сайт', 'Бот']);
-    // Запись добавили, пока таймер идёт, — без заморозки Бот был бы уже первым.
-    await addTwoHours();
-    expect(groups(q)).toEqual(['Сайт', 'Бот']);
-    await stop();
-    expect(groups(q)).toEqual(['Бот', 'Сайт']);
-    expect(q.getByTestId('day-group-p2').props.layout).toBe(MOVE);
-    expect(q.getByTestId('day-group-p1').props.layout).toBe(MOVE);
-    // Остров вернулся к обычному: последняя — «Команды», кнопка «старт»
-    // (вторая — у «Вёрстки» в «Недавних»).
-    expect(island(q)).toBeTruthy();
-    expect(q.getAllByLabelText(t('ru', 'timer.start'))).toHaveLength(2);
-    // Переезд кончился — layout снят.
-    await wait(MOVE_MS + 400);
-    expect(q.getByTestId('day-group-p2').props.layout).toBeUndefined();
-  });
-
-  test('уход с экрана и возврат: идущая уходит из острова, проекты — по новому порядку, без движения', async () => {
-    const nav = makeNav();
-    const q = await open(nav);
-    await fireEvent.press(q.getAllByLabelText(t('ru', 'timer.start'))[0]);
-    await addTwoHours();
-    expect(groups(q)).toEqual(['Сайт', 'Бот']);
-    await nav.emit('blur');
-    expect(groups(q)).toEqual(['Бот', 'Сайт']);
-    expect(q.getByTestId('day-group-p2').props.layout).toBeUndefined();
-    // Идущая — строкой «сейчас» в записях дня и первой в «Недавних»; остров
-    // показывает другую, и «стоп» у него нет — он один, в «Недавних».
-    q.getByText(t('ru', 'tasks.now').toLowerCase());
-    expect(q.getAllByLabelText(t('ru', 'timer.stop'))).toHaveLength(1);
-    expect(within(q.getByTestId('recent-block')).getAllByLabelText(t('ru', 'timer.stop'))).toHaveLength(1);
-    expect(q.getAllByText('Вёрстка')).toHaveLength(2); // запись дня и остров
-    await nav.emit('focus');
-    expect(groups(q)).toEqual(['Бот', 'Сайт']);
-    // Идёт таймер — к остановке переезд уже задан.
-    expect(q.getByTestId('day-group-p2').props.layout).toBe(MOVE);
-  });
-
-  test('«уменьшение движения»: ни переезда, ни заливки; порядок тот же', async () => {
-    jest.spyOn(ReduceMotion, 'useReduceMotion').mockReturnValue(true);
-    const q = await open();
-    await fireEvent.press(q.getAllByLabelText(t('ru', 'timer.start'))[0]);
-    await addTwoHours();
-    expect(groups(q)).toEqual(['Сайт', 'Бот']);
-    expect(q.getByTestId('day-group-p2').props.layout).toBeUndefined();
-    await stop();
-    expect(groups(q)).toEqual(['Бот', 'Сайт']);
-    expect(q.getByTestId('day-group-p2').props.layout).toBeUndefined();
-  });
-
-  test('вход с идущей задачей: остров её не показывает, как и раньше', async () => {
-    useAppStore.setState({ activeTimer: { taskId: 't2', startedAt: at(11), heartbeatAt: at(11) } });
-    const q = await open();
-    expect(q.getAllByText(t('ru', 'today.last_task'))).toHaveLength(1); // остров показывает «Вёрстка»
-    q.getByLabelText(t('ru', 'timer.start'));
-    // «Стоп» — только у идущей строки в «Недавних», в острове его нет.
-    expect(q.getAllByLabelText(t('ru', 'timer.stop'))).toHaveLength(1);
-    expect(within(q.getByTestId('recent-block')).getAllByLabelText(t('ru', 'timer.stop'))).toHaveLength(1);
-  });
-});
-
-// --- лента «Задачи» ----------------------------------------------------------
 
 describe('лента «Задачи»', () => {
   const task = (id, title, updatedAt) => ({

@@ -2,13 +2,15 @@
 // меню «/». Каждая — обычная команда ProseMirror (state, dispatch) → bool:
 // без dispatch она только отвечает, применима ли, и по этому кнопки знают,
 // гасить ли себя.
-import { TextSelection, NodeSelection } from 'prosemirror-state';
+import { Selection, TextSelection, NodeSelection } from 'prosemirror-state';
+import { GapCursor } from 'prosemirror-gapcursor';
 import { toggleMark, setBlockType, wrapIn, lift, chainCommands, exitCode } from 'prosemirror-commands';
 import { wrapInList, liftListItem, sinkListItem, splitListItem } from 'prosemirror-schema-list';
-import { undo, redo, undoDepth, redoDepth } from 'prosemirror-history';
+import { undo, redo, undoDepth, redoDepth, closeHistory } from 'prosemirror-history';
 import {
   addRowAfter, addRowBefore, addColumnAfter, addColumnBefore, deleteRow, deleteColumn, deleteTable,
   mergeCells, splitCell, toggleHeaderRow, toggleHeaderColumn, setCellAttr, isInTable, CellSelection, selectedRect,
+  moveTableRow, moveTableColumn, rowIsHeader,
 } from 'prosemirror-tables';
 import { schema } from './schema.js';
 
@@ -264,15 +266,19 @@ export function splitItem(state, dispatch) {
 
 export function setAlign(align) {
   return (state, dispatch) => {
-    const { from, to } = state.selection;
     let any = false;
     const tr = state.tr;
-    state.doc.nodesBetween(from, to, (node, pos) => {
-      if (node.type === N.paragraph || node.type === N.heading) {
-        tr.setNodeMarkup(pos, null, Object.assign({}, node.attrs, { align: align === 'left' ? null : align }));
-        any = true;
-      }
-    });
+    // По каждому диапазону выделения: у выделенных ячеек (столбец с ручки,
+    // tablehandles.js) диапазон свой у каждой ячейки, а общий from–to
+    // захватил бы и ячейки соседних столбцов между ними.
+    for (const { $from, $to } of state.selection.ranges) {
+      state.doc.nodesBetween($from.pos, $to.pos, (node, pos) => {
+        if (node.type === N.paragraph || node.type === N.heading) {
+          tr.setNodeMarkup(pos, null, Object.assign({}, node.attrs, { align: align === 'left' ? null : align }));
+          any = true;
+        }
+      });
+    }
     if (any && dispatch) dispatch(tr);
     return any;
   };
@@ -339,8 +345,35 @@ export function insertTable(rows, cols, withHeader) {
 export const insertRule = (state, dispatch) => insertBlock(N.horizontal_rule.create())(state, dispatch);
 
 export const insertImage = (attrs) => insertBlock(N.image.create(attrs));
+/** Страница PDF со слоями (pdf.js: импорт «страницы»). */
+export const insertPdfPage = (attrs) => insertBlock(N.pdfpage.create(attrs));
 export const insertChart = (chart) => insertBlock(N.chart.create({ chart }));
 export const insertDrawing = (attrs) => insertBlock(N.drawing.create(attrs || {}));
+
+/** Несколько блоков подряд — текст из PDF (pdf.js). Пустой абзац под
+ *  курсором они заменяют, иначе встают под блоком верхнего уровня с
+ *  курсором: фраза, в которой он стоит, не разрывается. Курсор — в конец
+ *  вставленного. */
+export function insertBlocks(nodes) {
+  return (state, dispatch) => {
+    if (!nodes || !nodes.length) return false;
+    if (!dispatch) return true;
+    const tr = state.tr;
+    const { $from } = state.selection;
+    let start;
+    if ($from.parent.type === N.paragraph && $from.parent.content.size === 0 && $from.depth >= 1) {
+      start = $from.before();
+      tr.replaceWith(start, start + $from.parent.nodeSize, nodes);
+    } else {
+      start = $from.depth >= 1 ? $from.after(1) : state.selection.to;
+      tr.insert(start, nodes);
+    }
+    const end = start + nodes.reduce((n, node) => n + node.nodeSize, 0);
+    tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(end - 1, tr.doc.content.size)), -1));
+    dispatch(tr.scrollIntoView());
+    return true;
+  };
+}
 
 // --- ряд картинок --------------------------------------------------------------------
 
@@ -351,6 +384,77 @@ function imageAt(state, pos) {
   const $p = state.doc.resolve(pos);
   const inRow = $p.parent.type === N.gallery;
   return { node, pos, inRow, rowPos: inRow ? $p.before() : null, row: inRow ? $p.parent : null, index: $p.index() };
+}
+
+// --- картинка: выравнивание, ширина, подпись -------------------------------------
+//
+// Одни и те же команды у острова картинки (image.js) и у контекстной панели
+// телефона (host.js, протокол 4). Без pos — выделенная картинка
+// (NodeSelection). Атрибуты меняются шагом атрибута (setNodeAttribute): узел
+// не пересоздаётся, и выделение остаётся на картинке — панель телефона не
+// гаснет после каждой кнопки. Каждая правка — свой пункт истории.
+
+/** Выравнивания картинки: четыре строкой и два с обтеканием. */
+export const IMAGE_ALIGNS = ['left', 'center', 'right', 'full', 'wrap-left', 'wrap-right'];
+/** Ширина картинки с обтеканием по умолчанию — доля полосы, %. */
+export const IMAGE_WRAP_WIDTH = 40;
+export const isWrapAlign = (align) => align === 'wrap-left' || align === 'wrap-right';
+
+/** Выделенная картинка: { node, pos } или null. */
+export function selectedImage(state) {
+  const sel = state.selection;
+  return sel instanceof NodeSelection && sel.node.type === N.image ? { node: sel.node, pos: sel.from } : null;
+}
+
+function imageTarget(state, pos) {
+  if (pos == null) return selectedImage(state);
+  const node = state.doc.nodeAt(pos);
+  return node && node.type === N.image ? { node, pos } : null;
+}
+
+/** Поменять атрибуты картинки: patch — { alt, caption, width, align }. */
+export function setImageAttrs(patch, pos) {
+  return (state, dispatch) => {
+    const at = imageTarget(state, pos);
+    if (!at) return false;
+    if (dispatch) {
+      const tr = state.tr;
+      for (const [k, v] of Object.entries(patch || {})) if (k in at.node.attrs && at.node.attrs[k] !== v) tr.setNodeAttribute(at.pos, k, v);
+      if (tr.docChanged) dispatch(closeHistory(tr));
+    }
+    return true;
+  };
+}
+
+/** Выравнивание. Обтекание и обычное выравнивание по-разному понимают
+ *  ширину: у первого это доля полосы рядом с текстом, и «как есть» там нет;
+ *  «во всю ширину» ширину снимает. */
+export function setImageAlign(align, pos) {
+  return (state, dispatch) => {
+    const at = IMAGE_ALIGNS.includes(align) ? imageTarget(state, pos) : null;
+    if (!at) return false;
+    const was = at.node.attrs;
+    let { width } = was;
+    if (align === 'full') width = null;
+    else if (isWrapAlign(align) && !isWrapAlign(was.align)) width = IMAGE_WRAP_WIDTH;
+    else if (!isWrapAlign(align) && isWrapAlign(was.align)) width = null;
+    return setImageAttrs({ align, width }, at.pos)(state, dispatch);
+  };
+}
+
+/** Ширина в процентах полосы (в ряду — ряда): 10–100, в ряду 15–85, целыми.
+ *  Можно и шире исходного размера картинки — до ширины полосы. «Во всю
+ *  ширину» с заданной шириной становится «по центру». */
+export function setImageWidth(pct, pos) {
+  return (state, dispatch) => {
+    const at = imageTarget(state, pos);
+    const n = Number(pct);
+    if (!at || pct == null || pct === '' || !Number.isFinite(n)) return false;
+    const row = state.doc.resolve(at.pos).parent.type === N.gallery;
+    const width = Math.round(Math.max(row ? 15 : 10, Math.min(row ? 85 : 100, n)));
+    const align = at.node.attrs.align === 'full' ? 'center' : at.node.attrs.align;
+    return setImageAttrs({ width, align }, at.pos)(state, dispatch);
+  };
 }
 
 /** Ещё картинка справа от данной: отдельная становится рядом из двух. */
@@ -419,7 +523,152 @@ export const table = {
   headerRow: toggleHeaderRow,
   headerCol: toggleHeaderColumn,
   fill: (color) => setCellAttr('background', color || null),
+  // ручки строки и столбца
+  rowDup: duplicateRow,
+  colDup: duplicateColumn,
+  rowUp: moveRow(-1),
+  rowDown: moveRow(1),
+  colMoveLeft: moveColumn(-1),
+  colMoveRight: moveColumn(1),
+  colHeader: toggleHeaderCol,
 };
+
+// --- ручки строки и столбца (tablehandles.js) -------------------------------------
+//
+// Строка и столбец — те, где курсор или выделение ячеек (ручка выделяет
+// строку или столбец целиком). Без dispatch команда только отвечает,
+// применима ли: по этому пункт меню гасит себя.
+
+/** Дублировать строку: копия встаёт сразу под ней. Строку, через которую
+ *  проходит объединённая по вертикали ячейка, не дублируем — копия
+ *  разорвала бы объединение. */
+export function duplicateRow(state, dispatch) {
+  if (!isInTable(state)) return false;
+  const { map, table, tableStart, top, bottom } = selectedRect(state);
+  if (bottom - top !== 1) return false;
+  for (let c = 0; c < map.width; c++) {
+    const at = map.map[top * map.width + c];
+    if (table.nodeAt(at).attrs.rowspan > 1) return false;
+    if (top > 0 && map.map[(top - 1) * map.width + c] === at) return false;
+  }
+  if (dispatch) {
+    let pos = tableStart;
+    for (let r = 0; r < top; r++) pos += table.child(r).nodeSize;
+    const row = table.child(top);
+    dispatch(state.tr.insert(pos + row.nodeSize, row.type.create(row.attrs, row.content, row.marks)).scrollIntoView());
+  }
+  return true;
+}
+
+/** Дублировать столбец: копия встаёт сразу справа, с той же шириной.
+ *  Объединённые ячейки в столбце — нет: копию некуда было бы вписать. */
+export function duplicateColumn(state, dispatch) {
+  if (!isInTable(state)) return false;
+  const { map, table, tableStart, left, right } = selectedRect(state);
+  if (right - left !== 1) return false;
+  const cells = [];
+  for (let r = 0; r < map.height; r++) {
+    const at = map.map[r * map.width + left];
+    const cell = table.nodeAt(at);
+    if (cell.attrs.colspan > 1 || cell.attrs.rowspan > 1) return false;
+    cells.push({ at, cell });
+  }
+  if (dispatch) {
+    const tr = state.tr;
+    // Снизу вверх: вставка ниже не сдвигает позиции ячеек выше.
+    for (let i = cells.length - 1; i >= 0; i--) {
+      const { at, cell } = cells[i];
+      tr.insert(tableStart + at + cell.nodeSize, cell.type.create(cell.attrs, cell.content, cell.marks));
+    }
+    dispatch(tr.scrollIntoView());
+  }
+  return true;
+}
+
+/** Переместить строку на одну вверх (dir −1) или вниз (+1). Объединённые
+ *  строки едут вместе — это делает prosemirror-tables. */
+export function moveRow(dir) {
+  return (state, dispatch) => {
+    if (!isInTable(state)) return false;
+    const { map, top, bottom } = selectedRect(state);
+    const to = dir < 0 ? top - 1 : bottom;
+    if (to < 0 || to >= map.height) return false;
+    return moveTableRow({ from: dir < 0 ? top : bottom - 1, to, select: false, pos: state.selection.from })(state, dispatch);
+  };
+}
+
+/** Переместить столбец на один влево (dir −1) или вправо (+1). */
+export function moveColumn(dir) {
+  return (state, dispatch) => {
+    if (!isInTable(state)) return false;
+    const { map, left, right } = selectedRect(state);
+    const to = dir < 0 ? left - 1 : right;
+    if (to < 0 || to >= map.width) return false;
+    return moveTableColumn({ from: dir < 0 ? left : right - 1, to, select: false, pos: state.selection.from })(state, dispatch);
+  };
+}
+
+/** Ячейки столбца под курсором, кроме строки заголовков: её верхняя ячейка
+ *  — часть строки, а не столбца. */
+function columnBody(state) {
+  const { map, table, tableStart, left } = selectedRect(state);
+  const from = map.height > 1 && rowIsHeader(map, table, 0) ? 1 : 0;
+  const out = [];
+  for (let r = from; r < map.height; r++) {
+    const at = map.map[r * map.width + left];
+    if (!out.some((c) => c.at === at)) out.push({ at, pos: tableStart + at, cell: table.nodeAt(at) });
+  }
+  return out;
+}
+
+/** Столбец под курсором — столбец заголовков? */
+export function isHeaderColumn(state) {
+  if (!isInTable(state)) return false;
+  const cells = columnBody(state);
+  return cells.length > 0 && cells.every((c) => c.cell.type === N.table_header);
+}
+
+/** Столбец заголовков — любой, не только первый (toggleHeaderColumn из
+ *  prosemirror-tables снимал бы заодно ячейку строки заголовков). Строку
+ *  заголовков не трогает. */
+export function toggleHeaderCol(state, dispatch) {
+  if (!isInTable(state)) return false;
+  const cells = columnBody(state);
+  if (!cells.length) return false;
+  if (dispatch) {
+    const type = isHeaderColumn(state) ? N.table_cell : N.table_header;
+    const tr = state.tr;
+    for (const c of cells) tr.setNodeMarkup(c.pos, type, c.cell.attrs);
+    dispatch(tr);
+  }
+  return true;
+}
+
+/** Выравнивание текста в столбце: одно на все ячейки — или null, если разное. */
+export function columnAlign(state) {
+  if (!isInTable(state)) return null;
+  const { map, table, tableStart, left } = selectedRect(state);
+  let align;
+  for (let r = 0; r < map.height; r++) {
+    const at = map.map[r * map.width + left];
+    table.nodeAt(at).forEach((node) => {
+      if (!node.isTextblock) return;
+      const a = node.attrs.align || 'left';
+      align = align === undefined ? a : (align === a ? a : null);
+    });
+  }
+  return align === undefined ? 'left' : align;
+}
+
+/** Таблица под курсором — для контекстной панели телефона (host.js,
+ *  протокол 4): можно ли объединить ячейки (выделено несколько) и разделить
+ *  (под курсором объединённая), строка заголовков включена ли. Не в
+ *  таблице — null. */
+export function tableContext(state) {
+  if (!isInTable(state)) return null;
+  const { map, table: tbl } = selectedRect(state);
+  return { canMerge: !!mergeCells(state), canSplit: !!splitCell(state), headerRow: !!rowIsHeader(map, tbl, 0) };
+}
 
 /** Строки таблицы под курсором текстом — для «график из таблицы». */
 export function tableRowsAtCursor(state) {
@@ -474,6 +723,57 @@ export function moveBlock(dir) {
   };
 }
 
+/** Выделение после переноса: картинку, график, страницу PDF — целиком
+ *  (остров у неё остаётся на месте), текст — курсором в начало. */
+function selectMoved(tr, pos) {
+  const node = tr.doc.nodeAt(pos);
+  if (node && (node.isAtom || node.type === N.gallery)) return tr.setSelection(NodeSelection.create(tr.doc, pos));
+  return tr.setSelection(TextSelection.near(tr.doc.resolve(Math.min(pos + 1, tr.doc.content.size))));
+}
+
+/** Блок верхнего уровня, в котором стоит pos, — на одно место выше (dir −1)
+ *  или ниже (+1). Для кнопок «Выше» и «Ниже» у картинки на телефоне
+ *  (17 октября 2026): ручки блока там нет. Одна транзакция — одна отмена. */
+export function moveBlockAt(pos, dir) {
+  return (state, dispatch) => {
+    const b = topBlock(state, pos);
+    if (!b) return false;
+    const index = state.doc.resolve(b.pos).index(0);
+    const target = index + dir;
+    if (target < 0 || target >= state.doc.childCount) return false;
+    if (dispatch) {
+      const other = state.doc.child(target);
+      const to = dir < 0 ? b.pos - other.nodeSize : b.pos + b.node.nodeSize + other.nodeSize;
+      dispatch(moveTo(state.tr, b, to).scrollIntoView());
+    }
+    return true;
+  };
+}
+
+/** Перенести блок верхнего уровня с позиции from в промежуток между
+ *  блоками верхнего уровня to (позиция в документе до переноса). Перенос
+ *  за ручку на телефоне (blockdrag.js). На своё же место — false. */
+export function moveBlockTo(from, to) {
+  return (state, dispatch) => {
+    const b = topBlock(state, from);
+    if (!b || b.pos !== from) return false;
+    const $to = state.doc.resolve(Math.max(0, Math.min(to, state.doc.content.size)));
+    if ($to.depth !== 0) return false;
+    if ($to.pos === b.pos || $to.pos === b.pos + b.node.nodeSize) return false;
+    if (dispatch) dispatch(moveTo(state.tr, b, $to.pos).scrollIntoView());
+    return true;
+  };
+}
+
+/** Перенос — своим пунктом истории: подряд идущие переносы не сливаются в
+ *  одну отмену. */
+function moveTo(tr, b, to) {
+  tr.delete(b.pos, b.pos + b.node.nodeSize);
+  const at = tr.mapping.map(to, to > b.pos ? -1 : 1);
+  tr.insert(at, b.node);
+  return closeHistory(selectMoved(tr, at));
+}
+
 export function duplicateBlock(state, dispatch) {
   const b = topBlock(state);
   if (!b) return false;
@@ -493,6 +793,50 @@ export function deleteBlock(state, dispatch) {
     dispatch(tr.scrollIntoView());
   }
   return true;
+}
+
+/** Удалить выделенный блок: картинку, график, рисунок, страницу PDF
+ *  (NodeSelection) — его самого; курсор в таблице — таблицу; иначе — блок
+ *  верхнего уровня с курсором. Контекстная панель телефона (deleteBlock). */
+export function deleteSelectedBlock(state, dispatch) {
+  if (state.selection instanceof NodeSelection) {
+    if (dispatch) {
+      const tr = state.tr.deleteSelection();
+      if (!tr.doc.childCount) tr.insert(0, N.paragraph.create());
+      dispatch(tr.scrollIntoView());
+    }
+    return true;
+  }
+  if (isInTable(state)) return deleteTable(state, dispatch);
+  return deleteBlock(state, dispatch);
+}
+
+/** Уйти из блока (контекстная панель телефона, «назад» — exec deselect):
+ *  курсор — сразу за блоком верхнего уровня, который выделен (картинка,
+ *  график, страница PDF), в котором курсор (таблица) или который стоит в pos
+ *  (рисунок в правке). За блоком текст — курсор в его начало; там другой
+ *  блок или конец документа — курсор-промежуток (gapcursor), набранное
+ *  встанет абзацем. Документ не меняется, фокус команда не трогает. */
+export function leaveBlock(pos) {
+  return (state, dispatch) => {
+    const sel = state.selection;
+    let b = null;
+    if (pos != null) b = topBlock(state, pos);
+    else if (sel instanceof NodeSelection) b = topBlock(state, sel.from);
+    else if (isInTable(state)) b = topBlock(state);
+    if (!b) return false;
+    if (dispatch) {
+      const after = b.pos + b.node.nodeSize;
+      const $a = state.doc.resolve(after);
+      const next = state.doc.nodeAt(after);
+      let to;
+      if (next && next.isTextblock) to = TextSelection.create(state.doc, after + 1);
+      else if (GapCursor.valid($a)) to = new GapCursor($a);
+      else to = Selection.near($a, 1);
+      dispatch(state.tr.setSelection(to));
+    }
+    return true;
+  };
 }
 
 /** «Превратить в» — для меню блока: тип текста меняется, содержание остаётся. */

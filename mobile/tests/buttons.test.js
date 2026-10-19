@@ -16,7 +16,6 @@ import ActionSheetContent from '../src/components/ActionSheetContent';
 import AuthSheet from '../src/components/AuthSheet';
 import ChangePasswordSheet from '../src/components/ChangePasswordSheet';
 import DueSheet from '../src/components/DueSheet';
-import EntrySheet from '../src/components/EntrySheet';
 import ExportPeriodSheet from '../src/components/ExportPeriodSheet';
 import NewProjectSheet from '../src/components/NewProjectSheet';
 import QuickTaskSheet from '../src/components/QuickTaskSheet';
@@ -179,7 +178,6 @@ describe('листы: все кнопки подвала и содержимог
     ['AuthSheet', () => <AuthSheet />],
     ['ChangePasswordSheet', () => <ChangePasswordSheet />],
     ['DueSheet', () => <DueSheet task={{ ...task, dueAt: '2026-10-12T10:00:00.000Z' }} lang="ru" onApply={noop} onClear={noop} />],
-    ['EntrySheet', () => <EntrySheet initial={{ start: 1_700_000_000_000, end: 1_700_003_600_000 }} />],
     ['ExportPeriodSheet', () => <ExportPeriodSheet lang="ru" onConfirm={noop} onCancel={noop} />],
     ['NewProjectSheet', () => <NewProjectSheet onCreated={noop} onCancel={noop} />],
     // У списка настроек проекта кнопок нет (выбор сохраняется сразу); кнопка —
@@ -237,7 +235,7 @@ describe('экраны', () => {
     expect(flat(screen.getByText(t('ru', 'auth.create_account'))).fontSize).toBe(fontSize.sm);
   });
 
-  test('остальные кнопки приложения остались обычными: малая — только у гостя в меню', async () => {
+  test('остальные кнопки приложения остались обычными: малая — у гостя в меню и у карточки агента', async () => {
     const small = [];
     for (const dir of ['components', 'screens']) {
       (function walk(d) {
@@ -248,7 +246,9 @@ describe('экраны', () => {
         }
       })(join(__dirname, '..', 'src', dir));
     }
-    expect(small).toEqual(['SettingsScreen.js']);
+    // Карточка предложения агента: «Применить» и «Отклонить» в ряд — то, для
+    // чего малая кнопка и заведена.
+    expect(small).toEqual(['ChatCard.js', 'SettingsScreen.js']);
   });
 });
 

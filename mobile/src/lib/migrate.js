@@ -85,9 +85,27 @@ function fixUi(state, { known, fallback }) {
   }
 }
 
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/** Окончание повтора «до даты» — днём «ГГГГ-ММ-ДД». Лист повторения
+ *  телефона до 17 октября 2026 писал сюда ISO-момент, и ядро (nextDue ждёт
+ *  день) такое окончание не видело: серия не кончалась. Приводим при чтении,
+ *  тем же правилом, что веб при открытии окна (местный день момента).
+ *  Повторный прогон ничего не меняет. */
+export function fixRepeatEnds(tasks) {
+  for (const task of tasks || []) {
+    const ends = task && task.repeat && task.repeat.ends;
+    const at = ends && ends.at;
+    if (typeof at !== 'string' || !at.includes('T') || !Number.isFinite(Date.parse(at))) continue;
+    const d = new Date(at);
+    ends.at = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+  return tasks;
+}
+
 /** Нормализует загруженное состояние на месте и возвращает его же. */
 export function migrate(state) {
-  return Core.migrate(state, {
+  const out = Core.migrate(state, {
     // Язык читается в момент вызова, а не заранее: ядро сперва чинит
     // settings.lang и только потом зовёт перевод — для имён статусов и
     // проекта по умолчанию.
@@ -100,6 +118,8 @@ export function migrate(state) {
     defaultProjectNameKey: DEFAULT_PROJECT_NAME_KEY,
     ui: fixUi,
   });
+  fixRepeatEnds(out && out.tasks);
+  return out;
 }
 
 // Заметки хранятся в формате редактора (core/doc.js): контейнер в

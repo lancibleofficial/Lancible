@@ -86,6 +86,7 @@ test('в настройках — документы на языке прило�
   await open(page);
   await page.evaluate(() => { state.settings.lang = 'en'; });
   await page.locator('.nav-item[data-view="settings"]').first().click();
+  await page.locator('#settings-sec-about').click(); // документы — в «О приложении»
   for (const [id, doc] of [['settings-legal-privacy', 'privacy'], ['settings-legal-terms', 'terms'], ['settings-legal-docs', 'legal']]) {
     await page.locator(`#${id}`).click();
     expect((await page.evaluate(() => window.__opened)).pop()).toBe(`https://lancible.vercel.app/${doc}?lang=en`);
@@ -95,6 +96,7 @@ test('в настройках — документы на языке прило�
 test('«Удалить аккаунт» есть только у вошедшего и спрашивает подтверждение', async ({ page }) => {
   await open(page);
   await page.locator('.nav-item[data-view="settings"]').first().click();
+  await page.locator('#settings-sec-data').click(); // удаление — в «Данных»
   await expect(page.locator('#settings-delete-row')).toBeHidden();
 
   // Вошедший — без сети: подменяем только то, что нужно строке настроек.

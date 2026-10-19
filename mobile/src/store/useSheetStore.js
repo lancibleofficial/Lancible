@@ -7,7 +7,7 @@
 // useEffect — так кнопки (например "Создать" с disabled от локального
 // state) остаются рядом со своим состоянием, а не поднимаются в родителя.
 // Заголовок и стрелка «назад» — тем же путём, через useSheetHeader.
-import { useLayoutEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import { create } from 'zustand';
 
 export const useSheetStore = create((set) => ({
@@ -34,6 +34,19 @@ export const useSheetStore = create((set) => ({
 
 export const openSheet = (content) => useSheetStore.getState().open(content);
 export const closeSheet = () => useSheetStore.getState().close();
+
+/** Закрыть лист, только если в нём всё ещё то содержимое, что показывает
+ *  этот компонент. Для действий, которые заканчиваются не сразу (вход в
+ *  аккаунт): пока шёл запрос, единственное место листа мог занять другой —
+ *  вопрос «Перенести данные?» (lib/accounts.js) открывается, пока вход ещё
+ *  не вернул ответ, — и закрыть надо свой лист, а не чужой (17 октября
+ *  2026). Содержимое запоминается при первой отрисовке. */
+export function useCloseOwnSheet() {
+  const own = useRef(useSheetStore.getState().content);
+  return useCallback(() => {
+    if (useSheetStore.getState().content === own.current) closeSheet();
+  }, []);
+}
 export const setSheetFooter = (footer) => useSheetStore.getState().setFooter(footer);
 export const setSheetHeader = (header) => useSheetStore.getState().setHeader(header);
 

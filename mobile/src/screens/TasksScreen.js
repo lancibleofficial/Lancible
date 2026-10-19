@@ -41,6 +41,7 @@ import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { useColors, spacing, screenPadding, radius } from '../theme';
 import { t } from '../lib/i18n';
+import { pushTask } from '../navigation/openTask';
 
 // «Закреплённые» — готовая строка с главной (её же берёт колода проекта).
 const GROUP_KEY = { now: 'tasks.now', pinned: 'home.pinned', unpinned: 'tasks.unpinned', done: 'tasks.done_group', cancelled: 'tasks.cancelled_group' };
@@ -198,7 +199,8 @@ export default function TasksScreen({ navigation }) {
     else hold.markNow(change, task);
   }
 
-  const openTask = (taskId) => navigation.navigate('TaskDetail', { taskId });
+  // Задача — поверх ленты, «назад» сюда же (navigation/openTask.js).
+  const openTask = (taskId) => pushTask(navigation, taskId);
   const openNewProject = () => openSheet(<NewProjectSheet onCancel={closeSheet} onCreated={closeSheet} />);
 
   // Пустая лента — четыре разных случая, и у каждого своё действие: нет ни
@@ -241,7 +243,7 @@ export default function TasksScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="tasks-screen">
       <TabHeader title={t(lang, 'nav.tasks')} count={openCount || null}>
         <HeaderButton icon="search" label={t(lang, 'search.placeholder')} onPress={() => navigation.navigate('Search')} />
         <NotificationsButton navigation={navigation} />
@@ -312,6 +314,7 @@ export default function TasksScreen({ navigation }) {
       </View>
 
       <Animated.FlatList
+        testID="tasks-list"
         data={items}
         extraData={rowState}
         keyExtractor={(item) => item.key}
@@ -382,6 +385,12 @@ function FilterChip({ label, active, onPress, styles, colors, testID }) {
 }
 
 const makeStyles = (colors, clearance) => StyleSheet.create({
+  // Страница — во всю высоту вкладки и не выше. Без flex: 1 корень рос по
+  // содержимому: лента выходила за низ страницы под панель вкладок и не
+  // прокручивалась — последние строки было не достать (круг 21; стиль пропал
+  // 13 октября вместе с полосой чипов, а ссылка на него осталась). Страница
+  // ограничена — ограничена и лента, и её нижний отступ (clearance) работает.
+  container: { flex: 1, backgroundColor: colors.bg },
   // Три чипа в ряд без прокрутки: длинное имя проекта сжимается многоточием,
   // а не выталкивает остальные за край.
   chips: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: screenPadding, marginBottom: spacing.md },

@@ -30,24 +30,30 @@ import markdownit from 'markdown-it';
 import Core from '../renderer/core/doc.js';
 import { schema } from './schema.js';
 import * as C from './commands.js';
-import { blockIds, placeholder, buildInputRules, buildKeymaps, galleryNormalize } from './plugins.js';
+import { blockIds, placeholder, buildInputRules, buildKeymaps, galleryNormalize, linkOnPaste } from './plugins.js';
 import { commentsPlugin, CommentsPanel, commentsKey } from './comments.js';
 import { findPlugin, FindBar } from './find.js';
 import { slashPlugin, SlashMenu, BubbleMenu, BlockHandle } from './menus.js';
 import { Toolbar } from './toolbar.js';
-import { ImageView } from './image.js';
-import { ChartView, editChart, defaultChart } from './chart.js';
-import { DrawingView } from './drawing.js';
-import { InkOverlay } from './overlay.js';
+import { ImageView, imageViewOf } from './image.js';
+import { ChartView, editChart, defaultChart, chartSpec, chartFromSpec, CHART_TYPES } from './chart.js';
+import { DrawingView, drawingViewOf } from './drawing.js';
+import { InkOverlay, INK_ROOM } from './overlay.js';
 import { TaskItemView, CodeBlockView } from './views.js';
 import {
-  HostBridge, commands, KEEP_FOCUS, toolbarState, clampZoom, normalizeHref, dataUrlToBlob, PROTOCOL, VIEWPORT, EXEC_NAMES, ZOOM_MIN, ZOOM_MAX,
+  HostBridge, commands, KEEP_FOCUS, toolbarState, clampZoom, normalizeHref, dataUrlToBlob, base64ToBytes, PROTOCOL, VIEWPORT, EXEC_NAMES, ZOOM_MIN, ZOOM_MAX,
   changeDelay,
 } from './host.js';
 import { TableHandles } from './tablehandles.js';
+import { ContextMenu } from './contextmenu.js';
 import { normalizeInkSettings, defaultInkSettings, clearInkColorCache } from './ink.js';
-import { createAssetStore } from './assets.js';
-import { h, icon, debounce, downloadBlob, keyLabel } from './util.js';
+import { createAssetStore, assetIdsIn } from './assets.js';
+import { importPdf, loadPdfModule, pdfModuleArrived, recognizeLines } from './pdf.js';
+import { PdfPageView, pdfPageViewOf } from './pdfpage.js';
+import { buildPdfPlan, rasterPage, bytesToBase64 } from './pdfexport.js';
+import { startBlockDrag } from './blockdrag.js';
+import { cancelPresses } from './press.js';
+import { h, icon, debounce, downloadBlob, keyLabel, shortId } from './util.js';
 import { popup, menu, modal, closePopup } from './ui.js';
 import { translate } from './strings.js';
 
@@ -202,6 +208,9 @@ class Editor {
     this.bridge = new HostBridge(this, post);
     this.zoom = clampZoom(this.opts.zoom == null ? 1 : this.opts.zoom);
     this.assets = this.opts.assets || createAssetStore({});
+    /** Долгая работа над открытым документом (импорт PDF): её прерывают
+     *  setContent и destroy (docJob). */
+    this.docJobs = new Set();
     this.comments = [];
     this.panel = null;
     this.annotating = false;
@@ -228,7 +237,7 @@ class Editor {
       handlePaste: (view, e) => this.onPaste(view, e),
       handleDrop: (view, e) => this.onDrop(view, e),
       handleDOMEvents: {
-        mousemove: (view, e) => { this.handle.track(e); this.tableHandles.track(e); return false; },
+        mousemove: (view, e) => { this.handle.track(e); return false; },
         focus: () => { this.updateUi(); return false; },
         blur: () => { setTimeout(() => this.updateUi(), 0); return false; },
       },
@@ -241,6 +250,13 @@ class Editor {
     // Касание пустого места под текстом — писать дальше (onBlankDown).
     this.onBlank = (e) => this.onBlankDown(e);
     this.mount.addEventListener('mousedown', this.onBlank);
+    // Правая кнопка — своё меню: вырезать, копировать, вставить (десктоп и веб).
+    this.contextMenu = new ContextMenu(this);
+    // Окно потеряло фокус или ушло в фон посреди перетаскивания — жест
+    // кончается: хозяину не остаться с выключенной прокруткой.
+    this.onWinBlur = () => { if (!document.hidden && document.hasFocus()) return; this.endGestures(); };
+    window.addEventListener('blur', this.onWinBlur);
+    document.addEventListener('visibilitychange', this.onWinBlur);
     this.overlay = new InkOverlay({
       root: this.root,
       t: this.t,
@@ -263,6 +279,10 @@ class Editor {
       hide: () => this.hideInk(),
       // Лассо выделило штрихи — нативной строке пера показать «копия» и «удалить».
       onSelection: () => { if (this.host) this.bridge.ink(); },
+      // Высота по тексту: слой пометок — во всё окно, а штрихи ниже текста
+      // растят редактор (contentHeight) — хозяин узнаёт это сообщением height.
+      autoHeight: !!this.opts.autoHeight,
+      onRender: () => { if (this.heightRo) this.bridge.height(this.contentHeight()); },
     });
     this.viewport.append(this.overlay.dom);
     // Телефон: панель пера встаёт на место панели редактора (та на время
@@ -280,7 +300,9 @@ class Editor {
     this.onThemeChange = () => { clearInkColorCache(); this.overlay.render(); };
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', this.onThemeChange);
     // Высота по тексту: WebView на странице задачи растёт вместе с ним, а
-    // прокручивает экран вокруг. Высоту хозяин узнаёт сообщением «height».
+    // прокручивает экран вокруг. Высоту хозяин узнаёт сообщением «height»;
+    // поменялась высота — вместе с ней уходит и курсор заново (HostBridge.height):
+    // картинка догрузилась выше него, а выделение то же.
     if (this.opts.autoHeight && typeof ResizeObserver === 'function') {
       this.heightRo = new ResizeObserver(() => this.bridge.height(this.contentHeight()));
       this.heightRo.observe(this.root);
@@ -288,9 +310,15 @@ class Editor {
     }
   }
 
-  /** Высота редактора по содержимому — в CSS px, для хозяина. */
+  /** Высота редактора по содержимому — в CSS px, для хозяина. Пометки ниже
+   *  текста — тоже содержимое: до самого нижнего штриха и запас под ним,
+   *  иначе WebView обрезал бы штрих по краю текста. */
   contentHeight() {
-    return Math.ceil(this.root.getBoundingClientRect().height);
+    const r = this.root.getBoundingClientRect();
+    let px = r.height;
+    const ink = this.overlay ? this.overlay.inkBottom() : null;
+    if (ink != null) px = Math.max(px, this.scroller.getBoundingClientRect().top - r.top + ink + INK_ROOM);
+    return Math.ceil(px);
   }
 
   // --- разметка -------------------------------------------------------------
@@ -305,12 +333,20 @@ class Editor {
     this.page = h('div', { class: 'led-page' });
     this.handle = new BlockHandle(this);
     this.tableHandles = new TableHandles(this);
-    this.pageWrap = h('div', { class: 'led-page-wrap' }, this.handle.dom, this.page, this.toolbar.tableBar);
+    // Остров таблицы — веб и десктоп; на телефоне с нативной панелью его
+    // действия — в контекстной панели хозяина (host.js, протокол 4).
+    this.pageWrap = h('div', { class: 'led-page-wrap' }, this.handle.dom, this.page, this.host ? null : this.toolbar.tableBar);
     this.tableHandles.mount(this.pageWrap);
     this.scroller = h('div', { class: 'led-scroll' }, this.pageWrap);
     this.viewport = h('div', { class: 'led-viewport' }, this.scroller);
     this.status = h('div', { class: 'led-status' });
     this.fileInput = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true, onchange: (e) => this.onFiles(e) });
+    // PDF — только веб и десктоп: с нативной панелью (телефон) его нет.
+    this.pdfInput = this.host ? null : h('input', {
+      type: 'file', accept: 'application/pdf,.pdf', hidden: true, class: 'led-pdf-input',
+      // Поле сразу пустеет: тот же файл, выбранный снова, — снова change.
+      onchange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) this.importPdf(f); },
+    });
     this.toastEl = h('div', { class: 'led-toast', hidden: true, role: 'status' });
     this.slash = new SlashMenu(this);
     this.bubble = new BubbleMenu(this);
@@ -322,6 +358,7 @@ class Editor {
       h('div', { class: 'led-body' }, this.outline, this.viewport, this.commentsPanel.dom),
       this.status,
       this.fileInput,
+      ...(this.pdfInput ? [this.pdfInput] : []),
       this.toastEl,
     );
     this.scroller.addEventListener('mouseleave', () => this.handle.hide());
@@ -329,7 +366,6 @@ class Editor {
       this.bubble.update(this.view, this.view.hasFocus());
       if (!this.toolbar.tableBar.hidden) this.placeTableBar();
     }, { passive: true });
-    this.scroller.addEventListener('mouseleave', () => this.tableHandles.scheduleHide());
     this.mount.append(this.root);
   }
 
@@ -436,6 +472,7 @@ class Editor {
       },
       task_item: (n, v, g) => new TaskItemView(n, v, g),
       code_block: (n, v, g) => new CodeBlockView(n, v, g, ctx),
+      pdfpage: (n, v, g) => new PdfPageView(n, v, g, ctx),
     };
   }
 
@@ -450,10 +487,33 @@ class Editor {
       inkSettings: () => this.settings().ink,
       setInkSettings: (p) => this.setInkSettings(p),
       mobile: this.isMobile,
+      // Телефон с нативной панелью: островов у блоков нет, их действия — в
+      // контекстной панели хозяина; что выделено, уходит сообщением context.
+      native: this.host,
+      contextChanged: () => { if (this.host) this.bridge.schedule(); },
+      // Можно ли править документ вообще (страница PDF и её слои).
+      canEdit: () => this.editable !== false,
+      // Строки старой страницы PDF — из исходника в хранилище (волна 2).
+      recognizeLines: (attrs) => recognizeLines(this, attrs),
+      selectNode: (pos) => this.view.dispatch(this.view.state.tr.setSelection(NodeSelection.create(this.view.state.doc, pos))),
+      // Перенос блока за ручку пальцем (картинка на телефоне, blockdrag.js).
+      // Высота по тексту (телефон): своей прокрутки нет — прокручивает хозяин
+      // (autoscroll), видимую часть он сообщает сам (viewport, host.js).
+      blockDrag: (getPos, e, grip, source, onTap) => startBlockDrag({
+        view: this.view, root: this.root, pageWrap: this.pageWrap, scroller: this.scroller,
+        hostScroll: this.host && this.opts.autoHeight ? (dy) => this.bridge.send({ type: 'autoscroll', dy }) : null,
+        viewport: () => this.hostViewport || null,
+        gesture: (on) => this.gesture(on),
+      }, getPos, e, grip, source, onTap),
+      // Перетаскивание пальцем включилось и кончилось — хозяину (gesture).
+      gesture: (on) => this.gesture(on),
+      // Телефон с нативной панелью: график правит хозяин нижним листом (host.js).
+      editChart: this.host ? (getPos) => this.editChartOnHost(getPos) : null,
       onDrawingActive: (dv, on) => {
         this.activeDrawing = on ? dv : (this.activeDrawing === dv ? null : this.activeDrawing);
         this.root.classList.toggle('led-drawing-active', !!this.activeDrawing);
         if (this.opts.onDrawingActive) this.opts.onDrawingActive(!!this.activeDrawing);
+        if (this.host) this.bridge.schedule();
       },
     };
   }
@@ -475,6 +535,8 @@ class Editor {
     if (!this.view) return;
     const fs = C.formatState(this.view.state);
     this.toolbar.update(fs);
+    // Ручки строки и столбца — к курсору (tablehandles.js).
+    this.tableHandles.update();
     this.bubble.update(this.view, this.view.hasFocus());
     // Без транзакции (фокус, потеря фокуса) панели не перерисовываем: иначе
     // поле ответа, в котором человек сейчас пишет, пересоздавалось бы.
@@ -530,6 +592,8 @@ class Editor {
   }
 
   setContent(container) {
+    this.endGestures();
+    this.abortDocJobs('content');
     const c = Core.normalizeContainer(container);
     this.emitChange.cancel();
     this.comments = c.comments.slice();
@@ -546,6 +610,28 @@ class Editor {
   }
 
   flush() { this.emitChange.flush(); }
+
+  /** Работа, привязанная к документу, который открыт сейчас (импорт PDF:
+   *  страницы ложатся в нынешний view.state). onAbort(reason) — документ
+   *  сменился ('content': setContent) или редактор закрыт ('destroy'):
+   *  работа должна остановиться и больше ничего не вставлять. Вернуть —
+   *  { release() }: работа кончилась сама. */
+  docJob(onAbort) {
+    const job = { aborted: null };
+    const abort = (reason) => {
+      if (job.aborted) return;
+      job.aborted = reason;
+      this.docJobs.delete(abort);
+      try { onAbort(reason); } catch (e) { console.error('[editor] docJob', e); }
+    };
+    this.docJobs.add(abort);
+    job.release = () => this.docJobs.delete(abort);
+    return job;
+  }
+
+  abortDocJobs(reason) {
+    for (const abort of [...this.docJobs]) abort(reason);
+  }
 
   threads() { return this.comments; }
 
@@ -787,6 +873,7 @@ class Editor {
   /** Остров таблицы — под таблицей с курсором. Таблица выше экрана —
    *  остров прилипает к нижнему краю видимой части, чтобы не искать его. */
   placeTableBar() {
+    if (this.host) return;
     const bar = this.toolbar.tableBar;
     const found = C.findParent(this.view.state, [N.table]);
     const dom = found && this.view.nodeDOM(found.pos);
@@ -955,6 +1042,92 @@ class Editor {
     return true;
   }
 
+  // --- PDF (pdf.js) -------------------------------------------------------------------
+
+  /** Выбрать PDF: страницы или текст (pdf.js). Веб и десктоп — окно выбора
+   *  файла в странице; телефон (nativeToolbar, протокол 3) — файл выбирает
+   *  хозяин: редактор шлёт { type: 'pdf-pick' }, ответ — pdf-file. */
+  pickPdf() {
+    if (this.host) { this.bridge.send({ type: 'pdf-pick' }); return true; }
+    if (!this.pdfInput) return false;
+    this.pdfInput.value = '';
+    this.pdfInput.click();
+    return true;
+  }
+
+  importPdf(file) { return importPdf(this, file); }
+
+  /** Ответ хозяина на pdf-pick: { name, base64 } — байты PDF без префикса
+   *  data:; { cancel: true } — передумали. Дальше — тот же путь, что у
+   *  файла из окна выбора (размер, страницы, окно способа). */
+  receivePdfFile(m) {
+    if (!m || m.cancel || typeof m.base64 !== 'string') return false;
+    let bytes;
+    try { bytes = base64ToBytes(m.base64); } catch (e) {
+      this.bridge.send({ type: 'error', message: `pdf-file: ${e && e.message}` });
+      return false;
+    }
+    return this.importPdf(new File([bytes], m.name || 'document.pdf', { type: 'application/pdf' }));
+  }
+
+  /** Перетаскивание пальцем (press.js: картинка за ручку, слои и ручки
+   *  страницы PDF) — хозяину { type: 'gesture', on } (протокол 3): на время
+   *  жеста телефон выключает прокрутку страницы, иначе Android отдаёт
+   *  движение внешнему ScrollView. Жестов может идти несколько — on уходит на
+   *  первом, off — когда кончился последний; повторного on без off нет. */
+  gesture(on) {
+    this.gestures = Math.max(0, (this.gestures || 0) + (on ? 1 : -1));
+    const now = this.gestures > 0;
+    if (now === !!this.gestureSent) return;
+    this.gestureSent = now;
+    if (this.host) this.bridge.send({ type: 'gesture', on: now });
+  }
+
+  /** Прервать идущие жесты: смена документа, уход фокуса, закрытие. На
+   *  каждое отправленное on — off, даже если жест не успел кончиться сам. */
+  endGestures() {
+    cancelPresses();
+    if (this.gestures || this.gestureSent) {
+      this.gestures = 0;
+      if (this.gestureSent) { this.gestureSent = false; if (this.host) this.bridge.send({ type: 'gesture', on: false }); }
+    }
+  }
+
+  /** Гостевые картинки (вставлены без аккаунта) — аккаунту userId: перенос
+   *  «Без аккаунта» на телефоне (host.js: assets-adopt). which.ids — только
+   *  эти записи; which.referenced — только те, на которые ссылается
+   *  открытый документ (он — документ аккаунта userId, значит, и картинки в
+   *  нём его); без них — все гостевые. Сразу и выгрузка — если облако этого
+   *  аккаунта открыто. Возвращает, сколько записей перешло. */
+  async adoptGuestAssets(userId, which) {
+    if (!userId || !this.assets || !this.assets.adoptGuest) return 0;
+    const w = which || {};
+    let ids = null;
+    if (w.referenced) ids = assetIdsIn(this.view.state.doc.toJSON());
+    else if (Array.isArray(w.ids)) ids = w.ids.filter((x) => typeof x === 'string' && x);
+    if (ids && !ids.length) return 0;
+    const n = await this.assets.adoptGuest(String(userId), ids);
+    if (n && this.assets.flush) await this.assets.flush();
+    return n;
+  }
+
+  /** Стереть с устройства картинки аккаунта userId (host.js: assets-forget,
+   *  протокол 5): аккаунт удалён или убран с телефона. Хозяину — ответ
+   *  { type: 'assets-forgotten', userId, n }. Возвращает n. */
+  async forgetAssets(userId) {
+    let n = 0;
+    try {
+      if (userId && this.assets && this.assets.forget) n = await this.assets.forget(String(userId));
+    } catch (e) {
+      this.bridge.send({ type: 'error', message: `assets-forget: ${e && e.message}` });
+    }
+    this.bridge.send({ type: 'assets-forgotten', userId: userId == null ? null : String(userId), n });
+    return n;
+  }
+
+  /** Ответ хозяина на pdf-module: код модуля впрыснут ({ error } — нет). */
+  pdfModuleReady(m) { pdfModuleArrived(m && m.error); }
+
   imageFromUrl(anchor) {
     this.ask(anchor, { label: this.t('image.url_prompt'), placeholder: 'https://' }, (v) => {
       const src = v.trim();
@@ -963,11 +1136,17 @@ class Editor {
     });
   }
 
+  /** Правила вставки — и для Ctrl+V, и для «Вставить» из меню по правой
+   *  кнопке (contextmenu.js шлёт сюда то же событие с буфером): картинки —
+   *  в хранилище, один адрес на выделенный текст — ссылкой на выделение,
+   *  Markdown — разметкой. Остальное вставляет ProseMirror сам. */
   onPaste(view, e) {
     const files = [...((e.clipboardData && e.clipboardData.files) || [])].filter((f) => /^image\//.test(f.type));
     if (files.length) { e.preventDefault(); this.insertFiles(files); return true; }
     const html = e.clipboardData && e.clipboardData.getData('text/html');
     const text = e.clipboardData && e.clipboardData.getData('text/plain');
+    // Адрес на выделенный текст — текст остаётся, ссылка ложится на него.
+    if (text && linkOnPaste(text)(view.state, view.dispatch)) { e.preventDefault(); return true; }
     if (!html && text && view.state.selection.$from.parent.type !== N.code_block && looksLikeMarkdown(text)) {
       const doc = parseMarkdown(text);
       if (doc) {
@@ -994,7 +1173,10 @@ class Editor {
 
   // --- графики и рисунки ------------------------------------------------------------
 
+  /** Новый график: окно правки, а на телефоне с нативной панелью — лист
+   *  хозяина (сообщение chart, host.js). */
   insertChart(chart) {
+    if (this.host) { this.chartToHost(null, chart || defaultChart(this.t)); return; }
     editChart(this.root, chart || defaultChart(this.t), this.t, (c) => {
       C.insertChart(c)(this.view.state, this.view.dispatch);
       this.view.focus();
@@ -1007,12 +1189,69 @@ class Editor {
     const data = rows && Core.chartFromRows(rows);
     if (!data) { this.toast(this.t('table.no_numbers')); return; }
     const found = C.findParent(state, [N.table]);
+    if (this.host) {
+      this.chartToHost(null, Object.assign(defaultChart(this.t), data, { title: '' }), found ? found.node.attrs.bid : null);
+      return;
+    }
     editChart(this.root, Object.assign(defaultChart(this.t), data, { title: '' }), this.t, (c) => {
       const s = this.view.state;
       const at = found ? found.pos + found.node.nodeSize : s.selection.to;
       const tr = s.tr.insert(at, N.chart.create({ chart: c }));
       this.view.dispatch(tr.scrollIntoView());
     });
+  }
+
+  /** График — хозяину на правку: id — bid узла (null — новый), spec — его
+   *  данные. afterBid — новый встанет под этим блоком (график из таблицы). */
+  chartToHost(id, chart, afterBid) {
+    this.pendingChart = { afterBid: afterBid || null };
+    this.bridge.send({ type: 'chart', id, spec: chartSpec(chart) });
+  }
+
+  /** Касание графика на телефоне. Без bid (график вложен в список или
+   *  цитату — blockIds метит только верхний уровень) — сначала метим, иначе
+   *  ответ хозяина некуда было бы положить. */
+  editChartOnHost(getPos) {
+    const pos = getPos();
+    const node = pos == null ? null : this.view.state.doc.nodeAt(pos);
+    if (!node || node.type !== N.chart) return;
+    let bid = node.attrs.bid;
+    if (!bid) {
+      bid = shortId();
+      this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, Object.assign({}, node.attrs, { bid })).setMeta('addToHistory', false));
+    }
+    this.chartToHost(bid, node.attrs.chart);
+  }
+
+  /** Ответ хозяина на chart: { id: null, spec } — вставить новый, { id, spec }
+   *  — заменить данные графика, { cancel: true } — передумали. */
+  receiveChart(m) {
+    const pending = this.pendingChart;
+    this.pendingChart = null;
+    if (!m || m.cancel || !m.spec || typeof m.spec !== 'object') return;
+    const { state } = this.view;
+    const byBid = (bid, type) => {
+      let found = null;
+      if (bid == null) return null;
+      state.doc.descendants((node, pos) => {
+        if (found) return false;
+        if (node.attrs && node.attrs.bid === bid && (!type || node.type === type)) { found = { node, pos }; return false; }
+        return true;
+      });
+      return found;
+    };
+    if (m.id != null) {
+      const found = byBid(m.id, N.chart);
+      if (!found) { this.bridge.send({ type: 'error', message: `chart: нет графика ${m.id}` }); return; }
+      const chart = chartFromSpec(m.spec, found.node.attrs.chart);
+      this.view.dispatch(state.tr.setNodeMarkup(found.pos, null, Object.assign({}, found.node.attrs, { chart })));
+      return;
+    }
+    const chart = chartFromSpec(m.spec, defaultChart(this.t));
+    const after = pending && byBid(pending.afterBid);
+    if (after) this.view.dispatch(state.tr.insert(after.pos + after.node.nodeSize, N.chart.create({ chart })).scrollIntoView());
+    else C.insertChart(chart)(state, this.view.dispatch);
+    this.view.focus();
   }
 
   insertDrawing() {
@@ -1046,6 +1285,22 @@ class Editor {
       const c = canvases[i];
       if (c) el.replaceWith(h('img', { src: c.toDataURL('image/png'), alt: '' }));
     });
+    // Страницы PDF — картинкой со слоями поверх (pdfexport.js: rasterPage):
+    // в печати по странице на лист — то же правило @media print, что у картинок.
+    // Слой-картинку, которую нельзя нарисовать (чужой адрес без CORS),
+    // rasterPage пропускает и считает — об этом тост.
+    const pages = [];
+    this.view.state.doc.descendants((n) => { if (n.type === N.pdfpage) pages.push(n); return true; });
+    const divs = box.querySelectorAll('div.led-pdfpage');
+    const report = { skipped: 0 };
+    for (let i = 0; i < divs.length; i++) {
+      const node = pages[i];
+      const src = node ? await rasterPage(this, node, { report }) : null;
+      divs[i].replaceWith(src
+        ? h('figure', { class: 'led-pdfpage' }, h('img', { src, alt: this.t('pdf.page_alt', { n: node.attrs.page }) }))
+        : h('p', {}, this.t('pdf.page_alt', { n: node ? node.attrs.page : i + 1 })));
+    }
+    if (report.skipped) this.toast(this.t('export.layers_skipped', { n: report.skipped }));
     const title = this.docTitle();
     return `<!doctype html><html lang="${this.lang()}"><head><meta charset="utf-8"><title>${title.replace(/</g, '&lt;')}</title>
 <style>body{font:16px/1.6 system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 20px;color:#1d1f22}
@@ -1056,23 +1311,66 @@ pre{background:#f3f4f6;padding:12px;border-radius:8px;overflow:auto}blockquote{b
 .align-wrap-left{float:left;width:40%;margin:4px 20px 8px 0}.align-wrap-right{float:right;width:40%;margin:4px 0 8px 20px}ul[data-type=tasks]{list-style:none;padding-left:4px}
 li[data-checked=true]::before{content:"☑ "}li[data-checked=false]::before{content:"☐ "}figure{margin:16px 0}figcaption{color:#666;font-size:13px;text-align:center}
 mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs-l{font-size:1.25em}.led-fs-xl{font-size:1.5em}.led-fs-xxl{font-size:2em}
-.led-ff-serif{font-family:Georgia,serif}.led-ff-mono{font-family:ui-monospace,Menlo,Consolas,monospace}</style></head><body>${box.innerHTML}</body></html>`;
+.led-ff-serif{font-family:Georgia,serif}.led-ff-mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+@media print{figure,img,svg{break-inside:avoid;page-break-inside:avoid}img{max-height:calc(100vh - 80px);width:auto}}</style></head><body>${box.innerHTML}</body></html>`;
+  }
+
+  /** HTML для «Скачать HTML» и печати; не вышло — тост, как у «Сохранить
+   *  как PDF», и null. */
+  async safeHtml() {
+    try {
+      return await this.exportHtml();
+    } catch (e) {
+      console.error('[editor] HTML', e);
+      this.toast(this.t('export.html_failed'));
+      return null;
+    }
   }
 
   async exportAs(kind) {
+    const md = kind === 'md';
+    const text = md ? Core.docToMarkdown(this.view.state.doc.toJSON()) : await this.safeHtml();
+    if (text == null) return false;
     // В WebView скачивания нет: файл отдаёт хозяин (поделиться, сохранить).
     if (this.host) {
-      const md = kind === 'md';
-      this.bridge.send({
-        type: 'export', kind, name: this.fileName(md ? 'md' : 'html'), mime: md ? 'text/markdown' : 'text/html',
-        text: md ? Core.docToMarkdown(this.view.state.doc.toJSON()) : await this.exportHtml(),
-      });
-      return;
+      this.bridge.send({ type: 'export', kind, name: this.fileName(md ? 'md' : 'html'), mime: md ? 'text/markdown' : 'text/html', text });
+      return true;
     }
-    if (kind === 'md') {
-      downloadBlob(new Blob([Core.docToMarkdown(this.view.state.doc.toJSON())], { type: 'text/markdown' }), this.fileName('md'));
-    } else {
-      downloadBlob(new Blob([await this.exportHtml()], { type: 'text/html' }), this.fileName('html'));
+    downloadBlob(new Blob([text], { type: md ? 'text/markdown' : 'text/html' }), this.fileName(md ? 'md' : 'html'));
+    return true;
+  }
+
+  /** «Сохранить как PDF» (17 октября 2026): весь документ — страницы PDF
+   *  копиями исходного файла со слоями поверх, остальное — набором на A4.
+   *  Пишет pdf-lib из ленивого PDF-модуля (editor-pdf.js, pdfwrite.js), план
+   *  собирает pdfexport.js. Веб и десктоп скачивают файл тем же путём, что
+   *  Markdown и HTML (downloadBlob: в Electron — окно сохранения); хозяину с
+   *  нативной панелью уходит export с kind 'pdf' и байтами в base64. Модуль
+   *  телефону даёт хозяин по запросу pdf-module (pdf.js: loadPdfModule). */
+  async exportPdf() {
+    const t = this.t;
+    let mod;
+    this.toast(t('export.pdf_making'));
+    try {
+      mod = await loadPdfModule(this);
+    } catch (e) {
+      console.error('[editor] PDF-модуль', e);
+      this.toast(t('pdf.module_failed'));
+      return false;
+    }
+    try {
+      const { plan } = await buildPdfPlan(this);
+      const { bytes, rasterized } = await mod.writePdf(plan);
+      const name = this.fileName('pdf');
+      if (this.host) this.bridge.send({ type: 'export', kind: 'pdf', name, mime: 'application/pdf', base64: bytesToBase64(bytes) });
+      else downloadBlob(new Blob([bytes], { type: 'application/pdf' }), name);
+      // Исходного PDF на этом устройстве нет — такие страницы ушли картинкой.
+      if (rasterized) this.toast(t('export.pdf_raster', { n: rasterized }));
+      return true;
+    } catch (e) {
+      console.error('[editor] PDF', e);
+      this.toast(t('export.pdf_failed'));
+      return false;
     }
   }
 
@@ -1093,7 +1391,8 @@ mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs
   /** Печать — через невидимый фрейм: window.print() напечатал бы всё
    *  приложение вокруг документа. */
   async print() {
-    const html = await this.exportHtml();
+    const html = await this.safeHtml();
+    if (html == null) return false;
     if (this.host) {
       this.bridge.send({ type: 'export', kind: 'print', name: this.fileName('html'), mime: 'text/html', text: html });
       return;
@@ -1131,6 +1430,114 @@ mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs
     [{ label: this.t('common.close'), primary: true, run: (close) => close() }], { class: 'modal-lg led-help-modal' });
   }
 
+  // --- контекстная панель телефона (host.js, протокол 4) ----------------------------------
+  //
+  // Выделенный блок — картинка, график, рисунок, страница PDF и её слой — и
+  // таблица под курсором. Команды не зовут view.focus(): выделен блок, а не
+  // текст, и клавиатуре на телефоне открываться незачем (KEEP_FOCUS).
+
+  /** Вид выделенного блока нужного типа — по NodeSelection. */
+  selectedView(type, of) {
+    const sel = this.view.state.selection;
+    if (!(sel instanceof NodeSelection) || sel.node.type !== type) return null;
+    return of(this.view.nodeDOM(sel.from));
+  }
+
+  /** Ширина картинки на экране в % полосы (в ряду — ряда) — для context. */
+  imageWidthPct(pos) {
+    const iv = imageViewOf(this.view.nodeDOM(pos));
+    return iv ? iv.widthPct() : null;
+  }
+
+  /** Вид страницы PDF по позиции — для context (выделенный слой, режим). */
+  pdfPageView(pos) { return pdfPageViewOf(this.view.nodeDOM(pos)); }
+
+  /** «Назад» (exec deselect): снять выделение блока, курсор — за блок. Со
+   *  слоя страницы PDF (и из «Заменить текст») — сначала на саму страницу.
+   *  Рисунок в правке закрывается. Фокус не трогаем: клавиатура закрыта —
+   *  так и остаётся. */
+  deselect() {
+    const dv = this.activeDrawing;
+    if (dv) {
+      const pos = dv.getPos();
+      dv.deactivate();
+      return pos == null ? true : C.leaveBlock(pos)(this.view.state, this.view.dispatch);
+    }
+    const pv = this.selectedView(N.pdfpage, pdfPageViewOf);
+    if (pv && pv.release()) return true;
+    return C.leaveBlock()(this.view.state, this.view.dispatch);
+  }
+
+  /** Удалить выделенный блок (exec deleteBlock): рисунок в правке — его. */
+  deleteSelected() {
+    if (this.activeDrawing) { this.activeDrawing.remove(); return true; }
+    return C.deleteSelectedBlock(this.view.state, this.view.dispatch);
+  }
+
+  /** Действия острова картинки, которым нужен её вид: подпись и описание
+   *  полем в странице, замена (image-pick), скачивание. */
+  imageAction(what) {
+    const iv = this.selectedView(N.image, imageViewOf);
+    if (!iv) return false;
+    if (what === 'caption') iv.editCaption();
+    else if (what === 'alt') iv.editAlt();
+    else if (what === 'replace') iv.replace();
+    else if (what === 'download') this.downloadImage(iv);
+    else return false;
+    return true;
+  }
+
+  /** Скачать картинку. Веб и десктоп — как раньше (image.js: download);
+   *  в WebView скачивания нет — байты хозяину (export kind 'image'), а
+   *  картинку по адресу открывает браузер системы. */
+  async downloadImage(iv) {
+    if (!this.host) { iv.download(); return true; }
+    const { src, alt } = iv.node.attrs;
+    let blob = null;
+    try {
+      blob = /^data:/.test(src) ? dataUrlToBlob(src) : await this.assets.blob(src);
+    } catch { blob = null; }
+    if (!blob) {
+      if (/^https?:/i.test(src)) { this.openUrl(src); return true; }
+      this.bridge.send({ type: 'error', message: 'imageDownload: картинки нет на устройстве' });
+      return false;
+    }
+    const mime = blob.type || 'image/png';
+    const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg' }[mime] || 'png';
+    const name = `${String(alt || 'image').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 80) || 'image'}.${ext}`;
+    this.bridge.send({ type: 'export', kind: 'image', name, mime, base64: bytesToBase64(new Uint8Array(await blob.arrayBuffer())) });
+    return true;
+  }
+
+  /** Править выделенный график: на телефоне — лист хозяина (chart), на
+   *  вебе и десктопе — окно правки. */
+  editSelectedChart() {
+    const sel = this.view.state.selection;
+    if (!(sel instanceof NodeSelection) || sel.node.type !== N.chart || !this.view.editable) return false;
+    const pos = sel.from;
+    if (this.host) { this.editChartOnHost(() => pos); return true; }
+    editChart(this.root, sel.node.attrs.chart, this.t, (chart) => {
+      const node = this.view.state.doc.nodeAt(pos);
+      if (node && node.type === N.chart) this.view.dispatch(this.view.state.tr.setNodeMarkup(pos, null, Object.assign({}, node.attrs, { chart })));
+    });
+    return true;
+  }
+
+  /** Открыть выделенный рисунок на правку (панель пера в самом блоке). */
+  editSelectedDrawing() {
+    const dv = this.activeDrawing || this.selectedView(N.drawing, drawingViewOf);
+    if (!dv || !this.view.editable) return false;
+    dv.activate();
+    return true;
+  }
+
+  /** Команда выделенной страницы PDF: tool — добавить слой или режим
+   *  «Заменить текст», остальное — про выделенный слой (pdfpage.js: command). */
+  pdfCommand(name, arg) {
+    const pv = this.selectedView(N.pdfpage, pdfPageViewOf);
+    return pv ? pv.command(name, arg) : false;
+  }
+
   // --- для хозяина и тестов --------------------------------------------------------------
 
   /** Команда по имени — для телефона (кнопки снаружи WebView), меню и
@@ -1153,14 +1560,20 @@ mark{padding:0 2px}.led-fs-xs{font-size:.75em}.led-fs-s{font-size:.875em}.led-fs
   }
 
   /** Сообщение хозяина (exec, setZoom, setContent, focus, blur,
-   *  insertImage, setLink, getState). true — разобрано. */
+   *  insertImage, setLink, chart, pdf-file, pdf-module-ready, viewport,
+   *  assets-adopt, assets-forget, getState). true — разобрано. */
   receive(msg) { return this.bridge.receive(msg); }
 
   destroy() {
+    this.endGestures();
+    this.abortDocJobs('destroy');
+    if (this.onWinBlur) { window.removeEventListener('blur', this.onWinBlur); document.removeEventListener('visibilitychange', this.onWinBlur); }
     this.flush();
     this.bridge.destroy();
     if (this.heightRo) this.heightRo.disconnect();
     this.mount.removeEventListener('mousedown', this.onBlank);
+    this.contextMenu.destroy();
+    this.tableHandles.destroy();
     closePopup();
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', this.onThemeChange);
     this.overlay.destroy();
@@ -1182,5 +1595,6 @@ function DecorationSetFor(doc, start, node) {
 
 export function create(mount, opts) { return new Editor(mount, opts); }
 
-// Протокол телефона (host.js): версия, окно WebView, имена команд, масштаб.
-export { createAssetStore, schema, Core, isInTable, NodeSelection, PROTOCOL, VIEWPORT, EXEC_NAMES, ZOOM_MIN, ZOOM_MAX };
+// Протокол телефона (host.js): версия, окно WebView, имена команд, масштаб,
+// данные графика для листа хозяина.
+export { createAssetStore, schema, Core, isInTable, NodeSelection, PROTOCOL, VIEWPORT, EXEC_NAMES, ZOOM_MIN, ZOOM_MAX, chartSpec, chartFromSpec, CHART_TYPES };

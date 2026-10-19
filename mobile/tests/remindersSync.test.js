@@ -6,32 +6,25 @@
 // поэтому приём сам приводит напоминания к списку (core/reminders.js:
 // reconcileReminders): правка старого клиента ложится в список, у задач без
 // списка он выводится из старых полей. Правила — в ядре и закрыты юнитами
-// (tests/unit/reminders.test.js); здесь — что телефон их применяет и что приём
-// ничего не отправляет обратно. Сеть подменена (supabase-клиент), сам
-// lib/sync.js и стор — настоящие.
-import { useAppStore } from '../src/store/useAppStore';
-import { setSyncUser, syncOnSignIn } from '../src/lib/sync';
-import Reminders from '../src/core/reminders.js';
-
-const mockCloud = { row: null, realtime: null };
-const mockUpsert = jest.fn(async () => ({ error: null }));
+// (tests/unit/reminders.test.js); здесь — что телефон их применяет.
+//
+// С журналом правок (17 октября 2026) облако старых клиентов — это sync_state:
+// при первом входе он становится слепком журнала, а запись старого клиента
+// потом приходит через мост (legacyBridgeOps). Приведение телефон отправляет
+// своими правками — один раз: в журнале и в зеркале для старых клиентов
+// дальше лежит уже приведённый список, и повторный приём ничего не шлёт.
+// Сеть подменена (tests/fakeSupabase.js — сервер журнала), lib/sync.js, стор
+// и ядро — настоящие.
+jest.setTimeout(30000);
 
 jest.mock('../src/lib/supabaseClient', () => {
-  const channel = {
-    on: (_event, _filter, handler) => { mockCloud.realtime = handler; return channel; },
-    subscribe: () => channel,
-  };
-  return {
-    sb: {
-      from: () => ({
-        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: mockCloud.row, error: null }) }) }),
-        upsert: (...args) => mockUpsert(...args),
-      }),
-      channel: () => channel,
-      removeChannel: () => {},
-    },
-  };
+  const { createWorld } = require('./fakeSupabase');
+  if (!global.__oplogWorld) global.__oplogWorld = createWorld();
+  return { sb: global.__oplogWorld.client, __world: global.__oplogWorld };
 });
+
+const { settle, until, phone } = require('./fakeSupabase');
+const Reminders = require('../src/core/reminders.js');
 
 const iso = (day, h, m = 0) => new Date(2026, 9, day, h, m).toISOString();
 const base = { projectId: 'p1', title: 'Вёрстка', done: false, statusId: 's1', sessions: [], totalMs: 0, tagIds: [], dueAt: iso(20, 18) };
@@ -48,28 +41,27 @@ const blob = (tasks) => ({
 const withList = (task, list) => ({ ...task, ...Reminders.withReminders(task, list) });
 const dueRem = (offsetMin, unit = 'min') => ({ id: 'r1', kind: 'before', anchor: 'due', offsetMin, unit });
 
-beforeEach(() => {
-  jest.useFakeTimers();
-  mockUpsert.mockClear();
-  mockCloud.row = null;
-  mockCloud.realtime = null;
-  useAppStore.setState({
-    projects: [], tasks: [], statuses: [], tags: [], versions: [], documents: [], activeTimer: null,
-    settings: { ...useAppStore.getState().settings, syncEnabled: true, syncResolvedFor: null, lang: 'ru' },
-  });
+let m;
+beforeEach(async () => {
+  jest.resetModules();
+  global.__oplogWorld = undefined;
+  m = phone();
+  await m.AsyncStorage.clear();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
-  setSyncUser(null);
-  jest.useRealTimers();
+  m.sync.setSyncUser(null);
+  jest.restoreAllMocks();
 });
 
+/** Облако старого клиента — и первый вход телефона. */
 const pull = async (tasks) => {
-  mockCloud.row = { data: blob(tasks), updated_at: '2026-10-11T10:00:00.000Z' };
-  setSyncUser('u1');
-  await syncOnSignIn('u1');
+  m.world.db.syncState.u1 = { user_id: 'u1', data: blob(tasks), updated_at: '2026-10-11T10:00:00.000Z', updated_by: 'old-desktop' };
+  await m.signIn('u1');
 };
-const stored = (id = 't1') => useAppStore.getState().tasks.find((x) => x.id === id);
+const stored = (id = 't1') => m.app().tasks.find((x) => x.id === id);
+const mine = () => m.world.db.changes.filter((r) => r.device_id === m.device.deviceId());
 
 test('правка старого клиента: смещение поменяли в remindOffsetMin, а список остался прежним — в стор ложится список со сменённым смещением, id тот же', async () => {
   const fresh = withList({ ...base, id: 't1' }, [dueRem(60, 'hour')]);
@@ -112,40 +104,43 @@ test('смещения у отрезков из данных разработк�
   expect('remindOffsetMin' in stored().slots[0]).toBe(false);
 });
 
-test('уже согласованная задача принимается как есть — ничего не меняется', async () => {
+test('уже согласованная задача: список напоминаний принимается как есть, своего приведения напоминаний не уходит', async () => {
+  // Приём гоняет миграцию, как у веба: недостающие поля задачи (rate,
+  // repeat…) она дописывает своими правками, а напоминаниям приводить нечего.
   const fresh = withList({ ...base, id: 't1' }, [dueRem(60, 'hour')]);
   await pull([fresh]);
-  expect(stored()).toEqual(fresh);
+  expect(stored()).toMatchObject(fresh);
+  await settle(600);
+  expect(mine().filter((r) => ['reminders', 'remindOffsetMin', 'remindAt'].includes(r.field))).toEqual([]);
 });
 
-test('приём ничего не отправляет обратно, а ближайшая настоящая правка уносит в облако уже приведённый список', async () => {
+test('приведение уходит в журнал своими правками один раз; зеркало для старых — уже с приведённым; настоящая правка его не повторяет', async () => {
   const fresh = withList({ ...base, id: 't1' }, [dueRem(60, 'hour')]);
   await pull([{ ...fresh, remindOffsetMin: 30 }]);
-  // Дебаунс стора — 400 мс; отпечаток считан по приведённому, push молчит.
-  await jest.advanceTimersByTimeAsync(1000);
-  expect(mockUpsert).not.toHaveBeenCalled();
-
-  useAppStore.getState().updateTask('t1', { title: 'Вёрстка 2' });
-  await jest.advanceTimersByTimeAsync(1000);
-  expect(mockUpsert).toHaveBeenCalledTimes(1);
-  const sent = mockUpsert.mock.calls[0][0].data.tasks[0];
+  await until(() => !m.app().oplog.pending.length && (m.world.db.syncState.u1.updated_by || '').startsWith('oplog:'));
+  const reminders = mine().filter((r) => r.field === 'reminders');
+  expect(reminders).toHaveLength(1);
+  expect(reminders[0].value[0]).toMatchObject({ id: 'r1', offsetMin: 30 });
+  const sent = m.world.db.syncState.u1.data.tasks[0];
   expect(sent.reminders[0]).toMatchObject({ id: 'r1', offsetMin: 30 });
   expect(sent.remindOffsetMin).toBe(30);
+
+  m.app().updateTask('t1', { title: 'Вёрстка 2' });
+  await settle(600);
+  await until(() => !m.app().oplog.pending.length);
+  expect(mine().filter((r) => r.field === 'reminders')).toHaveLength(1);
+  expect(mine().some((r) => r.field === 'title' && r.value === 'Вёрстка 2')).toBe(true);
 });
 
-test('обновление из облака в реальном времени: правка старого клиента тоже приводится к списку', async () => {
-  await pull([withList({ ...base, id: 't1' }, [dueRem(60, 'hour')])]);
-  await jest.advanceTimersByTimeAsync(1000);
-  expect(mockCloud.realtime).toBeInstanceOf(Function);
-
+test('запись старого клиента после входа (мост): правка смещения тоже приводится к списку', async () => {
+  const fresh = withList({ ...base, id: 't1' }, [dueRem(60, 'hour')]);
+  await pull([fresh]);
   // Другое устройство со старой версией правит смещение и шлёт его в старом поле.
-  const old = { ...withList({ ...base, id: 't1' }, [dueRem(60, 'hour')]), remindOffsetMin: 15 };
-  mockCloud.realtime({ new: { updated_by: 'другое-устройство', data: blob([old]) } });
-  await jest.advanceTimersByTimeAsync(1000);
-
+  const old = { ...fresh, remindOffsetMin: 15 };
+  m.world.upsertSyncState({ user_id: 'u1', data: blob([old]), updated_at: '2026-10-12T10:00:00.000Z', updated_by: 'old-desktop' });
+  await until(() => stored().remindOffsetMin === 15);
+  await until(() => stored().reminders[0].offsetMin === 15);
   expect(stored().reminders[0]).toMatchObject({ id: 'r1', offsetMin: 15 });
-  expect(stored().remindOffsetMin).toBe(15);
-  expect(mockUpsert).not.toHaveBeenCalled();
 });
 
 test('отметка «уже напомнили» из облака доезжает до стора: сработавшее напоминание повторно не ставится', async () => {

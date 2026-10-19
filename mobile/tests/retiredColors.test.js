@@ -3,33 +3,21 @@
 // Правило перекраски — в ядре (core/migrate.js: renewColors) и закрыто юнитами
 // десктопа. Здесь — что телефон его применяет: при загрузке (обёртка
 // lib/migrate.js) и при приёме из облака. Там всю миграцию телефон не гоняет,
-// а старая версия приложения на другом устройстве всё ещё шлёт старый цвет. И
-// что приём ничего не отправляет обратно — иначе два устройства
-// перебрасывались бы одним и тем же по кругу. Сеть подменена
-// (supabase-клиент), сам lib/sync.js и стор — настоящие.
-import { useAppStore } from '../src/store/useAppStore';
-import { setSyncUser, syncOnSignIn } from '../src/lib/sync';
-import { migrate, emptyState, PALETTE } from '../src/lib/migrate';
-
-const mockCloud = { row: null, realtime: null };
-const mockUpsert = jest.fn(async () => ({ error: null }));
+// а старая версия приложения на другом устройстве всё ещё шлёт старый цвет.
+//
+// С журналом правок (17 октября 2026) перекраска уходит в журнал своими
+// правками — один раз: дальше и журнал, и зеркало для старых клиентов
+// (sync_state) несут новый цвет, и по кругу ничего не ходит. Сеть подменена
+// (tests/fakeSupabase.js — сервер журнала), lib/sync.js и стор — настоящие.
+jest.setTimeout(30000);
 
 jest.mock('../src/lib/supabaseClient', () => {
-  const channel = {
-    on: (_event, _filter, handler) => { mockCloud.realtime = handler; return channel; },
-    subscribe: () => channel,
-  };
-  return {
-    sb: {
-      from: () => ({
-        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: mockCloud.row, error: null }) }) }),
-        upsert: (...args) => mockUpsert(...args),
-      }),
-      channel: () => channel,
-      removeChannel: () => {},
-    },
-  };
+  const { createWorld } = require('./fakeSupabase');
+  if (!global.__oplogWorld) global.__oplogWorld = createWorld();
+  return { sb: global.__oplogWorld.client, __world: global.__oplogWorld };
 });
+
+const { settle, until, phone } = require('./fakeSupabase');
 
 const OLD = '#87ff65';
 const NEW = '#69d345';
@@ -40,7 +28,7 @@ const oldBlob = () => ({
     { id: 'p1', name: 'Сайт', color: OLD, tagIds: ['g1'], createdAt: '2026-10-07T10:00:00.000Z' },
     { id: 'p2', name: 'Блог', color: '#5ec8f2', tagIds: [], createdAt: '2026-10-07T10:00:00.000Z' },
   ],
-  tasks: [{ id: 't1', projectId: 'p1', title: 'Вёрстка', done: false, statusId: 's1', sessions: [], totalMs: 0, tagIds: [] }],
+  tasks: [{ id: 't1', projectId: 'p1', title: 'Вёрстка', done: false, statusId: 's1', sessions: [], totalMs: 0, tagIds: [], reminders: [], remindOffsetMin: null, remindAt: null }],
   statuses: [
     { id: 's1', projectId: 'p1', name: 'Готово', color: OLD, kind: 'done', order: 0, builtin: true },
     { id: 's2', projectId: 'p1', name: 'Моё', color: '#f5c451', kind: 'todo', order: 1, builtin: false },
@@ -50,82 +38,78 @@ const oldBlob = () => ({
   documents: [],
 });
 
-beforeEach(() => {
-  jest.useFakeTimers();
-  mockUpsert.mockClear();
-  mockCloud.row = { data: oldBlob(), updated_at: '2026-10-11T10:00:00.000Z' };
-  mockCloud.realtime = null;
-  useAppStore.setState({
-    projects: [], tasks: [], statuses: [], tags: [], versions: [], documents: [], activeTimer: null,
-    settings: { ...useAppStore.getState().settings, syncEnabled: true, syncResolvedFor: null, lang: 'ru' },
-  });
+let m;
+beforeEach(async () => {
+  jest.resetModules();
+  global.__oplogWorld = undefined;
+  m = phone();
+  await m.AsyncStorage.clear();
+  m.world.db.syncState.u1 = { user_id: 'u1', data: oldBlob(), updated_at: '2026-10-11T10:00:00.000Z', updated_by: 'old-phone' };
+  jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
-  setSyncUser(null);
-  jest.useRealTimers();
+  m.sync.setSyncUser(null);
+  jest.restoreAllMocks();
 });
 
 /** Все цвета проектов, статусов и тегов в сторе. */
 const colorsInStore = () => {
-  const s = useAppStore.getState();
+  const s = m.app();
   return [...s.projects, ...s.statuses, ...s.tags].map((x) => x.color);
 };
+const mine = () => m.world.db.changes.filter((r) => r.device_id === m.device.deviceId());
 
 test('вход с пустого телефона: старый цвет из облака ложится в стор новым, чужие — как были', async () => {
-  setSyncUser('u1');
-  await syncOnSignIn('u1');
-  const s = useAppStore.getState();
+  await m.signIn('u1');
+  const s = m.app();
   expect(s.projects.map((p) => p.color)).toEqual([NEW, '#5ec8f2']);
-  expect(s.statuses.map((st) => st.color)).toEqual([NEW, '#f5c451']);
+  // Свои статусы p1 (у p2 их нет — миграция заводит ему набор по умолчанию).
+  expect(s.statuses.filter((st) => st.projectId === 'p1').map((st) => st.color)).toEqual([NEW, '#f5c451']);
   expect(s.tags.map((tg) => tg.color)).toEqual([NEW]);
   expect(colorsInStore()).not.toContain(OLD);
 });
 
-test('приём ничего не отправляет обратно, а ближайшая настоящая правка уносит в облако уже новые цвета', async () => {
-  setSyncUser('u1');
-  await syncOnSignIn('u1');
-  // Дебаунс стора — 400 мс; отпечаток считан по перекрашенному, push молчит.
-  await jest.advanceTimersByTimeAsync(1000);
-  expect(mockUpsert).not.toHaveBeenCalled();
+test('перекраска уходит в журнал один раз, зеркало для старых — уже с новыми цветами; настоящая правка её не повторяет', async () => {
+  await m.signIn('u1');
+  await until(() => !m.app().oplog.pending.length && (m.world.db.syncState.u1.updated_by || '').startsWith('oplog:'));
+  const colors = mine().filter((r) => r.field === 'color');
+  expect(colors.map((r) => `${r.entity}:${r.entity_id}=${r.value}`).sort()).toEqual([`project:p1=${NEW}`, `status:s1=${NEW}`, `tag:g1=${NEW}`]);
+  expect(JSON.stringify(m.world.db.syncState.u1.data).toLowerCase()).not.toContain(OLD);
 
-  useAppStore.getState().updateProject('p2', { name: 'Блог 2' });
-  await jest.advanceTimersByTimeAsync(1000);
-  expect(mockUpsert).toHaveBeenCalledTimes(1);
-  const sent = mockUpsert.mock.calls[0][0].data;
-  expect(JSON.stringify(sent).toLowerCase()).not.toContain(OLD);
-  expect(sent.projects.map((p) => p.color)).toEqual([NEW, '#5ec8f2']);
+  m.app().updateProject('p2', { name: 'Блог 2' });
+  await settle(600);
+  await until(() => !m.app().oplog.pending.length);
+  expect(mine().filter((r) => r.field === 'color')).toHaveLength(3);
+  expect(mine().some((r) => r.field === 'name' && r.value === 'Блог 2')).toBe(true);
 });
 
-test('обновление из облака в реальном времени: прежний цвет от старой версии красится и не возвращается', async () => {
-  setSyncUser('u1');
-  await syncOnSignIn('u1');
-  await jest.advanceTimersByTimeAsync(1000);
-  expect(mockCloud.realtime).toBeInstanceOf(Function);
-
+test('запись старой версии после входа (мост): прежний цвет красится и не возвращается', async () => {
+  await m.signIn('u1');
+  await until(() => (m.world.db.syncState.u1.updated_by || '').startsWith('oplog:'));
   // Другое устройство со старой версией приложения правит и шлёт старый цвет.
   const blob = oldBlob();
   blob.projects[1].name = 'Блог (с другого устройства)';
-  mockCloud.realtime({ new: { updated_by: 'другое-устройство', data: blob } });
-  await jest.advanceTimersByTimeAsync(1000);
-
-  const s = useAppStore.getState();
-  expect(s.projects[1].name).toBe('Блог (с другого устройства)');
+  m.world.upsertSyncState({ user_id: 'u1', data: blob, updated_at: '2026-10-12T10:00:00.000Z', updated_by: 'old-phone' });
+  await until(() => m.app().projects[1].name === 'Блог (с другого устройства)');
+  await settle(300);
   expect(colorsInStore()).not.toContain(OLD);
-  expect(mockUpsert).not.toHaveBeenCalled();
+  await until(() => (m.world.db.syncState.u1.updated_by || '').startsWith('oplog:'));
+  expect(JSON.stringify(m.world.db.syncState.u1.data).toLowerCase()).not.toContain(OLD);
 });
 
 test('набор без тегов и статусов (старая версия) не ломает приём и не стирает свои', async () => {
-  useAppStore.setState({ tags: [{ id: 'g9', name: 'Мой', color: OLD, projectId: null }] });
-  mockCloud.row = { data: { projects: oldBlob().projects, tasks: [] }, updated_at: '2026-10-11T10:00:00.000Z' };
-  setSyncUser('u1');
-  await syncOnSignIn('u1');
-  const s = useAppStore.getState();
+  m.world.db.syncState.u1 = { user_id: 'u1', data: { projects: oldBlob().projects, tasks: [] }, updated_at: '2026-10-11T10:00:00.000Z', updated_by: 'old-phone' };
+  // На телефоне в области аккаунта уже есть свой тег.
+  await m.AsyncStorage.setItem('lancible-data:u1', JSON.stringify({ state: { tags: [{ id: 'g9', name: 'Мой', color: OLD, projectId: null }], settings: { lang: 'ru' } }, version: 0 }));
+  await m.signIn('u1');
+  const s = m.app();
   expect(s.projects[0].color).toBe(NEW);
   expect(s.tags.map((tg) => tg.id)).toEqual(['g9']);
 });
 
 test('загрузка: обёртка телефона перекрашивает сохранённое, повторный прогон ничего не меняет', () => {
+  const { migrate, emptyState, PALETTE } = require('../src/lib/migrate');
   const saved = {
     ...emptyState(),
     projects: [{ id: 'p1', name: 'Сайт', color: OLD }, { id: 'p2', name: 'Блог', color: '#5ec8f2' }],

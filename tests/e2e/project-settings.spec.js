@@ -116,8 +116,8 @@ test('в задаче видны общие теги и теги её проек
 
 test('в настройках приложения — только общие теги, в окне проекта — его', async ({ page }) => {
   await seed(page);
-  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
-  await expect(page.locator('#tags-list .settings-row-label')).toHaveText(['Срочное']);
+  await page.evaluate(() => openSettings('work')); // теги — в разделе «Работа»
+  await expect(page.locator('#tags-list .srow-label')).toHaveText(['Срочное']);
 
   await page.evaluate(() => openProjectDialog(getProject('p-usd'), 'tags'));
   await expect(page.locator('#pdlg-tag-list .settings-row-label')).toHaveText(['Invoice']);

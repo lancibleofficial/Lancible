@@ -274,6 +274,53 @@
     return out.sort((x, y) => x.start - y.start || x.end - y.end);
   }
 
+  /** Метки «времени работы» для клеток месяца: по дню — первые limit кусков
+   *  (по началу), сколько ещё не влезло и все куски дня — для подсказки.
+   *  Те же куски, что у недели и дня (slotItems): у закрытой задачи меток
+   *  нет. Дни идут от from (местная полночь), days штук.
+   *  @returns [{ marks, more, all }] — по индексу дня */
+  function slotDayMarks(tasks, from, days, limit) {
+    const n = Math.max(0, Math.floor(days) || 0);
+    const cap = Math.max(0, Math.floor(limit) || 0);
+    const out = Array.from({ length: n }, () => ({ marks: [], more: 0, all: [] }));
+    for (const it of slotItems(tasks, from, A.addDaysMs(from, n))) {
+      const day = out[it.dayIndex];
+      if (!day) continue;
+      day.all.push(it);
+      if (day.marks.length < cap) day.marks.push(it);
+      else day.more += 1;
+    }
+    return out;
+  }
+
+  /** С чем пересекается отрезок span {start, end} (ISO или числа): вхождения
+   *  плановых отрезков других задач — с повторами, по правилу каждой задачи,
+   *  как на календаре (slotItems). Закрытые и отменённые задачи не считаются:
+   *  на календаре их блоков нет. Касание краями — не пересечение: 10:00–11:00
+   *  и 11:00–12:00 стоят друг за другом. Свою задачу (exceptTaskId)
+   *  вызывающий исключает сам — её отрезки не мешают друг другу.
+   *  Ничего не запрещает: время задачи — любое, вопрос задаёт клиент.
+   *  @returns [{ taskId, title, start, end }] — вхождения целиком (ISO), не
+   *    обрезанные по span и полуночи, по началу */
+  function slotOverlaps(tasks, span, exceptTaskId) {
+    const ms = (v) => (typeof v === 'number' ? v : toMs(v));
+    const from = ms(span && span.start);
+    const to = ms(span && span.end);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || !(to > from)) return [];
+    const out = [];
+    for (const task of Array.isArray(tasks) ? tasks : []) {
+      if (!task || task.done || task.cancelled) continue;
+      if (exceptTaskId != null && task.id === exceptTaskId) continue;
+      const rule = slotRule(task);
+      for (const slot of slotsOf(task)) {
+        for (const occ of slotOccurrences(slot, from, to, 400, rule)) {
+          out.push({ taskId: task.id, title: typeof task.title === 'string' ? task.title : '', start: iso(occ.start), end: iso(occ.end) });
+        }
+      }
+    }
+    return out.sort((x, y) => toMs(x.start) - toMs(y.start) || toMs(x.end) - toMs(y.end));
+  }
+
   // --- повтор задачи --------------------------------------------------------
 
   /** Якорь цикла повтора: дедлайн; без него — самый ранний отрезок; без них —
@@ -512,6 +559,8 @@
     foldSlotRepeat,
     slotOccurrences,
     slotItems,
+    slotDayMarks,
+    slotOverlaps,
     rollAnchor,
     planTaskRoll,
     planUntick,

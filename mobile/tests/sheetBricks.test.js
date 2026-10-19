@@ -25,7 +25,6 @@ import { render, renderHook, fireEvent, within } from '@testing-library/react-na
 import BottomSheet from '../src/components/BottomSheet';
 import AuthSheet from '../src/components/AuthSheet';
 import DueSheet from '../src/components/DueSheet';
-import EntrySheet from '../src/components/EntrySheet';
 import ExportPeriodSheet from '../src/components/ExportPeriodSheet';
 import MenuSheet from '../src/components/MenuSheet';
 import NewProjectSheet from '../src/components/NewProjectSheet';
@@ -63,10 +62,10 @@ describe('исходники всех листов', () => {
   test('обходятся все листы: перечень не пустеет и называет приведённые', () => {
     expect(SHEET_FILES).toEqual(expect.arrayContaining([
       'AuthSheet.js', 'DueSheet.js', 'SlotSheet.js', 'TaskMoveSheet.js', 'ExportPeriodSheet.js',
-      'ProfileSheet.js', 'TagEditSheet.js', 'NewProjectSheet.js', 'EntrySheet.js', 'SessionSheet.js',
+      'ProfileSheet.js', 'TagEditSheet.js', 'NewProjectSheet.js', 'SessionSheet.js',
       'RepeatSheet.js', 'ReminderSheet.js', 'SlotListSheet.js', 'RateSheet.js', 'TagPickerSheet.js',
       'ColorPickerSheet.js', 'PickerSheet.js', 'QuickTaskSheet.js', 'ChangePasswordSheet.js', 'MenuSheet.js',
-      'FilterSheet.js',
+      'FilterSheet.js', 'WorkHoursSheet.js',
     ]));
   });
 
@@ -323,27 +322,26 @@ describe('экспорт', () => {
 });
 
 describe('профиль, тег, проект, запись', () => {
-  test('профиль: подпись «Имя» — Block; почта, пароль, выход и удаление — строки острова; подвал — «Сохранить»', async () => {
+  // Круг 21: лист профиля — только имя (как на вебе); пароль, выход и
+  // удаление — строками разделов «Аккаунт» и «Данные».
+  test('имя: заголовок «Имя», одно поле без своей подписи и островов; подвал — «Сохранить»', async () => {
     useAuthStore.setState({ status: 'signedIn', user: { id: 'u1', email: 'me@example.com', name: 'Я' } });
     const s = await show(<ProfileSheet />);
-    expectCaption(s.getByText(t('ru', 'auth.name_label')));
-    expectIsland(s.getByTestId('profile-account'));
-    for (const id of ['profile-email', 'profile-password', 'profile-sign-out', 'profile-delete']) expectSettingRow(s.getByTestId(id));
-    within(s.getByTestId('profile-email')).getByText('me@example.com');
-    expect(flat(within(s.getByTestId('profile-delete')).getByText(t('ru', 'account.delete'))).color).toBe(colors.danger);
+    within(s.getByTestId('sheet-head-row')).getByText(t('ru', 'profile.name_label'));
+    expect(s.getByTestId('profile-name').props.value).toBe('Я');
+    expect(s.queryByText(t('ru', 'auth.name_label'))).toBeNull();
+    expect(s.queryByText('me@example.com')).toBeNull();
+    expect(s.queryByText(t('ru', 'profile.change_password'))).toBeNull();
     expectFooter(s, ['primary']);
   });
 
-  test('профиль: «Изменить пароль» — страница этого же листа со стрелкой «назад»', async () => {
+  test('«Удалить аккаунт» из «Данных»: подтверждение без стрелки «назад», подвал — danger и серая «Отмена»', async () => {
     useAuthStore.setState({ status: 'signedIn', user: { id: 'u1', email: 'me@example.com', name: 'Я' } });
-    const s = await show(<ProfileSheet />);
-    const content = useSheetStore.getState().content;
-    await fireEvent.press(s.getByTestId('profile-password'));
-    expect(useSheetStore.getState().content).toBe(content);
-    within(s.getByTestId('sheet-head-row')).getByText(t('ru', 'profile.change_password'));
-    within(s.getByTestId('sheet-head-row')).getByLabelText(t('ru', 'common.back'));
-    s.getByPlaceholderText(t('ru', 'profile.new_password'));
-    expectFooter(s, ['primary']);
+    const s = await show(<ProfileSheet page="delete" />);
+    within(s.getByTestId('sheet-head-row')).getByText(t('ru', 'account.delete_title'));
+    expect(within(s.getByTestId('sheet-head-row')).queryByLabelText(t('ru', 'common.back'))).toBeNull();
+    s.getByText(t('ru', 'account.delete_confirm'));
+    expectFooter(s, ['danger', 'ghost']);
   });
 
   test('тег: подпись «Цвет» — Block мелким шрифтом (было fontSize.sm); подвал существующего — три кнопки', async () => {
@@ -371,32 +369,6 @@ describe('профиль, тег, проект, запись', () => {
     expectIsland(s.getByTestId('project-form-group-money'));
     for (const id of ['color', 'desc', 'marks', 'rate', 'currency']) expectSettingRow(s.getByTestId(`project-row-${id}`));
     expectFooter(s, ['primary', 'ghost']);
-  });
-
-  test('новая запись: крупное название, проект и дата — строки острова; «или существующая» — Block; подвал — «Создать» и серая «Отмена»', async () => {
-    const s = await show(<EntrySheet initial={{ start: 1_700_000_000_000, end: 1_700_003_600_000 }} />);
-    expect(flat(s.getByTestId('entry-title')).fontSize).toBe(fontSize.lg);
-    expectSettingRow(s.getByTestId('entry-project'));
-    expectSettingRow(s.getByTestId('entry-date'));
-    expectGreyRow(s.getByTestId('entry-duration-row'));
-    await fireEvent.changeText(s.getByPlaceholderText(t('ru', 'agenda.task_name_ph')), 'Вёр');
-    expectCaption(s.getByText(t('ru', 'agenda.or_existing')));
-    expectFooter(s, ['primary', 'ghost']);
-  });
-
-  test('новая запись: проект выбирается страницей этого же листа, набранное остаётся', async () => {
-    useAppStore.setState((st) => ({ projects: [...st.projects, { id: 'p2', name: 'Бот', color: '#5ec8f2' }] }));
-    const s = await show(<EntrySheet initial={{ start: 1_700_000_000_000, end: 1_700_003_600_000 }} />);
-    const content = useSheetStore.getState().content;
-    await fireEvent.changeText(s.getByTestId('entry-title'), 'Созвон');
-    await fireEvent.press(s.getByTestId('entry-project'));
-    expect(useSheetStore.getState().content).toBe(content);
-    within(s.getByTestId('sheet-head-row')).getByText(t('ru', 'board.pick_project'));
-    await fireEvent.press(s.getByText('Бот'));
-    within(s.getByTestId('entry-project')).getByText('Бот');
-    expect(s.getByTestId('entry-title').props.value).toBe('Созвон');
-    // Возврат со страницы клавиатуру не поднимает: фокус — только при открытии.
-    expect(s.getByTestId('entry-title').props.autoFocus).toBe(false);
   });
 
   test('запись времени: строка задачи и дата — строки острова; подвал существующей — «Сохранить» и серая красная «Удалить»', async () => {

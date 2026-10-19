@@ -48,6 +48,7 @@ async function signedIn(page, { files = [], fn = 200, list = 'ok', remove = 'ok'
   await page.reload();
   await expect(page.locator('#shell')).toBeVisible();
   await page.locator('.nav-item[data-view="settings"]').first().click();
+  await page.locator('#settings-sec-data').click(); // удаление — в разделе «Данные»
   await page.evaluate(({ files, fn, list, remove, rpcAnswers }) => {
     currentUser = { id: 'u1', email: 'test@example.com', name: null };
     const folder = { files: files.slice() };

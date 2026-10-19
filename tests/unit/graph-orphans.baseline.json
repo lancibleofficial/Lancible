@@ -71,19 +71,19 @@
       "id": "mobile_src_components_authsheet_authsheet_ongooglepress",
       "label": "onGooglePress()",
       "file": "mobile/src/components/AuthSheet.js",
-      "at": "L70"
+      "at": "L90"
     },
     {
       "id": "mobile_src_components_authsheet_authsheet_onsubmit",
       "label": "onSubmit()",
       "file": "mobile/src/components/AuthSheet.js",
-      "at": "L55"
+      "at": "L75"
     },
     {
       "id": "mobile_src_components_authsheet_authsheet_switchtab",
       "label": "switchTab()",
       "file": "mobile/src/components/AuthSheet.js",
-      "at": "L49"
+      "at": "L69"
     },
     {
       "id": "mobile_src_components_boardview_boardview_onadd",
@@ -95,25 +95,31 @@
       "id": "mobile_src_components_bottomsheet_bottomsheet_animateclose",
       "label": "animateClose()",
       "file": "mobile/src/components/BottomSheet.js",
-      "at": "L371"
+      "at": "L373"
     },
     {
       "id": "mobile_src_components_bottomsheet_bottomsheet_revealfocused",
       "label": "revealFocused()",
       "file": "mobile/src/components/BottomSheet.js",
-      "at": "L315"
+      "at": "L317"
     },
     {
       "id": "mobile_src_components_changepasswordsheet_changepasswordsheet_save",
       "label": "save()",
       "file": "mobile/src/components/ChangePasswordSheet.js",
-      "at": "L25"
+      "at": "L24"
+    },
+    {
+      "id": "mobile_src_components_conflictsheet_conflictblocks_keep",
+      "label": "keep()",
+      "file": "mobile/src/components/ConflictSheet.js",
+      "at": "L114"
     },
     {
       "id": "mobile_src_components_doceditor_alloweditorload",
       "label": "allowEditorLoad()",
       "file": "mobile/src/components/DocEditor.js",
-      "at": "L48"
+      "at": "L61"
     },
     {
       "id": "mobile_src_components_documentlist_documentlist_onmore",
@@ -125,25 +131,31 @@
       "id": "mobile_src_components_duesheet_duesheet_apply",
       "label": "apply()",
       "file": "mobile/src/components/DueSheet.js",
-      "at": "L46"
+      "at": "L41"
     },
     {
-      "id": "mobile_src_components_entrysheet_entrysheet_attach",
-      "label": "attach()",
-      "file": "mobile/src/components/EntrySheet.js",
-      "at": "L108"
+      "id": "mobile_src_components_editortoolbar_editortoolbar_layerfill",
+      "label": "layerFill()",
+      "file": "mobile/src/components/EditorToolbar.js",
+      "at": "L394"
     },
     {
-      "id": "mobile_src_components_entrysheet_entrysheet_create",
-      "label": "create()",
-      "file": "mobile/src/components/EntrySheet.js",
-      "at": "L99"
+      "id": "mobile_src_components_editortoolbar_editortoolbar_signed",
+      "label": "signed()",
+      "file": "mobile/src/components/EditorToolbar.js",
+      "at": "L384"
     },
     {
       "id": "mobile_src_components_expandabletext_expandabletext_toggle",
       "label": "toggle()",
       "file": "mobile/src/components/ExpandableText.js",
       "at": "L61"
+    },
+    {
+      "id": "mobile_src_components_island_islandempty",
+      "label": "IslandEmpty()",
+      "file": "mobile/src/components/Island.js",
+      "at": "L204"
     },
     {
       "id": "mobile_src_components_linksheet_linksheet_remove",
@@ -191,25 +203,25 @@
       "id": "mobile_src_components_newprojectsheet_newprojectsheet_back",
       "label": "back()",
       "file": "mobile/src/components/NewProjectSheet.js",
-      "at": "L119"
+      "at": "L131"
     },
     {
       "id": "mobile_src_components_newprojectsheet_newprojectsheet_oncreate",
       "label": "onCreate()",
       "file": "mobile/src/components/NewProjectSheet.js",
-      "at": "L106"
+      "at": "L118"
     },
     {
       "id": "mobile_src_components_newprojectsheet_newprojectsheet_open",
       "label": "open()",
       "file": "mobile/src/components/NewProjectSheet.js",
-      "at": "L113"
+      "at": "L125"
     },
     {
       "id": "mobile_src_components_newprojectsheet_newprojectsheet_tagusagelabel",
       "label": "tagUsageLabel()",
       "file": "mobile/src/components/NewProjectSheet.js",
-      "at": "L149"
+      "at": "L162"
     },
     {
       "id": "mobile_src_components_pinmark_pinmark_drop",
@@ -224,10 +236,10 @@
       "at": "L49"
     },
     {
-      "id": "mobile_src_components_profilesheet_profilesheet_onsignout",
-      "label": "onSignOut()",
+      "id": "mobile_src_components_profilesheet_profilesheet_save",
+      "label": "save()",
       "file": "mobile/src/components/ProfileSheet.js",
-      "at": "L45"
+      "at": "L34"
     },
     {
       "id": "mobile_src_components_quicktasksheet_quicktasksheet_oncreate",
@@ -257,7 +269,7 @@
       "id": "mobile_src_components_repeatsheet_repeatsheet_pick",
       "label": "pick()",
       "file": "mobile/src/components/RepeatSheet.js",
-      "at": "L78"
+      "at": "L96"
     },
     {
       "id": "mobile_src_components_segmented_segmented_onitemlayout",
@@ -275,13 +287,13 @@
       "id": "mobile_src_components_slotsheet_slotsheet_remove",
       "label": "remove()",
       "file": "mobile/src/components/SlotSheet.js",
-      "at": "L104"
+      "at": "L154"
     },
     {
       "id": "mobile_src_components_slotsheet_slotsheet_save",
       "label": "save()",
       "file": "mobile/src/components/SlotSheet.js",
-      "at": "L94"
+      "at": "L131"
     },
     {
       "id": "mobile_src_components_tageditsheet_tageditsheet_deletemessage",
@@ -308,10 +320,28 @@
       "at": "L78"
     },
     {
+      "id": "mobile_src_components_wheelpicker_pad2",
+      "label": "pad2()",
+      "file": "mobile/src/components/WheelPicker.js",
+      "at": "L34"
+    },
+    {
       "id": "mobile_src_components_wheelpicker_wheelpicker_settle",
       "label": "settle()",
       "file": "mobile/src/components/WheelPicker.js",
-      "at": "L61"
+      "at": "L68"
+    },
+    {
+      "id": "mobile_src_components_workhourssheet_workhourssheet_save",
+      "label": "save()",
+      "file": "mobile/src/components/WorkHoursSheet.js",
+      "at": "L43"
+    },
+    {
+      "id": "mobile_src_core_accounts_upsertaccount",
+      "label": "upsertAccount()",
+      "file": "mobile/src/core/accounts.js",
+      "at": "L93"
     },
     {
       "id": "mobile_src_core_format_fmtshort",
@@ -332,70 +362,76 @@
       "at": "L51"
     },
     {
+      "id": "mobile_src_hooks_useeditorsession_imagetextsheet_save",
+      "label": "save()",
+      "file": "mobile/src/hooks/useEditorSession.js",
+      "at": "L78"
+    },
+    {
       "id": "mobile_src_hooks_useeditorsession_useeditorsession_onexport",
       "label": "onExport()",
       "file": "mobile/src/hooks/useEditorSession.js",
-      "at": "L118"
+      "at": "L299"
+    },
+    {
+      "id": "mobile_src_hooks_useeditorsession_useeditorsession_setcontext",
+      "label": "setContext()",
+      "file": "mobile/src/hooks/useEditorSession.js",
+      "at": "L188"
     },
     {
       "id": "mobile_src_lib_auth_changepassword",
       "label": "changePassword()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L295"
+      "at": "L303"
+    },
+    {
+      "id": "mobile_src_lib_auth_revokeaccountsession",
+      "label": "revokeAccountSession()",
+      "file": "mobile/src/lib/auth.js",
+      "at": "L328"
     },
     {
       "id": "mobile_src_lib_auth_saveonboarding",
       "label": "saveOnboarding()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L103"
-    },
-    {
-      "id": "mobile_src_lib_auth_signinwithgoogle",
-      "label": "signInWithGoogle()",
-      "file": "mobile/src/lib/auth.js",
-      "at": "L75"
+      "at": "L111"
     },
     {
       "id": "mobile_src_lib_auth_updateprofilename",
       "label": "updateProfileName()",
       "file": "mobile/src/lib/auth.js",
-      "at": "L280"
+      "at": "L288"
     },
     {
       "id": "mobile_src_lib_editorbridge_str",
       "label": "str()",
       "file": "mobile/src/lib/editorBridge.js",
-      "at": "L81"
-    },
-    {
-      "id": "mobile_src_lib_format_fmttimeshort",
-      "label": "fmtTimeShort()",
-      "file": "mobile/src/lib/format.js",
-      "at": "L56"
+      "at": "L127"
     },
     {
       "id": "mobile_src_lib_keyboard_load",
       "label": "load()",
       "file": "mobile/src/lib/keyboard.js",
-      "at": "L26"
+      "at": "L31"
     },
     {
       "id": "mobile_src_lib_keyboard_passthrough",
       "label": "PassThrough()",
       "file": "mobile/src/lib/keyboard.js",
-      "at": "L39"
+      "at": "L44"
     },
     {
       "id": "mobile_src_lib_keyboard_usezerokeyboardanimation",
       "label": "useZeroKeyboardAnimation()",
       "file": "mobile/src/lib/keyboard.js",
-      "at": "L48"
+      "at": "L53"
     },
     {
       "id": "mobile_src_lib_keyboard_usezeroreanimatedkeyboardanimation",
       "label": "useZeroReanimatedKeyboardAnimation()",
       "file": "mobile/src/lib/keyboard.js",
-      "at": "L52"
+      "at": "L57"
     },
     {
       "id": "mobile_src_lib_motion_ring",
@@ -407,13 +443,13 @@
       "id": "mobile_src_lib_statuses_isclosedstatus",
       "label": "isClosedStatus()",
       "file": "mobile/src/lib/statuses.js",
-      "at": "L19"
+      "at": "L20"
     },
     {
       "id": "mobile_src_lib_statuses_isdonestatus",
       "label": "isDoneStatus()",
       "file": "mobile/src/lib/statuses.js",
-      "at": "L18"
+      "at": "L19"
     },
     {
       "id": "mobile_src_lib_xlsx_zip",
@@ -425,7 +461,7 @@
       "id": "mobile_src_navigation_maintabs_ios_maintabs",
       "label": "MainTabs()",
       "file": "mobile/src/navigation/MainTabs.ios.js",
-      "at": "L94"
+      "at": "L97"
     },
     {
       "id": "mobile_src_screens_auth_onboardingscreen_onboardingscreen_submit",
@@ -458,70 +494,52 @@
       "at": "L46"
     },
     {
-      "id": "mobile_src_screens_homescreen_homescreen_addentry",
-      "label": "addEntry()",
-      "file": "mobile/src/screens/HomeScreen.js",
-      "at": "L197"
+      "id": "mobile_src_screens_feedbackscreen_feedbackscreen_pick",
+      "label": "pick()",
+      "file": "mobile/src/screens/FeedbackScreen.js",
+      "at": "L67"
     },
     {
-      "id": "mobile_src_screens_homescreen_homescreen_onentry",
-      "label": "onEntry()",
-      "file": "mobile/src/screens/HomeScreen.js",
-      "at": "L194"
-    },
-    {
-      "id": "mobile_src_screens_homescreen_homescreen_pickday",
-      "label": "pickDay()",
-      "file": "mobile/src/screens/HomeScreen.js",
-      "at": "L201"
+      "id": "mobile_src_screens_feedbackscreen_feedbackscreen_send",
+      "label": "send()",
+      "file": "mobile/src/screens/FeedbackScreen.js",
+      "at": "L78"
     },
     {
       "id": "mobile_src_screens_notificationsscreen_notificationsscreen_onopen",
       "label": "onOpen()",
       "file": "mobile/src/screens/NotificationsScreen.js",
-      "at": "L43"
+      "at": "L44"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_onnamechange",
       "label": "onNameChange()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L191"
+      "at": "L195"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_onnameend",
       "label": "onNameEnd()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L201"
+      "at": "L205"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_onopentags",
       "label": "onOpenTags()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L265"
+      "at": "L269"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_onpickversion",
       "label": "onPickVersion()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L275"
+      "at": "L279"
     },
     {
       "id": "mobile_src_screens_projectscreen_projectscreen_submitdraft",
       "label": "submitDraft()",
       "file": "mobile/src/screens/ProjectScreen.js",
-      "at": "L306"
-    },
-    {
-      "id": "mobile_src_screens_projectsscreen_projectcard_submit",
-      "label": "submit()",
-      "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L947"
-    },
-    {
-      "id": "mobile_src_screens_projectsscreen_projectsscreen_openprojectscreen",
-      "label": "openProjectScreen()",
-      "file": "mobile/src/screens/ProjectsScreen.js",
-      "at": "L500"
+      "at": "L311"
     },
     {
       "id": "mobile_src_screens_projectstatusesscreen_projectstatusesscreen_onadd",
@@ -554,64 +572,64 @@
       "at": "L133"
     },
     {
+      "id": "mobile_src_screens_searchscreen_searchscreen_onchat",
+      "label": "onChat()",
+      "file": "mobile/src/screens/SearchScreen.js",
+      "at": "L111"
+    },
+    {
       "id": "mobile_src_screens_searchscreen_searchscreen_onproject",
       "label": "onProject()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L84"
+      "at": "L109"
     },
     {
       "id": "mobile_src_screens_searchscreen_searchscreen_ontask",
       "label": "onTask()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L85"
-    },
-    {
-      "id": "mobile_src_screens_settingsscreen_settingsscreen_onexcel",
-      "label": "onExcel()",
-      "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L137"
-    },
-    {
-      "id": "mobile_src_screens_settingsscreen_settingsscreen_onopencurrency",
-      "label": "onOpenCurrency()",
-      "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L124"
-    },
-    {
-      "id": "mobile_src_screens_settingsscreen_settingsscreen_onopenlanguage",
-      "label": "onOpenLanguage()",
-      "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L114"
-    },
-    {
-      "id": "mobile_src_screens_settingsscreen_settingsscreen_onopenrate",
-      "label": "onOpenRate()",
-      "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L134"
-    },
-    {
-      "id": "mobile_src_screens_settingsscreen_settingsscreen_onopensystemnotifications",
-      "label": "onOpenSystemNotifications()",
-      "file": "mobile/src/screens/SettingsScreen.js",
       "at": "L110"
     },
     {
-      "id": "mobile_src_screens_settingsscreen_settingsscreen_onupdatepress",
-      "label": "onUpdatePress()",
-      "file": "mobile/src/screens/SettingsScreen.js",
-      "at": "L66"
+      "id": "mobile_src_screens_settingssectionscreen_mainsection_onopenlanguage",
+      "label": "onOpenLanguage()",
+      "file": "mobile/src/screens/SettingsSectionScreen.js",
+      "at": "L279"
+    },
+    {
+      "id": "mobile_src_screens_settingssectionscreen_mainsection_onopensystemnotifications",
+      "label": "onOpenSystemNotifications()",
+      "file": "mobile/src/screens/SettingsSectionScreen.js",
+      "at": "L275"
+    },
+    {
+      "id": "mobile_src_screens_settingssectionscreen_worksection_onopencurrency",
+      "label": "onOpenCurrency()",
+      "file": "mobile/src/screens/SettingsSectionScreen.js",
+      "at": "L326"
+    },
+    {
+      "id": "mobile_src_screens_settingssectionscreen_worksection_onopenhours",
+      "label": "onOpenHours()",
+      "file": "mobile/src/screens/SettingsSectionScreen.js",
+      "at": "L320"
+    },
+    {
+      "id": "mobile_src_screens_settingssectionscreen_worksection_onopenrate",
+      "label": "onOpenRate()",
+      "file": "mobile/src/screens/SettingsSectionScreen.js",
+      "at": "L323"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_onexcel",
       "label": "onExcel()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L248"
+      "at": "L252"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_pickproject",
       "label": "pickProject()",
       "file": "mobile/src/screens/StatsScreen.js",
-      "at": "L236"
+      "at": "L240"
     },
     {
       "id": "mobile_src_screens_tagsscreen_tagsscreen_usagelabel",
@@ -620,124 +638,232 @@
       "at": "L28"
     },
     {
+      "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_autoscroll",
+      "label": "autoscroll()",
+      "file": "mobile/src/screens/TaskDetailScreen.js",
+      "at": "L330"
+    },
+    {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_keepcaret",
       "label": "keepCaret()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L220"
+      "at": "L312"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ondeletesession",
       "label": "onDeleteSession()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L360"
+      "at": "L528"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopendue",
       "label": "onOpenDue()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L318"
+      "at": "L486"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenmenu",
       "label": "onOpenMenu()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L300"
+      "at": "L467"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenrate",
       "label": "onOpenRate()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L346"
+      "at": "L514"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenrepeat",
       "label": "onOpenRepeat()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L333"
+      "at": "L501"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopenslots",
       "label": "onOpenSlots()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L340"
+      "at": "L508"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_onopentags",
       "label": "onOpenTags()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L328"
+      "at": "L496"
     },
     {
       "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_ontitlechange",
       "label": "onTitleChange()",
       "file": "mobile/src/screens/TaskDetailScreen.js",
-      "at": "L312"
+      "at": "L480"
+    },
+    {
+      "id": "mobile_src_screens_taskdetailscreen_taskdetailscreen_viewportsoon",
+      "label": "viewportSoon()",
+      "file": "mobile/src/screens/TaskDetailScreen.js",
+      "at": "L358"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_openduefilter",
       "label": "openDueFilter()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L164"
+      "at": "L165"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_openprojectfilter",
       "label": "openProjectFilter()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L151"
+      "at": "L152"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_openstatusfilter",
       "label": "openStatusFilter()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L176"
+      "at": "L177"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_picktargetproject",
       "label": "pickTargetProject()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L135"
+      "at": "L136"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_submit",
       "label": "submit()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L127"
+      "at": "L128"
     },
     {
       "id": "mobile_src_screens_tasksscreen_tasksscreen_toggledone",
       "label": "toggleDone()",
       "file": "mobile/src/screens/TasksScreen.js",
-      "at": "L196"
+      "at": "L197"
+    },
+    {
+      "id": "mobile_src_store_useappstore_aidraft",
+      "label": "aiDraft()",
+      "file": "mobile/src/store/useAppStore.js",
+      "at": "L35"
+    },
+    {
+      "id": "mobile_src_store_useappstore_aipatch",
+      "label": "aiPatch()",
+      "file": "mobile/src/store/useAppStore.js",
+      "at": "L42"
     },
     {
       "id": "mobile_src_store_useappstore_slotswithids",
       "label": "slotsWithIds()",
       "file": "mobile/src/store/useAppStore.js",
-      "at": "L29"
+      "at": "L49"
     },
     {
       "id": "mobile_src_store_useappstore_sortedprojecttasks",
       "label": "sortedProjectTasks()",
       "file": "mobile/src/store/useAppStore.js",
-      "at": "L805"
+      "at": "L1032"
+    },
+    {
+      "id": "mobile_src_store_useappstore_touchproject",
+      "label": "touchProject()",
+      "file": "mobile/src/store/useAppStore.js",
+      "at": "L144"
     },
     {
       "id": "mobile_src_store_useappstore_withreminderlist",
       "label": "withReminderList()",
       "file": "mobile/src/store/useAppStore.js",
-      "at": "L37"
+      "at": "L57"
     },
     {
-      "id": "mobile_src_store_useauthstore_applyauthresult",
-      "label": "applyAuthResult()",
-      "file": "mobile/src/store/useAuthStore.js",
-      "at": "L15"
+      "id": "mobile_tests_chatattach_test_file_base64",
+      "label": ".base64()",
+      "file": "mobile/tests/chatAttach.test.js",
+      "at": "L44"
+    },
+    {
+      "id": "mobile_tests_chatattach_test_file_constructor",
+      "label": ".constructor()",
+      "file": "mobile/tests/chatAttach.test.js",
+      "at": "L41"
+    },
+    {
+      "id": "mobile_tests_chatattach_test_file_exists",
+      "label": ".exists()",
+      "file": "mobile/tests/chatAttach.test.js",
+      "at": "L42"
+    },
+    {
+      "id": "mobile_tests_chatattach_test_file_size",
+      "label": ".size()",
+      "file": "mobile/tests/chatAttach.test.js",
+      "at": "L43"
+    },
+    {
+      "id": "mobile_tests_editorcontext_test_ids",
+      "label": "ids()",
+      "file": "mobile/tests/editorContext.test.js",
+      "at": "L66"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_base64",
+      "label": ".base64()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L66"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_constructor",
+      "label": ".constructor()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L60"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_create",
+      "label": ".create()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L63"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_delete",
+      "label": ".delete()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L64"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_exists",
+      "label": ".exists()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L61"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_size",
+      "label": ".size()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L62"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_text",
+      "label": ".text()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L67"
+    },
+    {
+      "id": "mobile_tests_editorpdf_test_file_write",
+      "label": ".write()",
+      "file": "mobile/tests/editorPdf.test.js",
+      "at": "L65"
     },
     {
       "id": "mobile_tests_miniplayeroverlay_test_barprops",
       "label": "barProps()",
       "file": "mobile/tests/miniPlayerOverlay.test.js",
       "at": "L18"
+    },
+    {
+      "id": "mobile_tests_orderhold_test_at",
+      "label": "at()",
+      "file": "mobile/tests/orderHold.test.js",
+      "at": "L44"
     },
     {
       "id": "scripts_build_landing_app_build",
@@ -767,7 +893,7 @@
       "id": "scripts_make_ios_icons_draw",
       "label": "draw()",
       "file": "scripts/make-ios-icons.js",
-      "at": "L32"
+      "at": "L36"
     },
     {
       "id": "scripts_make_mobile_icons_drawforeground",
@@ -785,19 +911,19 @@
       "id": "scripts_make_solar_icons_applyhtml",
       "label": "applyHtml()",
       "file": "scripts/make-solar-icons.js",
-      "at": "L351"
+      "at": "L358"
     },
     {
       "id": "scripts_make_solar_icons_build",
       "label": "build()",
       "file": "scripts/make-solar-icons.js",
-      "at": "L272"
+      "at": "L278"
     },
     {
       "id": "scripts_make_solar_icons_rebuildown",
       "label": "rebuildOwn()",
       "file": "scripts/make-solar-icons.js",
-      "at": "L284"
+      "at": "L291"
     },
     {
       "id": "scripts_publish_release_main",
@@ -842,10 +968,16 @@
       "at": "L9"
     },
     {
+      "id": "scripts_smoke_guestscope",
+      "label": "guestScope()",
+      "file": "scripts/smoke.js",
+      "at": "L88"
+    },
+    {
       "id": "scripts_smoke_run",
       "label": "run()",
       "file": "scripts/smoke.js",
-      "at": "L169"
+      "at": "L182"
     },
     {
       "id": "scripts_watch_main",
@@ -881,205 +1013,301 @@
       "id": "src_editor_assets_alllocalids",
       "label": "allLocalIds()",
       "file": "src/editor/assets.js",
-      "at": "L64"
+      "at": "L179"
+    },
+    {
+      "id": "src_editor_assets_cachedurl",
+      "label": "cachedUrl()",
+      "file": "src/editor/assets.js",
+      "at": "L135"
     },
     {
       "id": "src_editor_assets_createassetstore_download",
       "label": "download()",
       "file": "src/editor/assets.js",
-      "at": "L119"
+      "at": "L289"
     },
     {
       "id": "src_editor_assets_createassetstore_upload",
       "label": "upload()",
       "file": "src/editor/assets.js",
-      "at": "L102"
+      "at": "L282"
+    },
+    {
+      "id": "src_editor_assets_deletelocal",
+      "label": "deleteLocal()",
+      "file": "src/editor/assets.js",
+      "at": "L173"
     },
     {
       "id": "src_editor_assets_downscale",
       "label": "downscale()",
       "file": "src/editor/assets.js",
-      "at": "L71"
+      "at": "L186"
+    },
+    {
+      "id": "src_editor_assets_dropurl",
+      "label": "dropUrl()",
+      "file": "src/editor/assets.js",
+      "at": "L158"
     },
     {
       "id": "src_editor_assets_getlocal",
       "label": "getLocal()",
       "file": "src/editor/assets.js",
-      "at": "L56"
+      "at": "L166"
+    },
+    {
+      "id": "src_editor_assets_rememberurl",
+      "label": "rememberUrl()",
+      "file": "src/editor/assets.js",
+      "at": "L143"
     },
     {
       "id": "src_editor_chart_chartview_constructor",
       "label": ".constructor()",
       "file": "src/editor/chart.js",
-      "at": "L323"
+      "at": "L379"
     },
     {
       "id": "src_editor_chart_chartview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/chart.js",
-      "at": "L371"
+      "at": "L446"
     },
     {
       "id": "src_editor_chart_chartview_destroy",
       "label": ".destroy()",
       "file": "src/editor/chart.js",
-      "at": "L377"
+      "at": "L452"
     },
     {
       "id": "src_editor_chart_chartview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/chart.js",
-      "at": "L375"
+      "at": "L450"
     },
     {
       "id": "src_editor_chart_chartview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/chart.js",
-      "at": "L369"
+      "at": "L444"
     },
     {
       "id": "src_editor_chart_chartview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/chart.js",
-      "at": "L373"
+      "at": "L448"
     },
     {
       "id": "src_editor_chart_chartview_update",
       "label": ".update()",
       "file": "src/editor/chart.js",
-      "at": "L362"
+      "at": "L437"
     },
     {
       "id": "src_editor_chart_editchart_onpastegrid",
       "label": "onPasteGrid()",
       "file": "src/editor/chart.js",
-      "at": "L285"
+      "at": "L339"
     },
     {
       "id": "src_editor_commands_addimagebeside",
       "label": "addImageBeside()",
       "file": "src/editor/commands.js",
-      "at": "L357"
+      "at": "L461"
     },
     {
       "id": "src_editor_commands_clearformatting",
       "label": "clearFormatting()",
       "file": "src/editor/commands.js",
-      "at": "L160"
+      "at": "L162"
     },
     {
-      "id": "src_editor_commands_deleteblock",
-      "label": "deleteBlock()",
+      "id": "src_editor_commands_columnalign",
+      "label": "columnAlign()",
       "file": "src/editor/commands.js",
-      "at": "L487"
+      "at": "L648"
+    },
+    {
+      "id": "src_editor_commands_deleteselectedblock",
+      "label": "deleteSelectedBlock()",
+      "file": "src/editor/commands.js",
+      "at": "L801"
     },
     {
       "id": "src_editor_commands_duplicateblock",
       "label": "duplicateBlock()",
       "file": "src/editor/commands.js",
-      "at": "L477"
+      "at": "L777"
     },
     {
       "id": "src_editor_commands_formatstate",
       "label": "formatState()",
       "file": "src/editor/commands.js",
-      "at": "L56"
+      "at": "L58"
+    },
+    {
+      "id": "src_editor_commands_indent",
+      "label": "indent()",
+      "file": "src/editor/commands.js",
+      "at": "L241"
     },
     {
       "id": "src_editor_commands_insertchart",
       "label": "insertChart()",
       "file": "src/editor/commands.js",
-      "at": "L342"
+      "at": "L350"
     },
     {
       "id": "src_editor_commands_insertdrawing",
       "label": "insertDrawing()",
       "file": "src/editor/commands.js",
-      "at": "L343"
+      "at": "L351"
+    },
+    {
+      "id": "src_editor_commands_insertimage",
+      "label": "insertImage()",
+      "file": "src/editor/commands.js",
+      "at": "L347"
     },
     {
       "id": "src_editor_commands_insertrule",
       "label": "insertRule()",
       "file": "src/editor/commands.js",
-      "at": "L339"
+      "at": "L345"
     },
     {
       "id": "src_editor_commands_inserttable",
       "label": "insertTable()",
       "file": "src/editor/commands.js",
-      "at": "L316"
+      "at": "L322"
+    },
+    {
+      "id": "src_editor_commands_leaveblock",
+      "label": "leaveBlock()",
+      "file": "src/editor/commands.js",
+      "at": "L820"
     },
     {
       "id": "src_editor_commands_moveblock",
       "label": "moveBlock()",
       "file": "src/editor/commands.js",
-      "at": "L449"
+      "at": "L698"
+    },
+    {
+      "id": "src_editor_commands_moveblockat",
+      "label": "moveBlockAt()",
+      "file": "src/editor/commands.js",
+      "at": "L737"
+    },
+    {
+      "id": "src_editor_commands_movecolumn",
+      "label": "moveColumn()",
+      "file": "src/editor/commands.js",
+      "at": "L601"
     },
     {
       "id": "src_editor_commands_moveingallery",
       "label": "moveInGallery()",
       "file": "src/editor/commands.js",
-      "at": "L376"
+      "at": "L480"
+    },
+    {
+      "id": "src_editor_commands_moverow",
+      "label": "moveRow()",
+      "file": "src/editor/commands.js",
+      "at": "L590"
+    },
+    {
+      "id": "src_editor_commands_outdent",
+      "label": "outdent()",
+      "file": "src/editor/commands.js",
+      "at": "L246"
     },
     {
       "id": "src_editor_commands_setalign",
       "label": "setAlign()",
       "file": "src/editor/commands.js",
-      "at": "L265"
+      "at": "L267"
     },
     {
       "id": "src_editor_commands_setcolormark",
       "label": "setColorMark()",
       "file": "src/editor/commands.js",
-      "at": "L96"
+      "at": "L98"
     },
     {
       "id": "src_editor_commands_setheading",
       "label": "setHeading()",
       "file": "src/editor/commands.js",
-      "at": "L176"
+      "at": "L178"
+    },
+    {
+      "id": "src_editor_commands_setimagealign",
+      "label": "setImageAlign()",
+      "file": "src/editor/commands.js",
+      "at": "L432"
+    },
+    {
+      "id": "src_editor_commands_setimagewidth",
+      "label": "setImageWidth()",
+      "file": "src/editor/commands.js",
+      "at": "L448"
     },
     {
       "id": "src_editor_commands_setlink",
       "label": "setLink()",
       "file": "src/editor/commands.js",
-      "at": "L136"
+      "at": "L138"
     },
     {
       "id": "src_editor_commands_splititem",
       "label": "splitItem()",
       "file": "src/editor/commands.js",
-      "at": "L249"
+      "at": "L251"
+    },
+    {
+      "id": "src_editor_commands_tablecontext",
+      "label": "tableContext()",
+      "file": "src/editor/commands.js",
+      "at": "L667"
     },
     {
       "id": "src_editor_commands_tablerowsatcursor",
       "label": "tableRowsAtCursor()",
       "file": "src/editor/commands.js",
-      "at": "L425"
+      "at": "L674"
     },
     {
       "id": "src_editor_commands_takeoutofgallery",
       "label": "takeOutOfGallery()",
       "file": "src/editor/commands.js",
-      "at": "L393"
+      "at": "L497"
     },
     {
       "id": "src_editor_commands_toggle",
       "label": "toggle()",
       "file": "src/editor/commands.js",
-      "at": "L93"
+      "at": "L95"
     },
     {
       "id": "src_editor_commands_togglecallout",
       "label": "toggleCallout()",
       "file": "src/editor/commands.js",
-      "at": "L206"
+      "at": "L208"
     },
     {
       "id": "src_editor_commands_turninto",
       "label": "turnInto()",
       "file": "src/editor/commands.js",
-      "at": "L499"
+      "at": "L843"
+    },
+    {
+      "id": "src_editor_comments_commentspanel_add",
+      "label": ".add()",
+      "file": "src/editor/comments.js",
+      "at": "L105"
     },
     {
       "id": "src_editor_comments_commentspanel_constructor",
@@ -1088,46 +1316,64 @@
       "at": "L84"
     },
     {
+      "id": "src_editor_contextmenu_contextmenu_constructor",
+      "label": ".constructor()",
+      "file": "src/editor/contextmenu.js",
+      "at": "L85"
+    },
+    {
+      "id": "src_editor_contextmenu_contextmenu_destroy",
+      "label": ".destroy()",
+      "file": "src/editor/contextmenu.js",
+      "at": "L99"
+    },
+    {
+      "id": "src_editor_contextmenu_contextmenu_open",
+      "label": ".open()",
+      "file": "src/editor/contextmenu.js",
+      "at": "L105"
+    },
+    {
       "id": "src_editor_drawing_drawingview_constructor",
       "label": ".constructor()",
       "file": "src/editor/drawing.js",
-      "at": "L19"
+      "at": "L24"
     },
     {
       "id": "src_editor_drawing_drawingview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/drawing.js",
-      "at": "L276"
+      "at": "L289"
     },
     {
       "id": "src_editor_drawing_drawingview_destroy",
       "label": ".destroy()",
       "file": "src/editor/drawing.js",
-      "at": "L282"
+      "at": "L295"
     },
     {
       "id": "src_editor_drawing_drawingview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/drawing.js",
-      "at": "L280"
+      "at": "L293"
     },
     {
       "id": "src_editor_drawing_drawingview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/drawing.js",
-      "at": "L274"
+      "at": "L287"
     },
     {
       "id": "src_editor_drawing_drawingview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/drawing.js",
-      "at": "L278"
+      "at": "L291"
     },
     {
       "id": "src_editor_drawing_drawingview_update",
       "label": ".update()",
       "file": "src/editor/drawing.js",
-      "at": "L261"
+      "at": "L274"
     },
     {
       "id": "src_editor_find_findbar_constructor",
@@ -1151,295 +1397,601 @@
       "id": "src_editor_host_hostbridge_constructor",
       "label": ".constructor()",
       "file": "src/editor/host.js",
-      "at": "L215"
+      "at": "L461"
     },
     {
       "id": "src_editor_host_hostbridge_destroy",
       "label": ".destroy()",
       "file": "src/editor/host.js",
-      "at": "L293"
+      "at": "L560"
     },
     {
       "id": "src_editor_host_hostbridge_receive",
       "label": ".receive()",
       "file": "src/editor/host.js",
-      "at": "L272"
+      "at": "L532"
     },
     {
       "id": "src_editor_image_imageview_constructor",
       "label": ".constructor()",
       "file": "src/editor/image.js",
-      "at": "L23"
+      "at": "L49"
     },
     {
       "id": "src_editor_image_imageview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/image.js",
-      "at": "L217"
+      "at": "L363"
+    },
+    {
+      "id": "src_editor_image_imageview_destroy",
+      "label": ".destroy()",
+      "file": "src/editor/image.js",
+      "at": "L296"
+    },
+    {
+      "id": "src_editor_image_imageview_editcaption",
+      "label": ".editCaption()",
+      "file": "src/editor/image.js",
+      "at": "L323"
     },
     {
       "id": "src_editor_image_imageview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/image.js",
-      "at": "L223"
+      "at": "L370"
     },
     {
       "id": "src_editor_image_imageview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/image.js",
-      "at": "L215"
+      "at": "L361"
     },
     {
       "id": "src_editor_image_imageview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/image.js",
-      "at": "L219"
+      "at": "L365"
     },
     {
       "id": "src_editor_image_imageview_update",
       "label": ".update()",
       "file": "src/editor/image.js",
-      "at": "L207"
+      "at": "L353"
+    },
+    {
+      "id": "src_editor_image_imageview_widthpct",
+      "label": ".widthPct()",
+      "file": "src/editor/image.js",
+      "at": "L226"
     },
     {
       "id": "src_editor_index_decorationsetfor",
       "label": "DecorationSetFor()",
       "file": "src/editor/index.js",
-      "at": "L1179"
+      "at": "L1592"
+    },
+    {
+      "id": "src_editor_index_editor_adoptguestassets",
+      "label": ".adoptGuestAssets()",
+      "file": "src/editor/index.js",
+      "at": "L1102"
     },
     {
       "id": "src_editor_index_editor_chartfromtable",
       "label": ".chartFromTable()",
       "file": "src/editor/index.js",
-      "at": "L1004"
+      "at": "L1186"
     },
     {
       "id": "src_editor_index_editor_constructor",
       "label": ".constructor()",
       "file": "src/editor/index.js",
-      "at": "L192"
+      "at": "L198"
     },
     {
       "id": "src_editor_index_editor_copymarkdown",
       "label": ".copyMarkdown()",
       "file": "src/editor/index.js",
-      "at": "L1079"
+      "at": "L1377"
+    },
+    {
+      "id": "src_editor_index_editor_deleteselected",
+      "label": ".deleteSelected()",
+      "file": "src/editor/index.js",
+      "at": "L1472"
+    },
+    {
+      "id": "src_editor_index_editor_deselect",
+      "label": ".deselect()",
+      "file": "src/editor/index.js",
+      "at": "L1459"
     },
     {
       "id": "src_editor_index_editor_destroy",
       "label": ".destroy()",
       "file": "src/editor/index.js",
-      "at": "L1159"
+      "at": "L1567"
+    },
+    {
+      "id": "src_editor_index_editor_docjob",
+      "label": ".docJob()",
+      "file": "src/editor/index.js",
+      "at": "L619"
+    },
+    {
+      "id": "src_editor_index_editor_editselectedchart",
+      "label": ".editSelectedChart()",
+      "file": "src/editor/index.js",
+      "at": "L1514"
+    },
+    {
+      "id": "src_editor_index_editor_editselecteddrawing",
+      "label": ".editSelectedDrawing()",
+      "file": "src/editor/index.js",
+      "at": "L1527"
     },
     {
       "id": "src_editor_index_editor_exportas",
       "label": ".exportAs()",
       "file": "src/editor/index.js",
-      "at": "L1062"
+      "at": "L1330"
+    },
+    {
+      "id": "src_editor_index_editor_exportpdf",
+      "label": ".exportPdf()",
+      "file": "src/editor/index.js",
+      "at": "L1350"
     },
     {
       "id": "src_editor_index_editor_fontfamilymenu",
       "label": ".fontFamilyMenu()",
       "file": "src/editor/index.js",
-      "at": "L731"
+      "at": "L817"
     },
     {
       "id": "src_editor_index_editor_fontsizemenu",
       "label": ".fontSizeMenu()",
       "file": "src/editor/index.js",
-      "at": "L720"
+      "at": "L806"
+    },
+    {
+      "id": "src_editor_index_editor_forgetassets",
+      "label": ".forgetAssets()",
+      "file": "src/editor/index.js",
+      "at": "L1117"
+    },
+    {
+      "id": "src_editor_index_editor_gettoolbarstate",
+      "label": ".getToolbarState()",
+      "file": "src/editor/index.js",
+      "at": "L1555"
+    },
+    {
+      "id": "src_editor_index_editor_imageaction",
+      "label": ".imageAction()",
+      "file": "src/editor/index.js",
+      "at": "L1479"
     },
     {
       "id": "src_editor_index_editor_imagecommand",
       "label": ".imageCommand()",
       "file": "src/editor/index.js",
-      "at": "L901"
+      "at": "L988"
     },
     {
       "id": "src_editor_index_editor_imagefromurl",
       "label": ".imageFromUrl()",
       "file": "src/editor/index.js",
-      "at": "L958"
+      "at": "L1131"
+    },
+    {
+      "id": "src_editor_index_editor_imagewidthpct",
+      "label": ".imageWidthPct()",
+      "file": "src/editor/index.js",
+      "at": "L1447"
     },
     {
       "id": "src_editor_index_editor_ink",
       "label": ".ink()",
       "file": "src/editor/index.js",
-      "at": "L365"
+      "at": "L401"
     },
     {
       "id": "src_editor_index_editor_insertchart",
       "label": ".insertChart()",
       "file": "src/editor/index.js",
-      "at": "L997"
+      "at": "L1178"
     },
     {
       "id": "src_editor_index_editor_insertdrawing",
       "label": ".insertDrawing()",
       "file": "src/editor/index.js",
-      "at": "L1018"
+      "at": "L1257"
+    },
+    {
+      "id": "src_editor_index_editor_pdfcommand",
+      "label": ".pdfCommand()",
+      "file": "src/editor/index.js",
+      "at": "L1536"
+    },
+    {
+      "id": "src_editor_index_editor_pdfmoduleready",
+      "label": ".pdfModuleReady()",
+      "file": "src/editor/index.js",
+      "at": "L1129"
+    },
+    {
+      "id": "src_editor_index_editor_pdfpageview",
+      "label": ".pdfPageView()",
+      "file": "src/editor/index.js",
+      "at": "L1453"
+    },
+    {
+      "id": "src_editor_index_editor_pickpdf",
+      "label": ".pickPdf()",
+      "file": "src/editor/index.js",
+      "at": "L1050"
     },
     {
       "id": "src_editor_index_editor_print",
       "label": ".print()",
       "file": "src/editor/index.js",
-      "at": "L1095"
+      "at": "L1393"
     },
     {
       "id": "src_editor_index_editor_receive",
       "label": ".receive()",
       "file": "src/editor/index.js",
-      "at": "L1157"
+      "at": "L1565"
     },
     {
-      "id": "src_editor_index_editor_setcontent",
-      "label": ".setContent()",
+      "id": "src_editor_index_editor_receivechart",
+      "label": ".receiveChart()",
       "file": "src/editor/index.js",
-      "at": "L532"
+      "at": "L1228"
+    },
+    {
+      "id": "src_editor_index_editor_receivepdffile",
+      "label": ".receivePdfFile()",
+      "file": "src/editor/index.js",
+      "at": "L1063"
     },
     {
       "id": "src_editor_index_editor_seteditable",
       "label": ".setEditable()",
       "file": "src/editor/index.js",
-      "at": "L552"
+      "at": "L638"
+    },
+    {
+      "id": "src_editor_index_editor_setzoom",
+      "label": ".setZoom()",
+      "file": "src/editor/index.js",
+      "at": "L793"
+    },
+    {
+      "id": "src_editor_index_editor_threads",
+      "label": ".threads()",
+      "file": "src/editor/index.js",
+      "at": "L636"
     },
     {
       "id": "src_editor_index_editor_user",
       "label": ".user()",
       "file": "src/editor/index.js",
-      "at": "L591"
+      "at": "L677"
     },
     {
       "id": "src_editor_ink_inkinput_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L353"
+      "at": "L359"
     },
     {
       "id": "src_editor_ink_inkinput_destroy",
       "label": ".destroy()",
       "file": "src/editor/ink.js",
-      "at": "L442"
+      "at": "L448"
     },
     {
       "id": "src_editor_ink_inkinput_ondown",
       "label": ".onDown()",
       "file": "src/editor/ink.js",
-      "at": "L402"
+      "at": "L408"
     },
     {
       "id": "src_editor_ink_inkinput_onmove",
       "label": ".onMove()",
       "file": "src/editor/ink.js",
-      "at": "L425"
+      "at": "L431"
     },
     {
       "id": "src_editor_ink_inkinput_ontouch",
       "label": ".onTouch()",
       "file": "src/editor/ink.js",
-      "at": "L395"
+      "at": "L401"
     },
     {
       "id": "src_editor_ink_inkinput_onup",
       "label": ".onUp()",
       "file": "src/editor/ink.js",
-      "at": "L435"
+      "at": "L441"
     },
     {
       "id": "src_editor_ink_inksurface_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L468"
+      "at": "L477"
     },
     {
       "id": "src_editor_ink_inksurface_destroy",
       "label": ".destroy()",
       "file": "src/editor/ink.js",
-      "at": "L752"
+      "at": "L764"
     },
     {
       "id": "src_editor_ink_inktoolbar_colormenu",
       "label": ".colorMenu()",
       "file": "src/editor/ink.js",
-      "at": "L882"
+      "at": "L894"
     },
     {
       "id": "src_editor_ink_inktoolbar_constructor",
       "label": ".constructor()",
       "file": "src/editor/ink.js",
-      "at": "L775"
+      "at": "L787"
     },
     {
       "id": "src_editor_ink_inktoolbar_set",
       "label": ".set()",
       "file": "src/editor/ink.js",
-      "at": "L783"
+      "at": "L795"
     },
     {
       "id": "src_editor_menus_blockhandle_constructor",
       "label": ".constructor()",
       "file": "src/editor/menus.js",
-      "at": "L234"
+      "at": "L276"
     },
     {
       "id": "src_editor_menus_blockhandle_hide",
       "label": ".hide()",
       "file": "src/editor/menus.js",
-      "at": "L272"
+      "at": "L317"
     },
     {
       "id": "src_editor_menus_blockhandle_track",
       "label": ".track()",
       "file": "src/editor/menus.js",
-      "at": "L246"
+      "at": "L288"
     },
     {
       "id": "src_editor_menus_bubblemenu_constructor",
       "label": ".constructor()",
       "file": "src/editor/menus.js",
-      "at": "L147"
+      "at": "L186"
     },
     {
       "id": "src_editor_menus_bubblemenu_update",
       "label": ".update()",
       "file": "src/editor/menus.js",
-      "at": "L200"
+      "at": "L239"
     },
     {
       "id": "src_editor_menus_slashmenu_constructor",
       "label": ".constructor()",
       "file": "src/editor/menus.js",
-      "at": "L79"
+      "at": "L81"
     },
     {
       "id": "src_editor_menus_slashmenu_move",
       "label": ".move()",
       "file": "src/editor/menus.js",
-      "at": "L117"
+      "at": "L156"
     },
     {
       "id": "src_editor_overlay_inkoverlay_constructor",
       "label": ".constructor()",
       "file": "src/editor/overlay.js",
-      "at": "L19"
+      "at": "L30"
     },
     {
       "id": "src_editor_overlay_inkoverlay_destroy",
       "label": ".destroy()",
       "file": "src/editor/overlay.js",
-      "at": "L220"
+      "at": "L264"
     },
     {
       "id": "src_editor_overlay_inkoverlay_seton",
       "label": ".setOn()",
       "file": "src/editor/overlay.js",
-      "at": "L190"
+      "at": "L206"
+    },
+    {
+      "id": "src_editor_pdf_pdfmoduleready",
+      "label": "pdfModuleReady()",
+      "file": "src/editor/pdf.js",
+      "at": "L66"
+    },
+    {
+      "id": "src_editor_pdfgeom_arrowhead",
+      "label": "arrowHead()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L319"
+    },
+    {
+      "id": "src_editor_pdfgeom_lineat",
+      "label": "lineAt()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L397"
+    },
+    {
+      "id": "src_editor_pdfgeom_movearrowend",
+      "label": "moveArrowEnd()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L127"
+    },
+    {
+      "id": "src_editor_pdfgeom_newoverlay",
+      "label": "newOverlay()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L167"
+    },
+    {
+      "id": "src_editor_pdfgeom_normalizeoverlays",
+      "label": "normalizeOverlays()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L239"
+    },
+    {
+      "id": "src_editor_pdfgeom_nudge",
+      "label": "nudge",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L137"
+    },
+    {
+      "id": "src_editor_pdfgeom_parsecsscolor",
+      "label": "parseCssColor()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L343"
+    },
+    {
+      "id": "src_editor_pdfgeom_pdfpoint",
+      "label": "pdfPoint()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L316"
+    },
+    {
+      "id": "src_editor_pdfgeom_pdfrect",
+      "label": "pdfRect()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L310"
+    },
+    {
+      "id": "src_editor_pdfgeom_pttopx",
+      "label": "ptToPx()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L69"
+    },
+    {
+      "id": "src_editor_pdfgeom_pxtopt",
+      "label": "pxToPt()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L68"
+    },
+    {
+      "id": "src_editor_pdfgeom_replaceoverlays",
+      "label": "replaceOverlays()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L413"
+    },
+    {
+      "id": "src_editor_pdfgeom_resizebox",
+      "label": "resizeBox()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L101"
+    },
+    {
+      "id": "src_editor_pdfgeom_rotatedplacement",
+      "label": "rotatedPlacement()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L332"
+    },
+    {
+      "id": "src_editor_pdfgeom_round",
+      "label": "round()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L62"
+    },
+    {
+      "id": "src_editor_pdfgeom_scaleof",
+      "label": "scaleOf()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L67"
+    },
+    {
+      "id": "src_editor_pdfgeom_toback",
+      "label": "toBack()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L270"
+    },
+    {
+      "id": "src_editor_pdfgeom_tofront",
+      "label": "toFront()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L264"
+    },
+    {
+      "id": "src_editor_pdfgeom_updateoverlay",
+      "label": "updateOverlay()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L257"
+    },
+    {
+      "id": "src_editor_pdfgeom_wraptext",
+      "label": "wrapText()",
+      "file": "src/editor/pdfgeom.js",
+      "at": "L281"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_constructor",
+      "label": ".constructor()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L71"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_deselectnode",
+      "label": ".deselectNode()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L302"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_destroy",
+      "label": ".destroy()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L821"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_ignoremutation",
+      "label": ".ignoreMutation()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L819"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_release",
+      "label": ".release()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L745"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_selectnode",
+      "label": ".selectNode()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L300"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_stopevent",
+      "label": ".stopEvent()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L814"
+    },
+    {
+      "id": "src_editor_pdfpage_pdfpageview_update",
+      "label": ".update()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L803"
+    },
+    {
+      "id": "src_editor_pdfwrite_flow_constructor",
+      "label": ".constructor()",
+      "file": "src/editor/pdfwrite.js",
+      "at": "L278"
     },
     {
       "id": "src_editor_schema_colormark",
       "label": "colorMark()",
       "file": "src/editor/schema.js",
-      "at": "L289"
+      "at": "L345"
     },
     {
       "id": "src_editor_schema_readalign",
@@ -1457,7 +2009,7 @@
       "id": "src_editor_schema_stepmark",
       "label": "stepMark()",
       "file": "src/editor/schema.js",
-      "at": "L313"
+      "at": "L369"
     },
     {
       "id": "src_editor_schema_withblock",
@@ -1469,19 +2021,31 @@
       "id": "src_editor_tablehandles_tablehandles_constructor",
       "label": ".constructor()",
       "file": "src/editor/tablehandles.js",
-      "at": "L20"
+      "at": "L31"
+    },
+    {
+      "id": "src_editor_tablehandles_tablehandles_destroy",
+      "label": ".destroy()",
+      "file": "src/editor/tablehandles.js",
+      "at": "L273"
     },
     {
       "id": "src_editor_tablehandles_tablehandles_mount",
       "label": ".mount()",
       "file": "src/editor/tablehandles.js",
-      "at": "L33"
+      "at": "L55"
     },
     {
-      "id": "src_editor_tablehandles_tablehandles_track",
-      "label": ".track()",
+      "id": "src_editor_tablehandles_tablehandles_open",
+      "label": ".open()",
       "file": "src/editor/tablehandles.js",
-      "at": "L48"
+      "at": "L177"
+    },
+    {
+      "id": "src_editor_tablehandles_tablehandles_update",
+      "label": ".update()",
+      "file": "src/editor/tablehandles.js",
+      "at": "L94"
     },
     {
       "id": "src_editor_toolbar_toolbar_constructor",
@@ -1493,19 +2057,19 @@
       "id": "src_editor_toolbar_toolbar_destroy",
       "label": ".destroy()",
       "file": "src/editor/toolbar.js",
-      "at": "L513"
+      "at": "L516"
     },
     {
       "id": "src_editor_toolbar_toolbar_syncfullscreen",
       "label": ".syncFullscreen()",
       "file": "src/editor/toolbar.js",
-      "at": "L626"
+      "at": "L621"
     },
     {
       "id": "src_editor_toolbar_toolbar_update",
       "label": ".update()",
       "file": "src/editor/toolbar.js",
-      "at": "L636"
+      "at": "L631"
     },
     {
       "id": "src_editor_views_codeblockview_constructor",
@@ -1565,283 +2129,325 @@
       "id": "src_main_createwindow",
       "label": "createWindow()",
       "file": "src/main.js",
-      "at": "L226"
+      "at": "L212"
     },
     {
       "id": "src_main_handledeeplink",
       "label": "handleDeepLink()",
       "file": "src/main.js",
-      "at": "L80"
+      "at": "L66"
+    },
+    {
+      "id": "src_main_initialdata",
+      "label": "initialData()",
+      "file": "src/main.js",
+      "at": "L27"
     },
     {
       "id": "src_main_rememberwindowcolors",
       "label": "rememberWindowColors()",
       "file": "src/main.js",
-      "at": "L184"
+      "at": "L170"
     },
     {
       "id": "src_main_setupautoupdater",
       "label": "setupAutoUpdater()",
       "file": "src/main.js",
-      "at": "L333"
+      "at": "L319"
     },
     {
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L8150"
+      "at": "L12767"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L7761"
+      "at": "L12370"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L7751"
+      "at": "L12360"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L8156"
+      "at": "L12773"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
       "label": "allSessionPairs()",
       "file": "src/renderer/app.js",
-      "at": "L556"
+      "at": "L595"
     },
     {
       "id": "src_renderer_app_anydialogopen",
       "label": "anyDialogOpen()",
       "file": "src/renderer/app.js",
-      "at": "L586"
+      "at": "L651"
     },
     {
       "id": "src_renderer_app_authdismissible",
       "label": "authDismissible()",
       "file": "src/renderer/app.js",
-      "at": "L1567"
+      "at": "L2904"
     },
     {
       "id": "src_renderer_app_boardlane",
       "label": "boardLane()",
       "file": "src/renderer/app.js",
-      "at": "L3436"
+      "at": "L5804"
     },
     {
       "id": "src_renderer_app_calshift",
       "label": "calShift()",
       "file": "src/renderer/app.js",
-      "at": "L2824"
+      "at": "L5171"
     },
     {
       "id": "src_renderer_app_changepassword",
       "label": "changePassword()",
       "file": "src/renderer/app.js",
-      "at": "L1326"
+      "at": "L2623"
     },
     {
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L5462"
+      "at": "L7873"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L8325"
+      "at": "L12960"
     },
     {
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L8065"
+      "at": "L12683"
     },
     {
       "id": "src_renderer_app_deletereminder",
       "label": "deleteReminder()",
       "file": "src/renderer/app.js",
-      "at": "L8779"
+      "at": "L13456"
     },
     {
       "id": "src_renderer_app_deleteslot",
       "label": "deleteSlot()",
       "file": "src/renderer/app.js",
-      "at": "L8587"
+      "at": "L13248"
     },
     {
       "id": "src_renderer_app_deletestatus",
       "label": "deleteStatus()",
       "file": "src/renderer/app.js",
-      "at": "L3937"
+      "at": "L6311"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L7203"
+      "at": "L11805"
+    },
+    {
+      "id": "src_renderer_app_fbshotchanged",
+      "label": "fbShotChanged()",
+      "file": "src/renderer/app.js",
+      "at": "L1092"
     },
     {
       "id": "src_renderer_app_gettag",
       "label": "getTag()",
       "file": "src/renderer/app.js",
-      "at": "L3581"
+      "at": "L5949"
     },
     {
       "id": "src_renderer_app_handleauthsubmit",
       "label": "handleAuthSubmit()",
       "file": "src/renderer/app.js",
-      "at": "L1216"
+      "at": "L2505"
     },
     {
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L7004"
+      "at": "L11583"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
       "label": "isClosedStatus()",
       "file": "src/renderer/app.js",
-      "at": "L437"
+      "at": "L476"
     },
     {
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L4786"
+      "at": "L7181"
+    },
+    {
+      "id": "src_renderer_app_openaccountmenu",
+      "label": "openAccountMenu()",
+      "file": "src/renderer/app.js",
+      "at": "L1943"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L6963"
+      "at": "L11542"
+    },
+    {
+      "id": "src_renderer_app_openforgetmenu",
+      "label": "openForgetMenu()",
+      "file": "src/renderer/app.js",
+      "at": "L1926"
     },
     {
       "id": "src_renderer_app_openlangmenu",
       "label": "openLangMenu()",
       "file": "src/renderer/app.js",
-      "at": "L753"
+      "at": "L818"
     },
     {
       "id": "src_renderer_app_openlegal",
       "label": "openLegal()",
       "file": "src/renderer/app.js",
-      "at": "L793"
+      "at": "L858"
     },
     {
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L7159"
+      "at": "L11758"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L8319"
+      "at": "L12941"
     },
     {
       "id": "src_renderer_app_opensearch",
       "label": "openSearch()",
       "file": "src/renderer/app.js",
-      "at": "L2708"
+      "at": "L5036"
     },
     {
       "id": "src_renderer_app_openslotslist",
       "label": "openSlotsList()",
       "file": "src/renderer/app.js",
-      "at": "L8564"
+      "at": "L13194"
     },
     {
       "id": "src_renderer_app_pickrangeday",
       "label": "pickRangeDay()",
       "file": "src/renderer/app.js",
-      "at": "L2880"
+      "at": "L5227"
     },
     {
       "id": "src_renderer_app_promptdialog",
       "label": "promptDialog()",
       "file": "src/renderer/app.js",
-      "at": "L606"
+      "at": "L671"
     },
     {
       "id": "src_renderer_app_saveonboarding",
       "label": "saveOnboarding()",
       "file": "src/renderer/app.js",
-      "at": "L1288"
+      "at": "L2583"
     },
     {
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L5176"
+      "at": "L7580"
     },
     {
       "id": "src_renderer_app_savereminderdialog",
       "label": "saveReminderDialog()",
       "file": "src/renderer/app.js",
-      "at": "L8952"
+      "at": "L13629"
     },
     {
       "id": "src_renderer_app_savetagdialog",
       "label": "saveTagDialog()",
       "file": "src/renderer/app.js",
-      "at": "L3725"
+      "at": "L6092"
+    },
+    {
+      "id": "src_renderer_app_sendfeedback",
+      "label": "sendFeedback()",
+      "file": "src/renderer/app.js",
+      "at": "L1037"
     },
     {
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L8277"
+      "at": "L12899"
+    },
+    {
+      "id": "src_renderer_app_setworkhours",
+      "label": "setWorkHours()",
+      "file": "src/renderer/app.js",
+      "at": "L2158"
     },
     {
       "id": "src_renderer_app_slotdayat",
       "label": "slotDayAt()",
       "file": "src/renderer/app.js",
-      "at": "L8669"
+      "at": "L13346"
     },
     {
       "id": "src_renderer_app_statusesofkind",
       "label": "statusesOfKind()",
       "file": "src/renderer/app.js",
-      "at": "L421"
+      "at": "L460"
+    },
+    {
+      "id": "src_renderer_app_syncstillfor",
+      "label": "syncStillFor()",
+      "file": "src/renderer/app.js",
+      "at": "L3195"
     },
     {
       "id": "src_renderer_app_syncupdatestatus",
       "label": "syncUpdateStatus()",
       "file": "src/renderer/app.js",
-      "at": "L877"
+      "at": "L1182"
     },
     {
       "id": "src_renderer_app_tickprojects",
       "label": "tickProjects()",
       "file": "src/renderer/app.js",
-      "at": "L2658"
+      "at": "L4986"
     },
     {
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L4528"
-    },
-    {
-      "id": "src_renderer_app_togglesyncenabled",
-      "label": "toggleSyncEnabled()",
-      "file": "src/renderer/app.js",
-      "at": "L1806"
+      "at": "L6905"
     },
     {
       "id": "src_renderer_app_updateprofilename",
       "label": "updateProfileName()",
       "file": "src/renderer/app.js",
-      "at": "L1314"
+      "at": "L2609"
+    },
+    {
+      "id": "src_renderer_core_accounts_upsertaccount",
+      "label": "upsertAccount()",
+      "file": "src/renderer/core/accounts.js",
+      "at": "L93"
     },
     {
       "id": "src_renderer_core_format_fmtshort",
@@ -1868,16 +2474,154 @@
       "at": "L49"
     },
     {
+      "id": "supabase_functions_ai_chat_index_ascii",
+      "label": "ascii()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L524"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_bad",
+      "label": "Bad",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L596"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_clean",
+      "label": "Clean",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L597"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_cleanmessages",
+      "label": "cleanMessages()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L612"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_countsasmessage",
+      "label": "countsAsMessage()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L767"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_id_or_ref",
+      "label": "ID_OR_REF()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L212"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_json",
+      "label": "Json",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L451"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_later",
+      "label": "later()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L875"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_meter",
+      "label": "meter()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L919"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_msg",
+      "label": "Msg",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L452"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_readbody",
+      "label": "readBody()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L854"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_reply",
+      "label": "reply()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L199"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_usage",
+      "label": "Usage",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L910"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_waituntil",
+      "label": "waitUntil()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L100"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_when",
+      "label": "when()",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L208"
+    },
+    {
       "id": "supabase_functions_delete_account_index_reply",
       "label": "reply()",
       "file": "supabase/functions/delete-account/index.ts",
-      "at": "L39"
+      "at": "L56"
+    },
+    {
+      "id": "supabase_functions_feedback_notify_index_admin",
+      "label": "Admin",
+      "file": "supabase/functions/feedback-notify/index.ts",
+      "at": "L74"
+    },
+    {
+      "id": "supabase_functions_feedback_notify_index_row",
+      "label": "Row",
+      "file": "supabase/functions/feedback-notify/index.ts",
+      "at": "L76"
+    },
+    {
+      "id": "supabase_functions_feedback_notify_index_sweepresult",
+      "label": "SweepResult",
+      "file": "supabase/functions/feedback-notify/index.ts",
+      "at": "L404"
+    },
+    {
+      "id": "supabase_functions_feedback_notify_index_telegram",
+      "label": "Telegram",
+      "file": "supabase/functions/feedback-notify/index.ts",
+      "at": "L75"
+    },
+    {
+      "id": "supabase_functions_feedback_notify_index_tgresult",
+      "label": "TgResult",
+      "file": "supabase/functions/feedback-notify/index.ts",
+      "at": "L280"
+    },
+    {
+      "id": "supabase_functions_feedback_notify_index_waituntil",
+      "label": "waitUntil()",
+      "file": "supabase/functions/feedback-notify/index.ts",
+      "at": "L72"
     },
     {
       "id": "tests_e2e_today_spec_element_getelementsbyclassname",
       "label": ".getElementsByClassName()",
       "file": "tests/e2e/today.spec.js",
-      "at": "L280"
+      "at": "L284"
+    },
+    {
+      "id": "tests_unit_ai_test_agendataskkeys",
+      "label": "agendaTaskKeys()",
+      "file": "tests/unit/ai.test.js",
+      "at": "L68"
+    },
+    {
+      "id": "tests_unit_oplog_test_device_reload",
+      "label": ".reload()",
+      "file": "tests/unit/oplog.test.js",
+      "at": "L128"
     },
     {
       "id": "tests_unit_visual_rules_test_expand",
@@ -1889,13 +2633,13 @@
       "id": "web_api_shim_loadlocal",
       "label": "loadLocal()",
       "file": "web/api-shim.js",
-      "at": "L19"
+      "at": "L33"
     },
     {
       "id": "web_api_shim_savelocal",
       "label": "saveLocal()",
       "file": "web/api-shim.js",
-      "at": "L28"
+      "at": "L42"
     }
   ]
 }

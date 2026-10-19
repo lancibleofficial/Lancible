@@ -255,7 +255,7 @@ const SWITCHES = [
   { name: 'вкладки проекта', open: () => openProject('p1'), seg: '#proj-tabs', to: 'button[data-ptab="versions"]' },
   { name: 'фильтр статусов', open: () => { openProject('p1'); }, seg: '.tf-status', to: 'button[data-status="done"]' },
   { name: 'вкладки задачи', open: () => { openProject('p1'); selectTask('t1'); }, seg: '#task-tabs', to: 'button[data-tab="history"]' },
-  { name: 'тема в настройках', open: () => openView('settings'), seg: '.theme-tabs', to: 'button[data-theme="light"]' },
+  { name: 'тема в настройках', open: () => openSettings('main'), seg: '.theme-tabs', to: 'button[data-theme="light"]' },
   { name: 'повторение задачи', open: () => { openProject('p1'); selectTask('t1'); openRepeatDialog(getTask('t1')); }, seg: '#rp-freq-seg', to: 'button[data-freq="month"]' },
 ];
 
@@ -352,10 +352,14 @@ test('колокольчик молчит без непрочитанного и
 // --- 5. Форма: скруглённый квадрат у кнопки запуска и галочки -------------------------
 
 test('кнопка запуска и галочка задачи — скруглённый квадрат одного токена во всех местах, обе темы', async ({ page }) => {
-  // Маленькая кнопка в строках и галочка — --radius-xs; большой квадрат
-  // таймера (#now-btn, #timer-btn) с 13 октября 2026 — --radius, как остров
-  // вокруг него и кнопки записи рядом.
-  const tokenOf = (sel) => (sel === '#now-btn' || sel === '#timer-btn' ? '--radius' : '--radius-xs');
+  // Большой квадрат таймера (#now-btn, #timer-btn) с 13 октября 2026 —
+  // --radius, как остров вокруг него и кнопки записи рядом. Маленькая кнопка
+  // в строках с 17 октября — --radius-sm: та же доля стороны, что у квадрата
+  // (около трети), и всё ещё квадрат, а не круг. Галочка — --radius-xs.
+  const tokenOf = (sel) => {
+    if (sel === '#now-btn' || sel === '#timer-btn') return '--radius';
+    return /rl-play/.test(sel) ? '--radius-sm' : '--radius-xs';
+  };
   await seed(page);
   const places = [
     { open: () => openView('home'), sels: ['#now-btn', '#recent-list .rl-play'] },
@@ -363,6 +367,9 @@ test('кнопка запуска и галочка задачи — скруг�
     { open: () => openProject('p1'), sels: ['.task-item .task-done'] },
     { open: () => { openProject('p1'); selectTask('t1'); }, sels: ['#timer-btn'] },
   ];
+  // Доля скругления от стороны у большого квадрата — с ней сверяется
+  // маленькая кнопка: «скруглена так же» значит той же формы.
+  let bigShare = null;
   for (const theme of ['dark', 'light']) {
     await page.evaluate((th) => { state.settings.theme = th; applyTheme(); }, theme);
     for (const p of places) {
@@ -381,6 +388,12 @@ test('кнопка запуска и галочка задачи — скруг�
         expect(m.token, 'токен объявлен').toMatch(/^\d+px$/);
         expect(new Set(m.radius), `${theme}, ${sel}: скругление = ${tokenOf(sel)}`).toEqual(new Set([m.token]));
         expect(parseFloat(m.token), `${theme}, ${sel}: не круг`).toBeLessThan(m.side / 2);
+        const share = parseFloat(m.token) / m.side;
+        if (sel === '#now-btn') bigShare = share;
+        if (/rl-play/.test(sel)) {
+          expect(bigShare, 'большой квадрат измерен раньше').not.toBeNull();
+          expect(Math.abs(share - bigShare), `${theme}, ${sel}: доля скругления ${share.toFixed(2)} против ${bigShare.toFixed(2)} у квадрата`).toBeLessThan(0.07);
+        }
       }
     }
   }
@@ -393,8 +406,10 @@ test('галочка задачи: выполнено — заливка акц�
   const before = await cb.evaluate((n) => ({ bg: getComputedStyle(n).backgroundColor, mark: getComputedStyle(n, '::before').transform }));
   expect(before.bg).toBe('rgba(0, 0, 0, 0)');
   await cb.check();
-  const moving = await cb.evaluate((n) => n.getAnimations({ subtree: true }).map((a) => a.transitionProperty));
-  expect(moving, 'заливка и галочка переходят, а не перескакивают').toEqual(expect.arrayContaining(['background-color', 'transform']));
+  // С 18 октября 2026 — налив, как на телефоне: акцент поднимается
+  // (liqRise), галочка выпрыгивает (checkMark). Подробно — check-motion.spec.js.
+  const moving = await cb.evaluate((n) => n.getAnimations({ subtree: true }).map((a) => a.animationName));
+  expect(moving, 'заливка и галочка наливаются, а не перескакивают').toEqual(expect.arrayContaining(['liqRise', 'checkMark']));
   await expect.poll(() => cb.evaluate((n) => n.getAnimations({ subtree: true }).length)).toBe(0);
   const after = await cb.evaluate((n) => {
     const probe = document.createElement('i');

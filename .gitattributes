@@ -16,3 +16,13 @@
 # Windows тоже. Остального репозитория правило не касается.
 src/renderer/core/*.js text eol=lf
 mobile/src/core/*.js   text eol=lf
+
+# Сборки редактора по 0,8–3 МБ одной строкой: построчный diff в них ничего не
+# скажет и только раздувает вывод git. Перевод строки у них одинаковый
+# (оба текстовые), поэтому editor-pdf.js и его копия-ассет телефона
+# editor-pdf.txt после выгрузки остаются равными побайтно — это сторожит
+# tests/unit/editor-bundle.test.js.
+src/renderer/editor.js            -diff
+src/renderer/editor-pdf.js        -diff
+mobile/src/editor/editorBundle.js -diff
+mobile/assets/editor-pdf.txt      -diff

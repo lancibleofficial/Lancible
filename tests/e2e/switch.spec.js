@@ -47,6 +47,19 @@ async function openSettings(page) {
   });
 }
 
+/** С 17 октября 2026 настройки — по разделам, и строки-переключатели стоят в
+ *  четырёх: «Основное» (напоминания), «Работа» (таймер, заработок),
+ *  «Аккаунт» (синхронизация), «Обратная связь» (снимок экрана). measure
+ *  зовётся на странице каждого раздела по видимым строкам. */
+async function eachSwitchRow(page, measure, arg) {
+  const out = [];
+  for (const section of ['main', 'work', 'account', 'feedback']) {
+    await page.evaluate((s) => openSettings(s), section);
+    out.push(...await page.evaluate(measure, arg));
+  }
+  return out;
+}
+
 for (const theme of THEMES) {
   test(`${theme}: кружок отличим от дорожки не меньше чем 3:1, включён он или выключен`, async ({ page }) => {
     await open(page, theme);
@@ -88,13 +101,15 @@ for (const theme of THEMES) {
   test(`${theme}: выключенная дорожка заметна на фоне карточки настроек`, async ({ page }) => {
     await open(page, theme);
     await openSettings(page);
-    const rows = await page.evaluate(() => [...document.querySelectorAll('#settings-view .settings-row.switch')].map((row) => {
+    const rows = await eachSwitchRow(page, () => [...document.querySelectorAll('#settings-view .srow.switch')].filter((row) => row.offsetParent).map((row) => {
       row.setAttribute('aria-pressed', 'false');
-      const card = getComputedStyle(row.closest('.settings-card')).backgroundColor;
+      const card = getComputedStyle(row.closest('.sgroup')).backgroundColor;
       const track = getComputedStyle(row.querySelector('.switch-track')).backgroundColor;
       return { id: row.id, card, track, ratio: +window.wcagRatio(card, track).toFixed(2) };
     }));
-    expect(rows.length, 'строк-переключателей в настройках').toBe(2);
+    expect(rows.map((r) => r.id), 'строки-переключатели в настройках').toEqual(
+      // Снимок в «Обратной связи» с 19 октября 2026 — блок со скрепкой, не переключатель.
+      ['settings-notif-toggle', 'settings-timer-toggle', 'settings-earnings-toggle', 'settings-sync-toggle']);
     for (const r of rows) expect(r.ratio, `${r.id}: дорожка ${r.track} на карточке ${r.card}`).toBeGreaterThanOrEqual(1.5);
   });
 
@@ -102,7 +117,7 @@ for (const theme of THEMES) {
     await open(page, theme);
     await openSettings(page);
     for (const on of [true, false]) {
-      const geo = await page.evaluate((on) => [...document.querySelectorAll('#settings-view .settings-row.switch')].map((row) => {
+      const geo = await eachSwitchRow(page, (on) => [...document.querySelectorAll('#settings-view .srow.switch')].filter((row) => row.offsetParent).map((row) => {
         row.setAttribute('aria-pressed', String(on));
         const r = row.getBoundingClientRect();
         const t = row.querySelector('.switch-track').getBoundingClientRect();
@@ -118,7 +133,7 @@ for (const theme of THEMES) {
           thumbRight: t.right - k.right,
         };
       }), on);
-      expect(geo.length).toBe(2);
+      expect(geo.length).toBe(4);
       for (const g of geo) {
         expect(Math.abs(g.centerDy), `${g.id}: центр дорожки против центра строки`).toBeLessThanOrEqual(1);
         expect(Math.abs(g.rightGap - g.pad), `${g.id}: дорожка у края строки, внутри отступа`).toBeLessThanOrEqual(1);
@@ -126,7 +141,7 @@ for (const theme of THEMES) {
         const side = on ? g.thumbRight : g.thumbLeft;
         expect(Math.abs(side - g.thumbTop), `${g.id}: отступ кружка от торца равен отступу от верха`).toBeLessThanOrEqual(0.5);
       }
-      expect(Math.abs(geo[0].rightGap - geo[1].rightGap), 'правый край во всех строках одинаков').toBeLessThanOrEqual(0.5);
+      for (const g of geo) expect(Math.abs(g.rightGap - geo[0].rightGap), `${g.id}: правый край во всех строках одинаков`).toBeLessThanOrEqual(0.5);
     }
   });
 

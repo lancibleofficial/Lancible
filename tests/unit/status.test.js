@@ -165,3 +165,97 @@ test("без задачи план не падает", () => {
   assert.deepEqual(S.planTaskDone(doneSet, null, true), { setDone: true });
   assert.deepEqual(S.planTaskDone(doneSet, undefined, false), { setDone: false });
 });
+
+// --- id набора по умолчанию (17 октября 2026) ------------------------------
+//
+// Проект без статусов получает набор на каждом устройстве сам: при создании,
+// в migrate() из старого блоба, у агента. Со случайными id два устройства,
+// получившие один и тот же проект без статусов, завели бы по набору, и журнал
+// правок честно сложил бы оба — двенадцать столбцов на доске. Теперь id — от
+// проекта и ключа: `${projectId}:st:${key}`.
+
+test('набор по умолчанию: id от проекта и ключа — одинаковы при каждом вызове', () => {
+  const name = (key) => 'имя:' + key;
+  const a = S.makeProjectStatuses('p1', name, () => { throw new Error('генератор id набору не нужен'); });
+  const b = S.makeProjectStatuses('p1', (key) => 'name:' + key);
+  assert.deepEqual(a.map((r) => r.id), ['p1:st:backlog', 'p1:st:todo', 'p1:st:progress', 'p1:st:checking', 'p1:st:done', 'p1:st:cancelled']);
+  assert.deepEqual(b.map((r) => r.id), a.map((r) => r.id), 'другой язык — те же id');
+  const other = S.makeProjectStatuses('p2', name);
+  assert.equal(new Set([...a, ...other].map((r) => r.id)).size, 12, 'у разных проектов id не пересекаются');
+  assert.equal(S.defaultStatusKey('p1', 'done'), 'p1:st:done');
+});
+
+test('migrate(): проекту без статусов — тот же набор и те же id на любом устройстве; заведённые не трогает', () => {
+  const { migrate } = require('../../src/renderer/core/migrate.js');
+  const deps = (prefix) => {
+    let n = 0;
+    return {
+      t: (k) => k, uid: () => `${prefix}${++n}`, langs: ['ru'], palette: ['#111111'],
+      currencies: { RUB: {} }, sym2code: {}, defaultProjectNameKey: 'project.default',
+    };
+  };
+  const blob = () => ({
+    projects: [{ id: 'p1', name: 'Сайт' }, { id: 'p2', name: 'Своё' }],
+    statuses: [{ id: 'own-1', projectId: 'p2', name: 'Свой', kind: 'todo', order: 0, color: '#222222', builtin: false }],
+    tasks: [{ id: 't1', projectId: 'p1', title: 'Вёрстка', statusId: null, done: false }],
+  });
+  const onA = migrate(blob(), deps('a'));
+  const onB = migrate(blob(), deps('b'));
+  const ids = (s, pid) => S.orderedStatuses(s.statuses, pid).map((x) => x.id);
+  assert.deepEqual(ids(onA, 'p1'), S.makeProjectStatuses('p1', (k) => k).map((r) => r.id));
+  assert.deepEqual(ids(onA, 'p1'), ids(onB, 'p1'), 'два устройства — один набор');
+  assert.deepEqual(ids(onA, 'p2'), ['own-1'], 'заведённый статус не переименован');
+  assert.equal(onA.tasks[0].statusId, 'p1:st:todo', 'задача встала в «к выполнению» набора');
+});
+
+test('журнал правок: два устройства завели набор одному проекту — после слияния шесть статусов, не двенадцать', () => {
+  const O = require('../../src/renderer/core/oplog.js');
+  const T0 = Date.parse('2026-10-17T09:00:00.000Z');
+  const iso = (ms) => new Date(ms).toISOString();
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+  let idn = 0;
+  const newId = () => `00000000-0000-4000-8000-${(++idn).toString(16).padStart(12, '0')}`;
+  // Сервер — модель таблицы changes: seq по порядку, повтор op_id отбит.
+  const rows = [];
+  const insert = (ops) => {
+    const out = [];
+    for (const op of ops) {
+      if (rows.some((r) => r.op_id === op.id)) continue;
+      const row = clone(O.opToRow(op));
+      row.base_seq = Math.min(row.base_seq, rows.length);
+      row.seq = rows.length + 1;
+      row.created_at = iso(T0);
+      rows.push(row);
+      out.push(clone(row));
+    }
+    return out;
+  };
+  // Слепок, в котором проект есть, а статусов у него нет (старый блоб).
+  const snap = { seq: 0, data: { projects: [{ id: 'p1', name: 'Сайт', color: '#69d345', description: '', pinnedAt: null, tagIds: [] }], tasks: [], statuses: [], tags: [], versions: [], documents: [] } };
+  // Устройство — пачка ядра и три шага: завести набор, отправить, принять.
+  // Простые функции, а не методы: граф кода связывает их с вызовами
+  // (graph-dead-code.test.js).
+  function seedDevice(id, lang) {
+    let bundle = O.bootstrapFromSnapshot(snap, [], { deviceId: id, now: iso(T0), newId });
+    const live = clone(bundle.state);
+    live.statuses.push(...S.makeProjectStatuses('p1', (key) => `${lang}:${key}`));
+    bundle = O.commitLocal(bundle, live, { deviceId: id, at: iso(T0), newId }).bundle;
+    return { id, bundle };
+  }
+  function sendDevice(d) {
+    if (d.bundle.pending.length) d.bundle = O.ackPending(d.bundle, insert(d.bundle.pending), { deviceId: d.id, now: iso(T0), newId });
+  }
+  function readDevice(d) {
+    d.bundle = O.mergeIncoming(d.bundle, rows.filter((r) => r.seq > d.bundle.lastSeq).map(clone), { deviceId: d.id, now: iso(T0), newId });
+  }
+  // Оба офлайн завели набор, потом вышли на связь.
+  const A = seedDevice('web-a', 'ru');
+  const B = seedDevice('web-b', 'ru');
+  for (let i = 0; i < 4; i++) { sendDevice(A); sendDevice(B); readDevice(A); readDevice(B); }
+  for (const d of [A, B]) {
+    const list = d.bundle.state.statuses.filter((s) => s.projectId === 'p1');
+    assert.equal(list.length, 6, `дубли статусов: ${list.map((s) => s.id).join(', ')}`);
+    assert.deepEqual(list.map((s) => s.id).sort(), S.makeProjectStatuses('p1', String).map((r) => r.id).sort());
+  }
+  assert.deepEqual(A.bundle.state.statuses, B.bundle.state.statuses, 'устройства сошлись');
+});

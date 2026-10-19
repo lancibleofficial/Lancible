@@ -3,9 +3,13 @@
 //
 // Клавиатура открывается сразу: autoFocus на поле и ещё раз фокус, когда
 // экран доехал, — на Android autoFocus во время въезда срабатывает не всегда.
-import { render, fireEvent } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { render, fireEvent, waitFor, within, act } from '@testing-library/react-native';
 import SearchScreen from '../src/screens/SearchScreen';
 import { useAppStore } from '../src/store/useAppStore';
+import { useAuthStore } from '../src/store/useAuthStore';
+import { useAiChat, aiStop, aiChatsKey, aiChatKey } from '../src/lib/aiChat';
+import { t } from '../src/lib/i18n';
 
 const mockFocus = jest.fn();
 jest.mock('../src/components/AppTextInput', () => {
@@ -46,7 +50,7 @@ beforeEach(() => {
 test('поле с автофокусом, и фокус ещё раз, когда экран доехал', async () => {
   const navigation = nav();
   const { getByPlaceholderText } = await render(<SearchScreen navigation={navigation} />);
-  expect(getByPlaceholderText('Поиск задач и проектов').props.autoFocus).toBe(true);
+  expect(getByPlaceholderText('Поиск задач, проектов и чатов').props.autoFocus).toBe(true);
   expect(navigation.addListener).toHaveBeenCalledWith('transitionEnd', expect.any(Function));
 
   navigation.listeners.transitionEnd({ data: { closing: false } });
@@ -60,7 +64,64 @@ test('шапка своя, системную строку поиска не п�
   const navigation = nav();
   const { getByPlaceholderText, getByText, queryByText } = await render(<SearchScreen navigation={navigation} />);
   expect(navigation.setOptions).not.toHaveBeenCalled();
-  await fireEvent.changeText(getByPlaceholderText('Поиск задач и проектов'), 'глав');
+  await fireEvent.changeText(getByPlaceholderText('Поиск задач, проектов и чатов'), 'глав');
   getByText('Главная страница');
   expect(queryByText('Логи')).toBeNull();
+});
+
+// Круг 21 (19 октября 2026): поиск находит и чаты с агентом — по названию и
+// тексту сообщений, только вошедшего и только с этого устройства.
+describe('чаты', () => {
+  const at = new Date().toISOString();
+  const row = (id, title, preview) => ({ id, title, createdAt: at, updatedAt: at, preview, count: 2 });
+  const msgs = (...texts) => ({ messages: [], items: texts.map((text, i) => ({ id: `m${i}`, kind: 'msg', role: i % 2 ? 'assistant' : 'user', text })) });
+  const field = (s) => s.getByPlaceholderText(t('ru', 'search.placeholder'));
+
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    aiStop();
+    useAiChat.setState({ uid: null, loaded: false, chats: [], chatId: null, opened: false, messages: [], items: [], pending: [], needAuth: false });
+    await AsyncStorage.setItem(aiChatsKey('u1'), JSON.stringify([row('c-1', 'План недели', 'Начнём с понедельника.'), row('c-2', 'Отпуск в мае', 'Хорошо.')]));
+    await AsyncStorage.setItem(aiChatKey('u1', 'c-1'), JSON.stringify(msgs('План недели', 'Начнём с **понедельника**: созвон с бухгалтером в 10:00.')));
+    await AsyncStorage.setItem(aiChatKey('u1', 'c-2'), JSON.stringify(msgs('Отпуск в мае', 'Хорошо.')));
+    useAuthStore.setState({ status: 'signedIn', user: { id: 'u1', email: 'u1@example.com' } });
+  });
+  afterEach(async () => {
+    await act(async () => { useAuthStore.setState({ status: 'signedOut', user: null }); });
+  });
+
+  test('по тексту сообщения — группа «Чаты» с куском сообщения; касание — чат поверх поиска', async () => {
+    const navigation = { ...nav(), push: jest.fn() };
+    const s = await render(<SearchScreen navigation={navigation} />);
+    await waitFor(() => expect(useAiChat.getState().loaded).toBe(true));
+    await fireEvent.changeText(field(s), 'бухгалтер');
+    const hit = await s.findByTestId('search-chat-c-1');
+    s.getByText(t('ru', 'search.chats_group'));
+    within(hit).getByText('План недели');
+    within(hit).getByText(/созвон с бухгалтером в 10:00/);
+    expect(s.queryByTestId('search-chat-c-2')).toBeNull();
+    await fireEvent.press(hit);
+    expect(navigation.push).toHaveBeenCalledWith('ChatThread', { chatId: 'c-1' });
+  });
+
+  test('по названию — без сообщения с совпадением строка с превью; регистр не важен', async () => {
+    const s = await render(<SearchScreen navigation={nav()} />);
+    await waitFor(() => expect(useAiChat.getState().loaded).toBe(true));
+    await fireEvent.changeText(field(s), 'ОТПУСК');
+    const hit = await s.findByTestId('search-chat-c-2');
+    within(hit).getByText('Отпуск в мае');
+    within(hit).getByText('Хорошо.');
+    expect(s.queryByTestId('search-chat-c-1')).toBeNull();
+  });
+
+  test('чужой аккаунт — его чаты не ищутся; без входа группы нет', async () => {
+    useAuthStore.setState({ status: 'signedIn', user: { id: 'u2', email: 'u2@example.com' } });
+    const s = await render(<SearchScreen navigation={nav()} />);
+    await waitFor(() => expect(useAiChat.getState().uid).toBe('u2'));
+    await waitFor(() => expect(useAiChat.getState().loaded).toBe(true));
+    await fireEvent.changeText(field(s), 'план');
+    expect(s.queryByText(t('ru', 'search.chats_group'))).toBeNull();
+    await act(async () => { useAuthStore.setState({ status: 'signedOut', user: null }); });
+    expect(s.queryByTestId('search-chat-c-1')).toBeNull();
+  });
 });

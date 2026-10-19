@@ -190,6 +190,9 @@ function srowHtml(id, iconName, labelKey, valueId, subId) {
 
 function taskParamsHtml() {
   return [
+    // «Другая версия ›» — пусто и спрятано, пока у задачи нет конфликта
+    // (renderTaskConflicts, раздел «Конфликты»).
+    '<div class="sgroup" id="task-conflicts" hidden></div>',
     '<div class="sgroup-label" data-i18n="task.status_label"></div>',
     '<div class="tp-chips" id="task-statuses" role="group" data-i18n-aria="task.status_label"></div>',
     '<div class="sgroup-label" id="task-version-label" data-i18n="version.label" hidden></div>',
@@ -205,7 +208,7 @@ function taskParamsHtml() {
     '</div>',
     '<div class="sgroup-label" data-i18n="remind.label"></div>',
     '<div class="sgroup" id="remind-row"></div>',
-    '<div class="sgroup-label" data-i18n="task.group_more"></div>',
+    '<div class="sgroup-label" id="task-more-label" data-i18n="task.group_more"></div>',
     '<div class="sgroup" id="task-more-group">',
     srowHtml('rate-row', 'wallet', 'money.rate_label', 'rate-value'),
     '</div>',
@@ -237,7 +240,7 @@ const el = {
 
   authGoogleBtn: $('auth-google-btn'),
   authEmail: $('auth-email'), authPassword: $('auth-password'), authError: $('auth-error'),
-  authTitle: $('auth-title'), authSub: $('auth-sub'),
+  authTitle: $('auth-title'), authSub: $('auth-sub'), authAddNote: $('auth-add-note'),
   authSwitchText: $('auth-switch-text'), authSwitchBtn: $('auth-switch-btn'),
   authCancel: $('auth-cancel'), authSubmit: $('auth-submit'),
   authName: $('auth-name'), authUsecases: $('auth-usecases'),
@@ -266,16 +269,36 @@ const el = {
   periodBar: $('period-bar'), periodBarRange: $('period-bar-range'), periodBarSum: $('period-bar-sum'), periodBarInfo: $('period-bar-info'),
   agCreate: $('ag-create'),
   settingsView: $('settings-view'), settingsProfile: $('settings-profile'),
+  settingsRoot: $('settings-root'), settingsSections: $('settings-sections'),
+  settingsPages: [...document.querySelectorAll('#settings-view .settings-page[data-section]')],
   settingsLangRow: $('settings-lang-row'), settingsLangValue: $('settings-lang-value'),
   settingsVersion: $('settings-version'), settingsUpdateCheck: $('settings-update-check'),
-  settingsDataLabel: $('settings-data-label'), settingsDataCard: $('settings-data-card'),
   settingsSyncToggle: $('settings-sync-toggle'),
   settingsRate: $('settings-rate'),
   settingsCurrencyRow: $('settings-currency-row'), settingsCurrencyValue: $('settings-currency-value'),
-  settingsAccountLabel: $('settings-account-label'), settingsAccountCard: $('settings-account-card'),
-  settingsNameRow: $('settings-name-row'), settingsNameValue: $('settings-name-value'),
+  settingsAccountCard: $('settings-account-card'), settingsAccountGuest: $('settings-account-guest'),
+  settingsNameRow: $('settings-name-row'), settingsNameValue: $('settings-name-value'), settingsEmailValue: $('settings-email-value'),
   settingsPasswordRow: $('settings-password-row'), settingsSignoutRow: $('settings-signout-row'),
-  settingsDeleteRow: $('settings-delete-row'),
+  settingsDeleteRow: $('settings-delete-row'), settingsDanger: $('settings-danger'), settingsDangerLabel: $('settings-danger-label'),
+  settingsAccounts: $('settings-accounts'), settingsAccountsLabel: $('settings-accounts-label'), settingsCurrentLabel: $('settings-current-label'),
+  settingsRelogin: $('settings-relogin'), settingsDevice: $('settings-device'), settingsDeviceLabel: $('settings-device-label'), settingsForgetRow: $('settings-forget-row'), settingsMoveGuestRow: $('settings-move-guest-row'),
+  settingsExportRow: $('settings-export-row'), settingsLegalCookies: $('settings-legal-cookies'),
+  settingsSyncData: $('settings-sync-data'), settingsSyncDataLabel: $('settings-sync-data-label'),
+  settingsConflictsRow: $('settings-conflicts-row'), settingsConflictsValue: $('settings-conflicts-value'),
+  settingsTrashRow: $('settings-trash-row'), settingsTrashValue: $('settings-trash-value'),
+  syncdlgBackdrop: $('syncdlg-backdrop'), syncdlgTitle: $('syncdlg-title'), syncdlgBody: $('syncdlg-body'),
+  syncdlgBack: $('syncdlg-back'), syncdlgClose: $('syncdlg-close'),
+  taskConflicts: $('task-conflicts'), pdlgConflicts: $('pdlg-conflicts'),
+  settingsMode: $('settings-mode'), settingsModeHint: $('settings-mode-hint'),
+  settingsTimerToggle: $('settings-timer-toggle'), settingsEarningsToggle: $('settings-earnings-toggle'),
+  settingsHoursValue: $('settings-hours-value'), settingsWorkHint: $('settings-work-hint'),
+  settingsHoursStartRow: $('settings-hours-start-row'), settingsHoursStart: $('settings-hours-start'),
+  settingsHoursEndRow: $('settings-hours-end-row'), settingsHoursEnd: $('settings-hours-end'),
+  settingsHoursDays: $('settings-hours-days'),
+  taskMoreLabel: $('task-more-label'), taskMoreGroup: $('task-more-group'),
+  fbForm: $('fb-form'), fbKind: $('fb-kind'), fbText: $('fb-text'), fbCount: $('fb-count'),
+  fbAttach: $('fb-attach'), fbAttachSub: $('fb-attach-sub'), fbShot: $('fb-shot'), fbThumb: $('fb-thumb'), fbThumbImg: $('fb-thumb-img'), fbThumbX: $('fb-thumb-x'), fbFile: $('fb-file'),
+  fbHint: $('fb-hint'), fbError: $('fb-error'), fbErrorText: $('fb-error-text'), fbRetry: $('fb-retry'), fbSend: $('fb-send'),
   modalLabel2: $('modal-label2'), modalInput2: $('modal-input2'), modalError: $('modal-error'),
 
   homeCount: $('home-count'), projectsTrack: $('projects-track'),
@@ -333,7 +356,8 @@ const el = {
   taskVersionLabel: $('task-version-label'), taskVersionRow: $('task-version-row'),
   taskRepeat: $('task-repeat'), repeatValue: $('repeat-value'), repeatNext: $('repeat-next'),
   rpdlgBackdrop: $('rpdlg-backdrop'), rpEvery: $('rp-every'), rpUnit: $('rp-unit'),
-  rpFreqSeg: $('rp-freq-seg'), rpDays: $('rp-days'), rpMonthSeg: $('rp-month-seg'),
+  rpFreqSeg: $('rp-freq-seg'), rpDays: $('rp-days'), rpDaysBlock: $('rp-days-block'),
+  rpMonthSeg: $('rp-month-seg'), rpMonthBlock: $('rp-month-block'),
   rpFromSeg: $('rp-from-seg'), rpEndsSeg: $('rp-ends-seg'),
   rpAfter: $('rp-after'), rpCount: $('rp-count'), rpUntilRow: $('rp-until-row'), rpUntil: $('rp-until'),
   rpHistory: $('rp-history'), rpPreview: $('rp-preview'),
@@ -354,6 +378,12 @@ const el = {
   rmMonthLine: $('rm-month-line'), rmMonthDay: $('rm-monthday'), rmTimeBtn: $('rm-time-btn'),
   rmError: $('rm-error'), rmdlgDelete: $('rmdlg-delete'), rmdlgCancel: $('rmdlg-cancel'), rmdlgSave: $('rmdlg-save'),
   notifBtn: $('notif-btn'), notifBadge: $('notif-badge'), notifPanel: $('notif-panel'),
+  aiBtn: $('ai-btn'), aiPanel: $('ai-panel'), aiQuota: $('ai-quota'), aiMore: $('ai-more'), aiClose: $('ai-close'),
+  aiBack: $('ai-back'), aiTitle: $('ai-title'), aiSignin: $('ai-signin'), aiSigninBtn: $('ai-signin-btn'),
+  aiBody: $('ai-body'), aiHello: $('ai-hello'), aiPhrase: $('ai-phrase'), mobileAiBtn: $('mobile-ai-btn'),
+  aiList: $('ai-list'), aiListLabel: $('ai-list-label'), aiChats: $('ai-chats'), aiLog: $('ai-log'), navrail: $('navrail'),
+  aiCompose: $('ai-compose'), aiInput: $('ai-input'), aiSend: $('ai-send'), aiAttach: $('ai-attach'), aiFile: $('ai-file'),
+  aiAttachList: $('ai-attach-list'), aiAttachError: $('ai-attach-error'),
   settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
   settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
   settingsLegalPrivacy: $('settings-legal-privacy'), settingsLegalTerms: $('settings-legal-terms'),
@@ -410,6 +440,15 @@ const uid = () =>
 
 const getTask = (id) => state.tasks.find((t2) => t2.id === id) || null;
 const getProject = (id) => state.projects.find((p) => p.id === id) || null;
+/** Проект поменяли — он сам (имя, цвет, описание, ставка, теги) или его
+ *  статусы и версии: отметка свежести, по ней «Проекты» и списки проектов
+ *  ставят его первым (Core.projectsByActivity, 19 октября 2026). updatedAt —
+ *  тихое поле журнала правок (core/oplog.js, QUIET): две отметки с разных
+ *  устройств не спорят, побеждает поздняя. */
+function touchProject(id) {
+  const p = getProject(id);
+  if (p) p.updatedAt = new Date().toISOString();
+}
 const tasksOf = (projectId) => state.tasks.filter((t2) => t2.projectId === projectId);
 
 // --- Статусы ---------------------------------------------------------------
@@ -427,7 +466,7 @@ const defaultStatusId = (projectId, done) => Core.defaultStatusId(state.statuses
  *  бы без единого столбца. */
 function seedProjectStatuses(projectId) {
   if (state.statuses.some((s) => s.projectId === projectId)) return;
-  for (const row of Core.makeProjectStatuses(projectId, (key) => t(`status.default_${key}`), uid)) {
+  for (const row of Core.makeProjectStatuses(projectId, (key) => t(`status.default_${key}`))) {
     state.statuses.push(row);
   }
 }
@@ -563,6 +602,12 @@ const dueState = (task) => Core.dueState(task, Date.now());
 
 /** Сумма с валютой: по умолчанию основной, у проекта — своей. */
 const fmtMoney = (n, code) => `${moneyFmt().format(Math.round((n + Number.EPSILON) * 100) / 100)} ${symOf(code || state.settings.currency)}`;
+/** Режим (core/modes.js, 17 октября 2026): что показывать — деньги, счётчики
+ *  заработка, кнопки таймера. Экраны читают только эти флаги, не
+ *  settings.mode напрямую. */
+const modeFlags = () => Core.modeFlags(state.settings);
+/** «2 ч 30 мин · 4 000 ₽» — а в «личном» режиме только время. */
+const fmtDurMoney = (ms, money, code) => (modeFlags().money ? `${fmtDur(ms)} · ${fmtMoney(money, code)}` : fmtDur(ms));
 
 /** Короткая подпись срока для списка: «просрочено» / «сегодня» / дата. */
 const dueShort = (task) => Core.dueShort(task, Date.now(), t, fmtDateShort);
@@ -573,21 +618,41 @@ const dueShort = (task) => Core.dueShort(task, Date.now(), t, fmtDateShort);
 // ---------------------------------------------------------------------------
 
 let toastTimer = null;
-function toast(message) {
-  el.toast.textContent = message;
+/** Тост, который висит, пока его не снимут (opts.sticky): обычный тост
+ *  показывается поверх и, погаснув, уступает место ему снова. */
+let toastSticky = null;
+/** Тост: строка внизу, гаснет сама через 3,2 с. opts.action — кнопка справа
+ *  ({ label, onClick }, .btn-soft), opts.sticky — не гаснет. */
+function toast(message, opts) {
+  const o = opts || {};
+  if (o.sticky) toastSticky = { message, action: o.action || null };
+  paintToast(message, o.action || null);
+  clearTimeout(toastTimer);
+  if (o.sticky) return;
+  toastTimer = setTimeout(() => {
+    if (toastSticky) paintToast(toastSticky.message, toastSticky.action);
+    else el.toast.hidden = true;
+  }, 3200);
+}
+function paintToast(message, action) {
+  el.toast.classList.toggle('has-action', !!action);
+  if (action) {
+    const btn = elt('button', 'btn-soft toast-action', action.label);
+    btn.type = 'button';
+    btn.addEventListener('click', action.onClick);
+    el.toast.replaceChildren(elt('span', 'toast-text', message), btn);
+  } else el.toast.textContent = message;
   el.toast.hidden = false;
   el.toast.style.animation = 'none';
   void el.toast.offsetWidth;
   el.toast.style.animation = '';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.toast.hidden = true; }, 3200);
 }
 
 const anyDialogOpen = () =>
   !el.modalBackdrop.hidden || !el.pdlgBackdrop.hidden || !el.sdlgBackdrop.hidden ||
   !el.confirmBackdrop.hidden || !el.searchPanel.hidden || !el.expdlgBackdrop.hidden ||
   !el.tagdlgBackdrop.hidden || !el.rpdlgBackdrop.hidden || !el.sldlgBackdrop.hidden ||
-  !el.rmdlgBackdrop.hidden || !el.tmdlgBackdrop.hidden;
+  !el.rmdlgBackdrop.hidden || !el.tmdlgBackdrop.hidden || !el.syncdlgBackdrop.hidden;
 
 // ---------------------------------------------------------------------------
 // Диалог подтверждения (замена системного confirm())
@@ -805,27 +870,267 @@ el.settingsRate.addEventListener('input', () => {
   renderStats();
   scheduleSave();
 });
+// Имя и пароль — только своим сеансом: отставшая вкладка не спрашивает, а
+// сеанс в хранилище сверяется после ввода (foreignSession).
 el.settingsNameRow.addEventListener('click', async () => {
-  if (!currentUser) return;
+  if (!currentUser || staleGuard()) return;
   const res = await promptDialog({ label: t('profile.name_label'), value: currentUser.name || '', okLabel: t('common.save') });
-  if (!res) return;
+  if (!res || await foreignSession()) return;
   const ok = await updateProfileName(res.value);
   toast(t(ok ? 'profile.name_updated' : 'profile.update_failed'));
   renderAccountBtn();
   renderSettings();
 });
 el.settingsPasswordRow.addEventListener('click', async () => {
+  if (staleGuard()) return;
   const res = await promptDialog({
     label: t('profile.new_password'), type: 'password', label2: t('profile.confirm_password'), okLabel: t('common.save'),
     validate: (a, b) => (a.length < 6 ? t('profile.password_too_short') : a !== b ? t('profile.password_mismatch') : null),
   });
-  if (!res) return;
+  if (!res || await foreignSession()) return;
   const ok = await changePassword(res.value);
   toast(t(ok ? 'profile.password_updated' : 'profile.update_failed'));
 });
 el.settingsSignoutRow.addEventListener('click', signOut);
 el.settingsDeleteRow.addEventListener('click', deleteAccount);
 el.settingsCurrencyRow.addEventListener('click', () => openCurrencyMenu(el.settingsCurrencyRow));
+el.settingsLegalCookies.addEventListener('click', () => openLegal('cookies'));
+el.settingsExportRow.addEventListener('click', openExportPeriodDialog);
+for (const row of el.settingsSections.querySelectorAll('.srow[data-section]')) {
+  row.addEventListener('click', () => openSettings(row.dataset.section));
+}
+// Верхний блок: вошедшему (и открытому без сеанса) — раздел «Аккаунт», гостю — вход.
+el.settingsProfile.addEventListener('click', () => {
+  if (el.settingsProfile.dataset.go === 'signin') openAuthModal('signin');
+  else openSettings('account');
+});
+// «Назад» из раздела — тот же шаг, что «назад» браузера; пришли ссылкой прямо
+// в раздел — в список разделов.
+for (const back of el.settingsView.querySelectorAll('.settings-back')) {
+  back.addEventListener('click', () => routeBack(() => openSettings(null)));
+}
+
+// Режим и переключатели «Работы» (core/modes.js). Режим — пресет: «личное»
+// прячет деньги целиком, переключатель заработка в нём не действует и не
+// показан. Выключили таймер, пока он идёт, — запись сохраняется и таймер
+// останавливается: кнопки остановить его уже не будет.
+for (const b of el.settingsMode.querySelectorAll(':scope > button')) {
+  b.addEventListener('click', () => {
+    state.settings.mode = Core.normalizeMode(b.dataset.mode);
+    render();
+    scheduleSave();
+  });
+}
+el.settingsTimerToggle.addEventListener('click', () => {
+  const on = !modeFlags().timer;
+  if (!on && state.activeTimer) stopTimer();
+  state.settings.showTimer = on;
+  render();
+  scheduleSave();
+});
+el.settingsEarningsToggle.addEventListener('click', () => {
+  state.settings.showEarnings = state.settings.showEarnings === false;
+  render();
+  scheduleSave();
+});
+
+/** Классы режима на <body>: .if-money, .if-earnings и .if-timer в разметке и
+ *  в собранных строках прячет одно правило styles.css (слой «Каркас»).
+ *  Группа «Ещё» панели задачи — одна ставка: без денег её нет целиком. */
+function applyModeFlags() {
+  const f = modeFlags();
+  document.body.classList.toggle('no-money', !f.money);
+  document.body.classList.toggle('no-earnings', !f.earnings);
+  document.body.classList.toggle('no-timer', !f.timer);
+  el.taskMoreLabel.hidden = !f.money;
+  el.taskMoreGroup.hidden = !f.money;
+}
+
+// ---------------------------------------------------------------------------
+// Обратная связь (17 октября 2026)
+//
+// Форма одна на веб и десктоп, как на телефоне: вид, текст до 4000, снимок
+// экрана файлом с диска (в Electron нет desktopCapturer в preload — тоже
+// файл), «Отправить». Платформа, версия, язык и браузер уходят сами. Гость
+// шлёт без user_id. Строка — в таблицу feedback (supabase/feedback.sql),
+// снимок — в приватный бакет feedback по пути <id>.<тип>; id записи заводит
+// клиент, один на попытку и её повторы: «Повторить» не создаст второй строки
+// и второго файла. Ошибка — строка с «Повторить», текст остаётся в поле.
+//
+// С 19 октября 2026 — сначала строка, потом снимок: бакет примет только файл,
+// названный в screenshot_path строки не старше 15 минут, а частоту строк
+// держит база (5 за 10 минут и 20 за сутки с аккаунта, 30 в час на всех
+// гостей; отказ — 'feedback rate', P0001). Дошедшая строка второй раз не
+// уходит: отказала только загрузка — «Повторить» догружает снимок.
+// ---------------------------------------------------------------------------
+
+const FB_MAX = 4000;
+const FB_BUCKET = 'feedback';
+const FB_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+const FB_MAX_BYTES = 5 * 1024 * 1024; // как file_size_limit бакета
+// id — запись этой попытки; sent — строка дошла; shot — путь снимка, который
+// она назвала; uploaded — путь, уже лежащий в бакете.
+const fb = { kind: 'bug', file: null, url: null, id: null, sent: false, shot: null, uploaded: null, sending: false };
+
+/** uuid v4: crypto.randomUUID есть не везде (страница не по https). */
+function fbUuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+function renderFeedback() {
+  for (const b of el.fbKind.querySelectorAll(':scope > button')) {
+    const on = b.dataset.kind === fb.kind;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+  el.fbText.dataset.i18nPh = `feedback.ph_${fb.kind}`;
+  el.fbText.placeholder = t(el.fbText.dataset.i18nPh);
+  el.fbCount.textContent = t('feedback.count', { n: el.fbText.value.length, max: FB_MAX });
+  // Снимок: блок со скрепкой; выбранный — миниатюрой с крестиком, вместо
+  // подсказки о форматах — имя файла.
+  el.fbShot.classList.toggle('has-file', !!fb.file);
+  el.fbThumb.hidden = !fb.file;
+  if (fb.file && el.fbThumbImg.getAttribute('src') !== fb.url) el.fbThumbImg.src = fb.url;
+  el.fbThumbImg.alt = fb.file ? fb.file.name : '';
+  if (fb.file) { delete el.fbAttachSub.dataset.i18n; el.fbAttachSub.textContent = fb.file.name; }
+  else setI18nText(el.fbAttachSub, 'feedback.attach_hint');
+  setI18nText(el.fbHint, IS_WEB ? 'feedback.meta_hint_web' : 'feedback.meta_hint_desktop');
+  el.fbSend.disabled = fb.sending || !el.fbText.value.trim();
+}
+
+/** Строка таблицы feedback: всё, что форма знает сама. */
+async function feedbackRow(text, screenshotPath) {
+  let version = appVersion;
+  if (!version) {
+    try { version = await window.api.getVersion(); } catch { version = null; }
+  }
+  const row = {
+    id: fb.id,
+    kind: fb.kind,
+    text: text.slice(0, FB_MAX),
+    platform: IS_WEB ? 'web' : 'desktop',
+    app_version: version ? String(version).slice(0, 40) : null,
+    lang: lang(),
+    device: String(navigator.userAgent || '').slice(0, 200) || null,
+    screenshot_path: screenshotPath,
+  };
+  if (currentUser && currentUser.id) row.user_id = currentUser.id;
+  return row;
+}
+
+/** Отказ базы «слишком много подряд» (триггер feedback_rate в feedback.sql). */
+function fbRateLimited(err) {
+  return !!err && err.code === 'P0001' && /feedback rate/i.test(String(err.message || ''));
+}
+
+/** Строка ошибки над «Повторить»: feedback.failed, .rate или .shot_failed. */
+function fbShowError(key) {
+  setI18nText(el.fbErrorText, key);
+  el.fbError.hidden = false;
+}
+
+async function sendFeedback() {
+  const text = el.fbText.value.trim();
+  // Отставшая вкладка не шлёт: сеанс в хранилище — другого аккаунта.
+  if (!text || fb.sending || staleGuard()) return;
+  fb.sending = true;
+  el.fbError.hidden = true;
+  renderFeedback();
+  if (!fb.id) fb.id = fbUuid();
+  let stage = 'row';
+  try {
+    // Вошедший шлёт со своим user_id — и только своим сеансом. Текст
+    // остаётся в поле.
+    if (await foreignSession()) return;
+    // Сначала строка: бакет примет только снимок, который она назвала.
+    // Строку назад не просим — гостю её не прочитать.
+    if (!fb.sent) {
+      fb.shot = fb.file ? `${fb.id}.${FB_TYPES[fb.file.type]}` : null;
+      const { error } = await sb.from('feedback').insert(await feedbackRow(text, fb.shot));
+      // 23505 — строка с этим id уже есть: прошлая попытка дошла, а ответ нет.
+      if (error && error.code !== '23505') throw error;
+      fb.sent = true;
+    }
+    stage = 'shot';
+    if (fb.shot && fb.uploaded !== fb.shot) {
+      const { error } = await sb.storage.from(FB_BUCKET).upload(fb.shot, fb.file, { contentType: fb.file.type, upsert: false });
+      // Файл с этим именем уже лежит — это наш, от прошлой попытки.
+      if (error && !/exist|duplicate/i.test(`${error.message || ''} ${error.error || ''}`)) throw error;
+      fb.uploaded = fb.shot;
+    }
+    resetFeedback();
+    toast(t('feedback.sent'));
+  } catch (err) {
+    console.error('feedback', err);
+    // Строка дошла, а снимок нет — сообщение уже у нас, «Повторить» догрузит
+    // снимок. Отказ по частоте — своя строка; текст в поле в обоих случаях.
+    if (stage === 'shot') fbShowError('feedback.shot_failed');
+    else fbShowError(fbRateLimited(err) ? 'feedback.rate' : 'feedback.failed');
+  } finally {
+    fb.sending = false;
+    renderFeedback();
+  }
+}
+
+/** Снимок убран (крестик, сброс формы): миниатюра освобождается. */
+function fbDropShot() {
+  if (fb.url) URL.revokeObjectURL(fb.url);
+  fb.file = null;
+  fb.url = null;
+  el.fbFile.value = '';
+  el.fbThumbImg.removeAttribute('src');
+}
+
+/** Снимок сменили или убрали. Строка ещё не ушла — та же попытка: путь
+ *  возьмётся из нового файла. Ушла — это уже новое сообщение: у прежней
+ *  строки снимок назван по старому файлу (так же на телефоне). */
+function fbShotChanged() {
+  if (!fb.sent) return;
+  Object.assign(fb, { id: null, sent: false, shot: null, uploaded: null });
+  el.fbError.hidden = true;
+}
+
+function resetFeedback() {
+  fbDropShot();
+  Object.assign(fb, { kind: 'bug', id: null, sent: false, shot: null, uploaded: null });
+  el.fbText.value = '';
+  el.fbFile.value = '';
+  el.fbError.hidden = true;
+}
+
+for (const b of el.fbKind.querySelectorAll(':scope > button')) {
+  b.addEventListener('click', () => { fb.kind = b.dataset.kind; renderFeedback(); });
+}
+el.fbText.addEventListener('input', renderFeedback);
+// Весь блок — выбор картинки (и замена выбранной); крестик — убрать.
+el.fbAttach.addEventListener('click', () => el.fbFile.click());
+el.fbThumbX.addEventListener('click', () => {
+  fbShotChanged();
+  fbDropShot();
+  renderFeedback();
+  el.fbAttach.focus({ preventScroll: true });
+});
+el.fbFile.addEventListener('change', () => {
+  const file = el.fbFile.files && el.fbFile.files[0];
+  if (!file) return;
+  if (!FB_TYPES[file.type] || file.size > FB_MAX_BYTES) {
+    el.fbFile.value = '';
+    toast(t('feedback.bad_file'));
+    return;
+  }
+  fbShotChanged();
+  if (fb.url) URL.revokeObjectURL(fb.url);
+  fb.file = file;
+  fb.url = URL.createObjectURL(file);
+  renderFeedback();
+});
+el.fbForm.addEventListener('submit', (e) => { e.preventDefault(); sendFeedback(); });
+el.fbRetry.addEventListener('click', sendFeedback);
 
 if (el.mobileBackToList) {
   el.mobileBackToList.addEventListener('click', () => {
@@ -871,7 +1176,7 @@ function renderUpdateCheck() {
 // окна и событие, пришедшее раньше, чем окно успело подписаться.
 function applyUpdateStatus(s) {
   updateState = s.phase === 'ready' || s.phase === 'downloading' ? s.phase : 'idle';
-  el.updateProgress.style.width = `${Math.round(s.percent || 0)}%`;
+  barFill(el.updateProgress, Math.round(s.percent || 0));
   renderUpdateBtn();
 }
 const syncUpdateStatus = () => window.api.getUpdateStatus().then(applyUpdateStatus).catch(() => {});
@@ -884,7 +1189,7 @@ if (window.api.onUpdateAvailable) {
   // и «скачивается» для пользователя — одно и то же состояние: ходить и
   // нажимать «скачать» больше не нужно, нажатие остаётся ровно одно — «Установить».
   window.api.onUpdateAvailable(() => { updateState = 'downloading'; renderUpdateBtn(); });
-  window.api.onUpdateProgress(({ percent }) => { el.updateProgress.style.width = `${Math.round(percent || 0)}%`; });
+  window.api.onUpdateProgress(({ percent }) => { barFill(el.updateProgress, Math.round(percent || 0)); });
   window.api.onUpdateReady(() => { updateState = 'ready'; renderUpdateBtn(); });
   window.api.onUpdateError(syncUpdateStatus);
   syncUpdateStatus();
@@ -912,7 +1217,12 @@ el.settingsUpdateCheck.addEventListener('click', async () => {
 // (app.getVersion()), веб берёт её из корневого package.json при сборке
 // (web/version.js). Как на телефоне: «Lancible · 0.4.2».
 if (window.api.getVersion) {
-  window.api.getVersion().then((v) => { if (v) el.settingsVersion.textContent = `Lancible · ${v}`; }).catch(() => {});
+  window.api.getVersion().then((v) => {
+    if (!v) return;
+    appVersion = String(v);
+    el.settingsVersion.textContent = `Lancible · ${v}`;
+    if (state.ui.view === 'settings') renderSettings();
+  }).catch(() => {});
 }
 
 // ---------------------------------------------------------------------------
@@ -925,8 +1235,784 @@ let currentUser = null; // { id, email, name } | null
 const USE_CASES = ['personal', 'freelance', 'team', 'other'];
 let selectedUseCase = null;
 
+// ---------------------------------------------------------------------------
+// Несколько аккаунтов на устройстве (17 октября 2026). Правила — в ядре
+// (core/accounts.js, общее с телефоном): где лежат данные каждого, список с
+// токенами, план переключения. Здесь — сеансы supabase-js и перерисовка.
+//
+// У каждого аккаунта своя область данных (window.api.setDataScope: веб —
+// lancible:data:<uid>, десктоп — data-<uid>.json); гость — прежние
+// lancible:data и data.json, его данные никуда не переезжают и ни во что не
+// вливаются. Таймер, настройки синхронизации (syncResolvedFor) и язык — тоже
+// часть области: переключение их не трогает, вернулись — всё на месте.
+//
+// Сеанс текущего аккаунта supabase-js держит сам (sb-…-auth-token), список
+// хранит сеансы неактивных (window.api.accountsLoad/accountsSave). Refresh-
+// токены ротируются, поэтому каждый SIGNED_IN/TOKEN_REFRESHED переписывает
+// запись своего аккаунта: иначе при возврате старый токен дал бы
+// refresh_token_already_used.
+// ---------------------------------------------------------------------------
+
+/** Список аккаунтов устройства: { list, current } (core/accounts.js). */
+let accounts = Core.normalizeAccounts(null);
+/** Список прочитан: до этого писать его нельзя — затёрли бы пустым. */
+let accountsLoaded = false;
+/** Чья область данных открыта: uid аккаунта или null — гость. Пока сеанс
+ *  жив, совпадает с currentUser.id; без сеанса (токен протух, нет сети)
+ *  данные аккаунта открыты, а currentUser — null: без синхронизации. */
+let scopeUid = null;
+/** Области на устройстве (window.api.dataScopes): гость и аккаунты, в том
+ *  числе те, из которых вышли, — их копия лежит до «Удалить данные». */
+let deviceScopes = [];
+/** Идёт смена области: сохранение молчит, иначе прежнее состояние легло бы
+ *  в новую область (сердцебиение таймера не ждёт, пока загрузка кончится).
+ *  До первой загрузки — тоже: пока init() узнаёт, чья область открыта
+ *  (сеанс, список), отложенное сохранение пустого начального состояния
+ *  затёрло бы данные гостя — так и было в первой версии. */
+let scopeSwitching = true;
+/** Смены области идут строго по очереди (openScope): следующая ждёт, пока
+ *  прежняя не кончится целиком. Одного булева scopeSwitching не хватало: две
+ *  смены разом (колбэк входа через Google посреди переключения, тихий вход
+ *  на старте) шли вперемешку — данные одной области ложились с пачкой
+ *  журнала другой, а сохранение без пачки теряло очередь, корзину и
+ *  конфликты. Очередь открывает init(), когда первая область загружена. */
+let scopeQueueOpen = null;
+let scopeQueue = new Promise((resolve) => { scopeQueueOpen = resolve; });
+/** Номер открытой области: растёт с каждой сменой. Ответ, которого ждали при
+ *  прежнем номере (профиль в afterSignedIn), к новой области не применяется. */
+let scopeGen = 0;
+/** Переключение уже идёт — второй щелчок его не начинает. */
+let accountSwitchBusy = false;
+/** Другая вкладка открыла другой аккаунт (веб: список аккаунтов и сеанс
+ *  supabase-js в localStorage общие у вкладок, а область — у каждой своя).
+ *  До перезагрузки эта вкладка работает со своей областью только локально:
+ *  синхронизация, список аккаунтов и сеансы — уже чужие. См.
+ *  onAccountsElsewhere. */
+let scopeStale = false;
+/** Сколько цветов у аватара — столько [data-c] в «Странице настроек». */
+const AVATAR_COLORS = 6;
+
+async function saveAccounts() {
+  // Отставшая вкладка список не пишет: затёрла бы им выбор другой вкладки.
+  if (!accountsLoaded || scopeStale || !window.api.accountsSave) return;
+  try { await window.api.accountsSave(accounts); } catch (err) { console.error('Не удалось сохранить список аккаунтов:', err); }
+}
+
+async function refreshDeviceScopes() {
+  if (!window.api.dataScopes) { deviceScopes = []; return; }
+  try { deviceScopes = (await window.api.dataScopes()) || []; } catch (err) { console.error('Не удалось прочитать области данных:', err); deviceScopes = []; }
+}
+
+/** Есть ли что-то в записи «Без аккаунта». Открыт гость — смотрим живое. */
+function guestHasData() {
+  if (scopeUid === null) return Core.hasData(state);
+  const g = deviceScopes.find((d) => d.uid === null);
+  return !!(g && g.hasData);
+}
+
+/** Запись открытой области; гость или чужой — null. */
+const scopeEntry = () => (scopeUid ? Core.findAccount(accounts, scopeUid) : null);
+
+/** Свежие токены сеанса — в запись его аккаунта. Только для тех, кто уже в
+ *  списке: новый заводит вход (enterSignedInAccount). */
+function rememberSessionTokens(session) {
+  const uid = session && session.user && session.user.id;
+  if (!accountsLoaded || !uid || !session.refresh_token) return;
+  const prev = Core.findAccount(accounts, uid);
+  if (!prev) return;
+  if (prev.refreshToken === session.refresh_token && prev.accessToken === session.access_token) return;
+  accounts = Core.upsertAccount(accounts, {
+    uid, accessToken: session.access_token || '', refreshToken: session.refresh_token,
+    ...(session.user.email ? { email: session.user.email } : {}),
+  });
+  saveAccounts();
+}
+sb.auth.onAuthStateChange((event, session) => {
+  if (!session || !(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) return;
+  // supabase-js рассылает события всем вкладкам: сеанс, поднятый в другой
+  // вкладке для другого аккаунта, сюда не пишем. Свои чужие сеансы — при
+  // переключении (accountSwitchBusy) и входе — эта вкладка запоминает сама
+  // (resumeSession, enterSignedInAccount).
+  const uid = session.user && session.user.id;
+  if (scopeStale || (uid !== scopeUid && !accountSwitchBusy)) return;
+  rememberSessionTokens(session);
+});
+
+/** Список аккаунтов переписала другая вкладка (window.api.onAccountsChanged —
+ *  только на вебе). Там открыт уже не тот аккаунт — эта вкладка отстала:
+ *  синхронизация встаёт (сеанс в общем хранилище теперь чужой, и правки ушли
+ *  бы не тем сеансом), список и сеансы она больше не пишет, а тост с
+ *  «Обновить» висит до перезагрузки. Свои правки по-прежнему ложатся в свою
+ *  область: ключ хранилища у вкладки свой (setDataScope), и после
+ *  перезагрузки они на месте — в записи этого аккаунта. */
+function onAccountsElsewhere(raw) {
+  if (scopeStale || !accountsLoaded) return;
+  // Список — каким его оставила другая вкладка, при любой его правке, а не
+  // только при смене текущего: там могли стереть аккаунт с устройства или
+  // выйти из него. Иначе ближайшая запись отсюда (свежие токены, вход)
+  // вернула бы старый список — с аккаунтом, которого уже нет, и с его
+  // отозванными токенами.
+  accounts = Core.normalizeAccounts(raw);
+  if (!Core.accountChangedElsewhere(raw, scopeUid)) {
+    // Перерисовать только строки аккаунтов: вся страница настроек сбросила
+    // бы набранное в её полях (список переписывают и свежие токены).
+    if (state.ui.view === 'settings') renderAccountsGroup();
+    return;
+  }
+  scopeStale = true;
+  unsubscribeSyncRealtime();
+  stopSyncTimers();
+  assetsPaused = true;
+  closeMenu();
+  showStaleNotice();
+}
+function showStaleNotice() {
+  toast(t('accounts.other_tab'), { sticky: true, action: { label: t('accounts.other_tab_reload'), onClick: () => location.reload() } });
+}
+/** Отставшая вкладка аккаунты не трогает: переключение, вход и выход сняли
+ *  или подменили бы сеанс другой вкладки, а удаление аккаунта, пароль, имя,
+ *  агент и отзыв ушли бы её сеансом — от имени другого аккаунта. Вместо
+ *  действия — снова тост «Обновить». */
+function staleGuard() {
+  if (!scopeStale) return false;
+  showStaleNotice();
+  return true;
+}
+
+/** Чей сеанс сейчас в хранилище supabase-js: id пользователя или null. */
+async function sessionUid() {
+  try {
+    const { data } = await sb.auth.getSession();
+    return (data && data.session && data.session.user && data.session.user.id) || null;
+  } catch (err) {
+    console.error('Не удалось прочитать сеанс:', err);
+    return null;
+  }
+}
+
+/** Действие от имени вошедшего — удалить аккаунт, сменить пароль или имя,
+ *  позвать агента, отправить отзыв — идёт только его сеансом. Сеанс
+ *  supabase-js на вебе общий у вкладок, и запросы берут его из хранилища:
+ *  другая вкладка могла открыть другой аккаунт, а событие о списке сюда ещё
+ *  не дошло (или его не было вовсе — вход подменяет сеанс, не трогая
+ *  списка). Тогда функция delete-account удалила бы тот аккаунт, чей сеанс,
+ *  а не тот, что на экране, и пароль сменился бы ему же.
+ *
+ *  true — действовать нельзя: вкладка отстала или сеанс в хранилище не того,
+ *  кто на экране (тост «Обновить» уже показан). Сеанса нет вовсе — не повод:
+ *  без него запрос чужого аккаунта не тронет и откажет сам. Пока идёт своё
+ *  переключение (accountSwitchBusy), сеанс меняется законно — отказ без
+ *  тоста. */
+async function foreignSession() {
+  if (staleGuard()) return true;
+  if (!currentUser) return false;
+  const uid = currentUser.id;
+  const sid = await sessionUid();
+  if (staleGuard()) return true;
+  // Пока читали сеанс, аккаунт сменился здесь же — действие было не про него.
+  if (!currentUser || currentUser.id !== uid) return true;
+  if (!sid || sid === uid) return false;
+  if (!accountSwitchBusy) showStaleNotice();
+  return true;
+}
+if (window.api.onAccountsChanged) window.api.onAccountsChanged(onAccountsElsewhere);
+
+/** Токены текущего сеанса — в его запись: сейчас сеанс сменится. */
+async function snapshotSessionTokens() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session) rememberSessionTokens(data.session);
+  } catch (err) { console.error('Не удалось прочитать сеанс:', err); }
+}
+
+/** Ошибка сети, а не отказ: токен, может быть, ещё жив. */
+const isRetryableAuthError = (err) => !!err && (err.name === 'AuthRetryableFetchError' || err instanceof TypeError || err.status === 0);
+
+/** Снять сеанс только на этом устройстве, без единого запроса к серверу.
+ *
+ *  Почему не signOut({ scope: 'local' }). «local» у GoTrue — не «только в
+ *  браузере», а «только этот сеанс»: supabase-js шлёт POST
+ *  /auth/v1/logout?scope=local, и сервер удаляет сеанс вместе с его
+ *  refresh-токенами. Токен, сохранённый в списке аккаунтов, после этого
+ *  мёртв, и вернуться в аккаунт без пароля было бы нечем — ради этого
+ *  список и держит сеансы неактивных. Поэтому при переключении сеанс не
+ *  отзывается, а только убирается из хранилища клиента; отзывают его «Выйти»
+ *  и «Удалить данные с устройства» — там токен и правда больше не нужен.
+ *
+ *  Как. _removeSession — ровно то, что signOut делает после ответа
+ *  сервера: стирает сеанс из хранилища и говорит подписчикам SIGNED_OUT
+ *  (realtime и хранилище картинок снимают токен). Метод приватный: в новой
+ *  версии supabase-js его может не стать — тогда резерв: стереть записи
+ *  сеанса из хранилища самим, тем ключом, что у клиента
+ *  (sb-<ref>-auth-token, sb.auth.storageKey), и его спутники -user и
+ *  -code-verifier. Запроса /logout нет ни в одной ветке — это сторожит
+ *  tests/e2e/accounts.spec.js. */
+async function dropLocalSession() {
+  try {
+    if (typeof sb.auth._removeSession === 'function') { await sb.auth._removeSession(); return; }
+  } catch (err) { console.error('Не удалось снять сеанс:', err); }
+  const key = sb.auth.storageKey;
+  if (!key) return;
+  for (const k of [key, `${key}-user`, `${key}-code-verifier`]) {
+    try { localStorage.removeItem(k); } catch (err) { console.error('Не удалось снять сеанс:', err); }
+  }
+}
+
+/** Поднять сеанс аккаунта из списка. Сеанс — удалось; null — нет сети,
+ *  токены не трогаем; false — отказ: токен протух или отозван. */
+async function resumeSession(entry) {
+  try {
+    const { data, error } = entry.accessToken
+      ? await sb.auth.setSession({ access_token: entry.accessToken, refresh_token: entry.refreshToken })
+      : await sb.auth.refreshSession({ refresh_token: entry.refreshToken });
+    if (error) throw error;
+    const session = data && data.session;
+    if (!session || !session.user) throw new Error('сеанс не поднялся');
+    if (session.user.id !== entry.uid) { await dropLocalSession(); throw new Error('сеанс другого аккаунта'); }
+    rememberSessionTokens(session);
+    return session;
+  } catch (err) {
+    console.error('Сеанс аккаунта не поднялся:', err);
+    return isRetryableAuthError(err) ? null : false;
+  }
+}
+
+/** Перед входом в другой аккаунт: своё — на диск и в облако своим же
+ *  сеансом, его свежие токены — в список. Вход заменит сеанс в хранилище. */
+async function beforeSessionChange() {
+  flushEditor();
+  savePending = true;
+  await saveNow();
+  if (currentUser) await flushSync();
+  await snapshotSessionTokens();
+}
+
+/** Открыть область uid (null — гость): сохранить уходящую, загрузить
+ *  приходящую, перерисовать. Сеансы здесь не трогаются — это дело
+ *  switchAccount и входа; синхронизация уходящей уже закончена: currentUser
+ *  снимается до сохранения, и в облако отсюда ничего не уходит. Смены идут
+ *  по очереди (scopeQueue): вторая начинается, когда первая кончилась. */
+function openScope(uid) {
+  const run = scopeQueue.then(() => openScopeNow(uid));
+  scopeQueue = run.catch(() => {});
+  return run;
+}
+async function openScopeNow(uid) {
+  const next = Core.isValidUid(uid) ? uid : null;
+  scopeGen += 1;
+  flushEditor();
+  closeMenu();
+  currentUser = null;
+  unsubscribeSyncRealtime();
+  stopSyncTimers();
+  savePending = true;
+  await saveNow();
+  const prev = state;
+  const keepSection = prev.ui && prev.ui.view === 'settings' ? (prev.ui.settingsSection || null) : undefined;
+  scopeSwitching = true;
+  try {
+    // Пачка журнала — у каждой области своя: прежняя уже на диске.
+    syncBundle = null;
+    syncExtra = freshSyncExtra();
+    scopeUid = next;
+    if (next) accounts = Core.upsertAccount(accounts, { uid: next, lastUsedAt: Date.now() });
+    accounts = Core.setCurrentAccount(accounts, next);
+    await saveAccounts();
+    let loaded = null;
+    try {
+      if (window.api.setDataScope) await window.api.setDataScope(next);
+      loaded = await window.api.load();
+    } catch (err) {
+      console.error('Не удалось загрузить данные:', err);
+      toast(t('toast.load_error'));
+    }
+    state = loaded && typeof loaded === 'object' ? loaded : { tasks: [], activeTimer: null };
+    takeSync2(state, next);
+    // Новая область — как первый запуск, но язык и тема — того, кто сидит за
+    // устройством: добавили аккаунт — интерфейс не должен сменить язык.
+    if (!state.settings || typeof state.settings !== 'object') {
+      const s = (prev && prev.settings) || {};
+      state.settings = { lang: s.lang, theme: s.theme };
+    }
+    migrate();
+    reopenDueTasks(Date.now());
+  } finally {
+    scopeSwitching = false;
+  }
+  // Таймер — часть данных области: он идёт по меткам времени и не
+  // восстанавливается, как после перезапуска, — вернулись, он на месте.
+  selectedId = null;
+  docFilter = 'all';
+  docQuery = '';
+  // Открытые тексты — прежней области: редакторы пустеют (их правки уже
+  // дописаны flushEditor в начале).
+  if (editor) loadEditor(null);
+  if (docEditor) loadDocEditor(null);
+  el.langLabel.textContent = LANG_NAMES[state.settings.lang] || state.settings.lang;
+  document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
+  applyStaticTranslations();
+  paintArt();
+  applyTheme();
+  renderCurrency();
+  renderAccountBtn();
+  await refreshDeviceScopes();
+  if (keepSection !== undefined) openSettings(keepSection);
+  else openView('home');
+}
+
+/** Вошли в аккаунт (паролем, через Google, тихо на старте): он — в список
+ *  со свежими токенами и открыт своей областью. Тот же, что открыт, —
+ *  данные не трогаются (вход заново после протухшего токена). Данные гостя
+ *  в новый аккаунт сами не вливаются: его область на устройстве пуста, и
+ *  синхронизация возьмёт облачное (linkAccount); перенос — только с
+ *  согласия (offerGuestMove). */
+async function enterSignedInAccount(user) {
+  if (!user || !Core.isValidUid(user.id)) return;
+  let session = null;
+  try {
+    const { data } = await sb.auth.getSession();
+    session = data && data.session && data.session.user && data.session.user.id === user.id ? data.session : null;
+  } catch (err) { console.error('Не удалось прочитать сеанс:', err); }
+  accounts = Core.upsertAccount(accounts, {
+    uid: user.id,
+    lastUsedAt: Date.now(),
+    ...(user.email ? { email: user.email } : {}),
+    ...(session ? { accessToken: session.access_token || '', refreshToken: session.refresh_token || '' } : {}),
+  });
+  if (user.id === scopeUid) {
+    accounts = Core.setCurrentAccount(accounts, user.id);
+    await saveAccounts();
+    return;
+  }
+  // Свежие токены — в список сразу, не дожидаясь смены области: пока она
+  // сохраняет уходящую, другая вкладка может переписать список, и тогда
+  // (onAccountsElsewhere) эта запись пропала бы. Текущий пока прежний.
+  await saveAccounts();
+  // Попробовал без аккаунта, потом вошёл: данные гостя — скорее всего его.
+  // Аккаунт на этом устройстве пуст — спросим, перенести ли их (afterSignedIn,
+  // до синхронизации). Молча не переносим: «Без аккаунта» может быть и чужим.
+  const guestHad = scopeUid === null && !currentUser && Core.hasData(state);
+  await openScope(user.id);
+  if (guestHad && !Core.hasData(state)) guestOfferFor = user.id;
+}
+
+/** Кому предложить перенос данных «Без аккаунта» при этом входе. */
+let guestOfferFor = null;
+
+/** Перенести данные «Без аккаунта» в открытый аккаунт; гость пустеет — это
+ *  перенос, а не копия. В пустой аккаунт переезжают и настройки гостя
+ *  (ставка, валюта, режим): аккаунт только что заведён, и они — его.
+ *
+ *  Слияние — журналом, без потерь (core/oplog.js, adoptGuestState): новое
+ *  у гостя приходит в аккаунт правками создания, общее с аккаунтом (то же
+ *  id: устройство когда-то синхронизировалось, вышло и работало без входа)
+ *  — по полям, более свежая сторона показывается, другая версия остаётся
+ *  рядом. Аккаунт ещё не связан с журналом (первый вход) — сейчас просто
+ *  объединение без дублей (mergeScopeData), а слияние сделает связь
+ *  (linkAccount): при совпадении id гостевое ждёт её в пачке области. */
+async function moveGuestData() {
+  if (!scopeUid || !window.api.dataPeek || !window.api.dataWrite) return false;
+  flushEditor();
+  let guest = null;
+  try { guest = await window.api.dataPeek(null); } catch (err) { console.error('Не удалось прочитать данные без аккаунта:', err); }
+  if (!Core.hasData(guest)) return false;
+  const fresh = !Core.hasData(state);
+  // Таймер в области один. Идёт и у гостя, и в аккаунте — гостевой
+  // закрывается записью времени на своей задаче (core/accounts.js): на пути
+  // с журналом правок (adoptGuestState) он иначе пропал бы вместе со
+  // временем. В аккаунте таймер не идёт — гостевой переезжает как есть.
+  guest = Core.settleGuestTimer(state, guest, { now: Date.now() });
+  const guestLists = listsCopy(guest);
+  if (syncBundle) {
+    commitLive();
+    const res = Core.adoptGuestState(syncBundle, guestLists, { deviceId, at: new Date().toISOString() });
+    syncBundle = res.bundle;
+    syncMarksChanged();
+    Object.assign(state, listsCopy(syncBundle.state));
+    if (!state.activeTimer && guest.activeTimer) state.activeTimer = guest.activeTimer;
+  } else {
+    const ids = new Set(SYNC_LISTS.flatMap((k) => (state[k] || []).map((x) => `${k}:${x && x.id}`)));
+    const shared = SYNC_LISTS.some((k) => guestLists[k].some((x) => ids.has(`${k}:${x && x.id}`)));
+    state = Core.mergeScopeData(state, guest);
+    if (shared) syncExtra = Object.assign({}, syncExtra, { adopt: syncExtra.adopt.concat([guestLists]) });
+  }
+  if (fresh && guest.settings && typeof guest.settings === 'object') {
+    const own = state.settings || {};
+    const r = guest.settings.syncResolvedFor;
+    state.settings = {
+      ...guest.settings,
+      account: own.account,
+      syncResolvedFor: r && r.userId === scopeUid ? r : own.syncResolvedFor || null,
+    };
+  }
+  migrate();
+  // Картинки из заметок гостя — тоже аккаунту: в очереди выгрузки они
+  // гостевые (owner null) и сами в облако не уходят (src/editor/assets.js).
+  if (editorAssets && editorAssets.adoptGuest) {
+    try { if (await editorAssets.adoptGuest(scopeUid)) editorAssets.flush(); } catch (err) { console.error('Не удалось передать картинки аккаунту:', err); }
+  }
+  try { await window.api.dataWrite(null, Core.emptiedScopeData(guest)); } catch (err) { console.error('Не удалось очистить данные без аккаунта:', err); }
+  render();
+  savePending = true;
+  await saveNow();
+  await refreshDeviceScopes();
+  if (state.ui.view === 'settings') renderSettings();
+  return true;
+}
+
+/** Спросить про перенос. «Оставить отдельно» — данные гостя остаются в
+ *  записи «Без аккаунта», как были. */
+async function offerGuestMove() {
+  const ok = await confirmDialog(t('accounts.move_text'), {
+    title: t('accounts.move_title'), okLabel: t('accounts.move_ok'), cancelLabel: t('accounts.move_keep'), danger: false,
+  });
+  if (!ok) return false;
+  const moved = await moveGuestData();
+  if (moved) toast(t('accounts.moved_toast'));
+  return moved;
+}
+
+/** Имя и почта вошедшего — в его запись списка и в саму область
+ *  (settings.account): по ней строка «Удалить данные с устройства»
+ *  подписывает копию аккаунта, из которого уже вышли. */
+function noteAccountProfile() {
+  if (!currentUser || !Core.isValidUid(currentUser.id)) return;
+  accounts = Core.upsertAccount(accounts, {
+    uid: currentUser.id,
+    name: currentUser.name || '',
+    ...(currentUser.email ? { email: currentUser.email } : {}),
+  });
+  saveAccounts();
+  if (scopeUid !== currentUser.id) return;
+  const label = { email: currentUser.email || '', name: currentUser.name || '' };
+  const was = state.settings.account || {};
+  if (was.email !== label.email || was.name !== label.name) {
+    state.settings.account = label;
+    scheduleSave();
+  }
+}
+
+/** Переключиться на аккаунт uid (null — «Без аккаунта»). Порядок: текст из
+ *  редактора и данные — на диск, в облако — своим сеансом, свежие токены — в
+ *  список, сеанс снят только здесь, поднят сеанс следующего, его данные
+ *  открыты, синхронизация — своя. Сеанс не поднялся — аккаунт остаётся в
+ *  списке «нужно войти заново», данные открываются без синхронизации. */
+async function switchAccount(uid) {
+  if (staleGuard()) return;
+  const plan = Core.planSwitch(accounts, uid);
+  if (accountSwitchBusy || plan.sameAccount) return;
+  accountSwitchBusy = true;
+  try {
+    await beforeSessionChange();
+    await dropLocalSession();
+    const entry = plan.load ? Core.findAccount(accounts, plan.load) : null;
+    let session = null;
+    let lost = false;
+    if (entry && plan.canResume) {
+      const res = await resumeSession(entry);
+      if (res) session = res;
+      else if (res === false) lost = true;
+    } else if (entry) lost = true;
+    if (lost) accounts = Core.markNeedsSignIn(accounts, plan.load);
+    await openScope(plan.load);
+    const name = entry ? Core.accountLabel(entry, t) : '';
+    if (!plan.load) toast(t('accounts.guest_toast'));
+    else if (lost) toast(t('accounts.session_lost_toast', { name }));
+    else toast(t('accounts.switched_toast', { name }));
+    if (session) await afterSignedIn({ silent: true });
+  } finally {
+    accountSwitchBusy = false;
+  }
+}
+
+/** Аккаунт ушёл из списка («Выйти», удаление): сеанс уже снят. Был открыт —
+ *  открывается следующий по времени с живым сеансом, иначе гость. Копию
+ *  данных «Выйти» не стирает. */
+async function leaveAccount(uid) {
+  const wasOpen = scopeUid === uid;
+  accounts = Core.removeAccount(accounts, uid);
+  await saveAccounts();
+  if (!wasOpen) {
+    renderAccountBtn();
+    if (state.ui.view === 'settings') renderSettings();
+    return;
+  }
+  const next = Core.nextAccount(accounts, uid);
+  if (next) await switchAccount(next);
+  else await openScope(null);
+}
+
+/** Строки списка аккаунтов — одни для раздела «Аккаунт» и меню профиля:
+ *  аккаунты списка; вошедший, которого в списке ещё нет (мгновение между
+ *  входом и записью); «Без аккаунта» — если у гостя есть данные или он
+ *  открыт. */
+function accountRows() {
+  const rows = accounts.list.map((e) => ({
+    uid: e.uid,
+    entry: e,
+    label: Core.accountLabel(e, t),
+    email: e.name ? e.email : '',
+    current: currentUser ? currentUser.id === e.uid : scopeUid === e.uid,
+    needsSignIn: !(currentUser && currentUser.id === e.uid) && (e.needsSignIn || scopeUid === e.uid),
+  }));
+  if (currentUser && !rows.some((r) => r.uid === currentUser.id)) {
+    const e = { uid: currentUser.id, name: currentUser.name || '', email: currentUser.email || '' };
+    rows.unshift({ uid: e.uid, entry: e, label: Core.accountLabel(e, t), email: e.name ? e.email : '', current: true, needsSignIn: false });
+  }
+  if ((scopeUid === null && !currentUser) || guestHasData()) {
+    rows.push({ uid: null, entry: null, label: t('accounts.guest'), email: '', current: scopeUid === null && !currentUser, needsSignIn: false });
+  }
+  return rows;
+}
+
+/** Кружок с буквой: цвет — от uid (core/accounts.js), сам цвет — токеном
+ *  палитры в «Странице настроек» ([data-c]). Гость — «?». */
+function accountAvatar(entry, cls) {
+  const a = elt('span', `${cls}${entry ? '' : ' guest'}`, Core.accountInitial(entry));
+  if (entry) a.dataset.c = String(Core.accountColorIndex(entry.uid, AVATAR_COLORS));
+  return a;
+}
+
+/** Группа «Аккаунты» раздела «Аккаунт»: строка на аккаунт (аватар, имя,
+ *  почта, галочка у текущего), «Без аккаунта», «Добавить аккаунт». Пока
+ *  аккаунтов нет, группы нет: гостю — прежний пустой экран со входом. */
+function renderAccountsGroup() {
+  const rows = accountRows();
+  const any = rows.some((r) => r.uid !== null);
+  el.settingsAccountsLabel.hidden = !any;
+  el.settingsAccounts.hidden = !any;
+  el.settingsCurrentLabel.hidden = !(any && currentUser);
+  el.settingsAccounts.innerHTML = '';
+  if (!any) return;
+  for (const r of rows) {
+    const b = elt('button', 'srow acc-row');
+    b.type = 'button';
+    b.dataset.uid = r.uid || '';
+    if (r.current) b.setAttribute('aria-current', 'true');
+    b.append(accountAvatar(r.entry, 'acc-avatar'), elt('span', 'srow-label', r.label));
+    const box = elt('span', 'srow-box');
+    if (r.email) box.append(elt('span', 'srow-value', r.email));
+    if (r.uid === null) box.append(elt('span', 'srow-sub', t('accounts.guest_sub')));
+    else if (r.needsSignIn) box.append(elt('span', 'srow-sub', t('accounts.needs_sign_in')));
+    b.append(box);
+    if (r.current) b.insertAdjacentHTML('beforeend', icon('check', 'icon srow-check'));
+    b.addEventListener('click', () => {
+      if (!r.current) { switchAccount(r.uid); return; }
+      if (r.needsSignIn) openAuthModal('signin', { email: r.entry && r.entry.email });
+    });
+    el.settingsAccounts.appendChild(b);
+  }
+  const add = elt('button', 'srow srow-add');
+  add.type = 'button';
+  add.id = 'settings-account-add';
+  add.insertAdjacentHTML('beforeend', icon('plus'));
+  add.append(elt('span', 'srow-label', t('accounts.add')));
+  add.addEventListener('click', addAccount);
+  el.settingsAccounts.appendChild(add);
+}
+
+/** Открыт аккаунт без сеанса: «Войти заново» и «Выйти». */
+function renderReloginGroup() {
+  const entry = !currentUser ? scopeEntry() : null;
+  el.settingsRelogin.hidden = !entry;
+  el.settingsRelogin.innerHTML = '';
+  if (!entry) return;
+  const again = elt('button', 'srow');
+  again.type = 'button';
+  again.id = 'settings-relogin-row';
+  again.insertAdjacentHTML('beforeend', icon('account'));
+  again.append(elt('span', 'srow-label', t('accounts.sign_in_again')));
+  const box = elt('span', 'srow-box');
+  if (entry.email) box.append(elt('span', 'srow-value', entry.email));
+  box.append(elt('span', 'srow-sub', t('accounts.offline_hint')));
+  again.append(box);
+  again.insertAdjacentHTML('beforeend', icon('chevron-right', 'icon srow-chev'));
+  again.addEventListener('click', () => openAuthModal('signin', { email: entry.email }));
+  const out = elt('button', 'srow srow-danger');
+  out.type = 'button';
+  out.id = 'settings-relogin-signout';
+  out.insertAdjacentHTML('beforeend', icon('logout'));
+  out.append(elt('span', 'srow-label', t('auth.sign_out')));
+  out.addEventListener('click', signOut);
+  el.settingsRelogin.append(again, out);
+}
+
+/** Аккаунты, у которых на устройстве есть копия данных: из списка и те, из
+ *  которых вышли. Подпись — из списка, иначе из самой области. */
+function deviceAccounts() {
+  const out = new Map();
+  for (const e of accounts.list) out.set(e.uid, { uid: e.uid, label: Core.accountLabel(e, t) });
+  for (const d of deviceScopes) {
+    if (!d.uid || out.has(d.uid)) continue;
+    out.set(d.uid, { uid: d.uid, label: d.name || d.email || t('accounts.signed_out_account') });
+  }
+  if (scopeUid && !out.has(scopeUid)) out.set(scopeUid, { uid: scopeUid, label: t('accounts.signed_out_account') });
+  return [...out.values()];
+}
+
+/** Отозвать на сервере сеанс аккаунта, который сейчас не открыт: его копию
+ *  стирают с устройства, токены из списка больше не нужны — пусть и не
+ *  действуют. Отдельный клиент без сохранения сеанса (persistSession и
+ *  autoRefreshToken выключены, свой storageKey): основной sb держит сеанс
+ *  открытого аккаунта, его трогать нельзя. setSession проверяет токены у
+ *  сервера (просрочен доступ — обновит refresh-токеном), signOut({ scope:
+ *  'local' }) — один POST /logout этим сеансом, как «Выйти» у открытого.
+ *  Нет сети или токен уже мёртв — не беда: копия стирается всё равно, а
+ *  сеанс без refresh-токена на устройстве сам истечёт. */
+async function revokeAccountSession(entry) {
+  if (!entry || !entry.refreshToken || entry.needsSignIn || !window.supabase) return;
+  try {
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: `lancible-revoke-${entry.uid}` },
+    });
+    const { error } = entry.accessToken
+      ? await client.auth.setSession({ access_token: entry.accessToken, refresh_token: entry.refreshToken })
+      : await client.auth.refreshSession({ refresh_token: entry.refreshToken });
+    if (error) throw error;
+    const out = await client.auth.signOut({ scope: 'local' });
+    if (out && out.error) throw out.error;
+  } catch (err) {
+    console.error('Не удалось отозвать сеанс аккаунта:', err);
+  }
+}
+
+/** «Удалить данные аккаунта с устройства»: копия стирается, аккаунт уходит
+ *  из списка; был открыт — сеанс снимается, открывается гость; не открыт —
+ *  его сеанс отзывается на сервере отдельным клиентом (revokeAccountSession),
+ *  не дожидаясь ответа: сеть копии не держит. */
+async function forgetDeviceData(uid, label) {
+  if (staleGuard()) return;
+  const ok = await confirmDialog(t('accounts.forget_confirm', { name: label }), {
+    title: t('accounts.forget_title'), okLabel: t('common.delete'), danger: true,
+  });
+  if (!ok) return;
+  if (uid === scopeUid) {
+    flushEditor();
+    savePending = true;
+    await saveNow();
+    if (currentUser) await flushSync();
+    unsubscribeSyncRealtime();
+    stopSyncTimers();
+    // Токены уходят вместе с данными — сеанс этого устройства можно и
+    // отозвать: возвращаться в него нечем.
+    if (currentUser) { try { await sb.auth.signOut({ scope: 'local' }); } catch (err) { console.error('Не удалось выйти:', err); } } else await dropLocalSession();
+    // Дальше — как после «Выйти»: следующий аккаунт с живым сеансом, иначе
+    // гость. Так же делает телефон (useAuthStore.forgetDeviceData).
+    accounts = Core.removeAccount(accounts, uid);
+    // Список без него — сразу на диск: пока открывается следующий, другая
+    // вкладка может переписать список (onAccountsElsewhere), и стёртый
+    // вернулся бы в него.
+    await saveAccounts();
+    const next = Core.nextAccount(accounts, uid);
+    if (next) await switchAccount(next);
+    else await openScope(null);
+  } else {
+    revokeAccountSession(Core.findAccount(accounts, uid));
+    accounts = Core.removeAccount(accounts, uid);
+    await saveAccounts();
+  }
+  try { await window.api.dataRemove(uid); } catch (err) { console.error('Не удалось стереть данные:', err); }
+  // С копией уходит и остальное, что лежит на устройстве про этот аккаунт:
+  // чаты агента (только в localStorage, в область данных не входят) и
+  // картинки и PDF из заметок — и ждущие выгрузки, и скачанные копии.
+  aiForgetAccount(uid);
+  await forgetAccountAssets(uid);
+  await refreshDeviceScopes();
+  renderAccountBtn();
+  if (state.ui.view === 'settings') renderSettings();
+  toast(t('accounts.forgot_toast'));
+}
+
+function openForgetMenu(anchor) {
+  const list = deviceAccounts();
+  if (!list.length) { toast(t('accounts.forget_none')); return; }
+  openMenu(anchor, list.map((a) => ({
+    label: a.label,
+    selected: a.uid === scopeUid,
+    onClick: () => forgetDeviceData(a.uid, a.label),
+  })), { toggle: true });
+}
+
+function addAccount() {
+  if (staleGuard()) return;
+  openAuthModal('signin', { add: true });
+}
+
+/** Меню профиля в рейле: те же строки для быстрого переключения, «Добавить
+ *  аккаунт», синхронизация и «Выйти» — для открытого. */
+function openAccountMenu() {
+  const items = accountRows().map((r) => ({
+    label: r.needsSignIn && r.uid !== null ? `${r.label} · ${t('accounts.needs_sign_in')}` : r.label,
+    selected: r.current,
+    onClick: () => {
+      if (!r.current) switchAccount(r.uid);
+      else if (r.needsSignIn) openAuthModal('signin', { email: r.entry && r.entry.email });
+    },
+  }));
+  items.push({ label: t('accounts.add'), icon: 'plus', onClick: addAccount });
+  if (currentUser) {
+    items.push({ sep: true }, { label: t('sync.toggle_label'), selected: state.settings.syncEnabled !== false, onClick: toggleSyncEnabled });
+  }
+  if (currentUser || scopeUid) items.push({ sep: true }, { label: t('auth.sign_out'), danger: true, onClick: signOut });
+  openMenu(el.accountBtn, items);
+}
+
+/** Старт: список → чья область → её данные. Сеанс в хранилище — того, кто
+ *  вошёл последним (так приходит и вход через Google на вебе, и версия до
+ *  списка аккаунтов): он и открыт. Сеанса нет, а в списке есть текущий —
+ *  поднимаем его сеанс; не поднялся — данные открываются без синхронизации.
+ *  Возвращает сеанс, если он есть. */
+async function prepareAccountsOnStart() {
+  if (window.api.accountsLoad) {
+    try { accounts = Core.normalizeAccounts(await window.api.accountsLoad()); } catch (err) { console.error('Не удалось прочитать список аккаунтов:', err); }
+  }
+  accountsLoaded = true;
+  let session = null;
+  let sessionError = null;
+  try {
+    const { data, error } = await sb.auth.getSession();
+    session = (data && data.session) || null;
+    sessionError = error || null;
+  } catch (err) { sessionError = err; }
+  const sid = session && session.user && Core.isValidUid(session.user.id) ? session.user.id : null;
+  let scope = accounts.current;
+  // В прошлый раз был открыт гость, а сеанс есть: вход через Google с
+  // возвратом на страницу или вход ещё в версии без списка аккаунтов (тогда
+  // всё, что на устройстве, лежит под гостем). Область аккаунта пуста, а у
+  // гостя есть данные — предложим перенос, как при входе паролем.
+  if (sid && !accounts.current) {
+    await refreshDeviceScopes();
+    const g = deviceScopes.find((d) => d.uid === null);
+    const own = deviceScopes.find((d) => d.uid === sid);
+    if (g && g.hasData && !(own && own.hasData)) guestOfferFor = sid;
+  }
+  if (sid) {
+    accounts = Core.upsertAccount(accounts, {
+      uid: sid, lastUsedAt: Date.now(), accessToken: session.access_token || '', refreshToken: session.refresh_token || '',
+      ...(session.user.email ? { email: session.user.email } : {}),
+    });
+    scope = sid;
+  } else if (scope) {
+    const entry = Core.findAccount(accounts, scope);
+    if (entry && !entry.needsSignIn && !isRetryableAuthError(sessionError)) {
+      const res = await resumeSession(entry);
+      if (res) session = res;
+      else if (res === false) accounts = Core.markNeedsSignIn(accounts, scope);
+    }
+  }
+  accounts = Core.setCurrentAccount(accounts, scope);
+  scopeUid = accounts.current;
+  await saveAccounts();
+  if (window.api.setDataScope) await window.api.setDataScope(scopeUid);
+  return session;
+}
+
 function renderAccountBtn() {
-  const name = currentUser ? (currentUser.name || currentUser.email) : t('auth.sign_in_nav');
+  // Открыт аккаунт без сеанса — его имя и буква: данные его, а войти заново
+  // можно из меню профиля.
+  const entry = currentUser ? null : scopeEntry();
+  const who = currentUser || entry;
+  const name = currentUser ? (currentUser.name || currentUser.email) : entry ? Core.accountLabel(entry, t) : t('auth.sign_in_nav');
   el.accountLabel.textContent = name;
   // Кружок с первой буквой — только у вошедшего: у гостя пилюля остаётся
   // кнопкой входа со значком.
@@ -934,7 +2020,7 @@ function renderAccountBtn() {
   const icon0 = el.accountBtn.querySelector('.icon');
   // В свёрнутой панели подписи не видно — имя всплывает подсказкой.
   el.accountBtn.title = name;
-  if (currentUser) {
+  if (who) {
     if (!avatar) {
       const a = document.createElement('span');
       a.className = 'nav-avatar';
@@ -948,6 +2034,9 @@ function renderAccountBtn() {
     if (avatar) avatar.remove();
     if (icon0) icon0.removeAttribute('hidden');
   }
+  // Вход, выход и смена языка — панель агента перечитывает историю своего
+  // аккаунта и свои слова.
+  aiAccountChanged();
 }
 
 /** Страница настроек — зеркалит то, что есть в настройках мобильного
@@ -1029,36 +2118,160 @@ function renderStatsPage() {
   el.spDone.textContent = tasks.length ? `${done} / ${tasks.length}` : '0';
 }
 
-function renderSettings() {
-  if (currentUser) {
-    const initial = (currentUser.name || currentUser.email || '?')[0].toUpperCase();
+/** Настройки по разделам (17 октября 2026). Страница «Настройки» — профиль и
+ *  строки-разделы со сводкой справа; раздел — своя страница
+ *  (#/settings/<раздел>, core/route.js), стрелка «назад» — routeBack, как у
+ *  задачи и проекта: на список. Набор и порядок разделов — как в меню
+ *  телефона. Открытый раздел — state.ui.settingsSection, null — список. */
+const settingsSection = () => (Core.ROUTE_SETTINGS_SECTIONS.includes(state.ui.settingsSection) ? state.ui.settingsSection : null);
+
+function openSettings(section) {
+  flushEditor();
+  closeMenu();
+  closeSearch();
+  state.ui.view = 'settings';
+  state.ui.settingsSection = Core.ROUTE_SETTINGS_SECTIONS.includes(section) ? section : null;
+  render();
+  scheduleSave();
+}
+
+/** Версия приложения — для подвала «О приложении», сводки раздела и отзыва. */
+let appVersion = null;
+
+/** Рабочие часы (state.settings.workHours, с 18 октября 2026 правятся в
+ *  «Работе»): { start, end, days } — настройка устройства, в облако не уходит.
+ *  По ним агент ищет свободное время, и только: время задачи и её отрезков
+ *  они не ограничивают. Читаются правилом ядра агента (Core.aiWorkHours);
+ *  пока его нет — тем же правилом здесь: неразобранное — умолчание
+ *  Core.AI_WORK_HOURS (Пн–Пт, 09:00–18:00). */
+function workHours() {
+  if (typeof Core.aiWorkHours === 'function') return Core.aiWorkHours(state.settings);
+  const def = Core.AI_WORK_HOURS;
+  const raw = state.settings && state.settings.workHours;
+  const w = raw && typeof raw === 'object' ? raw : {};
+  const clock = (v) => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : null);
+  const days = Array.isArray(w.days) ? [...new Set(w.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))] : [];
+  return { start: clock(w.start) || def.start, end: clock(w.end) || def.end, days: days.length ? days : def.days.slice() };
+}
+
+/** Рабочие часы целиком: патч поверх нынешних. */
+function setWorkHours(patch) {
+  state.settings.workHours = { ...workHours(), ...patch };
+  renderSettings();
+  scheduleSave();
+}
+
+/** Группа «Рабочие часы»: сводка словами, начало, конец и дни — квадратами
+ *  окна повторения (.rp-day), с понедельника. */
+function renderWorkHours() {
+  const w = workHours();
+  el.settingsHoursValue.textContent = workHoursText(w);
+  el.settingsHoursStart.textContent = w.start;
+  el.settingsHoursEnd.textContent = w.end;
+  if (!el.settingsHoursDays.children.length) {
+    for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rp-day';
+      b.dataset.day = String(d);
+      el.settingsHoursDays.appendChild(b);
+    }
+  }
+  for (const b of el.settingsHoursDays.children) {
+    const on = w.days.includes(Number(b.dataset.day));
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+    b.textContent = weekdayName(Number(b.dataset.day));
+  }
+}
+
+// Начало и конец — общим выбором времени; конец позже начала, иначе агенту
+// искать негде. Дни — щелчком, последний день не снимается.
+el.settingsHoursStartRow.addEventListener('click', () => openTimePicker(el.settingsHoursStartRow, workHours().start, (val) => {
+  if (val >= workHours().end) { toast(t('slot.end_before_start')); return; }
+  setWorkHours({ start: val });
+}));
+el.settingsHoursEndRow.addEventListener('click', () => openTimePicker(el.settingsHoursEndRow, workHours().end, (val) => {
+  if (val <= workHours().start) { toast(t('slot.end_before_start')); return; }
+  setWorkHours({ end: val });
+}));
+el.settingsHoursDays.addEventListener('click', (e) => {
+  const b = e.target.closest('.rp-day');
+  if (!b) return;
+  const d = Number(b.dataset.day);
+  const { days } = workHours();
+  if (!days.includes(d)) { setWorkHours({ days: mondayFirst([...days, d]) }); return; }
+  if (days.length === 1) { toast(t('settings.work_days_min')); return; }
+  setWorkHours({ days: days.filter((x) => x !== d) });
+});
+
+/** Рабочие часы словами: «Пн–Пт, 09:00–18:00», «Пн, Ср, Сб, 10:00–19:00». */
+function workHoursText(w = workHours()) {
+  const days = mondayFirst(w.days);
+  const run = days.length > 2 && days.every((d, i) => i === 0 || (days[i - 1] + 1) % 7 === d);
+  const dayText = run ? `${weekdayName(days[0])}–${weekdayName(days[days.length - 1])}` : days.map(weekdayName).join(', ');
+  return `${dayText}, ${w.start}–${w.end}`;
+}
+
+/** Верхний блок списка разделов — аккаунт целиком (19 октября 2026): аватар,
+ *  имя и почта, справа шеврон; щелчок открывает раздел «Аккаунт» (отдельной
+ *  строки «Аккаунт» в списке нет). Гостю — «Гость» и вход тем же щелчком. */
+function renderSettingsProfile() {
+  const entry = currentUser ? null : scopeEntry();
+  const chev = icon('chevron-right', 'icon srow-chev');
+  if (currentUser || entry) {
+    const who = currentUser ? { uid: currentUser.id, name: currentUser.name || '', email: currentUser.email || '' } : entry;
+    const sub = !currentUser ? t('accounts.needs_sign_in') : who.name ? who.email : '';
+    const c = Core.isValidUid(who.uid) ? Core.accountColorIndex(who.uid, AVATAR_COLORS) : 0;
     el.settingsProfile.innerHTML = `
-      <div class="settings-avatar">${escapeHtml(initial)}</div>
-      <div class="settings-profile-main">
-        <div class="settings-profile-name">${escapeHtml(currentUser.name || currentUser.email)}</div>
-        ${currentUser.name ? `<div class="settings-profile-sub">${escapeHtml(currentUser.email)}</div>` : ''}
-      </div>`;
+      <span class="settings-avatar" data-c="${c}">${escapeHtml(Core.accountInitial(who))}</span>
+      <span class="settings-profile-main">
+        <span class="settings-profile-name">${escapeHtml(Core.accountLabel(who, t))}</span>
+        ${sub ? `<span class="settings-profile-sub">${escapeHtml(sub)}</span>` : ''}
+      </span>${chev}`;
+    el.settingsProfile.dataset.go = 'account';
   } else {
     el.settingsProfile.innerHTML = `
-      <div class="settings-avatar guest">?</div>
-      <div class="settings-profile-main">
-        <div class="settings-profile-name">${escapeHtml(t('profile.guest'))}</div>
-        <div class="settings-profile-sub">${escapeHtml(t('profile.guest_sub'))}</div>
-      </div>
-      <div class="settings-guest-actions">
-        <button type="button" class="ghost" id="settings-signin-btn">${escapeHtml(t('auth.sign_in'))}</button>
-        <button type="button" class="btn-accent" id="settings-signup-btn">${escapeHtml(t('auth.create_account'))}</button>
-      </div>`;
-    $('settings-signin-btn').addEventListener('click', () => openAuthModal('signin'));
-    $('settings-signup-btn').addEventListener('click', () => openAuthModal('signup'));
+      <span class="settings-avatar guest">?</span>
+      <span class="settings-profile-main">
+        <span class="settings-profile-name">${escapeHtml(t('profile.guest'))}</span>
+        <span class="settings-profile-sub">${escapeHtml(t('profile.guest_sub'))}</span>
+      </span>${chev}`;
+    el.settingsProfile.dataset.go = 'signin';
+  }
+  el.settingsProfile.setAttribute('aria-label', `${el.settingsProfile.querySelector('.settings-profile-name').textContent} · ${t(currentUser || entry ? 'settings.section_account' : 'auth.sign_in')}`);
+}
+
+function renderSettings() {
+  const section = settingsSection();
+  el.settingsRoot.hidden = !!section;
+  for (const p of el.settingsPages) p.hidden = p.dataset.section !== section;
+  const f = modeFlags();
+  const code = (state.settings && state.settings.lang) || 'ru';
+
+  // Список разделов: сводка справа — то, что в разделе главное.
+  if (!section) renderSettingsProfile();
+  const rate = Number(state.settings.hourlyRate) || 0;
+  const summary = {
+    main: `${LANG_NAMES[code]} · ${t(f.money ? 'mode.freelance' : 'mode.personal')}`,
+    work: f.money ? (rate ? `${fmtMoney(rate)}${t('rate.per_hour')}` : currencyLabel(state.settings.currency)) : '',
+    data: '',
+    about: appVersion || '',
+    feedback: '',
+  };
+  for (const [name, text] of Object.entries(summary)) {
+    const node = $(`settings-sec-${name}-value`);
+    if (node) node.textContent = text;
   }
 
-  el.settingsAccountLabel.hidden = !currentUser;
-  el.settingsAccountCard.hidden = !currentUser;
-  if (currentUser) el.settingsNameValue.textContent = currentUser.name || t('profile.no_name');
-
-  el.settingsLangValue.textContent = LANG_NAMES[(state.settings && state.settings.lang) || 'ru'];
-
+  // Основное: язык, тема, режим; уведомления.
+  el.settingsLangValue.textContent = LANG_NAMES[code];
+  for (const b of el.settingsMode.querySelectorAll(':scope > button')) {
+    const on = b.dataset.mode === f.mode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  }
+  el.settingsModeHint.textContent = t(f.money ? 'mode.hint_freelance' : 'mode.hint_personal');
   const notifyOn = state.settings.notifyEnabled !== false;
   el.settingsNotifToggle.setAttribute('aria-pressed', String(notifyOn));
   // На десктопе ведём в системные настройки, в браузере — показываем
@@ -1066,17 +2279,49 @@ function renderSettings() {
   const perm = typeof Notification === 'undefined' ? 'denied' : Notification.permission;
   el.settingsNotifState.textContent = t(perm === 'granted' ? 'notif.perm_granted' : perm === 'denied' ? 'notif.perm_denied' : 'notif.perm_ask');
 
-  const syncOn = state.settings.syncEnabled !== false;
-  el.settingsDataLabel.hidden = !currentUser;
-  el.settingsDataCard.hidden = !currentUser;
-  el.settingsSyncToggle.setAttribute('aria-pressed', String(syncOn));
-
+  // Работа: ставка и валюта (только с деньгами), таймер, заработок, часы.
   if (document.activeElement !== el.settingsRate) {
     el.settingsRate.value = state.settings.hourlyRate ? String(state.settings.hourlyRate) : '';
   }
   renderCurrency();
-
+  el.settingsTimerToggle.setAttribute('aria-pressed', String(f.timer));
+  el.settingsEarningsToggle.setAttribute('aria-pressed', String(state.settings.showEarnings !== false));
+  renderWorkHours();
+  el.settingsWorkHint.textContent = f.money ? `${t('settings.timer_hint')} ${t('settings.earnings_hint')}` : t('settings.timer_hint');
   renderTagsSettings();
+
+  // Аккаунт: список аккаунтов устройства; вошедшему — профиль, пароль,
+  // синхронизация, выход; открытому без сеанса — «Войти заново»; гостю без
+  // аккаунтов — вход.
+  renderAccountsGroup();
+  renderReloginGroup();
+  const guestOnly = !currentUser && !scopeUid && el.settingsAccounts.hidden;
+  el.settingsAccountCard.hidden = !currentUser;
+  el.settingsAccountGuest.hidden = !guestOnly;
+  if (currentUser) {
+    el.settingsNameValue.textContent = currentUser.name || t('profile.no_name');
+    el.settingsEmailValue.textContent = currentUser.email || '';
+    el.settingsSyncToggle.setAttribute('aria-pressed', String(state.settings.syncEnabled !== false));
+  } else if (guestOnly) {
+    emptyState({
+      art: 'tasks', title: t('settings.guest_title'), text: t('profile.guest_sub'), small: true,
+      action: { label: t('auth.sign_in'), icon: 'account', onClick: () => openAuthModal('signin') },
+    }, el.settingsAccountGuest);
+  }
+
+  // Данные: копии аккаунтов на устройстве — любому, у кого они есть;
+  // удалить аккаунт может только вошедший.
+  const onDevice = deviceAccounts().length > 0;
+  const canMove = !!currentUser && scopeUid === currentUser.id && guestHasData();
+  el.settingsMoveGuestRow.hidden = !canMove;
+  el.settingsForgetRow.hidden = !onDevice;
+  el.settingsDeviceLabel.hidden = !(onDevice || canMove);
+  el.settingsDevice.hidden = !(onDevice || canMove);
+  el.settingsDangerLabel.hidden = !currentUser;
+  el.settingsDanger.hidden = !currentUser;
+  renderSyncSettings();
+
+  renderFeedback();
 }
 
 function buildUsecaseButtons() {
@@ -1105,20 +2350,42 @@ function setI18nText(node, key) {
  *  подпись главной кнопки, подсказку для менеджера паролей и строку-переключатель
  *  внизу. Почта и пароль остаются как были — человек не перепечатывает их. */
 let authMode = 'signin';
+/** Окно открыто «Добавить аккаунт»: открытый аккаунт остаётся в списке. */
+let authAdd = false;
 function setAuthMode(mode) {
   authMode = mode === 'signup' ? 'signup' : 'signin';
   const up = authMode === 'signup';
   el.authError.hidden = true;
-  setI18nText(el.authTitle, up ? 'auth.signup_title' : 'auth.title');
+  setI18nText(el.authTitle, up ? 'auth.signup_title' : authAdd ? 'accounts.add' : 'auth.title');
   setI18nText(el.authSub, up ? 'auth.signup_subtitle' : 'auth.subtitle');
   setI18nText(el.authSubmit, up ? 'auth.create_account' : 'auth.sign_in');
   setI18nText(el.authSwitchText, up ? 'auth.have_account' : 'auth.no_account_q');
   setI18nText(el.authSwitchBtn, up ? 'auth.sign_in' : 'auth.create_account');
   el.authPassword.autocomplete = up ? 'new-password' : 'current-password';
 }
-function openAuthModal(mode) {
+/** Чьи данные останутся где были: у каждого аккаунта своя область, и вход
+ *  ничего в неё не переносит. Гость с данными — его запись остаётся «Без
+ *  аккаунта»; открыт аккаунт — он остаётся в списке. */
+function renderAuthAddNote() {
+  const entry = scopeEntry();
+  let text = '';
+  if (scopeUid === null && !currentUser && guestHasData()) text = t('accounts.add_note_guest');
+  else if (authAdd && (currentUser || entry)) {
+    text = t('accounts.add_note', { name: currentUser ? (currentUser.name || currentUser.email) : Core.accountLabel(entry, t) });
+  }
+  el.authAddNote.textContent = text;
+  el.authAddNote.hidden = !text;
+}
+/** opts.add — «Добавить аккаунт»; opts.email — почта заранее (войти заново).
+ *  Отставшая вкладка окна входа не открывает: вход подменил бы общий сеанс
+ *  другой вкладки, и та узнала бы об этом, только когда её запросы ушли бы
+ *  чужим сеансом. */
+function openAuthModal(mode, opts = {}) {
+  if (staleGuard()) return;
+  authAdd = !!(opts && opts.add);
   setAuthMode(mode);
-  el.authEmail.value = '';
+  renderAuthAddNote();
+  el.authEmail.value = (opts && opts.email) || '';
   el.authPassword.value = '';
   showAuthStep('credentials');
   el.authBackdrop.hidden = false;
@@ -1180,14 +2447,26 @@ function renderConsentText() {
  * нечем. */
 async function afterSignedIn(opts) {
   const silent = !!(opts && opts.silent); // true при тихом восстановлении сессии на старте — без модалки/тоста
+  if (scopeStale) return;
+  // Пока ждём сервер, область могут сменить (переключение в меню профиля,
+  // другой вход, колбэк Google): тогда этот ответ уже не про то, что
+  // открыто, и ничего не применяется — currentUser не меняется, окно
+  // согласия не открывается, синхронизация не начинается. Сверка — по
+  // номеру области (scopeGen).
+  const gen0 = scopeGen;
   const { data } = await sb.auth.getUser();
   const user = data && data.user;
-  if (!user) return;
+  if (!user || scopeStale || scopeGen !== gen0) return;
+  // Вошли в другой аккаунт, чем открыт, — сначала его область: проверка
+  // профиля и синхронизация идут уже с его данными.
+  await enterSignedInAccount(user);
+  const gen = scopeGen;
   let profile = null;
   try {
     const { data: row } = await sb.from('profiles').select('name, terms_version, age_confirmed').eq('id', user.id).maybeSingle();
     profile = row;
   } catch (err) { console.error('Не удалось прочитать профиль:', err); }
+  if (scopeStale || scopeGen !== gen) return;
   if (!profile) {
     if (!silent) openOnboarding('full');
     return;
@@ -1199,7 +2478,9 @@ async function afterSignedIn(opts) {
     return;
   }
   currentUser = { id: user.id, email: user.email, name: profile.name };
+  noteAccountProfile();
   renderAccountBtn();
+  if (state.ui.view === 'settings') renderSettings();
   // Окно входа закрывается сразу, ДО синхронизации. Раньше закрытие стояло
   // после неё, а синхронизация умеет спрашивать про конфликт данных и умеет
   // падать на сетевой ошибке — в обоих случаях окно оставалось висеть на
@@ -1209,11 +2490,22 @@ async function afterSignedIn(opts) {
     closeAuthModal();
     toast(t('auth.signed_in_toast'));
   }
+  // Первый вход в этот аккаунт после работы без него — перенести ли данные.
+  // До синхронизации: связь с журналом (linkAccount) сольёт перенесённое с
+  // облачным без потерь и ни о чём не спросит.
+  if (guestOfferFor === user.id) {
+    guestOfferFor = null;
+    await offerGuestMove();
+  }
+  if (scopeStale || scopeGen !== gen) return;
   await syncOnSignIn();
 }
 
 /** Главная кнопка и Enter: вход или регистрация, смотря какой режим. */
 async function handleAuthSubmit() {
+  // Окно открыли до того, как вкладка отстала, — вход и регистрация всё
+  // равно не идут (openAuthModal).
+  if (staleGuard()) return;
   if (authMode === 'signup') { await handleSignup(); return; }
   const email = el.authEmail.value.trim();
   const password = el.authPassword.value;
@@ -1221,6 +2513,7 @@ async function handleAuthSubmit() {
   el.authError.hidden = true;
   el.authSubmit.disabled = true;
   try {
+    await beforeSessionChange();
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
       // Неверная пара — это и опечатка в пароле, и «аккаунта ещё нет», сервер
@@ -1259,12 +2552,14 @@ function signupFailed(error, data) {
 }
 
 async function handleSignup() {
+  if (staleGuard()) return;
   const email = el.authEmail.value.trim();
   const password = el.authPassword.value;
   if (!email || !password) return;
   el.authError.hidden = true;
   el.authSubmit.disabled = true;
   try {
+    await beforeSessionChange();
     const { data, error } = await sb.auth.signUp({ email, password });
     if (signupFailed(error, data)) return;
     // Подтверждения почты нет: логин и пароль — и сразу внутри. Сервер без
@@ -1286,7 +2581,7 @@ async function handleSignup() {
  *  не пишется: он и так есть в аккаунте, копия ни для чего не нужна. Без
  *  согласия не сохраняется ничего. */
 async function saveOnboarding(withProfile = true) {
-  if (!consentGiven()) return;
+  if (!consentGiven() || staleGuard()) return;
   try {
     const { data } = await sb.auth.getUser();
     const user = data && data.user;
@@ -1316,10 +2611,12 @@ async function updateProfileName(name) {
   try {
     const { data } = await sb.auth.getUser();
     const user = data && data.user;
-    if (!user) return false;
+    // Профиль — того, кто на экране: сервер ответил про чужой сеанс — не он.
+    if (!user || !currentUser || user.id !== currentUser.id) return false;
     const { error } = await sb.from('profiles').update({ name: clean }).eq('id', user.id);
     if (error) throw error;
     currentUser = { ...currentUser, name: clean };
+    noteAccountProfile();
     return true;
   } catch (err) { console.error('Не удалось обновить имя профиля:', err); return false; }
 }
@@ -1331,14 +2628,29 @@ async function changePassword(newPassword) {
   } catch (err) { console.error('Не удалось изменить пароль:', err); return false; }
 }
 
+/** «Выйти»: аккаунт уходит из списка вместе с сеансом, копия его данных
+ *  остаётся на устройстве (стереть — «Удалить данные аккаунта с
+ *  устройства»). Дальше открывается следующий аккаунт или гость. Сеанс
+ *  снимается только на этом устройстве: телефон того же аккаунта не
+ *  выходит. */
 async function signOut() {
+  if (staleGuard()) return;
   const ok = await confirmDialog(t('auth.sign_out_confirm'), {
     title: t('auth.sign_out'), okLabel: t('auth.sign_out'), danger: true,
   });
   if (!ok) return;
-  await sb.auth.signOut();
+  const uid = scopeUid || (currentUser && currentUser.id) || null;
+  flushEditor();
+  savePending = true;
+  await saveNow();
+  if (currentUser) await flushSync();
   unsubscribeSyncRealtime();
+  stopSyncTimers();
+  if (currentUser) {
+    try { await sb.auth.signOut({ scope: 'local' }); } catch (err) { console.error('Не удалось выйти:', err); }
+  } else await dropLocalSession();
   currentUser = null;
+  if (uid) await leaveAccount(uid);
   renderAccountBtn();
   // Страница настроек показывает карточку профиля и раздел «Аккаунт» —
   // без этого после выхода она продолжала показывать вошедшего.
@@ -1428,15 +2740,25 @@ function functionStatus(error) {
  *  картинок и пользователя, а профиль, проекты, задачи и синхронизация
  *  уходят каскадом. Ответы: 200 — удалено; 409 — картинки стереть не вышло,
  *  аккаунт цел; 500 — картинки стёрты, аккаунт цел. Нет функции (404) или
- *  нет связи с ней — старый путь, deleteAccountLegacy. Копия данных на
- *  устройстве, вместе с картинками, остаётся: приложение работает и без
- *  аккаунта. */
+ *  нет связи с ней — старый путь, deleteAccountLegacy.
+ *
+ *  На устройстве удалённый аккаунт только уходит из списка аккаунтов
+ *  (leaveAccount): открывается следующий или гость, а копия его данных,
+ *  чаты агента и картинки из заметок на этом устройстве остаются — так
+ *  обещают account.delete_confirm и landing/delete-account.html, так делает
+ *  телефон. Стереть их — отдельное действие «Удалить данные аккаунта с
+ *  устройства» (forgetDeviceData). Данные гостя и других аккаунтов не
+ *  трогаются.
+ *
+ *  Функция удаляет того, чей сеанс, а не того, кто на экране, — поэтому
+ *  сеанс сверяется с вошедшим после подтверждения (foreignSession), а
+ *  отставшая вкладка не удаляет вовсе. */
 async function deleteAccount() {
-  if (!currentUser) return;
+  if (!currentUser || staleGuard()) return;
   const ok = await confirmDialog(t('account.delete_confirm'), {
     title: t('account.delete_title'), okLabel: t('account.delete'), danger: true,
   });
-  if (!ok) return;
+  if (!ok || !currentUser || await foreignSession()) return;
   const uid = currentUser.id;
   // Пока папка стирается, картинки в облако не уходят: иначе файл из очереди
   // доехал бы в уже пустую папку и аккаунт не удалился бы.
@@ -1495,18 +2817,29 @@ async function deleteAccount() {
     return;
   }
   unsubscribeSyncRealtime();
+  stopSyncTimers();
   // Пользователя на сервере уже нет — выходим только здесь, без запроса.
   try { await sb.auth.signOut({ scope: 'local' }); } catch (err) { console.error('Не удалось выйти:', err); }
   currentUser = null;
+  // Аккаунт уходит из списка, открывается следующий или гость. Копия его
+  // данных на этом устройстве остаётся — так обещает текст подтверждения
+  // (account.delete_confirm) и landing/delete-account.html, и так делает
+  // телефон: стереть её — отдельное действие в «Данных», «Удалить данные
+  // аккаунта с устройства».
+  await leaveAccount(uid);
+  await refreshDeviceScopes();
   renderAccountBtn();
   if (state.ui.view === 'settings') renderSettings();
   toast(t('account.deleted_toast'));
 }
 
 async function handleGoogleSignIn() {
+  if (staleGuard()) return;
   el.authGoogleBtn.disabled = true;
   el.authError.hidden = true;
   try {
+    // Веб уходит со страницы на Google — своё должно лечь на диск раньше.
+    await beforeSessionChange();
     // Десктоп: открываем системный браузер и ждём lancible://auth-callback
     // через IPC (кастомный протокол, main.js). Веб: сама страница и есть
     // редирект-цель — не мешаем signInWithOAuth перенаправить вкладку.
@@ -1541,8 +2874,9 @@ if (window.api.onOAuthCallback) {
     try {
       code = new URL(url).searchParams.get('code');
     } catch { /* некорректный колбэк — игнорируем */ }
-    if (!code) return;
+    if (!code || staleGuard()) return;
     try {
+      await beforeSessionChange();
       const { error } = await sb.auth.exchangeCodeForSession(code);
       if (error) { showAuthError('auth.error_generic'); return; }
       await afterSignedIn();
@@ -1553,14 +2887,17 @@ if (window.api.onOAuthCallback) {
 }
 
 el.accountBtn.addEventListener('click', () => {
-  if (currentUser) {
-    openMenu(el.accountBtn, [
-      { label: t('sync.toggle_label'), selected: state.settings.syncEnabled !== false, onClick: toggleSyncEnabled },
-      { sep: true },
-      { label: t('auth.sign_out'), danger: true, onClick: signOut },
-    ]);
-  } else openAuthModal('signin');
+  // Аккаунтов на устройстве нет — кнопка, как и была, открывает вход.
+  if (currentUser || scopeUid || accounts.list.length) openAccountMenu();
+  else openAuthModal('signin');
 });
+el.settingsForgetRow.addEventListener('click', () => openForgetMenu(el.settingsForgetRow));
+el.settingsConflictsRow.addEventListener('click', openConflictList);
+el.settingsTrashRow.addEventListener('click', openTrash);
+el.syncdlgClose.addEventListener('click', closeSyncDialog);
+el.syncdlgBack.addEventListener('click', openConflictList);
+el.syncdlgBackdrop.addEventListener('click', (e) => { if (e.target === el.syncdlgBackdrop) closeSyncDialog(); });
+el.settingsMoveGuestRow.addEventListener('click', () => offerGuestMove());
 el.authCancel.addEventListener('click', closeAuthModal);
 // Шаг согласия не закрывается ни щелчком мимо окна, ни Escape: иначе он
 // обходится без ответа. Выйти из него — только «Выйти» или «Продолжить».
@@ -1574,9 +2911,15 @@ el.authConsentText.addEventListener('click', (e) => {
   setConsent(!consentGiven()); // подпись работает как <label>
 });
 el.authConsentDecline.addEventListener('click', async () => {
+  // Без согласия аккаунт не работает: выход, как «Выйти», — аккаунт уходит
+  // из списка, открывается следующий или гость. Отставшая вкладка не
+  // выходит: сеанс в хранилище — уже другой вкладки.
+  if (staleGuard()) return;
+  const uid = scopeUid;
   try { await sb.auth.signOut(); } catch (err) { console.error('Не удалось выйти:', err); }
   currentUser = null;
   closeAuthModal();
+  if (uid) await leaveAccount(uid);
   renderAccountBtn();
   toast(t('auth.signed_out_toast'));
 });
@@ -1597,32 +2940,96 @@ el.authOnboardingSkip.addEventListener('click', () => saveOnboarding(false));
 // когда синхронизация упала: ждать больше нечего.
 let firstSyncDone;
 const firstSync = new Promise((resolve) => { firstSyncDone = resolve; });
-sb.auth.getSession()
-  .then(({ data }) => (data && data.session ? afterSignedIn({ silent: true }) : null))
-  .catch((err) => console.error('Не удалось восстановить сессию:', err))
-  .finally(firstSyncDone);
+// Сеанс поднимается в init(): сначала список аккаунтов и область данных
+// (prepareAccountsOnStart), потом загрузка, и только потом afterSignedIn —
+// иначе синхронизация увидела бы данные чужой области.
 
 // ---------------------------------------------------------------------------
-// Синхронизация данных (проекты/задачи) с Supabase — только для вошедших.
-// Хранится одним JSON-документом на пользователя (таблица sync_state), а не
-// разложено по реляционным таблицам: это ровно то же самое, что уже целиком
-// сохраняется локально в data.json, поэтому не потребовалось менять ни одну
-// точку мутации state.projects/state.tasks. activeTimer/settings/ui
-// намеренно НЕ синхронизируются — это данные конкретного устройства.
+// Синхронизация — журнал правок (17 октября 2026)
+// ---------------------------------------------------------------------------
+// Единица синхронизации — правка одного поля одной сущности, а не весь набор
+// данных: правила — в ядре (core/oplog.js, общее с телефоном), как это
+// устроено целиком — ARCHITECTURE.md, «Синхронизация». Сервер хранит журнал
+// (таблица changes, supabase/sync2.sql) и ничего в нём не стирает; устройство
+// сливает чужие правки со своими по полям. Две правки одного поля спорят,
+// только если каждая сделана, не видя другую: тогда показывается одна, другая
+// лежит рядом («Другая версия», раздел «Конфликты» ниже), и ничего не
+// спрашивается в момент слияния.
+//
+// Пачка (bundle, core/oplog.js) — всё, что устройство знает о журнале своего
+// аккаунта: очередь своих неотправленных правок, докуда прочитан журнал,
+// конфликты, корзина, история полей. Лежит в том же файле (ключе) области,
+// что и данные, — полем sync2 (packSync2): данные без своих неотправленных
+// правок были бы потерей, а две записи вместо одной могли бы разойтись при
+// сбое между ними. Состояние пачки — сами списки области: каждое сохранение
+// сначала сводит живое состояние в пачку (commitLive), поэтому сохранённые
+// списки и есть то, с чем пачка сверится в следующий раз.
+//
+// Гость и область аккаунта, ещё не связанная с журналом на этом устройстве,
+// пачки не держат: копить очередь из каждой буквы, которая никуда не уйдёт,
+// незачем. Их данные уходят в журнал при первой связи целиком
+// (linkAccount → adoptGuestState): правками baseSeq 0, общее с аккаунтом —
+// по полям, расхождения — пометками; ничего не затирается.
+//
+// activeTimer, settings и ui в журнал не уходят: это данные устройства.
+//
+// Старые клиенты (десктоп ≤ 0.4.4, телефон ≤ 1.2.3) живут на sync_state —
+// мост. После слияния состояние зеркалится туда (writeMirror: updated_by
+// 'oplog:<устройство>', mirror_seq), а чужая запись старого клиента
+// превращается в правки (bridgeLegacy). Мост живёт один релиз.
 // ---------------------------------------------------------------------------
 
-const SYNC_CLIENT_ID = uid(); // отличает собственные правки от чужих в realtime-подписке
+const SYNC_LISTS = ['projects', 'tasks', 'statuses', 'tags', 'versions', 'documents'];
+/** Строк журнала за один запрос — чтение страницами. */
+const SYNC_PAGE = 1000;
+/** Своих правок за одну отправку. Одна вставка — одна транзакция: проект и
+ *  его статусы приходят к другим вместе, и их миграция не заводит своих. */
+const SYNC_SEND_MAX = 2000;
+/** Слепок — когда журнал ушёл от прошлого дальше, чем на столько правок. */
+const SNAPSHOT_EVERY = 1000;
+/** Сколько дней удалённое лежит в корзине. */
+const TRASH_DAYS = 30;
+/** Пауза перед зеркалом для старых клиентов: правки идут пачками. */
+const MIRROR_DELAY_MS = 1500;
+/** Запись старого клиента, посчитанную от зеркала, которого это устройство
+ *  не знает, сначала ждёт устройство, которое его писало. */
+const LEGACY_GRACE_MS = 120000;
+/** Повторы после сбоя сети: всё реже, до минуты. */
+const SYNC_BACKOFF_MS = [2000, 5000, 15000, 30000, 60000];
+/** Тихая сверка с журналом, пока страница на виду: realtime может молча
+ *  отвалиться, а пропущенная правка не должна ждать перезапуска. */
+const SYNC_POLL_MS = 60000;
+
+/** Пачка открытой области; null — область с журналом не связана. */
+let syncBundle = null;
+/** Служебное рядом с пачкой, ядру не нужное (freshSyncExtra). */
+let syncExtra = freshSyncExtra();
+/** Случайный id установки (не области): так ядро отличает свои правки от
+ *  чужих, а окно конфликта — с какого устройства версия. */
+let deviceId = null;
 let syncChannel = null;
-let syncDirty = false;
 let syncRetryTimer = null;
-// JSON последнего состояния, которое точно совпадает с сервером (свой
-// успешный пуш или только что подтянутые чужие данные) — pushSyncState
-// сверяется с ним, чтобы не отправлять обратно то же самое, что и так
-// только что пришло. Без этой проверки два устройства бесконечно
-// перекидывались бы идентичными обновлениями по кругу (реально
-// воспроизведено при тестировании), а под нагрузкой более старое
-// сообщение могло прийти позже нового и откатить чужие изменения.
-let lastSyncedJSON = null;
+let syncFails = 0;
+let syncSendBusy = false;
+let syncSendAgain = false;
+let syncPullBusy = false;
+let syncPullAgain = false;
+let mirrorTimer = null;
+let legacyTimer = null;
+let syncPollTimer = null;
+/** Правки в полёте: их нельзя ни сжать, ни отправить второй раз сразу. */
+const syncInflight = new Set();
+/** Ушли на сервер, но ещё не подтверждены (повтор отбит, строки в ответе
+ *  нет): подтвердит чтение журнала, повторять сразу незачем. */
+const syncSent = new Set();
+
+/** extra: mirror — последнее увиденное зеркало sync_state {seq, data, json};
+ *  snapSeq — seq последнего слепка; bridged — updated_at последней записи
+ *  старого клиента, уже переведённой в правки; adopt — данные, ждущие
+ *  первой связи с журналом (перенос «Без аккаунта» до неё). */
+function freshSyncExtra() {
+  return { mirror: null, snapSeq: 0, bridged: null, adopt: [] };
+}
 
 function syncPayload() {
   // Статусы, теги и версии — такие же пользовательские данные, как проекты и
@@ -1638,40 +3045,403 @@ function syncPayload() {
   };
 }
 
-async function pushSyncState() {
-  if (!currentUser || state.settings.syncEnabled === false) return;
-  const payload = syncPayload();
-  const json = JSON.stringify(payload);
-  if (json === lastSyncedJSON) return; // с последнего синка ничего не поменялось
-  try {
-    const { error } = await sb.from('sync_state').upsert({
-      user_id: currentUser.id,
-      data: payload,
-      updated_at: new Date().toISOString(),
-      updated_by: SYNC_CLIENT_ID,
-    });
-    if (error) throw error;
-    lastSyncedJSON = json;
-    syncDirty = false;
-    // Держим "отпечаток" свежим при каждом обычном пуше, пока пользователь
-    // не выходил из аккаунта — иначе создание задачи, пока уже залогинен,
-    // само по себе устарило бы отпечаток и на следующем запуске диалог
-    // "какие данные оставить" всплыл бы просто из-за обычной, уже
-    // синхронизированной правки, а не из-за настоящего расхождения.
-    rememberSyncResolution();
-  } catch (err) {
-    console.error('Не удалось синхронизировать данные:', err);
-    syncDirty = true;
-    scheduleSyncRetry();
-  }
+/** Глубокая копия шести списков: пачка и живое состояние никогда не делят
+ *  объекты — app.js правит свои на месте. */
+function listsCopy(src) {
+  const out = {};
+  for (const k of SYNC_LISTS) out[k] = Array.isArray(src && src[k]) ? JSON.parse(JSON.stringify(src[k])) : [];
+  return out;
 }
+
+const hasAnyLists = (lists) => !!lists && SYNC_LISTS.some((k) => Array.isArray(lists[k]) && lists[k].length > 0);
+
+/** Пачка → поле sync2 в данных области. state не пишется: им служат сами
+ *  списки области (commitLive сводит их в пачку перед каждой записью).
+ *  Зеркало, совпавшее с ними, — пометкой base, а не второй копией данных. */
+function packSync2(bundle, extra, uid) {
+  const out = { v: 1, uid };
+  const x = extra || {};
+  if (bundle) {
+    Object.assign(out, {
+      linked: true,
+      pending: bundle.pending || [],
+      lastSeq: bundle.lastSeq || 0,
+      conflicts: bundle.conflicts || [],
+      trash: bundle.trash || [],
+      meta: bundle.meta || {},
+      deferred: bundle.deferred || [],
+    });
+  }
+  if (x.mirror) {
+    const json = x.mirror.json || JSON.stringify(x.mirror.data);
+    const base = bundle ? JSON.stringify(Core.mirrorSyncState(bundle.state)) : null;
+    out.mirror = json === base ? { seq: x.mirror.seq, base: true } : { seq: x.mirror.seq, data: x.mirror.data };
+  }
+  if (x.snapSeq) out.snapSeq = x.snapSeq;
+  if (x.bridged) out.bridged = x.bridged;
+  if (Array.isArray(x.adopt) && x.adopt.length) out.adopt = x.adopt;
+  return out;
+}
+
+/** Поле sync2 из загруженных данных области uid → { bundle, extra }; поле из
+ *  данных снимается. Чужая область, гость, незнакомый вид — пачки нет. */
+function unpackSync2(loaded, uid) {
+  const raw = loaded && typeof loaded === 'object' ? loaded.sync2 : null;
+  if (loaded && typeof loaded === 'object') delete loaded.sync2;
+  const extra = freshSyncExtra();
+  if (!uid || !raw || typeof raw !== 'object' || raw.v !== 1 || raw.uid !== uid) return { bundle: null, extra };
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  extra.snapSeq = Number(raw.snapSeq) || 0;
+  extra.bridged = raw.bridged || null;
+  extra.adopt = arr(raw.adopt);
+  const bundle = raw.linked ? {
+    state: listsCopy(loaded),
+    pending: arr(raw.pending),
+    lastSeq: Number(raw.lastSeq) || 0,
+    conflicts: arr(raw.conflicts),
+    trash: arr(raw.trash),
+    meta: raw.meta && typeof raw.meta === 'object' ? raw.meta : {},
+    deferred: arr(raw.deferred),
+  } : null;
+  if (raw.mirror && Number.isFinite(Number(raw.mirror.seq))) {
+    const data = raw.mirror.base ? (bundle ? Core.mirrorSyncState(bundle.state) : null) : raw.mirror.data;
+    if (data) extra.mirror = { seq: Number(raw.mirror.seq), data, json: null };
+  }
+  return { bundle, extra };
+}
+
+/** Служебные поля правки, которые не сжимаются: создание, удаление,
+ *  пометки и записи времени. */
+const COALESCE_KEEP = new Set(['*', 'deleted', 'conflict', 'resolved', 'sessions+', 'sessions-', 'sessions~']);
+
+/** Своя неотправленная правка поля, которую перекрыла следующая своя правка
+ *  того же поля, никому уже не нужна: её значения нет ни в состоянии, ни в
+ *  истории поля (верхняя там — новая). Без сжатия офлайн-заметка уходила бы
+ *  в журнал целиком на каждую паузу в наборе. Убираются только такие: не в
+ *  полёте и без записи о конфликте поля (её версии ссылаются на id правок). */
+function coalescePending(bundle, fresh, inflight) {
+  if (!bundle || !Array.isArray(fresh) || !fresh.length) return bundle;
+  const keyOf = (op) => `${op.entity}:${op.entityId}:${op.field}`;
+  const newest = new Map();
+  for (const op of fresh) if (op && !COALESCE_KEEP.has(op.field)) newest.set(keyOf(op), op.id);
+  if (!newest.size) return bundle;
+  const drop = new Set();
+  for (const op of bundle.pending || []) {
+    if (!op || COALESCE_KEEP.has(op.field)) continue;
+    const keep = newest.get(keyOf(op));
+    if (!keep || keep === op.id || (inflight && inflight.has(op.id))) continue;
+    if (op.seq !== null && op.seq !== undefined) continue;
+    const m = bundle.meta && bundle.meta[`${op.entity}:${op.entityId}`];
+    if (m && m.k && m.k[op.field]) continue;
+    drop.add(op.id);
+  }
+  if (!drop.size) return bundle;
+  return Object.assign({}, bundle, { pending: bundle.pending.filter((op) => !drop.has(op.id)) });
+}
+
+/** Записям времени без id — их ключ (core/oplog.js, stampSessionIds): тогда
+ *  сдвиг начала записи остаётся правкой той же записи. На месте: объекты
+ *  задач остаются теми же, на них держатся окна и выделение. */
+function stampLive() {
+  const st = Core.stampSessionIds({ tasks: state.tasks });
+  if (!st || st.tasks === state.tasks) return;
+  st.tasks.forEach((task, i) => {
+    const live = state.tasks[i];
+    if (live && task !== live) live.sessions = task.sessions;
+  });
+}
+
+/** Живое состояние → пачка: что поменялось с прошлого раза — правками в
+ *  очередь, удалённое — в корзину. Возвращает новые правки. */
+function commitLive() {
+  stampLive();
+  if (!syncBundle) return [];
+  const r = Core.commitLocal(syncBundle, syncPayload(), { deviceId, at: new Date().toISOString() });
+  syncBundle = coalescePending(r.bundle, r.ops, syncInflight);
+  if (r.ops.length) syncMarksChanged();
+  return r.ops;
+}
+
+/** Что ложится на диск: состояние и, у области аккаунта, его пачка. */
+function persistData() {
+  commitLive();
+  if (!scopeUid) return state;
+  const sync2 = packSync2(syncBundle, syncExtra, scopeUid);
+  if (!syncBundle && !sync2.adopt && !sync2.mirror) return state;
+  return Object.assign({}, state, { sync2 });
+}
+
+/** Пачка только что загруженной области (зовут openScope и init): снять
+ *  sync2 с данных, вычистить корзину старше 30 дней. */
+function takeSync2(loaded, uid) {
+  const { bundle, extra } = unpackSync2(loaded, uid);
+  syncBundle = bundle ? Core.trashSweep(bundle, Date.now(), TRASH_DAYS) : null;
+  syncExtra = extra;
+  syncSent.clear();
+  syncInflight.clear();
+  syncFails = 0;
+  conflictIndexFor = null;
+}
+
+/** Установка — одна на устройство, и id у неё один на все аккаунты. Нет
+ *  моста к хранилищу (старый preload) — id на время сеанса. */
+async function loadDeviceId() {
+  try { if (window.api.deviceId) deviceId = await window.api.deviceId(); } catch (err) { console.error('Не удалось прочитать id установки:', err); }
+  if (!deviceId) deviceId = `${IS_WEB ? 'web' : 'app'}-${uid()}`;
+}
+
+/** Синхронизация всё ещё про того же: пока ждали сеть, могли переключить
+ *  аккаунт, и ответ про прежний нельзя применять к данным следующего. */
+const syncStillFor = (uid) => !!(!scopeStale && currentUser && currentUser.id === uid && (scopeUid === uid || scopeUid === null));
+/** То же для журнала: его пачка — у области, поэтому область — та же. */
+const syncFor = (uid) => !!(!scopeStale && currentUser && currentUser.id === uid && scopeUid === uid);
+/** Можно ли сейчас говорить с журналом. */
+const syncLive = () => !!(!scopeStale && currentUser && scopeUid === currentUser.id && state.settings.syncEnabled !== false && deviceId);
 
 function scheduleSyncRetry() {
   clearTimeout(syncRetryTimer);
-  syncRetryTimer = setTimeout(() => { if (syncDirty && currentUser) pushSyncState(); }, 15000);
+  const ms = SYNC_BACKOFF_MS[Math.min(syncFails, SYNC_BACKOFF_MS.length - 1)];
+  syncFails += 1;
+  syncRetryTimer = setTimeout(() => { syncRetryTimer = null; syncNow(); }, ms);
 }
-window.addEventListener('online', () => { if (syncDirty && currentUser) pushSyncState(); });
 
+/** Всё, что журналу сейчас нужно: связь, чтение, отправка. Его зовут
+ *  повтор после сбоя, «online», возврат на вкладку и тихая сверка. */
+async function syncNow() {
+  if (!syncLive()) return;
+  if (!syncBundle) { await syncOnSignIn(); return; }
+  await pullChanges();
+  await sendPending();
+}
+window.addEventListener('online', () => { syncFails = 0; syncNow(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
+
+function startSyncPoll() {
+  clearInterval(syncPollTimer);
+  syncPollTimer = setInterval(() => { if (document.visibilityState === 'visible') syncNow(); }, SYNC_POLL_MS);
+}
+function stopSyncTimers() {
+  clearInterval(syncPollTimer);
+  syncPollTimer = null;
+  clearTimeout(syncRetryTimer);
+  syncRetryTimer = null;
+  clearTimeout(mirrorTimer);
+  mirrorTimer = null;
+  clearTimeout(legacyTimer);
+  legacyTimer = null;
+}
+
+/** Свои правки — в журнал: insert с игнором повторов (on_conflict
+ *  user_id,op_id) → ackPending. Сеть упала — очередь лежит в пачке на диске
+ *  и уйдёт повтором, хоть после перезапуска. */
+async function sendPending() {
+  if (!syncLive() || !syncBundle) return;
+  if (syncSendBusy) { syncSendAgain = true; return; }
+  const uid = currentUser.id;
+  const batch = syncBundle.pending.slice(0, SYNC_SEND_MAX);
+  if (!batch.length) return;
+  syncSendBusy = true;
+  syncSendAgain = false;
+  for (const op of batch) syncInflight.add(op.id);
+  let ok = false;
+  try {
+    const { data, error } = await sb.from('changes')
+      .upsert(batch.map((op) => Core.opToRow(op, uid)), { onConflict: 'user_id,op_id', ignoreDuplicates: true })
+      .select();
+    if (!syncFor(uid) || !syncBundle) return;
+    if (error) throw error;
+    syncBundle = Core.ackPending(syncBundle, Array.isArray(data) ? data : [], { deviceId, now: Date.now() });
+    for (const op of batch) syncSent.add(op.id);
+    syncFails = 0;
+    ok = true;
+    savePending = true;
+    scheduleSave();
+  } catch (err) {
+    console.error('Не удалось отправить правки:', err);
+    if (syncFor(uid)) scheduleSyncRetry();
+  } finally {
+    syncSendBusy = false;
+    syncInflight.clear();
+  }
+  if (!ok) return;
+  // ack не двигает lastSeq: журнал до своих правок мог быть не прочитан.
+  // Там же подтвердятся правки, которые сервер уже знал.
+  await pullChanges();
+  if (!syncLive() || !syncBundle) return;
+  const ids = new Set(syncBundle.pending.map((p) => p.id));
+  for (const id of [...syncSent]) if (!ids.has(id)) syncSent.delete(id);
+  if (syncSendAgain || syncBundle.pending.some((p) => !syncSent.has(p.id))) sendPending();
+  else if (syncBundle.pending.length) scheduleSyncRetry();
+}
+
+/** Чтение журнала: на событие realtime не берём строку из события, а
+ *  читаем всё после lastSeq по порядку (строка из события могла обогнать
+ *  соседку).
+ *
+ *  Строки всех страниц сначала собираются, а сливаются разом, после
+ *  последней, — одним синхронным шагом: своё несохранённое в очередь
+ *  (commitLive), приём (mergeIncoming), результат в живое состояние
+ *  (applyRemoteData). Между ними нет ни одного await, и правка, сделанная,
+ *  пока грузилась следующая страница, не теряется: раньше страницы
+ *  сливались по одной, своё сводилось в очередь только перед первой, а
+ *  живое затиралось в конце. Звать commitLive перед каждой страницей тоже
+ *  нельзя: пачка после первой страницы уже со слитым, а живое — ещё без
+ *  него, и разница ушла бы своими правками, откатывающими чужие. В живое
+ *  состояние результат по-прежнему ложится один раз: миграция между
+ *  страницами завела бы проекту, чьи статусы на следующей странице, свои.
+ *  Страница упала — сливается то, что успели прочитать: строки идут по
+ *  порядку, следующий приём продолжит с последней. */
+async function pullChanges() {
+  if (!syncLive() || !syncBundle) return;
+  if (syncPullBusy) { syncPullAgain = true; return; }
+  syncPullBusy = true;
+  syncPullAgain = false;
+  const uid = currentUser.id;
+  let before = null;
+  let events = [];
+  let merged = false;
+  let foreign = false;
+  let failed = false;
+  const rows = [];
+  try {
+    try {
+      let after = syncBundle.lastSeq;
+      for (;;) {
+        const { data, error } = await sb.from('changes').select('*')
+          .eq('user_id', uid).gt('seq', after)
+          .order('seq', { ascending: true }).limit(SYNC_PAGE);
+        if (!syncFor(uid) || !syncBundle) return;
+        if (error) throw error;
+        const page = Array.isArray(data) ? data : [];
+        rows.push(...page);
+        if (page.length < SYNC_PAGE) break;
+        after = Number(page[page.length - 1].seq);
+      }
+      syncFails = 0;
+    } catch (err) {
+      console.error('Не удалось прочитать журнал правок:', err);
+      failed = true;
+      if (syncFor(uid)) scheduleSyncRetry();
+    }
+    if (rows.length && syncFor(uid) && syncBundle) {
+      flushEditor();
+      commitLive(); // своё несохранённое — в очередь до приёма
+      before = syncBundle.state;
+      const out = Core.mergeIncoming(syncBundle, rows, { deviceId, now: Date.now() });
+      events = out.events || [];
+      syncBundle = stripMerge(out);
+      merged = true;
+      foreign = rows.some((r) => r.device_id !== deviceId);
+    }
+  } finally {
+    syncPullBusy = false;
+  }
+  if (!syncFor(uid) || !syncBundle) return;
+  if (merged) {
+    // Своё, вернувшееся из журнала, состояния обычно не меняет — тогда
+    // перерисовывать нечего, достаточно запомнить, докуда прочитано.
+    const touched = SYNC_LISTS.some((k) => syncBundle.state[k] !== before[k]);
+    if (foreign || touched || events.length) applyRemoteData(listsCopy(syncBundle.state));
+    else { savePending = true; scheduleSave(); }
+    syncMarksChanged();
+    syncToasts(events, foreign);
+  }
+  if (syncPullAgain) { syncPullAgain = false; await pullChanges(); return; }
+  if (failed) return;
+  maybeSnapshot(uid);
+  scheduleMirror();
+  // В очереди могли появиться пометки о конфликтах — их тоже отправить.
+  if (syncBundle.pending.some((p) => !syncSent.has(p.id))) sendPending();
+}
+
+const stripMerge = (out) => {
+  const b = Object.assign({}, out);
+  delete b.restored; delete b.events;
+  return b;
+};
+
+/** Все строки журнала после seq — страницами. */
+async function readChangesAfter(uid, seq) {
+  const rows = [];
+  let from = seq;
+  for (;;) {
+    const { data, error } = await sb.from('changes').select('*')
+      .eq('user_id', uid).gt('seq', from).order('seq', { ascending: true }).limit(SYNC_PAGE);
+    if (error) throw error;
+    const page = Array.isArray(data) ? data : [];
+    rows.push(...page);
+    if (page.length < SYNC_PAGE) return rows;
+    from = Number(page[page.length - 1].seq);
+  }
+}
+
+const SYNC_STATE_COLS = 'data, updated_at, updated_by, mirror_seq';
+
+/** Первая связь области аккаунта с журналом на этом устройстве: последний
+ *  слепок и правки после него; слепка нет — sync_state как слепок seq 0 (и
+ *  он же, если журнал пуст, ложится в snapshots: следующие устройства
+ *  начнут с него, а не с пустоты). Своё, что лежало в области до связи, и
+ *  ждущий перенос «Без аккаунта» — adoptGuestState: правками baseSeq 0,
+ *  общее с аккаунтом — по полям, с пометками; ничего не затирается. Вопроса
+ *  «какие данные оставить» больше нет. */
+async function linkAccount(uid) {
+  try {
+    const snapRes = await sb.from('snapshots').select('seq, data').eq('user_id', uid).order('seq', { ascending: false }).limit(1);
+    if (snapRes.error) throw snapRes.error;
+    let snap = (Array.isArray(snapRes.data) && snapRes.data[0]) || null;
+    const rowRes = await sb.from('sync_state').select(SYNC_STATE_COLS).eq('user_id', uid).maybeSingle();
+    if (rowRes.error) throw rowRes.error;
+    const row = rowRes.data || null;
+    const fromRow = !snap;
+    if (!snap) snap = { seq: 0, data: (row && row.data) || {} };
+    const ops = await readChangesAfter(uid, Number(snap.seq) || 0);
+    if (!syncFor(uid)) return false;
+    if (syncBundle) return true; // связал параллельный вызов
+    if (fromRow && row && !ops.length) {
+      const { error } = await sb.from('snapshots').insert({ user_id: uid, seq: 0, data: row.data || {} });
+      if (error && error.code !== '23505') console.error('Не удалось положить слепок sync_state:', error);
+    }
+    if (!syncFor(uid) || syncBundle) return !!syncBundle;
+    flushEditor();
+    stampLive();
+    const at = new Date().toISOString();
+    let b = stripMerge(Core.bootstrapFromSnapshot({ seq: Number(snap.seq) || 0, data: snap.data || {} }, ops, { deviceId, now: Date.now() }));
+    const events = [];
+    for (const lists of [listsCopy(state), ...syncExtra.adopt]) {
+      if (!hasAnyLists(lists)) continue;
+      const res = Core.adoptGuestState(b, lists, { deviceId, at });
+      b = res.bundle;
+      events.push(...(res.events || []));
+    }
+    syncBundle = b;
+    const extra = Object.assign(freshSyncExtra(), { snapSeq: Number(snap.seq) || 0 });
+    if (row) {
+      // Зеркало, от которого считают старые клиенты: запись нового
+      // устройства — как есть; запись старого, взятая за слепок, — она же
+      // и есть то, что в пачке.
+      if (isOplogRow(row) || fromRow) extra.mirror = { seq: rowMirrorSeq(row), data: row.data || {}, json: null };
+      if (!isOplogRow(row) && fromRow) extra.bridged = row.updated_at || null;
+    }
+    syncExtra = extra;
+    syncSent.clear();
+    applyRemoteData(listsCopy(syncBundle.state));
+    syncMarksChanged();
+    syncToasts(events, false);
+    savePending = true;
+    await saveNow();
+    return true;
+  } catch (err) {
+    console.error('Не удалось связаться с журналом правок:', err);
+    if (syncFor(uid)) scheduleSyncRetry();
+    return false;
+  }
+}
+
+/** Пришло слитое состояние (приём журнала, связь, выбор версии, корзина):
+ *  глубокая копия — в живое, миграция, перерисовка. Своё несохранённое к
+ *  этому моменту уже сведено в пачку (commitLive) и в data есть. То, что
+ *  поменяют миграция и возврат задач, — свои правки этого устройства: они
+ *  уйдут следующим сохранением, как любые другие. */
 function applyRemoteData(data) {
   state.projects = Array.isArray(data && data.projects) ? data.projects : [];
   state.tasks = Array.isArray(data && data.tasks) ? data.tasks : [];
@@ -1684,11 +3454,6 @@ function applyRemoteData(data) {
   // (правило в core/sync.js: pickDocuments).
   state.documents = Core.pickDocuments(state.documents, data);
   migrate();
-  // Отпечаток — того, что пришло, до возврата задач: возврат — своя правка
-  // этого устройства, и уйти в облако он должен, как любая другая. Снятый
-  // после, он считался бы уже отправленным, и второе устройство продолжало бы
-  // видеть задачу закрытой.
-  lastSyncedJSON = JSON.stringify(syncPayload());
   reopenDueTasks(Date.now());
   if (selectedId && !getTask(selectedId)) selectedId = null;
   if (state.ui.projectId && !getProject(state.ui.projectId)) {
@@ -1697,49 +3462,157 @@ function applyRemoteData(data) {
   }
   render();
   refreshEditorsFromRemote();
-  scheduleSave(); // сохраняем локально; pushSyncState сам не отправит лишнего — см. lastSyncedJSON
-}
-
-// "Отпечаток" локальных данных на момент разрешения конфликта — используется
-// ниже, чтобы не спрашивать "какие данные оставить" повторно при каждом
-// входе/перезапуске, если с прошлого раза ничего не изменилось (раньше
-// диалог всплывал на КАЖДОЕ восстановление сессии на старте, а не только на
-// осознанный вход, потому что afterSignedIn({silent:true}) всё равно звал
-// syncOnSignIn). Отпечаток инвалидируется сам по себе, если пользователь
-// поработал локально (в том числе выйдя из аккаунта) — тогда хэш перестаёт
-// совпадать и при следующем входе диалог закономерно появится снова.
-/* Вопрос «взять данные с сервера или оставить локальные» задаётся один раз на
- * аккаунт, и всё.
- *
- * Раньше решение помнилось вместе с отпечатком локальных данных, и любая
- * правка — добавленная задача, запущенный таймер — делала отпечаток другим.
- * Из-за этого приложение спрашивало заново при каждом запуске, хотя выбор был
- * сделан давно. Дальше устройства и так сходятся: обычная синхронизация
- * заливает и подтягивает изменения сама, конфликт возможен только в первый
- * раз, когда на обеих сторонах уже лежат независимо накопленные данные.
- *
- * Отметка живёт в локальных настройках, поэтому на новом устройстве вопрос
- * прозвучит ровно один раз — там он как раз уместен. */
-function isSyncAlreadyResolved() {
-  const r = state.settings.syncResolvedFor;
-  return !!(currentUser && r && r.userId === currentUser.id);
-}
-function rememberSyncResolution() {
-  if (!currentUser) return;
-  if (isSyncAlreadyResolved()) return;
-  state.settings.syncResolvedFor = { userId: currentUser.id };
+  if (!el.syncdlgBackdrop.hidden) renderSyncDialog();
   scheduleSave();
 }
 
+/** Тосты слияния: спасённое от удаления, другая версия, просто обновление. */
+function syncToasts(events, foreign) {
+  const list = Array.isArray(events) ? events : [];
+  const restored = list.find((e) => e.type === 'restored');
+  const conflict = list.find((e) => e.type === 'conflict');
+  if (restored) toast(t('sync.restored_toast', { name: entityName(restored.entity, restored.entityId) }));
+  else if (conflict) toast(t('sync.conflict_toast', { name: entityName(conflict.entity, conflict.entityId) }));
+  else if (foreign) toast(t('sync.updated_toast'));
+}
+
+/** Слепок для новых устройств: журнал ушёл от прошлого дальше, чем на
+ *  SNAPSHOT_EVERY правок, и своих неотправленных нет (иначе слепок соврал
+ *  бы). Два устройства на одном seq — второй отбит ключом, это нормально. */
+async function maybeSnapshot(uid) {
+  if (!syncFor(uid) || !syncBundle || syncBundle.pending.length) return;
+  if (syncBundle.lastSeq - (syncExtra.snapSeq || 0) <= SNAPSHOT_EVERY) return;
+  const snap = Core.compactSnapshot(syncBundle);
+  if (!snap) return;
+  try {
+    const { error } = await sb.from('snapshots').insert({ user_id: uid, seq: snap.seq, data: snap.data });
+    if (error && error.code !== '23505') throw error;
+    if (!syncFor(uid)) return;
+    syncExtra = Object.assign({}, syncExtra, { snapSeq: snap.seq });
+    savePending = true;
+    scheduleSave();
+  } catch (err) {
+    console.error('Не удалось положить слепок:', err);
+  }
+}
+
+// --- Мост к старым клиентам (sync_state) -------------------------------------
+
+const isOplogRow = (row) => !!(row && typeof row.updated_by === 'string' && row.updated_by.startsWith('oplog:'));
+const rowMirrorSeq = (row) => (row && row.mirror_seq !== null && row.mirror_seq !== undefined ? Number(row.mirror_seq) || 0 : 0);
+const mirrorJson = (m) => {
+  if (!m) return null;
+  if (!m.json) m.json = JSON.stringify(m.data);
+  return m.json;
+};
+
+function scheduleMirror() {
+  clearTimeout(mirrorTimer);
+  mirrorTimer = setTimeout(() => { mirrorTimer = null; writeMirror(); }, MIRROR_DELAY_MS);
+}
+
+/** Зеркало для старых клиентов: после слияния — состояние в sync_state, с
+ *  mirror_seq (на каком seq журнала это зеркало) и updated_by 'oplog:…' (по
+ *  нему новые устройства отличают зеркало от записи старого клиента).
+ *  Сначала — свежая запись: если там непереведённая правка старого клиента,
+ *  зеркало её затёрло бы, — сперва мост. */
+async function writeMirror() {
+  if (!syncLive() || !syncBundle || syncBundle.pending.length) return;
+  const uid = currentUser.id;
+  const data = Core.mirrorSyncState(syncBundle);
+  const json = JSON.stringify(data);
+  const seq = syncBundle.lastSeq;
+  const m = syncExtra.mirror;
+  if (m && m.seq === seq && mirrorJson(m) === json) return;
+  try {
+    const { data: row, error: readError } = await sb.from('sync_state').select(SYNC_STATE_COLS).eq('user_id', uid).maybeSingle();
+    if (readError) throw readError;
+    if (!syncFor(uid) || !syncBundle) return;
+    if (row && !isOplogRow(row) && row.updated_at !== syncExtra.bridged) { await bridgeLegacy(row); return; }
+    if (syncBundle.pending.length || syncBundle.lastSeq !== seq) return; // пока ждали, пришло новое — следующим разом
+    const { error } = await sb.from('sync_state').upsert({
+      user_id: uid,
+      data,
+      updated_at: new Date().toISOString(),
+      updated_by: `oplog:${deviceId}`,
+      mirror_seq: seq,
+    });
+    if (error) throw error;
+    if (!syncFor(uid)) return;
+    syncExtra = Object.assign({}, syncExtra, { mirror: { seq, data, json } });
+    savePending = true;
+    scheduleSave();
+  } catch (err) {
+    console.error('Не удалось обновить sync_state для старых версий:', err);
+  }
+}
+
+/** Запись sync_state (realtime или чтение): зеркало другого нового
+ *  устройства — запомнить как последнее увиденное; запись старого клиента
+ *  — в правки. */
+async function onSyncStateRow(row) {
+  if (!row || !syncLive() || !syncBundle) return;
+  if (row.user_id && row.user_id !== currentUser.id) return;
+  if (isOplogRow(row)) {
+    if (row.updated_by !== `oplog:${deviceId}`) syncExtra = Object.assign({}, syncExtra, { mirror: { seq: rowMirrorSeq(row), data: row.data || {}, json: null } });
+    return;
+  }
+  await bridgeLegacy(row);
+}
+
+/** Запись старого клиента → правки устройства 'legacy' (legacyBridgeOps):
+ *  разница с зеркалом, от которого он считал (его seq — mirror_seq строки:
+ *  старый клиент колонку не знает и не трогает), с baseSeq этого зеркала —
+ *  то, что журнал после него менял, против неё параллельно, а не затёрто.
+ *  id правок — от updated_at: все новые устройства дают одни и те же, и
+ *  повтор отбивает сервер. Зеркала нет у этого устройства — сначала ждём
+ *  то, которое его писало; не дождались — берём ближайшее известное
+ *  (лишнее станет «другой версией», а не потерей). */
+async function bridgeLegacy(row) {
+  if (!syncLive() || !syncBundle) return;
+  const uid = currentUser.id;
+  const stamp = row.updated_at || null;
+  if (!stamp || syncExtra.bridged === stamp) return;
+  const base = rowMirrorSeq(row);
+  const m = syncExtra.mirror;
+  if (!m || m.seq !== base) {
+    const wait = LEGACY_GRACE_MS - (Date.now() - Date.parse(stamp));
+    if (wait > 0) {
+      clearTimeout(legacyTimer);
+      legacyTimer = setTimeout(() => { legacyTimer = null; writeMirror(); }, wait + 1000);
+      return;
+    }
+  }
+  const prev = m ? m.data : Core.mirrorSyncState(syncBundle);
+  const ops = Core.legacyBridgeOps(prev, row.data || {}, { at: stamp, baseSeq: base, stamp });
+  try {
+    if (ops.length) {
+      const { error } = await sb.from('changes')
+        .upsert(ops.map((op) => Core.opToRow(op, uid)), { onConflict: 'user_id,op_id', ignoreDuplicates: true });
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.error('Не удалось перевести запись старой версии в правки:', err);
+    if (syncFor(uid)) scheduleSyncRetry();
+    return;
+  }
+  if (!syncFor(uid) || !syncBundle) return;
+  syncExtra = Object.assign({}, syncExtra, { bridged: stamp, mirror: { seq: base, data: row.data || {}, json: null } });
+  savePending = true;
+  scheduleSave();
+  await pullChanges();
+}
+
+// --- Вход и подписка ----------------------------------------------------------
+
 let syncInFlightFor = null;
 
-/** При входе: если на сервере ничего нет — заливаем локальные данные; если
- * локально пусто — просто подтягиваем с сервера; если данные есть и там, и
- * там — спрашиваем пользователя, но только один раз для этой пары
- * (аккаунт, состояние локальных данных) — см. rememberSyncResolution. */
+/** После входа (и на старте с живым сеансом): связь с журналом, если её
+ *  ещё нет, подписка, чтение, мост, отправка. Защита от почти одновременных
+ *  повторных вызовов (см. afterSignedIn). */
 async function syncOnSignIn() {
-  if (!currentUser || state.settings.syncEnabled === false) return;
-  if (syncInFlightFor === currentUser.id) return; // защита от почти одновременных повторных вызовов (см. afterSignedIn)
+  if (!syncLive()) return;
+  if (syncInFlightFor === currentUser.id) return;
   syncInFlightFor = currentUser.id;
   try {
     await syncOnSignInInner();
@@ -1749,66 +3622,469 @@ async function syncOnSignIn() {
 }
 
 async function syncOnSignInInner() {
-  let row = null;
-  try {
-    const { data, error } = await sb.from('sync_state').select('data, updated_at').eq('user_id', currentUser.id).maybeSingle();
-    if (error) throw error;
-    row = data;
-  } catch (err) {
-    console.error('Не удалось прочитать синхронизированные данные:', err);
-    return;
-  }
-  // Какую ветку выбрать — решает ядро (core/sync.js): это единственное
-  // место, где ошибка стоит пользователю его данных, и правило обязано
-  // совпадать с телефоном. Сами запросы и диалог остаются здесь.
-  const plan = Core.planSignInSync({
-    localHasData: Core.hasData(state),
-    remoteHasData: Core.hasData(row && row.data),
-    resolved: isSyncAlreadyResolved(),
-  });
-  if (plan === 'push') await pushSyncState();
-  else if (plan === 'pull') applyRemoteData(row.data);
-  else if (plan === 'ask') {
-    const useServer = await confirmDialog(t('sync.conflict_text'), {
-      title: t('sync.conflict_title'),
-      okLabel: t('sync.use_server'),
-      cancelLabel: t('sync.use_local'),
-      danger: false,
-    });
-    if (useServer) applyRemoteData(row.data);
-    else await pushSyncState();
-  }
-  rememberSyncResolution();
+  const uid = currentUser.id;
+  if (!syncBundle && !(await linkAccount(uid))) return;
+  if (!syncFor(uid)) return;
   subscribeSyncRealtime();
+  startSyncPoll();
+  await pullChanges();
+  if (!syncFor(uid)) return;
+  // Пока устройства не было, старый клиент мог записать sync_state.
+  try {
+    const { data: row, error } = await sb.from('sync_state').select(SYNC_STATE_COLS).eq('user_id', uid).maybeSingle();
+    if (error) throw error;
+    if (row && syncFor(uid)) await onSyncStateRow(Object.assign({ user_id: uid }, row));
+  } catch (err) {
+    console.error('Не удалось прочитать sync_state:', err);
+  }
+  await sendPending();
+  scheduleMirror();
+}
+
+/** Свои правки — в журнал своим же сеансом: перед сменой аккаунта, выходом
+ *  и стиранием копии. Не вышло — очередь лежит в пачке области. */
+async function flushSync() {
+  if (!syncLive() || !syncBundle) return;
+  await sendPending();
+}
+
+let pullSoonTimer = null;
+/** Событие realtime — только повод перечитать журнал; пачка строк одной
+ *  вставки — одно чтение. */
+function pullSoon(uid) {
+  clearTimeout(pullSoonTimer);
+  pullSoonTimer = setTimeout(() => { if (syncFor(uid)) pullChanges(); }, 60);
 }
 
 function subscribeSyncRealtime() {
   unsubscribeSyncRealtime();
-  if (!currentUser || state.settings.syncEnabled === false) return;
+  if (!syncLive()) return;
+  const uid = currentUser.id;
   syncChannel = sb
-    .channel('sync_state:' + currentUser.id)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sync_state', filter: `user_id=eq.${currentUser.id}` }, (payload) => {
-      const row = payload.new;
-      if (!row || row.updated_by === SYNC_CLIENT_ID) return; // эхо нашей же записи
-      applyRemoteData(row.data);
-      rememberSyncResolution(); // см. комментарий в pushSyncState
-      toast(t('sync.updated_toast'));
+    .channel('sync2:' + uid)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'changes', filter: `user_id=eq.${uid}` }, () => pullSoon(uid))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'sync_state', filter: `user_id=eq.${uid}` }, (payload) => {
+      if (syncFor(uid)) onSyncStateRow(payload && payload.new);
     })
-    .subscribe();
+    .subscribe((status) => { if (status === 'SUBSCRIBED') pullSoon(uid); });
 }
 function unsubscribeSyncRealtime() {
   if (syncChannel) { sb.removeChannel(syncChannel); syncChannel = null; }
+  clearTimeout(pullSoonTimer);
 }
 
 /** Пункт меню аккаунта — источник данных: пользователь может полностью
  * отключить облачную синхронизацию для этого устройства (данные остаются
- * только локально, даже будучи залогиненным), не выходя из аккаунта. */
+ * только локально, даже будучи залогиненным), не выходя из аккаунта. Правки
+ * тем временем копятся в очереди и уйдут, когда её включат снова. */
 function toggleSyncEnabled() {
   const next = !(state.settings.syncEnabled !== false);
   state.settings.syncEnabled = next;
   scheduleSave();
-  if (next) { if (currentUser) syncOnSignIn(); } else { unsubscribeSyncRealtime(); }
+  if (next) { if (currentUser) syncOnSignIn(); } else { unsubscribeSyncRealtime(); stopSyncTimers(); }
   toast(next ? t('sync.enabled_toast') : t('sync.disabled_toast'));
+}
+
+// ---------------------------------------------------------------------------
+// Конфликты — «Другая версия» (17 октября 2026)
+// ---------------------------------------------------------------------------
+// Конфликт — две правки одного поля, сделанные не видя друг друга. Ядро уже
+// показывает одну (позднюю), другая лежит в syncBundle.conflicts. Здесь —
+// значок у задачи в строке, карточке и на доске (.conflict-mark), строка
+// «Другая версия ›» в свойствах задачи, окне проекта и меню документа,
+// список всех в «Данных» и окно выбора: поле, версии с устройством и
+// временем, «Оставить эту» (resolveConflict — обычная правка выбранным
+// значением плюс 'resolved'; обе версии остаются в журнале).
+
+/** Индекс конфликтов по сущности — пересобирается, когда меняется пачка. */
+let conflictIndexFor = null;
+let conflictIndex = new Map();
+
+function syncMarksChanged() {
+  conflictIndexFor = null;
+}
+
+function conflictsOf(kind, id) {
+  if (!syncBundle) return [];
+  if (conflictIndexFor !== syncBundle) {
+    conflictIndex = new Map();
+    for (const c of syncBundle.conflicts || []) {
+      const key = `${c.entity}:${c.entityId}`;
+      if (!conflictIndex.has(key)) conflictIndex.set(key, []);
+      conflictIndex.get(key).push(c);
+    }
+    conflictIndexFor = syncBundle;
+  }
+  return conflictIndex.get(`${kind}:${id}`) || [];
+}
+
+const allConflicts = () => (syncBundle ? syncBundle.conflicts || [] : []);
+
+/** Значок «есть другая версия» — один на строку списка, карточку проекта и
+ *  доску. null — конфликтов нет. */
+function conflictMark(kind, id) {
+  const n = conflictsOf(kind, id).length;
+  if (!n) return null;
+  const m = elt('span', 'conflict-mark');
+  m.innerHTML = icon('copy');
+  m.title = t('sync.conflict_badge');
+  m.setAttribute('aria-label', t('sync.conflict_badge'));
+  return m;
+}
+const conflictMarkHtml = (kind, id) => {
+  const m = conflictMark(kind, id);
+  return m ? m.outerHTML : '';
+};
+
+/** Строка «Другая версия · N ›» (srow) — в свойствах задачи, окне проекта. */
+function conflictRowHtml(id) {
+  return `<button type="button" class="srow" id="${id}">${icon('copy')}`
+    + `<span class="srow-label">${escapeHtml(t('sync.other_version'))}</span>`
+    + `<span class="srow-box"><span class="srow-value"></span></span>${icon('chevron-right', 'icon srow-chev')}</button>`;
+}
+
+/** Группа с этой строкой в host: нет конфликтов — группа прячется. */
+function renderConflictRow(host, kind, id) {
+  if (!host) return;
+  const list = conflictsOf(kind, id);
+  host.hidden = !list.length;
+  if (!list.length) { host.innerHTML = ''; return; }
+  if (!host.firstElementChild) {
+    host.innerHTML = conflictRowHtml(`${host.id}-row`);
+    host.firstElementChild.addEventListener('click', () => openConflictDialog(host.dataset.kind, host.dataset.id));
+  }
+  host.dataset.kind = kind;
+  host.dataset.id = id;
+  host.querySelector('.srow-label').textContent = t('sync.other_version');
+  host.querySelector('.srow-value').textContent = fieldsLabel(list);
+}
+
+function renderTaskConflicts(task) {
+  renderConflictRow(el.taskConflicts, 'task', task.id);
+}
+
+/** Поля конфликтов словами: «Название, Заметки». */
+function fieldsLabel(list) {
+  return [...new Set(list.map((c) => fieldLabel(c.entity, c.field)))].join(', ');
+}
+
+const FIELD_KEYS = {
+  title: 'sync.f_title', name: 'sync.f_name', notes: 'sync.f_notes', body: 'sync.f_body', description: 'sync.f_description',
+  color: 'sync.f_color', sessions: 'sync.f_session', done: 'sync.f_done', projectId: 'sync.f_project',
+  dueAt: 'due.label', statusId: 'task.status_label', versionId: 'version.label', tagIds: 'tag.pick', rate: 'money.rate_label',
+  repeat: 'repeat.label', reminders: 'remind.label', slots: 'slot.label', currency: 'sync.f_currency', releasedAt: 'sync.f_released',
+};
+
+function fieldLabel(kind, field) {
+  if (kind === 'document' && field === 'title') return t('sync.f_title');
+  const key = FIELD_KEYS[field];
+  return key ? t(key) : field;
+}
+
+const ENTITY_KEYS = {
+  project: 'sync.k_project', task: 'sync.k_task', document: 'sync.k_document', status: 'sync.k_status', tag: 'sync.k_tag', version: 'sync.k_version',
+};
+
+/** Сущность из живого состояния или из корзины. */
+function findEntity(kind, id) {
+  const list = { project: state.projects, task: state.tasks, status: state.statuses, tag: state.tags, version: state.versions, document: state.documents }[kind] || [];
+  const live = list.find((x) => x && String(x.id) === String(id));
+  if (live) return live;
+  const tr = syncBundle && (syncBundle.trash || []).find((x) => x.entity === kind && String(x.entityId) === String(id));
+  return tr ? tr.data : null;
+}
+
+function entityName(kind, id) {
+  const e = findEntity(kind, id);
+  if (!e) return t('task.no_name');
+  if (kind === 'task') return e.title || t('task.no_name');
+  if (kind === 'document') return docTitle(e);
+  return e.name || t('task.no_name');
+}
+
+/** С какого устройства версия: это, старая версия приложения или другое —
+ *  по началу id установки (web-, win-, mac-, android-, ios-). */
+function deviceLabel(id) {
+  if (!id) return t('sync.device_other');
+  if (id === deviceId) return t('sync.device_this');
+  if (id === 'legacy') return t('sync.device_legacy');
+  const kind = String(id).split('-')[0];
+  const known = { web: 'sync.device_web', win: 'sync.device_win', mac: 'sync.device_mac', linux: 'sync.device_linux', android: 'sync.device_android', ios: 'sync.device_ios' }[kind];
+  return known ? t(known) : t('sync.device_other');
+}
+
+function syncWhen(iso) {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return '';
+  return `${fmtDateShort(d.toISOString())}, ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/** Значение версии словами — для окна выбора. Текст заметки и документа —
+ *  целиком, простым текстом (docPlainText), его окно прокручивается. */
+function versionValueNode(c, value) {
+  const field = c.field;
+  if (value === null || value === undefined || value === '') {
+    return elt('span', 'syncdlg-empty', t(c.sessionId ? 'sync.session_removed' : 'sync.value_empty'));
+  }
+  if (field === 'notes' || field === 'body') {
+    const text = Core.docPlainText(Core.readNotes(value).doc).trim();
+    return elt('div', 'syncdlg-text', text || t('sync.value_empty'));
+  }
+  if (c.sessionId || field === 'sessions') {
+    const s = value || {};
+    const ms = Number(s.ms) || 0;
+    return elt('span', 'syncdlg-val', `${syncWhen(s.start)}${s.end ? `–${syncWhen(s.end).split(', ').pop()}` : ''} · ${fmtShort(ms)}`);
+  }
+  if (field === 'color') {
+    const box = elt('span', 'syncdlg-val');
+    const dot = elt('i', 'st-swatch');
+    dot.style.setProperty('--sc', String(value));
+    box.append(dot, ` ${value}`);
+    return box;
+  }
+  let text;
+  if (field === 'statusId') text = (getStatus(value) || {}).name;
+  else if (field === 'projectId') text = (getProject(value) || {}).name;
+  else if (field === 'versionId') text = ((state.versions || []).find((v) => v.id === value) || {}).name;
+  else if (field === 'tagIds' && Array.isArray(value)) text = value.map((id) => ((state.tags || []).find((g) => g.id === id) || {}).name).filter(Boolean).join(', ');
+  else if (field === 'repeat') text = repeatLabel(Core.normalizeRepeat(value));
+  else if (/At$/.test(field) && typeof value === 'string') text = syncWhen(value);
+  else if (typeof value === 'boolean') text = t(value ? 'sync.value_yes' : 'sync.value_no');
+  else if (typeof value === 'string' || typeof value === 'number') text = String(value);
+  else if (Array.isArray(value)) text = t('sync.value_items', { n: value.length });
+  else text = JSON.stringify(value);
+  return elt('span', 'syncdlg-val', text || t('sync.value_empty'));
+}
+
+/** Окно синхронизации: одно на три вида — конфликты сущности, список всех
+ *  конфликтов, корзина. */
+const syncdlg = { mode: null, kind: null, id: null, from: null };
+
+/** Конфликты сущности. from — 'all', если пришли из списка: тогда у окна
+ *  стрелка назад, к списку. */
+function openConflictDialog(kind, id, from) {
+  if (!conflictsOf(kind, id).length) return;
+  closeMenu();
+  syncdlg.mode = 'entity';
+  syncdlg.kind = kind;
+  syncdlg.id = id;
+  syncdlg.from = from || null;
+  renderSyncDialog();
+  el.syncdlgBackdrop.hidden = false;
+}
+
+function openConflictList() {
+  syncdlg.mode = 'all';
+  syncdlg.from = null;
+  renderSyncDialog();
+  el.syncdlgBackdrop.hidden = false;
+}
+
+function openTrash() {
+  syncdlg.mode = 'trash';
+  syncdlg.from = null;
+  renderSyncDialog();
+  el.syncdlgBackdrop.hidden = false;
+}
+
+function closeSyncDialog() {
+  el.syncdlgBackdrop.hidden = true;
+  syncdlg.mode = null;
+  if (state.ui.view === 'settings') renderSyncSettings();
+}
+
+function renderSyncDialog() {
+  const body = el.syncdlgBody;
+  body.innerHTML = '';
+  el.syncdlgBack.hidden = true;
+  if (syncdlg.mode === 'entity') {
+    const list = conflictsOf(syncdlg.kind, syncdlg.id);
+    if (!list.length) {
+      // Решили последний: из списка — обратно в список, иначе окно закрыто.
+      if (syncdlg.from === 'all' && allConflicts().length) { openConflictList(); return; }
+      closeSyncDialog();
+      return;
+    }
+    el.syncdlgTitle.textContent = t('sync.other_version');
+    el.syncdlgBack.hidden = syncdlg.from !== 'all';
+    body.appendChild(elt('p', 'syncdlg-sub', `${t(ENTITY_KEYS[syncdlg.kind] || 'sync.k_task')} · ${entityName(syncdlg.kind, syncdlg.id)}`));
+    for (const c of list) body.appendChild(conflictBlock(c));
+    return;
+  }
+  if (syncdlg.mode === 'all') {
+    el.syncdlgTitle.textContent = t('sync.conflicts');
+    const groups = new Map();
+    for (const c of allConflicts()) {
+      const key = `${c.entity}:${c.entityId}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(c);
+    }
+    if (!groups.size) {
+      body.appendChild(emptyState({ art: 'tasks', title: t('sync.conflicts_empty'), text: t('sync.conflicts_empty_text'), small: true }));
+      return;
+    }
+    const grp = elt('div', 'sgroup');
+    for (const list of groups.values()) {
+      const c = list[0];
+      const row = elt('button', 'srow');
+      row.type = 'button';
+      row.dataset.kind = c.entity;
+      row.dataset.id = c.entityId;
+      row.innerHTML = `${icon('copy')}<span class="srow-label"></span><span class="srow-box"><span class="srow-value"></span></span>${icon('chevron-right', 'icon srow-chev')}`;
+      row.querySelector('.srow-label').textContent = `${entityName(c.entity, c.entityId)}`;
+      row.querySelector('.srow-value').textContent = `${t(ENTITY_KEYS[c.entity] || 'sync.k_task')} · ${fieldsLabel(list)}`;
+      row.addEventListener('click', () => openConflictDialog(c.entity, c.entityId, 'all'));
+      grp.appendChild(row);
+    }
+    body.appendChild(grp);
+    return;
+  }
+  if (syncdlg.mode === 'trash') {
+    el.syncdlgTitle.textContent = t('sync.trash');
+    const rows = trashRows();
+    if (!rows.length) {
+      body.appendChild(emptyState({ art: 'tasks', title: t('sync.trash_empty'), text: t('sync.trash_empty_text', { days: TRASH_DAYS }), small: true }));
+      return;
+    }
+    body.appendChild(elt('p', 'syncdlg-sub', t('sync.trash_note', { days: TRASH_DAYS })));
+    const grp = elt('div', 'sgroup');
+    for (const tr of rows) {
+      const row = elt('div', 'srow srow-static trash-row');
+      row.dataset.kind = tr.entity;
+      row.dataset.id = tr.entityId;
+      row.innerHTML = `${icon('trash')}<span class="srow-label"></span><span class="srow-box"><span class="srow-value"></span><span class="srow-sub"></span></span>`;
+      row.querySelector('.srow-label').textContent = trashName(tr);
+      row.querySelector('.srow-value').textContent = t(ENTITY_KEYS[tr.entity] || 'sync.k_task');
+      row.querySelector('.srow-sub').textContent = t('sync.deleted_on', { date: syncWhen(tr.deletedAt) });
+      const btn = elt('button', 'btn-soft trash-restore', t('sync.restore'));
+      btn.type = 'button';
+      btn.addEventListener('click', () => restoreTrashItem(tr.entity, tr.entityId));
+      row.appendChild(btn);
+      grp.appendChild(row);
+    }
+    body.appendChild(grp);
+  }
+}
+
+/** Конфликт одного поля: подпись поля и версии — значение, устройство,
+ *  время, «сейчас показана» и «Оставить эту». */
+function conflictBlock(c) {
+  const box = elt('div', 'syncdlg-field');
+  box.dataset.conflict = c.id;
+  box.appendChild(elt('div', 'sgroup-label', c.sessionId ? t('sync.f_session') : fieldLabel(c.entity, c.field)));
+  const shownId = c.shownId || (c.shown === 'ours' ? c.ours && c.ours.opId : c.theirs && c.theirs.opId);
+  const versions = (c.versions || []).slice().sort((a, b) => (Date.parse(b.at) || 0) - (Date.parse(a.at) || 0));
+  for (const v of versions) {
+    const card = elt('div', 'syncdlg-version');
+    card.dataset.op = v.opId;
+    if (v.opId === shownId) card.classList.add('shown');
+    card.appendChild(versionValueNode(c, v.value));
+    const foot = elt('div', 'syncdlg-foot');
+    const who = elt('span', 'syncdlg-who', `${deviceLabel(v.deviceId)} · ${syncWhen(v.at)}`);
+    foot.appendChild(who);
+    if (v.opId === shownId) foot.appendChild(elt('span', 'syncdlg-shown', t('sync.shown_now')));
+    const keep = elt('button', 'btn-soft syncdlg-keep', t('sync.keep_this'));
+    keep.type = 'button';
+    keep.addEventListener('click', () => chooseVersion(c.id, v.opId));
+    foot.appendChild(keep);
+    card.appendChild(foot);
+    box.appendChild(card);
+  }
+  return box;
+}
+
+/** «Оставить эту»: правка поля выбранным значением и 'resolved' — в
+ *  очередь, значение — в живое состояние, отправка сразу. */
+function chooseVersion(conflictId, opId) {
+  if (!syncBundle) return;
+  flushEditor();
+  commitLive();
+  const r = Core.resolveConflict(syncBundle, conflictId, opId, { deviceId, at: new Date().toISOString() });
+  if (!r.ops.length) return;
+  syncBundle = r.bundle;
+  syncMarksChanged();
+  applyRemoteData(listsCopy(syncBundle.state));
+  savePending = true;
+  saveNow();
+  sendPending();
+  toast(t('sync.kept_toast'));
+}
+
+// ---------------------------------------------------------------------------
+// Корзина (17 октября 2026)
+// ---------------------------------------------------------------------------
+// Удалённое лежит рядом с состоянием (syncBundle.trash) 30 дней — и своё, и
+// пришедшее с других устройств; trashSweep чистит старое при открытии
+// области. В списке — то, что удаляли сами: статусы, версии и теги,
+// ушедшие вместе со своим проектом, не показываются отдельно и
+// возвращаются с ним; задача удалённого проекта возвращает и проект.
+
+const TRASH_KINDS_WITH_PROJECT = ['task', 'status', 'version', 'tag', 'document'];
+const TRASH_TOGETHER_MS = 10000;
+
+function trashList() {
+  return syncBundle ? (syncBundle.trash || []).filter((x) => x && x.entity && x.data) : [];
+}
+
+/** Ушла ли запись вместе со своим проектом (одним удалением). */
+function trashedWithProject(tr, all) {
+  if (!TRASH_KINDS_WITH_PROJECT.includes(tr.entity) || !tr.data.projectId) return null;
+  const p = all.find((x) => x.entity === 'project' && String(x.entityId) === String(tr.data.projectId));
+  if (!p) return null;
+  return Math.abs((Date.parse(p.deletedAt) || 0) - (Date.parse(tr.deletedAt) || 0)) <= TRASH_TOGETHER_MS ? p : null;
+}
+
+function trashRows() {
+  const all = trashList();
+  return all.filter((tr) => !trashedWithProject(tr, all))
+    .sort((a, b) => (Date.parse(b.deletedAt) || 0) - (Date.parse(a.deletedAt) || 0));
+}
+
+function trashName(tr) {
+  const e = tr.data || {};
+  if (tr.entity === 'task') return e.title || t('task.no_name');
+  if (tr.entity === 'document') return docTitle(e);
+  return e.name || t('task.no_name');
+}
+
+/** «Восстановить»: возврат — правками ('deleted' = null и '*', ядро
+ *  restoreFromTrash), вместе с тем, что ушло с проектом, и с проектом
+ *  задачи, если он тоже в корзине. */
+function restoreTrashItem(kind, id) {
+  if (!syncBundle) return;
+  flushEditor();
+  commitLive();
+  const all = trashList();
+  const item = all.find((x) => x.entity === kind && String(x.entityId) === String(id));
+  if (!item) return;
+  const group = [item];
+  if (kind === 'project') group.push(...all.filter((x) => x !== item && trashedWithProject(x, all) === item));
+  else if (item.data.projectId) {
+    const p = all.find((x) => x.entity === 'project' && String(x.entityId) === String(item.data.projectId));
+    if (p) group.unshift(p);
+  }
+  const at = new Date().toISOString();
+  for (const g of group) {
+    const r = Core.restoreFromTrash(syncBundle, g.entity, g.entityId, { deviceId, at });
+    syncBundle = r.bundle;
+  }
+  syncMarksChanged();
+  applyRemoteData(listsCopy(syncBundle.state));
+  savePending = true;
+  saveNow();
+  sendPending();
+  toast(t('sync.restored_one', { name: trashName(item) }));
+}
+
+/** Группа «Синхронизация» в «Данных»: «Конфликты · N ›», «Корзина · N ›».
+ *  Только у области, связанной с журналом. */
+function renderSyncSettings() {
+  const on = !!syncBundle;
+  el.settingsSyncDataLabel.hidden = !on;
+  el.settingsSyncData.hidden = !on;
+  if (!on) return;
+  el.settingsConflictsValue.textContent = String(allConflicts().length);
+  el.settingsTrashValue.textContent = String(trashRows().length);
 }
 
 // ---------------------------------------------------------------------------
@@ -1825,18 +4101,23 @@ function scheduleSave() {
 }
 async function saveNow() {
   clearTimeout(saveTimer);
-  if (!savePending) return;
+  // Идёт смена области (openScope): прежнее состояние легло бы в новую.
+  // savePending остаётся — новое состояние сохранится следующим разом.
+  if (!savePending || scopeSwitching) return;
   savePending = false;
   try {
-    await window.api.save(state);
-    if (currentUser) pushSyncState(); // не блокируем локальное сохранение сетью; сам не пришлёт лишнего — см. lastSyncedJSON
+    // Сначала живое — в пачку (commitLive): на диск ложатся данные вместе
+    // со своими неотправленными правками, одной записью.
+    await window.api.save(persistData());
+    // Отправка не держит локальное сохранение сетью.
+    if (syncBundle && syncBundle.pending.some((p) => !syncSent.has(p.id))) sendPending();
   } catch (err) {
     console.error('Не удалось сохранить данные:', err);
     toast(t('toast.save_error'));
     savePending = true;
   }
 }
-window.addEventListener('beforeunload', () => { if (savePending) window.api.save(state); });
+window.addEventListener('beforeunload', () => { if (savePending && !scopeSwitching) window.api.save(persistData()); });
 
 // ---------------------------------------------------------------------------
 // Рендер — маршрутизатор
@@ -1868,6 +4149,7 @@ function render() {
   const v = state.ui.view;
 
   document.body.classList.toggle('nav-collapsed', !!state.ui.navCollapsed);
+  applyModeFlags();
   renderStats();
   renderNotifBadge();
 
@@ -1879,12 +4161,13 @@ function render() {
   // задача. Перерисовка на месте (таймер, галочка, синхронизация) экран не
   // переигрывает — раньше он на каждой мигал прозрачностью.
   const views = { home: el.homeView, projects: el.projectsView, project: el.projectView, task: el.taskView, docs: el.docsView, time: el.timeView, settings: el.settingsView };
-  const shown = `${v}:${v === 'task' ? selectedId : v === 'project' ? state.ui.projectId : ''}`;
+  const shown = `${v}:${v === 'task' ? selectedId : v === 'project' ? state.ui.projectId : v === 'settings' ? settingsSection() || '' : ''}`;
   const entering = shown !== shownScreen;
   shownScreen = shown;
   // Новый экран — порядок строк считается заново, без заморозки и без
   // переезда: человек ушёл и вернулся, а не смотрел, как строка едет.
-  if (entering) { orderHold = null; shownOrder.clear(); flipArm = null; }
+  // Шкалы на новом экране натекают от нуля, отмеченные строки не держатся.
+  if (entering) { orderHold = null; shownOrder.clear(); flipArm = null; flipAll = false; deckOrder = null; rowsForget(); barForget(); }
   for (const [name, node] of Object.entries(views)) {
     const show = name === v;
     node.hidden = !show;
@@ -1940,6 +4223,7 @@ function openView(view) {
   closeSearch();
   // Вход на «Проекты»: идущая задача встаёт в своей карточке первой.
   if (view === 'projects') deckPin = state.activeTimer ? state.activeTimer.taskId : null;
+  if (view === 'settings') state.ui.settingsSection = null;
   state.ui.view = view;
   aliasTimeView();
   render();
@@ -1977,6 +4261,18 @@ let pendingDeepRoute = null;
 /** Адрес, с которым экран уже согласован: на «назад» браузер шлёт popstate и
  *  hashchange подряд, и второй раз переходить незачем. */
 let lastRouteHash = '';
+/** Номер записи истории, на которой стоит приложение: 0 — первая его запись
+ *  в этой вкладке. Лежит и в самой записи (history.state.lcbIdx), поэтому
+ *  переживает перезагрузку и находится сам на «назад» и «вперёд». По нему
+ *  стрелка «назад» в шапке знает, есть ли куда возвращаться. */
+let routeIdx = 0;
+/** Следующая запись адреса — заменой, а не новой записью: экран, с которого
+ *  уходим, исчез (удалили задачу или проект, на странице которого стояли), и
+ *  «назад» на него вело бы на «Сегодня». */
+let routeReplaceNext = false;
+/** Номер записи из самой записи истории; null — запись не наша (ручная
+ *  правка адреса, первая загрузка). */
+const historyIdx = () => (history.state && Number.isInteger(history.state.lcbIdx) ? history.state.lcbIdx : null);
 
 /** Сколько ждать первую синхронизацию, прежде чем решить, что сущности по
  *  ссылке нет. Облако отвечает за секунду-две; потолок нужен, чтобы
@@ -1996,6 +4292,7 @@ function currentRoute() {
   if (v === 'task') return { view: v, id: selectedId };
   if (v === 'docs') return { view: v, id: state.ui.docId || undefined };
   if (v === 'time') return { view: v, mode: timeMode() };
+  if (v === 'settings') return settingsSection() ? { view: v, section: settingsSection() } : { view: v };
   return { view: v };
 }
 
@@ -2013,7 +4310,8 @@ function routeTitle(route) {
   if (route.view === 'project') name = (getProject(route.id) || {}).name;
   else if (route.view === 'task') { const task = getTask(route.id); name = task && (task.title || t('task.no_name')); }
   else if (route.view === 'docs' && route.id) { const d = getDocument(route.id); name = d && docTitle(d); }
-  else name = t({ projects: 'nav.projects', docs: 'nav.docs', time: 'nav.stats', settings: 'nav.settings' }[route.view] || 'nav.home');
+  else if (route.view === 'settings' && route.section) name = t(`settings.section_${route.section}`);
+  else name = t({ projects: 'nav.projects', docs: 'nav.docs', time: 'nav.time', settings: 'nav.settings' }[route.view] || 'nav.home');
   return name ? `${name} — Lancible` : 'Lancible';
 }
 
@@ -2028,9 +4326,18 @@ function syncRoute() {
   const key = Core.routeKey(route);
   const title = routeTitle(route);
   if (document.title !== title) document.title = title;
+  const replace = routeApplying || routeReplaceNext || key === lastRouteKey;
+  routeReplaceNext = false;
   // Токены входа в хэше разбирает клиент базы — его адрес не трогаем.
-  if (location.hash !== hash && !Core.isAuthHash(location.hash)) {
-    history[routeApplying || key === lastRouteKey ? 'replaceState' : 'pushState'](null, '', hash);
+  if (!Core.isAuthHash(location.hash)) {
+    if (location.hash !== hash) {
+      if (!replace) routeIdx += 1;
+      history[replace ? 'replaceState' : 'pushState']({ lcbIdx: routeIdx }, '', hash);
+    } else if (historyIdx() !== routeIdx) {
+      // Адрес уже верный (правка руками, первая загрузка), но запись ещё не
+      // знает своего номера.
+      history.replaceState({ lcbIdx: routeIdx }, '', hash);
+    }
   }
   lastRouteKey = key;
   lastRouteHash = location.hash;
@@ -2041,10 +4348,14 @@ function syncRoute() {
 }
 
 /** Привести приложение к маршруту. Нет такой сущности (чужой id, удалена,
- *  кривая ссылка) — «Сегодня», и адрес заменяется на него. */
-function openRoute(route) {
+ *  кривая ссылка) — «Сегодня», и адрес заменяется на него.
+ *  @param fresh — переход по ссылке изнутри работающего приложения
+ *    (lancible:// на десктопе): новый экран — новая запись истории, как
+ *    щелчок. Без него (назад, вперёд, правка адреса, запуск) запись уже
+ *    есть, и адрес только приводится к виду — заменой. */
+function openRoute(route, fresh) {
   if (!routeFound(route)) route = { view: 'home' };
-  routeApplying = true;
+  routeApplying = !fresh;
   try {
     if (route.view === 'project') {
       state.ui.projectTab = route.tab;
@@ -2069,7 +4380,8 @@ function openRoute(route) {
     } else if (route.view === 'time') {
       if (route.mode) applyTimeMode(route.mode);
       openView('time');
-    } else openView(route.view);
+    } else if (route.view === 'settings') openSettings(route.section);
+    else openView(route.view);
     syncRoute(); // экран не менялся (уже там) — адрес всё равно приводится к виду
   } finally {
     routeApplying = false;
@@ -2092,6 +4404,10 @@ async function startRoute() {
   }
   pendingDeepRoute = null;
   routeReady = true;
+  // Перезагрузка оставляет вкладку на той же записи истории — номер берётся
+  // из неё, и стрелка «назад» после обновления страницы помнит, откуда пришли.
+  const idx = historyIdx();
+  routeIdx = idx == null ? 0 : idx;
   openRoute(route);
 }
 
@@ -2099,17 +4415,47 @@ async function startRoute() {
 // (на ручную правку и на «назад» по хэшу — оба): второй видит адрес, с которым
 // экран уже согласован, и ничего не делает.
 function onRouteChange() {
-  if (!routeReady || location.hash === lastRouteHash || Core.isAuthHash(location.hash)) return;
+  if (!routeReady || Core.isAuthHash(location.hash)) return;
+  const idx = historyIdx();
+  if (location.hash === lastRouteHash) {
+    // Экран тот же. Если это шаг по истории на запись с тем же адресом (два
+    // одинаковых экрана подряд остались от прежних версий), «назад» не должен
+    // молча стоять на месте — идём дальше в ту же сторону.
+    if (idx != null && idx !== routeIdx) {
+      const back = idx < routeIdx;
+      routeIdx = idx;
+      if (back && idx > 0) history.back();
+      else if (!back) history.forward();
+    }
+    return;
+  }
+  // Ручная правка адреса — новая запись без номера: она стоит за прежней.
+  routeIdx = idx == null ? routeIdx + 1 : idx;
   openRoute(Core.parseRoute(location.hash));
 }
 window.addEventListener('popstate', onRouteChange);
 window.addEventListener('hashchange', onRouteChange);
 
+/** Стрелка «назад» в шапке задачи и проекта — тот же шаг, что «назад»
+ *  браузера: на экран, с которого пришли («Сегодня», календарь, поиск,
+ *  доска). Раньше стрелка задачи всегда открывала её проект новой записью, а
+ *  стрелка проекта — «Проекты», и «назад» браузера после неё возвращал на
+ *  ту же задачу. Пришли не из приложения (ссылка, новая вкладка) — туда, куда
+ *  стрелка ведёт по смыслу: fallback. */
+function routeBack(fallback) {
+  flushEditor();
+  closeMenu();
+  if (routeReady && routeIdx > 0) history.back();
+  else fallback();
+}
+
 // Десктоп: lancible://project/<id> присылает главный процесс (src/main.js).
+// Ссылка, пришедшая в работающее окно, — новый шаг: «назад» вернёт туда, где
+// стояли до неё.
 if (window.api.onRouteOpen) {
   window.api.onRouteOpen(({ route }) => {
     if (!route) return;
-    if (routeReady) openRoute(route);
+    if (routeReady) openRoute(route, true);
     else pendingDeepRoute = route;
   });
 }
@@ -2246,7 +4592,8 @@ function renderDayIsland() {
   const agg = aggregateDays().get(dayKey(now)) || { ms: 0, money: 0 };
   const at = state.activeTimer;
   const since = at ? ` · ${t('home.since', { time: hm(at.startedAt) })}` : '';
-  const subHtml = `${escapeHtml(t('home.recorded'))} <b>${escapeHtml(fmtDur(agg.ms))}</b> · <b>${escapeHtml(fmtMoney(agg.money))}</b><span class="muted">${escapeHtml(since)}</span>`;
+  const earned = modeFlags().earnings ? ` · <b>${escapeHtml(fmtMoney(agg.money))}</b>` : '';
+  const subHtml = `${escapeHtml(t('home.recorded'))} <b>${escapeHtml(fmtDur(agg.ms))}</b>${earned}<span class="muted">${escapeHtml(since)}</span>`;
 
   const items = todaySessions();
   let h0 = 8;
@@ -2291,7 +4638,7 @@ function renderDayIsland() {
     b.title = blk.title;
     b.setAttribute('aria-label', blk.title);
     if (blk.label) b.textContent = blk.label;
-    b.addEventListener('click', () => { openProject(it.task.projectId); selectTask(it.task.id); });
+    b.addEventListener('click', () => openTask(it.task.id));
     el.dayTrack.appendChild(b);
   }
   if (nowAt !== null) {
@@ -2303,22 +4650,11 @@ function renderDayIsland() {
   el.dayHours.innerHTML = Array.from({ length: h1 - h0 }, (_, i) => `<span>${pad2(h0 + i)}</span>`).join('');
 }
 
-/** Проекты по последней записи времени, свежие первыми. */
+/** Проекты по свежести (19 октября 2026 — одно правило со всеми списками
+ *  проектов, Core.projectsByActivity): последнее изменение в самом проекте,
+ *  в его задачах или конец записи времени; свежие первыми. */
 function recentProjects(limit) {
-  const last = new Map();
-  for (const task of state.tasks) {
-    for (const sess of task.sessions || []) {
-      const e = new Date(sess.end || sess.start).getTime();
-      if (e > (last.get(task.projectId) || 0)) last.set(task.projectId, e);
-    }
-  }
-  // Проекты с записями — по последней записи; без записей — после них, в
-  // порядке создания (новые выше).
-  return state.projects
-    .map((p) => ({ p, last: last.get(p.id) || 0, created: new Date(p.createdAt || 0).getTime() }))
-    .sort((a, b) => (b.last - a.last) || (b.created - a.created))
-    .slice(0, limit)
-    .map((x) => x.p);
+  return Core.projectsByActivity(state.projects, state.tasks).slice(0, limit);
 }
 
 function renderHomeProjects() {
@@ -2335,8 +4671,9 @@ function renderHomeProjects() {
     flipTag(b, 'home-projects', p.id);
     b.style.setProperty('--pc', p.color || PALETTE[0]);
     b.innerHTML = `<span class="hp-head"><i class="hp-dot"></i><span class="hp-name">${escapeHtml(p.name)}</span></span>`
-      + `<span class="hp-figs"><span><b>${escapeHtml(fmtDur(projectMs(p.id)))}</b> · ${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span><span>${done}/${tasks.length}</span></span>`
-      + `<span class="hp-bar"><i style="width:${pct}%"></i></span>`;
+      + `<span class="hp-figs"><span><b>${escapeHtml(fmtDur(projectMs(p.id)))}</b>${modeFlags().money ? ` · ${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}` : ''}</span><span>${done}/${tasks.length}</span></span>`
+      + '<span class="hp-bar"><i></i></span>';
+    barFill(b.querySelector('.hp-bar i'), pct, `hp:${p.id}`);
     b.addEventListener('click', () => openProject(p.id));
     el.homeProjGrid.appendChild(b);
   }
@@ -2360,7 +4697,7 @@ function renderHomeDue() {
     li.innerHTML = `<span class="rl-main"><span class="rl-name">${escapeHtml(n.task.title || t('task.no_name'))}</span>`
       + `<span class="rl-sub"><i class="rl-dot"></i>${escapeHtml(p ? p.name : '')}${n.kind === 'reminder' ? ` · ${escapeHtml(t('notif.reminder'))}` : ''}</span></span>`
       + `<span class="rl-when${n.kind === 'overdue' ? ' overdue' : ''}">${escapeHtml(notifWhen(n))}</span>`;
-    li.addEventListener('click', () => { openProject(n.task.projectId); selectTask(n.task.id); });
+    li.addEventListener('click', () => openTask(n.task.id));
     el.homeDueList.appendChild(li);
   }
 }
@@ -2399,7 +4736,7 @@ function renderNowIsland() {
   el.nowBtn.setAttribute('aria-label', running ? t('timer.stop') : t('timer.start'));
   el.nowTime.textContent = fmtClock(taskElapsedMs(task));
   const earned = earnedOf(task);
-  el.nowMoney.textContent = earnedShown(task, earned) ? fmtMoney(earned, currencyOf(task.projectId)) : '';
+  el.nowMoney.textContent = modeFlags().earnings && earnedShown(task, earned) ? fmtMoney(earned, currencyOf(task.projectId)) : '';
 }
 
 /** Когда по задаче последний раз шло время; 0 — записей не было. Недавнее
@@ -2437,7 +4774,7 @@ function renderRecentList() {
     const play = li.querySelector('.rl-play');
     play.addEventListener('click', (e) => { e.stopPropagation(); if (running) stopTimer(); else startTimer(task.id); });
     liqMark(play, task.id);
-    li.addEventListener('click', () => { openProject(task.projectId); selectTask(task.id); });
+    li.addEventListener('click', () => openTask(task.id));
     el.recentList.appendChild(li);
   }
 }
@@ -2452,13 +4789,20 @@ let deckPin = null;
 /** Набранное в полях новых задач: страница перерисовывается целиком (таймер,
  *  синхронизация), и без этого текст пропадал бы на полуслове. */
 const deckDrafts = new Map();
+/** Порядок карточек на экране (id). Карточки стоят по свежести
+ *  (Core.projectsByActivity), но, пока экран открыт, не переставляются под
+ *  рукой: добавили задачу в третью карточку — она не прыгает первой.
+ *  Порядок берётся заново на входе на экран (render: entering); новый проект
+ *  встаёт по правилу — первым (Core.holdOrder), удалённый уходит. */
+let deckOrder = null;
 
 function renderProjects() {
-  // Закреплённые — первыми, в порядке закрепления; остальные как есть.
-  const projects = [...state.projects].sort((a, b) => {
-    if (!!a.pinnedAt !== !!b.pinnedAt) return a.pinnedAt ? -1 : 1;
-    return a.pinnedAt && b.pinnedAt ? byPinned(a, b) : 0;
-  });
+  // Свежие первыми (19 октября 2026). Закрепление порядок здесь не меняет:
+  // закреплённые — группа «Быстрый доступ» левой панели.
+  const fresh = Core.projectsByActivity(state.projects, state.tasks);
+  deckOrder = Core.holdOrder(deckOrder, fresh.map((p) => p.id));
+  const byId = new Map(fresh.map((p) => [p.id, p]));
+  const projects = deckOrder.map((id) => byId.get(id));
   el.homeCount.textContent = state.projects.length ? `· ${state.projects.length}` : '';
   el.homeEmpty.hidden = state.projects.length > 0;
   // Акцентная кнопка — одна на экран: пока проектов нет, она по центру.
@@ -2518,14 +4862,16 @@ function projectTile(p) {
       <button type="button" class="ptile-menu icon-btn" aria-label="${escapeHtml(t('project.opts'))}">${icon('kebab')}</button>
       <span class="ptile-chev">${icon('chevron-right')}</span>
     </div>
-    <div class="ptile-figs"><span class="ptile-time">${escapeHtml(fmtDur(projectMs(p.id)))}</span><span class="ptile-money">${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span></div>
-    <span class="ptile-progress"><i style="width:${pct}%"></i></span>
+    <div class="ptile-figs"><span class="ptile-time">${escapeHtml(fmtDur(projectMs(p.id)))}</span><span class="ptile-money if-money">${escapeHtml(fmtMoney(projectMoney(p.id), currencyOf(p.id)))}</span></div>
+    <span class="ptile-progress"><i></i></span>
     <form class="ptile-qa">
       <input class="field ptile-qa-in" type="text" maxlength="200" placeholder="${escapeHtml(t('deck.new_ph'))}" aria-label="${escapeHtml(t('deck.new_ph'))}">
       <button type="submit" class="btn-soft">${escapeHtml(t('agenda.create_btn'))}</button>
     </form>
     <ul class="row-list ptile-tasks"></ul>
     <button type="button" class="ptile-open">${escapeHtml(t('deck.open'))}${icon('chevron-right')}</button>`;
+
+  barFill(tile.querySelector('.ptile-progress > i'), pct, `ptile:${p.id}`);
 
   const head = tile.querySelector('.ptile-head');
   head.addEventListener('click', () => openProject(p.id));
@@ -2552,11 +4898,13 @@ function projectTile(p) {
 
   // Как на телефоне (13 октября 2026): сверху открытые (порядок —
   // Core.deckTasks), под ними выполненные — серые и зачёркнутые, в самом низу
-  // отменённые; закрытые — свежие выше.
+  // отменённые; закрытые — свежие выше. Только что отмеченная стоит, где
+  // стояла, пока её держат (placedAs, «Галочка»), а рисуется настоящей.
   const list = tile.querySelector('.ptile-tasks');
-  const own = listRows(`deck:${p.id}`, Core.deckTasks(tasks.filter((t2) => !isCancelledTask(t2)), deckPin));
-  const finished = byFresh(tasks.filter((t2) => t2.done));
-  const cancelled = byFresh(tasks.filter(isCancelledTask));
+  const placed = tasks.map(placedAs);
+  const own = listRows(`deck:${p.id}`, Core.deckTasks(placed.filter((t2) => !isCancelledTask(t2)), deckPin));
+  const finished = byFresh(placed.filter((t2) => t2.done));
+  const cancelled = byFresh(placed.filter(isCancelledTask));
   if (!own.length && !finished.length && !cancelled.length) {
     // Задач нет — компактный пустой экран посередине карточки; поле новой
     // задачи прямо над ним, поэтому без кнопки.
@@ -2564,9 +4912,7 @@ function projectTile(p) {
     empty.append(emptyState({ art: 'tasks', title: t('deck.no_tasks'), text: t('empty.tasks_text'), small: true }));
     list.appendChild(empty);
   }
-  own.forEach((task) => list.appendChild(deckRow(task)));
-  finished.forEach((task) => list.appendChild(deckRow(task, 'done')));
-  cancelled.forEach((task) => list.appendChild(deckRow(task, 'cancelled')));
+  for (const t2 of [...own, ...finished, ...cancelled]) list.appendChild(deckRow(getTask(t2.id) || t2));
   return tile;
 }
 
@@ -2584,39 +4930,18 @@ const byFresh = (list) => list.sort((a, b) => (Date.parse(b.updatedAt) || 0) - (
 
 /** Строка задачи в карточке: галочка, название, тихая мета (статус или
  *  «идёт сейчас», дедлайн, время), справа плей/стоп. Что показать — решает
- *  ядро (taskRowView), как в списке проекта. Отмеченная строка сначала тает,
- *  потом задача закрывается и уезжает вниз, к выполненным.
- *  closed — 'done' или 'cancelled': закрытая строка тише и без плея; у
- *  выполненной галочка стоит (снять — вернуть в работу), у отменённой на её
- *  месте серый крестик. */
-function deckRow(task, closed) {
+ *  ядро (taskRowView), как в списке проекта. Отмеченная галочка наливается и
+ *  брызгает, строка немного стоит и уезжает вниз, к выполненным (rowCheck,
+ *  «Галочка»). Закрытая строка тише и без плея; у выполненной галочка стоит
+ *  (снять — вернуть в работу), у отменённой на её месте серый крестик. */
+function deckRow(task) {
   const v = Core.taskRowView(task, taskRowCtx());
+  const closed = task.done ? 'done' : isCancelledTask(task) ? 'cancelled' : null;
   const li = document.createElement('li');
   li.className = 'ptile-task' + (v.running ? ' run' : '') + (closed ? ` ${closed}` : '');
   li.dataset.id = task.id;
-  if (!closed) flipTag(li, `deck:${task.projectId}`, task.id);
-
-  let cb;
-  if (closed === 'cancelled') {
-    cb = elt('span', 'ptile-x');
-    cb.innerHTML = icon('x');
-    cb.title = t('status.kind_cancelled');
-  } else {
-    cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.className = 'task-done';
-    cb.checked = closed === 'done';
-    cb.setAttribute('aria-label', t('task.done_label'));
-    cb.addEventListener('click', (e) => e.stopPropagation());
-    cb.addEventListener('change', () => {
-      li.classList.add('leaving');
-      setTimeout(() => {
-        setTaskDone(task, cb.checked);
-        render();
-        scheduleSave();
-      }, 240);
-    });
-  }
+  flipTag(li, `deck:${task.projectId}`, task.id);
+  const cb = rowCheck(task);
 
   const main = elt('span', 'rl-main');
   main.appendChild(elt('span', 'rl-name', v.title));
@@ -2635,6 +4960,9 @@ function deckRow(task, closed) {
   }
   if (v.due) part(`ptile-due ${v.due.state}`, v.due.text);
   if (v.running || taskElapsedMs(task) > 0) part('task-time', v.time);
+  // Значок другой версии — первым в мете, без точки-разделителя за ним.
+  const mark = conflictMark('task', task.id);
+  if (mark) sub.prepend(mark);
   if (sub.childNodes.length) main.appendChild(sub);
 
   const play = elt('button', `icon-btn rl-play${v.running ? ' run' : ''}`);
@@ -2691,13 +5019,13 @@ function recentRow(task) {
     + `<span class="recent-main"><span class="recent-name">${escapeHtml(task.title || t('task.no_name'))}</span><span class="recent-sub"><i class="rl-dot" style="--pc:${escapeHtml(p ? p.color : PALETTE[0])}"></i>${escapeHtml(p ? p.name : '')}</span></span>`
     + `<span class="recent-when${running ? ' run' : ''}">${escapeHtml(running ? t('task.running_now') : whenLabel(lastSessionAt(task)))}</span>`
     + `<span class="recent-num">${escapeHtml(fmtDur(taskElapsedMs(task)))}</span>`
-    + `<span class="recent-num money">${escapeHtml(fmtMoney(earnedOf(task), currencyOf(task.projectId)))}</span>`;
+    + `<span class="recent-num money if-money">${escapeHtml(fmtMoney(earnedOf(task), currencyOf(task.projectId)))}</span>`;
   const play = row.querySelector('.rl-play');
   const toggle = (e) => { e.stopPropagation(); if (running) stopTimer(); else startTimer(task.id); };
   play.addEventListener('click', toggle);
   play.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); } });
   liqMark(play, task.id);
-  row.addEventListener('click', () => { openProject(task.projectId); selectTask(task.id); });
+  row.addEventListener('click', () => openTask(task.id));
   return row;
 }
 
@@ -2729,14 +5057,17 @@ function renderSearch(q) {
     fillEmpty(el.searchResults, { art: 'search', title: t('empty.search_start'), text: t('empty.search_start_text'), small: true });
     return;
   }
-  const projects = state.projects
+  const projects = Core.projectsByActivity(state.projects, state.tasks)
     .filter((p) => (p.name + ' ' + (p.description || '')).toLowerCase().includes(q))
     .slice(0, 6);
   const tasks = state.tasks
     .filter((t2) => (t2.title || '').toLowerCase().includes(q))
     .slice(0, 10);
+  // Чаты агента (19 октября 2026) — по названию и тексту сообщений; лежат
+  // только на этом устройстве, у каждого аккаунта свои (aiSearchChats).
+  const chats = aiSearchChats(q);
 
-  if (!projects.length && !tasks.length) {
+  if (!projects.length && !tasks.length && !chats.length) {
     fillEmpty(el.searchResults, { art: 'search', title: t('search.nothing_found'), text: t('empty.search_text'), small: true });
     return;
   }
@@ -2746,7 +5077,7 @@ function renderSearch(q) {
     const b = document.createElement('button');
     b.className = 'sr-item';
     b.innerHTML =
-      `<span class="sr-dot" style="background:${escapeHtml(opts.color)}"></span>` +
+      (opts.icon ? `<span class="sr-icon">${icon(opts.icon)}</span>` : `<span class="sr-dot" style="background:${escapeHtml(opts.color)}"></span>`) +
       `<span class="sr-main"><span class="sr-title">${escapeHtml(opts.title)}</span>` +
       (opts.sub ? `<span class="sr-sub">${escapeHtml(opts.sub)}</span>` : '') + '</span>' +
       (opts.meta ? `<span class="sr-meta">${escapeHtml(opts.meta)}</span>` : '');
@@ -2783,8 +5114,24 @@ function renderSearch(q) {
         title: (t2.done ? '✓ ' : '') + (t2.title || t('task.no_name')),
         sub: p ? t('search.task_sub', { name: p.name }) : '',
         meta: fmtDur(taskElapsedMs(t2)),
-        onClick: () => { openProject(t2.projectId); selectTask(t2.id); },
+        onClick: () => openTask(t2.id),
       });
+    }
+  }
+  if (chats.length) {
+    const g = document.createElement('div');
+    g.className = 'sr-group';
+    g.textContent = `${t('search.chats_group')} · ${chats.length}`;
+    el.searchResults.appendChild(g);
+    for (const c of chats) {
+      const item = addItem({
+        icon: 'comments',
+        title: c.title || t('ai.new_chat'),
+        sub: c.snippet,
+        meta: aiChatWhen(c.updatedAt),
+        onClick: () => aiShowChat(c.id),
+      });
+      item.dataset.chatId = c.id;
     }
   }
   const first = el.searchResults.querySelector('.sr-item');
@@ -3129,7 +5476,7 @@ function renderViewTotal() {
   const label = calState.mode === 'month' ? t('calendar.for_month') : t('calendar.for_week');
   el.calViewTot.hidden = false;
   el.calViewTot.classList.remove('period');
-  el.calViewTot.innerHTML = `<span>${escapeHtml(label)}</span><b>${fmtDur(ms)} · ${fmtMoney(money)}</b>`;
+  el.calViewTot.innerHTML = `<span>${escapeHtml(label)}</span><b>${escapeHtml(fmtDurMoney(ms, money))}</b>`;
 }
 
 function renderCalendar() {
@@ -3161,6 +5508,12 @@ function renderCalendar() {
   const range = calState.periodOn ? rangeBounds() : null;
   el.calDays.innerHTML = '';
   const todayKey = dayKey(new Date());
+  // «Время работы» в месяце — те же плановые куски, что у недели и дня
+  // (Core.slotItems), меткой в клетке: первая по началу и «+N».
+  const firstKey = (cells.find(Boolean) || {}).key;
+  const planFrom = firstKey ? keyToDate(firstKey).getTime() : 0;
+  const plans = calState.mode === 'month' && firstKey
+    ? Core.slotDayMarks(statsTasks(), planFrom, cells.filter(Boolean).length, 1) : [];
   for (const c of cells) {
     const cell = document.createElement('button');
     cell.className = 'cal-cell';
@@ -3174,7 +5527,7 @@ function renderCalendar() {
       if (c.key === calState.rangeFrom || c.key === calState.rangeTo) cell.classList.add('range-end');
     }
     let html = `<span class="cc-num">${c.day}</span>`;
-    if (agg) html += `<span class="cc-time">${fmtDur(agg.ms)}</span><span class="cc-money">${fmtMoney(agg.money)}</span>`;
+    if (agg) html += `<span class="cc-time">${fmtDur(agg.ms)}</span><span class="cc-money if-money">${fmtMoney(agg.money)}</span>`;
     const doneTasks = tasksDoneOnDay(c.key);
     if (doneTasks.length) {
       if (calState.mode === 'week') {
@@ -3185,11 +5538,13 @@ function renderCalendar() {
         html += `<span class="cc-done-badge">${icon('check')}${doneTasks.length}</span>`;
       }
     }
+    const plan = plans[Core.daysBetween(planFrom, keyToDate(c.key).getTime())];
+    if (plan && plan.all.length) html += calPlanMarks(plan);
     cell.innerHTML = html;
     if (agg) {
       const bar = document.createElement('i');
       bar.className = 'cc-bar';
-      bar.style.width = `${Math.min(100, (agg.ms / (8 * 3_600_000)) * 100)}%`;
+      barFill(bar, (agg.ms / (8 * 3_600_000)) * 100, `cc:${c.key}`);
       cell.appendChild(bar);
     }
     cell.addEventListener('click', () => {
@@ -3201,6 +5556,19 @@ function renderCalendar() {
 
   if (calState.periodOn) renderPeriodSummary();
   else renderCalDay();
+}
+
+/** Метки «времени работы» в клетке месяца: промежуток первого куска пунктиром
+ *  цвета проекта (как плановый блок недели, .ag-plan) и «+N»; подсказка —
+ *  все куски дня с задачами. Сплошной текст клетки — записи времени. */
+function calPlanMarks(plan) {
+  const range = (p) => `${fmtTime(p.start).slice(0, 5)}–${fmtTime(p.end).slice(0, 5)}`;
+  const name = (p) => { const task = getTask(p.taskId); return task ? (task.title || t('task.no_name')) : ''; };
+  const tip = `${t('agenda.planned')}: ${plan.all.map((p) => `${range(p)} ${name(p)}`).join('; ')}`;
+  const marks = plan.marks.map((p) =>
+    `<span class="cc-plan" style="--pc:${escapeHtml(agendaProjectColor(p.projectId))}">${range(p)}</span>`).join('');
+  const more = plan.more ? `<span class="cc-plan-more">+${plan.more}</span>` : '';
+  return `<span class="cc-plans" title="${escapeHtml(tip)}">${marks}${more}</span>`;
 }
 
 /** Режим «День»: почасовая раскладка задач слева. */
@@ -3234,7 +5602,7 @@ function renderDayHours() {
     }).join('');
     row.innerHTML = `<span class="hour-label">${pad2(h)}:00</span><div class="hour-chips">${chips}</div>`;
     row.querySelectorAll('.hour-chip').forEach((btn, i) => {
-      btn.addEventListener('click', () => { const { t: t2 } = items[i]; openProject(t2.projectId); selectTask(t2.id); });
+      btn.addEventListener('click', () => { const { t: t2 } = items[i]; openTask(t2.id); });
     });
     el.calDays.appendChild(row);
   }
@@ -3271,12 +5639,12 @@ function renderCalDay() {
         <div class="cdl-task">${escapeHtml(t2.title || t('task.no_name'))}</div>
         <div class="cdl-dur">${fmtDur(s.ms)}</div>
         <div class="cdl-time">${fmtTime(s.start).slice(0, 5)}–${s.end ? fmtTime(s.end).slice(0, 5) : '…'}</div>
-        <div class="cdl-money">${fmtMoney(money, currencyOf(t2.projectId))}</div>`;
-      row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
+        <div class="cdl-money if-money">${fmtMoney(money, currencyOf(t2.projectId))}</div>`;
+      row.addEventListener('click', () => openTask(t2.id));
       return row;
     }));
   }
-  el.calDayTot.textContent = items.length ? `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}` : '';
+  el.calDayTot.textContent = items.length ? fmtDurMoney(totalMs, totalMoney) : '';
   el.calDayEmpty.hidden = items.length > 0;
   if (!items.length) emptyState({ art: 'time', title: t('calendar.day_empty'), text: t('empty.day_text'), small: true }, el.calDayEmpty);
 }
@@ -3305,13 +5673,13 @@ function renderPeriodSummary() {
   const scope = Core.moneyScope(state.tasks, state.projects, state.settings.currency);
   const totalMoney = tasks.reduce((a, x) => a + (scope.has(x.t.id) ? x.money : 0), 0);
 
-  el.calDayTot.textContent = tasks.length ? `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}` : '';
+  el.calDayTot.textContent = tasks.length ? fmtDurMoney(totalMs, totalMoney) : '';
   el.periodBarRange.textContent = el.calDayHead.textContent;
-  el.periodBarSum.textContent = `${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}`;
+  el.periodBarSum.textContent = fmtDurMoney(totalMs, totalMoney);
   el.calViewTot.hidden = false;
   el.calViewTot.classList.add('period');
   el.calViewTot.innerHTML = `<span>${escapeHtml(t('calendar.period_label'))}</span>`
-    + `<b>${fmtDur(totalMs)} · ${fmtMoney(totalMoney)}</b>`;
+    + `<b>${escapeHtml(fmtDurMoney(totalMs, totalMoney))}</b>`;
   el.calDayEmpty.hidden = tasks.length > 0;
   if (!tasks.length) emptyState({ art: 'time', title: t('agenda.empty'), text: t('empty.period_text'), small: true }, el.calDayEmpty);
 
@@ -3323,8 +5691,8 @@ function renderPeriodSummary() {
       row.innerHTML = `
         <span class="pl-check${t2.done ? ' done' : ''}">${icon('check')}</span>
         <span><span class="pl-name">${escapeHtml(t2.title || t('task.no_name'))}</span></span>
-        <span class="pl-right"><span class="pl-time">${fmtDur(ms)}</span><span class="pl-money">${fmtMoney(money, currencyOf(t2.projectId))}</span></span>`;
-      row.addEventListener('click', () => { openProject(t2.projectId); selectTask(t2.id); });
+        <span class="pl-right"><span class="pl-time">${fmtDur(ms)}</span><span class="pl-money if-money">${fmtMoney(money, currencyOf(t2.projectId))}</span></span>`;
+      row.addEventListener('click', () => openTask(t2.id));
       return row;
     }));
   }
@@ -3669,12 +6037,11 @@ function renderTagsSettings() {
     const u = tagUsage(tag.id);
     const row = document.createElement('button');
     row.type = 'button';
-    row.className = 'settings-row settings-row-btn';
+    row.className = 'srow';
     row.dataset.id = tag.id;
-    row.innerHTML = `
-      <span class="tag-dot" style="--sc:${escapeHtml(tag.color || PALETTE[0])}"></span>
-      <span class="settings-row-label">${escapeHtml(tag.name || '')}</span>
-      <span class="settings-row-value">${escapeHtml(tagUsageLabel(u))}</span>`;
+    row.innerHTML = `<span class="tag-dot" style="--sc:${escapeHtml(tag.color || PALETTE[0])}"></span>`
+      + `<span class="srow-label">${escapeHtml(tag.name || '')}</span>`
+      + `<span class="srow-box"><span class="srow-value">${escapeHtml(tagUsageLabel(u))}</span></span>${icon('chevron-right', 'icon srow-chev')}`;
     row.addEventListener('click', () => openTagDialog(tag));
     el.tagsList.appendChild(row);
   }
@@ -3740,6 +6107,9 @@ function saveTagDialog() {
     created = { id: uid(), name, color: tagdlg.color, projectId: tagdlg.projectId };
     state.tags.push(created);
   }
+  // Собственный тег проекта — часть проекта: завели, переименовали,
+  // перекрасили — проект свежий (как на телефоне). Общий тег — ничей.
+  if (tagdlg.projectId) touchProject(tagdlg.projectId);
   const after = tagdlg.after;
   closeTagDialog();
   if (after) after(created);
@@ -3760,6 +6130,7 @@ async function deleteTagFromDialog() {
   if (!ok) return;
   state.tags = state.tags.filter((x) => x.id !== tag.id);
   for (const p of state.projects) p.tagIds = (p.tagIds || []).filter((id) => id !== tag.id);
+  if (tag.projectId) touchProject(tag.projectId);
   for (const task of state.tasks) task.tagIds = (task.tagIds || []).filter((id) => id !== tag.id);
   closeTagDialog();
   render();
@@ -3891,13 +6262,14 @@ function renderStatusDialog() {
 
     row.querySelector('.st-name').addEventListener('input', (e) => {
       st.name = e.target.value;
+      touchProject(st.projectId);
       scheduleSave();
     });
     row.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-act]');
       if (!b) return;
       const act = b.dataset.act;
-      if (act === 'color') { openColorPicker(b, (c) => { st.color = c; renderStatusDialog(); scheduleSave(); }); return; }
+      if (act === 'color') { openColorPicker(b, (c) => { st.color = c; touchProject(st.projectId); renderStatusDialog(); scheduleSave(); }); return; }
       if (act === 'kind') {
         openMenu(b, STATUS_KINDS.map((k) => ({
           label: t(`status.kind_${k}`),
@@ -3908,6 +6280,7 @@ function renderStatusDialog() {
             // поэтому все задачи в этом статусе надо пересчитать — иначе
             // доска, галочки и статистика разойдутся.
             for (const task of state.tasks) if (task.statusId === st.id) setTaskStatus(task, st.id);
+            touchProject(st.projectId);
             renderStatusDialog();
             render();
             scheduleSave();
@@ -3920,6 +6293,7 @@ function renderStatusDialog() {
         const other = list[j];
         if (!other) return;
         [st.order, other.order] = [other.order, st.order];
+        touchProject(st.projectId);
         renderStatusDialog();
         scheduleSave();
         return;
@@ -3950,6 +6324,7 @@ async function deleteStatus(st) {
   for (const task of moving) setTaskStatus(task, target.id);
   state.statuses = state.statuses.filter((s) => s.id !== st.id);
   orderedStatuses(pid).forEach((s, i) => { s.order = i; });
+  touchProject(pid);
   renderStatusDialog();
   render();
   scheduleSave();
@@ -3963,6 +6338,7 @@ function addStatus() {
     id: uid(), projectId: pid, name: t('status.add'),
     color: PALETTE[list.length % PALETTE.length], kind: 'todo', order: list.length, builtin: false,
   });
+  touchProject(pid);
   renderStatusDialog();
   render();
   scheduleSave();
@@ -4004,11 +6380,11 @@ function boardCard(task) {
   // карточкой задачи ровно на то время, которое идёт прямо сейчас.
   const chips = tagChipsHtml(task.tagIds);
   card.innerHTML = `
-    <div class="bc-title">${escapeHtml(task.title || t('task.no_name'))}</div>
+    <div class="bc-title">${conflictMarkHtml('task', task.id)}${escapeHtml(task.title || t('task.no_name'))}</div>
     ${chips ? `<div class="tag-chips bc-tags">${chips}</div>` : ''}
     <div class="bc-foot">
       <span class="bc-time">${icon('clock')} ${fmtDur(taskElapsedMs(task))}</span>
-      <span class="bc-money">${escapeHtml(fmtMoney(earnedOf(task), currencyOf(task.projectId)))}</span>
+      <span class="bc-money if-money">${escapeHtml(fmtMoney(earnedOf(task), currencyOf(task.projectId)))}</span>
       ${due ? `<span class="task-due ${due}">${escapeHtml(dueShort(task))}</span>` : ''}
     </div>`;
   card.addEventListener('dragstart', (e) => {
@@ -4110,7 +6486,7 @@ function renderProjectHeader() {
     const done = tasks.filter((t2) => t2.done).length;
     el.projectEarned.append(
       elt('b', null, fmtDur(projectMs(p.id))),
-      elt('b', 'kpi-money', fmtMoney(projectMoney(p.id), currencyOf(p.id))),
+      elt('b', 'kpi-money if-money', fmtMoney(projectMoney(p.id), currencyOf(p.id))),
       elt('span', null, t('project.done_of', { done, total: tasks.length })),
     );
   }
@@ -4135,7 +6511,7 @@ function renderProjectSide() {
     const n = tasks.filter((t2) => t2.statusId === st.id).length;
     if (!n) continue;
     const seg = document.createElement('i');
-    seg.style.width = `${(n / tasks.length) * 100}%`;
+    barFill(seg, (n / tasks.length) * 100, `pp:${pid}:${st.id}`);
     seg.style.background = st.color;
     el.ppBar.appendChild(seg);
     const li = document.createElement('span');
@@ -4154,7 +6530,8 @@ function renderProjectSide() {
       row.textContent = `${t('version.none')} — ${t('project.of_done', { total: r.total }).replace(/^·\s*/, '')}`;
     } else {
       row.innerHTML = `<div class="pv-head"><span class="pv-name">${escapeHtml(r.name || t('task.no_name'))}</span><span class="pv-sum">${escapeHtml(t('project.done_of', { done: r.done, total: r.total }))} · ${escapeHtml(fmtDur(r.ms))}</span></div>`
-        + `<span class="pv-bar"><i style="width:${r.total ? Math.round((r.done / r.total) * 100) : 0}%"></i></span>`;
+        + '<span class="pv-bar"><i></i></span>';
+      barFill(row.querySelector('.pv-bar i'), r.total ? Math.round((r.done / r.total) * 100) : 0, `pv:${r.id}`);
       row.addEventListener('click', () => {
         taskFilter = { status: 'all', versionId: r.id };
         state.ui.projectTab = 'list';
@@ -4184,10 +6561,12 @@ function renderProjectSide() {
 }
 
 /** Проекты в левом меню: закреплённые — своей группой «Быстрый доступ» над
- *  остальными, в порядке закрепления. Рядом — сколько задач ещё не готово. */
+ *  остальными, в порядке закрепления; остальные — по свежести
+ *  (Core.projectsByActivity, 19 октября 2026). Рядом — сколько задач ещё не
+ *  готово. */
 function renderNavProjects() {
   const pinned = state.projects.filter((p) => p.pinnedAt).sort(byPinned);
-  const rest = state.projects.filter((p) => !p.pinnedAt);
+  const rest = Core.projectsByActivity(state.projects.filter((p) => !p.pinnedAt), state.tasks);
   el.navPinnedHead.hidden = el.navPinned.hidden = pinned.length === 0;
   el.navPinned.replaceChildren(...pinned.flatMap(navProjectItems));
   el.navProjects.replaceChildren(...rest.flatMap(navProjectItems));
@@ -4261,13 +6640,13 @@ function renderVersionsTab() {
     );
     const bar = elt('div', 'pver-bar');
     const fill = elt('span', 'pver-fill');
-    fill.style.width = `${r.total ? Math.round((r.done / r.total) * 100) : 0}%`;
+    barFill(fill, r.total ? Math.round((r.done / r.total) * 100) : 0, `pver:${pid}:${r.id || 'none'}`);
     bar.appendChild(fill);
     const meta = elt('div', 'pver-meta');
     meta.append(
       elt('span', null, t('project.done_of', { done: r.done, total: r.total })),
       elt('span', null, fmtDur(r.ms)),
-      elt('b', 'kpi-money', fmtMoney(r.money, currencyOf(pid))),
+      elt('b', 'kpi-money if-money', fmtMoney(r.money, currencyOf(pid))),
     );
     li.append(head, bar, meta);
     li.addEventListener('click', () => {
@@ -4312,7 +6691,7 @@ function renderSidebar() {
       }, el.sidebarEmpty);
   }
 
-  const groups = Core.projectListGroups(list, {
+  const groups = Core.projectListGroups(list.map(placedAs), {
     statuses: state.statuses,
     projectId: state.ui.projectId,
     collapsed: state.ui.collapsedGroups || [],
@@ -4331,6 +6710,8 @@ function renderSidebar() {
 function taskGroupHead(g) {
   const li = elt('li', 'task-group' + (g.collapsed ? ' collapsed' : ''));
   li.dataset.group = g.key;
+  // Заголовки едут вместе со строками, когда отмеченная уходит в другую группу.
+  flipTag(li, `list:${state.ui.projectId}`, `group:${g.key}`, true);
   const chev = elt('span', 'tg-chev');
   // Пустая колонка «срок» между именем и суммами — её занимает сетка.
   chev.innerHTML = icon('chevron-down');
@@ -4343,7 +6724,7 @@ function taskGroupHead(g) {
   li.append(
     chev, main,
     elt('span', 'tg-time', fmtShort(g.ms)),
-    elt('span', 'tg-money', money ? fmtMoney(money, currencyOf(state.ui.projectId)) : ''),
+    elt('span', 'tg-money if-money', money ? fmtMoney(money, currencyOf(state.ui.projectId)) : ''),
   );
   li.addEventListener('click', () => {
     const shut = new Set(state.ui.collapsedGroups || []);
@@ -4383,28 +6764,22 @@ const taskRowCtx = () => ({
 /** Строка задачи в списке. Что показать — решает ядро (taskRowView), общее
  *  с телефоном; здесь только сборка DOM и обработчики. */
 function taskItem(task, i) {
+  // Группы раскладывают задачу по placedAs (только что отмеченная — по себе
+  // до нажатия), а строка рисует настоящую.
+  task = getTask(task.id) || task;
   const v = Core.taskRowView(task, taskRowCtx());
 
   const li = document.createElement('li');
   li.className = 'task-item';
   li.dataset.id = task.id;
   li.style.animationDelay = `${Math.min(i, 12) * 16}ms`;
+  flipTag(li, `list:${task.projectId}`, task.id, true);
   if (v.selected) li.classList.add('selected');
   if (v.done) li.classList.add('done');
+  if (isCancelledTask(task)) li.classList.add('cancelled');
   if (v.pinned) li.classList.add('pinned');
 
-  const cb = document.createElement('input');
-  cb.type = 'checkbox';
-  cb.className = 'task-done';
-  cb.setAttribute('aria-label', t('task.done_label'));
-  cb.checked = v.done;
-  cb.addEventListener('click', (e) => e.stopPropagation());
-  cb.addEventListener('change', () => {
-    setTaskDone(task, cb.checked);
-    li.classList.toggle('done', task.done);
-    renderStats();
-    scheduleSave();
-  });
+  const cb = rowCheck(task);
 
   const name = elt('span', 'task-name', v.title);
 
@@ -4432,6 +6807,8 @@ function taskItem(task, i) {
     meta.appendChild(rep);
   }
   if (v.running) meta.appendChild(elt('span', 'running-dot', '●'));
+  const mark = conflictMark('task', task.id);
+  if (mark) meta.prepend(mark);
 
   // Колонки: галочка · название с метой · срок · время · деньги.
   const main = elt('div', 'ti-main');
@@ -4442,7 +6819,7 @@ function taskItem(task, i) {
   const due = elt('span', 'ti-due' + (v.due ? ` ${v.due.state}` : ''), v.due ? v.due.text : '');
   if (v.due) due.title = v.due.text;
   const money = earnedOf(task);
-  li.append(cb, main, due, elt('span', 'task-time', v.time), elt('span', 'ti-money', money ? fmtMoney(money, currencyOf(task.projectId)) : ''));
+  li.append(cb, main, due, elt('span', 'task-time', v.time), elt('span', 'ti-money if-money', money ? fmtMoney(money, currencyOf(task.projectId)) : ''));
   li.addEventListener('click', () => selectTask(task.id));
   li.addEventListener('contextmenu', (e) => { e.preventDefault(); openTaskMenu(task, li); });
   return li;
@@ -4510,7 +6887,7 @@ function renderNotifPanel() {
       + `<span class="notif-sub">${escapeHtml(t(`notif.${n.kind}`))} · ${escapeHtml(p ? p.name : '')}</span></span>`
       + `<span class="notif-when ${when}">${escapeHtml(notifWhen(n))}</span>`;
     li.dataset.key = n.key;
-    li.addEventListener('click', () => { closeNotifPanel(); openProject(n.task.projectId); selectTask(n.task.id); });
+    li.addEventListener('click', () => { closeNotifPanel(); openTask(n.task.id); });
     el.notifList.appendChild(li);
   }
 }
@@ -4595,6 +6972,8 @@ function checkReminders() {
 }
 
 function renderDue(task) {
+  // «Другая версия ›» — первой строкой свойств, если у задачи есть конфликт.
+  renderTaskConflicts(task);
   // Повторение считается от дедлайна: появился или исчез срок — строка
   // повторения должна это заметить.
   renderTaskRepeat(task);
@@ -4766,6 +7145,22 @@ function setTaskTab(tab) {
   el.tabHistory.hidden = tab !== 'history';
 }
 
+/** Открыть задачу откуда угодно — с «Сегодня», из поиска, уведомлений,
+ *  календаря, капсулы таймера, окна задачи — одним шагом истории. Раньше эти
+ *  места звали openProject и selectTask подряд: каждый рисовал экран, и в
+ *  истории вставали две записи — проект и задача. «Назад» с задачи вело в её
+ *  проект, где человек не был, и только второе «назад» — туда, откуда пришёл.
+ *  Фильтр списка проекта сбрасывается, как при входе в проект: задача должна
+ *  быть видна в нём, когда вернёмся к проекту. */
+function openTask(id) {
+  const task = getTask(id);
+  if (!task) return;
+  closeSearch();
+  if (state.ui.view === 'task' && selectedId === id) { closeMenu(); return; }
+  taskFilter = { status: 'all', versionId: 'all' };
+  selectTask(id);
+}
+
 /** Открыть задачу — своей страницей. */
 function selectTask(id) {
   const task = getTask(id);
@@ -4842,7 +7237,10 @@ async function deleteTask(id) {
   if (selectedId === id) {
     selectedId = null;
     loadEditor(null);
-    if (state.ui.view === 'task') state.ui.view = 'project';
+    // Страницы задачи больше нет — её запись в истории занимает проект:
+    // иначе «назад» с проекта вело бы на удалённую задачу, а оттуда — на
+    // «Сегодня».
+    if (state.ui.view === 'task') { state.ui.view = 'project'; routeReplaceNext = true; }
   }
   render();
   scheduleSave();
@@ -4902,7 +7300,11 @@ async function deleteProject(id) {
   // Документы проекта не удаляются вместе с ним — становятся общими.
   for (const d of state.documents || []) if (d.projectId === id) d.projectId = null;
   if (state.ui.projectId === id) {
-    state.ui.view = 'home';
+    // Уходим, только если стояли в самом проекте или его задаче, — и на
+    // «Проекты», где он был в списке, заменой записи: страницы больше нет.
+    // Раньше удаление из меню карточки на «Проектах» уводило на «Сегодня»,
+    // если этот проект открывали когда-то раньше.
+    if (['project', 'task'].includes(state.ui.view)) { state.ui.view = 'projects'; routeReplaceNext = true; }
     state.ui.projectId = state.projects[0] ? state.projects[0].id : null;
     selectedId = null;
     loadEditor(null);
@@ -4938,7 +7340,7 @@ async function copyProjectSummary(p) {
   const n = tasks.length;
   const parts = [p.name, fmtDur(projectMs(p.id)), `${n} ${pluralForm(n, 'plural.task')}, ${done} ${t('xlsx.done').toLowerCase()}`];
   const money = projectMoney(p.id);
-  if (money > 0) parts.push(fmtMoney(money, currencyOf(p.id)));
+  if (money > 0 && modeFlags().money) parts.push(fmtMoney(money, currencyOf(p.id)));
   try { await window.api.copy(parts.join(' · ')); toast(t('toast.summary_copied')); }
   catch { toast(t('toast.copy_failed')); }
 }
@@ -5106,6 +7508,8 @@ function openProjectDialog(project, sec) {
   el.pdlgRate.value = pdlg.rate !== null ? String(pdlg.rate) : '';
   el.pdlgRate.placeholder = String(defaultRate() || 0);
   el.pdlgLater.hidden = !!project;
+  if (project) renderConflictRow(el.pdlgConflicts, 'project', project.id);
+  else el.pdlgConflicts.hidden = true;
   renderPdlgSections();
   el.pdlgBackdrop.hidden = false;
   el.pdlgBody.scrollTop = 0;
@@ -5181,12 +7585,13 @@ function saveProjectDialog() {
   const rate = rateText === '' ? null : parseNum(rateText);
   const fields = { name, description, color: pdlg.color, tagIds: pdlg.tagIds.slice(), rate, currency: pdlg.currency };
   if (pdlg.editing) {
-    Object.assign(pdlg.editing, fields);
+    Object.assign(pdlg.editing, fields, { updatedAt: new Date().toISOString() });
     closeProjectDialog();
     render();
     scheduleSave();
   } else {
-    const p = { id: uid(), createdAt: new Date().toISOString(), pinnedAt: null, ...fields };
+    const now = new Date().toISOString();
+    const p = { id: uid(), createdAt: now, updatedAt: now, pinnedAt: null, ...fields };
     state.projects.push(p);
     seedProjectStatuses(p.id);
     closeProjectDialog();
@@ -5280,7 +7685,13 @@ el.sdlgEndBtn.addEventListener('click', () => openTimePicker(el.sdlgEndBtn, sdlg
 // формулы там, а здесь только подстановка состояния. Подписи и
 // форматирование передаются параметрами, потому что словарь и format у
 // десктопа и телефона свои.
+//
+// «Личное» (core/modes.js): денег в выгрузке нет. Ядро получает money: false
+// и собирает листы сразу без колонок «Ставка» и «Сумма» и без строк «ставка» и
+// «заработано» — вырезать их из готовых листов не нужно, и формулы в таких
+// листах уже на своих местах.
 const reportsFor = (projectId) => Core.makeReports({
+  money: modeFlags().money,
   t,
   cur: symOf(projectId ? currencyOf(projectId) : state.settings.currency),
   fmtClock,
@@ -5539,6 +7950,9 @@ function toggleTimer() {
   else startTimer(selectedId);
 }
 function startTimer(id) {
+  // Выключенный таймер (core/modes.js): кнопок нет, и горячие клавиши и
+  // «Старт» в шапке тоже ничего не запускают.
+  if (!modeFlags().timer) return;
   if (state.activeTimer) stopTimer();
   const now = new Date().toISOString();
   state.activeTimer = { taskId: id, startedAt: now, heartbeatAt: now };
@@ -5558,7 +7972,9 @@ function stopTimer() {
   const ms = Math.max(0, end.getTime() - new Date(startedAt).getTime());
   if (task && ms >= 1000) {
     task.sessions = task.sessions || [];
-    task.sessions.push({ start: startedAt, end: end.toISOString(), ms, rate: effectiveRate(task) });
+    // id — сразу: журнал правок знает запись по нему (core/oplog.js), и
+    // сдвиг её начала остаётся правкой той же записи.
+    task.sessions.push({ id: uid(), start: startedAt, end: end.toISOString(), ms, rate: effectiveRate(task) });
     task.totalMs = (task.totalMs || 0) + ms;
     task.updatedAt = end.toISOString();
   }
@@ -5594,6 +8010,9 @@ const shownOrder = new Map();
 let orderHold = null;
 /** Остановленная задача: при ближайшей перерисовке её строки едут на место. */
 let flipArm = null;
+/** Перерисовку взвела правка строк (галочка, агент — flipSoon), а не
+ *  таймер: тогда едут и списки со своим порядком (flipTag, own). */
+let flipAll = false;
 
 /** Строки списка в показанном порядке. rows — объекты с id в обычном
  *  порядке; пока идёт заморозка, порядок тот, что был на экране. */
@@ -5608,10 +8027,13 @@ function listRows(key, rows) {
 function holdOrders(taskId) { orderHold = { taskId, orders: new Map(shownOrder) }; }
 function releaseOrders(taskId) { orderHold = null; flipArm = taskId; }
 
-/** Пометить строку как участницу переезда: key — список, id — строка в нём. */
-function flipTag(node, key, id) {
+/** Пометить строку как участницу переезда: key — список, id — строка в нём.
+ *  own — у списка свой, хранимый порядок (список проекта): от таймера он не
+ *  зависит и едет только после правки строк (flipSoon). */
+function flipTag(node, key, id, own) {
   node.dataset.flip = key;
   node.dataset.flipId = id;
+  if (own) node.dataset.flipOwn = '1';
   return node;
 }
 const flipKey = (node) => `${node.dataset.flip}|${node.dataset.flipId}`;
@@ -5649,11 +8071,20 @@ function flipSnapshot() {
  *  задержка, как у --liq-t); сменилось — едет оттуда, где была видна. */
 function flipPlay(before) {
   const armed = flipArm;
+  const all = flipAll;
   flipArm = null;
+  flipAll = false;
   if (!before || reducedMotion()) return;
   for (const node of document.querySelectorAll('[data-flip]')) {
     const was = before.get(flipKey(node));
-    if (!was) continue;
+    const own = !!node.dataset.flipOwn;
+    if (!was) {
+      // Новая в списке после правки (группа «Готово», куда только что
+      // уехала первая выполненная) проявляется, а не выскакивает.
+      if (armed && (all || !own)) flipNew(node);
+      continue;
+    }
+    if (own && !all && !was.live) continue;
     const now = node.getBoundingClientRect();
     if (!now.width && !now.height) continue;
     const dx = Math.round(was.rect.left - now.left);
@@ -5667,11 +8098,263 @@ function flipPlay(before) {
       node.style.setProperty('--flip-y', `${dy}px`);
     } else continue;
     node.classList.toggle('flip-lead', was.lead || node.dataset.flipId === armed);
+    // Лесенка въезда строк (animationDelay у списка проекта) переезд не ждёт.
+    node.style.animationDelay = '';
     node.classList.add('flip-move');
     node.addEventListener('animationend', (e) => {
       if (e.target === node && e.animationName === 'flipMove') node.classList.remove('flip-move', 'flip-lead');
     });
   }
+}
+
+function flipNew(node) {
+  node.classList.add('flip-new');
+  node.addEventListener('animationend', (e) => {
+    if (e.target === node && e.animationName === 'flipNew') node.classList.remove('flip-new');
+  });
+}
+
+/** Ближайшая перерисовка переставит строки плавно: правка, после которой
+ *  строки встанут иначе, — галочка, предложение агента. id — строка, что
+ *  едет над остальными (.flip-lead); без него все равны. */
+function flipSoon(id) {
+  if (reducedMotion()) return;
+  flipArm = id || true;
+  flipAll = true;
+}
+
+// ---------------------------------------------------------------------------
+// Галочка «выполнено»: налив, брызги, строка держит место (18 октября 2026)
+// ---------------------------------------------------------------------------
+//
+// Как на телефоне (LiquidCheck, useOrderHold.markNow): задача отмечается в
+// тот же миг — счётчики, шкалы и мета не ждут, — а строка ещё HOLD_DONE_MS
+// стоит, где стояла: галочка наливается, из неё брызгают капли. Потом строка
+// уезжает вниз, к выполненным, — тем же переездом, что после остановки
+// таймера (flipSoon, «Порядок строк»). Сняли галочку или вернули отменённую
+// с крестика — то же без капель и быстрее, обратно наверх. Раньше строка
+// таяла и пропадала, а задача появлялась внизу уже без неё.
+//
+// Пока строку держат, нажатия на её галочку ничего не делают: двойной щелчок
+// не отменяет отметку и не путает порядок (так и на телефоне). Раскладывают
+// строку по задаче до нажатия (placedAs), рисуют — по настоящей. Перерисованная
+// посреди налива галочка продолжает его с того же места (checkKicks, --chk-t —
+// как liqKicks у кнопки запуска); задача, что закрылась не галочкой (агент,
+// синхронизация), наливается или прорисовывает крестик тоже, но без капель.
+// Без движения — ни налива, ни капель, ни задержки: строка сразу на месте.
+// Вид — «Галочка задачи» в компонентах styles.css.
+
+/** Сколько строка стоит после галочки — налив и брызги видны целиком. */
+const HOLD_DONE_MS = 600;
+/** Снятая галочка и крестик: брызг нет, ждать нечего. */
+const HOLD_OPEN_MS = 320;
+/** Чуть дольше самой длинной анимации галочки (поп кончается к 0,47 с). */
+const CHECK_WINDOW_MS = 520;
+const CHECK_DROPS = 7;
+/** id задачи → { was: поля до нажатия, timer } — строки, что держат место. */
+const rowHolds = new Map();
+/** id задачи → { kind: 'check' | 'uncheck' | 'cross' | 'uncross', at, seen }. */
+const checkKicks = new Map();
+/** id задачи → вид строки в прошлой отрисовке: 'open' | 'done' | 'cancelled'. */
+const rowSeen = new Map();
+
+const rowKind = (task) => (task.done ? 'done' : isCancelledTask(task) ? 'cancelled' : 'open');
+
+/** Задача, какой её раскладывать по спискам: только что отмеченная стоит,
+ *  где стояла до нажатия. */
+function placedAs(task) {
+  const h = rowHolds.get(task.id);
+  return h ? { ...task, ...h.was } : task;
+}
+
+/** Галочка строки задачи — или серый крестик у отменённой («Вернуть в
+ *  работу»). Одна на карточки «Проектов» и список проекта. */
+function rowCheck(task) {
+  let node;
+  if (isCancelledTask(task)) {
+    node = elt('button', 'task-x');
+    node.type = 'button';
+    node.innerHTML = icon('x');
+    node.title = `${t('status.kind_cancelled')} · ${t('task.reopen')}`;
+    node.setAttribute('aria-label', t('task.reopen'));
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const back = defaultStatusId(task.projectId, false);
+      if (back) holdRow(task, () => setTaskStatus(task, back), 'uncross');
+    });
+  } else {
+    node = document.createElement('input');
+    node.type = 'checkbox';
+    node.className = 'task-done';
+    node.checked = !!task.done;
+    node.setAttribute('aria-label', t('task.done_label'));
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (rowHolds.has(task.id)) e.preventDefault();
+    });
+    node.addEventListener('change', () => {
+      const on = node.checked;
+      holdRow(task, () => setTaskDone(task, on), on ? 'check' : 'uncheck', node);
+    });
+  }
+  checkMark(node, task);
+  return node;
+}
+
+/** Правка галочкой или крестиком: change — сама правка, сразу; строка
+ *  держит место и потом переезжает. box — галочка, из которой брызгать. */
+function holdRow(task, change, kind, box) {
+  if (rowHolds.has(task.id)) return;
+  if (reducedMotion()) {
+    change();
+    render();
+    scheduleSave();
+    return;
+  }
+  const was = { done: task.done, cancelled: task.cancelled, statusId: task.statusId, updatedAt: task.updatedAt };
+  if (kind === 'check' && box) checkBurst(box);
+  change();
+  checkKick(task.id, kind);
+  const ms = kind === 'check' ? HOLD_DONE_MS : HOLD_OPEN_MS;
+  rowHolds.set(task.id, { was, timer: setTimeout(() => releaseRow(task.id), ms) });
+  render();
+  scheduleSave();
+}
+
+/** Строку отпустили — она едет на своё новое место. */
+function releaseRow(id) {
+  if (!rowHolds.delete(id)) return;
+  flipSoon(id);
+  render();
+}
+
+/** Новый экран: строки встают сразу, держать и доигрывать нечего. */
+function rowsForget() {
+  for (const h of rowHolds.values()) clearTimeout(h.timer);
+  rowHolds.clear();
+  rowSeen.clear();
+}
+
+function checkKick(id, kind) {
+  if (!reducedMotion()) checkKicks.set(id, { kind, at: animNow(), seen: new WeakSet() });
+}
+
+/** Галочке или крестику строки — налив, слив или прорисовку, если задачу
+ *  только что тронули. Заодно замечает, что строка сменила вид не галочкой
+ *  (агент, синхронизация), — тогда играет то же, только без брызг. */
+function checkMark(node, task) {
+  const kind = rowKind(task);
+  const prev = rowSeen.get(task.id);
+  rowSeen.set(task.id, kind);
+  let k = checkKicks.get(task.id);
+  if (k && animNow() - k.at > CHECK_WINDOW_MS) { checkKicks.delete(task.id); k = null; }
+  if (!k && prev && prev !== kind) {
+    checkKick(task.id, kind === 'done' ? 'check' : kind === 'cancelled' ? 'cross' : prev === 'cancelled' ? 'uncross' : 'uncheck');
+    k = checkKicks.get(task.id);
+  }
+  if (!k || k.seen.has(node)) return;
+  const fits = node.classList.contains('task-x') ? k.kind === 'cross'
+    : k.kind === 'check' ? node.checked : k.kind !== 'cross' && !node.checked;
+  if (!fits) return;
+  k.seen.add(node);
+  const cls = `liq-${k.kind}`;
+  node.style.setProperty('--chk-t', `${-Math.round(animNow() - k.at)}ms`);
+  node.classList.add(cls);
+  liqSettle(node, () => node.classList.remove(cls));
+}
+
+/** Брызги галочки: капли акцента разлетаются из её центра и тают, как
+ *  LiquidDrops телефона (dropAt: по кругу с разбросом, дальше и мельче к
+ *  концу). Слой — на <body>: строку перерисуют сразу, а капли долетят. */
+function checkBurst(box) {
+  const r = box.getBoundingClientRect();
+  if (!r.width) return;
+  const burst = elt('span', 'task-drops');
+  burst.setAttribute('aria-hidden', 'true');
+  burst.style.left = `${Math.round(r.left + r.width / 2)}px`;
+  burst.style.top = `${Math.round(r.top + r.height / 2)}px`;
+  const px = (v) => `${v.toFixed(1)}px`;
+  for (let i = 0; i < CHECK_DROPS; i += 1) {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / CHECK_DROPS + (i % 2 ? 0.22 : -0.12);
+    const near = r.width * 0.32;
+    const far = r.width * 0.5 + 9 + (i % 3) * 2.5;
+    const drop = elt('i');
+    drop.style.setProperty('--x0', px(Math.cos(a) * near));
+    drop.style.setProperty('--y0', px(Math.sin(a) * near));
+    drop.style.setProperty('--dx', px(Math.cos(a) * far));
+    drop.style.setProperty('--dy', px(Math.sin(a) * far));
+    drop.style.setProperty('--ds', px(4 + (i % 3) * 0.9));
+    burst.append(drop);
+  }
+  document.body.append(burst);
+  liqSettle(burst, () => burst.remove());
+}
+
+// ---------------------------------------------------------------------------
+// Шкалы: заливка натекает до значения (18 октября 2026)
+// ---------------------------------------------------------------------------
+//
+// Как ProgressBar телефона: показанная шкала натекает от нуля, новое
+// значение — от того места, где заливка сейчас, пружиной --spring-flow
+// (LIQUID.flow: ζ ≈ 0.65, перехлёст ~6,6%) за 0,7 с. Строки и карточки
+// перерисовываются целиком, поэтому шкала помнит себя не узлом, а ключом
+// места (barShown): перерисовка с тем же значением заново не играет, а
+// перерисовка на ходу доигрывает с того же момента. Новый экран (render(),
+// entering) память стирает: шкалы там снова натекают от нуля. Шкала вне
+// экранов (загрузка обновления) помнит себя узлом. Без движения — ширина
+// сразу. Вид — «Шкала» в компонентах styles.css.
+
+const BAR_MS = 700;
+/** Ключ шкалы (строка места или сам узел) → { from, to, anim }. */
+const barShown = new Map();
+let barEase = '';
+
+/** Пружина шкал — из токена; браузер без linear() возьмёт --ease. */
+function barEasing() {
+  if (!barEase) barEase = getComputedStyle(document.documentElement).getPropertyValue('--spring-flow').trim() || 'ease-out';
+  return barEase;
+}
+
+/** Где заливка сейчас, %: если едет — по ходу пружины, иначе её цель. */
+function barNow(rec) {
+  if (!rec.anim || rec.anim.playState !== 'running') return rec.to;
+  const p = rec.anim.effect.getComputedTiming().progress;
+  return p === null ? rec.to : rec.from + (rec.to - rec.from) * p;
+}
+
+/** Заливка шкалы — pct процентов (0–100). key — какая это шкала на экране
+ *  (`ptile:<id проекта>`); без ключа шкала помнит себя узлом. */
+function barFill(fill, pct, key) {
+  const to = Math.max(0, Math.min(100, Number(pct) || 0));
+  fill.classList.add('bar-fill');
+  fill.style.width = `${to}%`;
+  const k = key || fill;
+  const was = barShown.get(k);
+  const live = !!was && !!was.anim && was.anim.playState === 'running';
+  // Тот же узел и то же значение — пусть едет, как ехал.
+  if (live && was.to === to && was.anim.effect.target === fill) return fill;
+  const rec = { from: to, to, anim: null };
+  barShown.set(k, rec);
+  if (reducedMotion() || typeof fill.animate !== 'function') return fill;
+  let from = was ? barNow(was) : 0;
+  let at = 0;
+  if (live && was.to === to) { from = was.from; at = was.anim.currentTime || 0; }
+  if (live && was.anim.effect.target === fill) was.anim.cancel();
+  if (!at && Math.abs(from - to) < 0.1) return fill;
+  rec.from = from;
+  const frames = [{ width: `${from}%` }, { width: `${to}%` }];
+  try {
+    rec.anim = fill.animate(frames, { duration: BAR_MS, easing: barEasing() });
+  } catch {
+    rec.anim = fill.animate(frames, { duration: BAR_MS, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' });
+  }
+  if (at) rec.anim.currentTime = at;
+  return fill;
+}
+
+/** Новый экран — шкалы на нём натекают заново; узловые помнят себя. */
+function barForget() {
+  for (const k of [...barShown.keys()]) if (typeof k === 'string') barShown.delete(k);
 }
 
 // ---------------------------------------------------------------------------
@@ -5934,10 +8617,64 @@ sb.auth.onAuthStateChange((_event, session) => {
 });
 
 const editorAssets = window.LancibleEditor ? LancibleEditor.createAssetStore({
+  // Чья вставленная картинка (src/editor/assets.js, очередь по аккаунтам): того
+  // аккаунта, чья область открыта, — даже без сеанса (уйдёт, когда он
+  // вернётся); гость — null, такие уезжают только переносом (adoptGuest).
+  // Не assetAuth: его меняют и события сеанса из других вкладок.
+  owner: () => scopeUid || null,
   remote: () => (assetAuth && !assetsPaused && state.settings.syncEnabled !== false
     ? { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY, accessToken: assetAuth.token, userId: assetAuth.userId }
     : null),
 }) : null;
+
+/** «Удалить данные аккаунта с устройства»: картинки и PDF из заметок
+ *  аккаунта uid — записи хранилища редактора с owner: uid (src/editor/
+ *  assets.js), и ждущие выгрузки, и скачанные копии. Стирает само хранилище
+ *  (forget): из IndexedDB и из своих кэшей в памяти, с освобождением адресов
+ *  blob: — без перезагрузки картинка уже не отдаётся. Облако не трогается.
+ *  Гостевые (owner null), чужие и записи без поля owner (до 17 октября)
+ *  остаются. Возвращает, сколько записей стёрто. */
+async function forgetAccountAssets(uid) {
+  if (!uid) return 0;
+  if (editorAssets && typeof editorAssets.forget === 'function') {
+    try { return await editorAssets.forget(uid); } catch (err) { console.error('Хранилище картинок не стёрло записи аккаунта:', err); }
+  }
+  return forgetAssetsInDb(uid);
+}
+
+/** Запасной путь forgetAccountAssets: редактора нет (не загрузился) или его
+ *  хранилище не справилось — записи стираются прямо в IndexedDB, по тем же
+ *  имени базы, хранилищу и полю owner; десктоп держит ту же IndexedDB
+ *  рендерера. Базы ещё нет — её и не заводим: открытие завело бы пустую,
+ *  без хранилища, и редактор потом не смог бы её дополнить. */
+const ASSET_DB = 'lancible-assets';
+const ASSET_STORE = 'blobs';
+function forgetAssetsInDb(uid) {
+  if (!uid || typeof indexedDB === 'undefined') return Promise.resolve(0);
+  return new Promise((resolve) => {
+    let req;
+    try { req = indexedDB.open(ASSET_DB); } catch (err) { console.error('Не удалось открыть хранилище картинок:', err); resolve(0); return; }
+    req.onupgradeneeded = () => { try { req.transaction.abort(); } catch { /* уже отменено */ } };
+    req.onerror = () => resolve(0);
+    req.onsuccess = () => {
+      const db = req.result;
+      const done = (n) => { db.close(); resolve(n); };
+      if (!db.objectStoreNames.contains(ASSET_STORE)) { done(0); return; }
+      let n = 0;
+      let tx;
+      try { tx = db.transaction(ASSET_STORE, 'readwrite'); } catch (err) { console.error('Не удалось стереть картинки:', err); done(0); return; }
+      const cursor = tx.objectStore(ASSET_STORE).openCursor();
+      cursor.onsuccess = () => {
+        const c = cursor.result;
+        if (!c) return;
+        if (c.value && c.value.owner === uid) { c.delete(); n += 1; }
+        c.continue();
+      };
+      tx.oncomplete = () => done(n);
+      tx.onabort = () => { console.error('Не удалось стереть картинки:', tx.error); done(0); };
+    };
+  });
+}
 
 /** Что у редакторов общее: язык, автор комментариев, вид, картинки. */
 function editorOptions(extra) {
@@ -6022,13 +8759,27 @@ function flushEditor() {
 }
 
 /** Пришли данные с другого устройства. Открытый текст перечитываем, если
- *  его поменяли там, а здесь в нём сейчас не пишут: иначе следующая буква
- *  отсюда затёрла бы чужую правку. */
+ *  его поменяли там: иначе следующая буква отсюда затёрла бы чужую правку.
+ *
+ *  С журналом правок (17 октября 2026) — и тогда, когда в редакторе стоит
+ *  курсор. Перед приёмом редактор дописан (flushEditor) и его текст уже в
+ *  очереди своей правкой: набранное здесь либо показано (оно позже), либо
+ *  лежит «другой версией» — не теряется. Раньше перечитывание при фокусе
+ *  пропускалось, и окно, оставленное с курсором в заметке, молча затирало
+ *  чужой текст первой же буквой. Фокус возвращается на место. */
 function refreshEditorsFromRemote() {
   const task = editor && getTask(editorTaskId);
-  if (task && JSON.stringify(task.notes || null) !== editorLoadedJSON && !editor.view.hasFocus()) loadEditor(task);
+  if (task && JSON.stringify(task.notes || null) !== editorLoadedJSON) {
+    const focused = editor.view.hasFocus();
+    loadEditor(task);
+    if (focused) editor.view.focus();
+  }
   const d = docEditor && getDocument(state.ui.docId);
-  if (d && JSON.stringify(d.body || null) !== docLoadedJSON && !docEditor.view.hasFocus()) loadDocEditor(d);
+  if (d && JSON.stringify(d.body || null) !== docLoadedJSON) {
+    const focused = docEditor.view.hasFocus();
+    loadDocEditor(d);
+    if (focused) docEditor.view.focus();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -6222,7 +8973,11 @@ function openDocFilterMenu(anchor) {
 }
 
 function openDocMenu(d, anchor) {
+  const conflicts = conflictsOf('document', d.id).length;
   openMenu(anchor, [
+    // Конфликт документа — та же «Другая версия», что у задачи: у документа
+    // нет панели свойств, его настройки — это меню.
+    ...(conflicts ? [{ label: `${t('sync.other_version')} · ${conflicts}`, icon: 'copy', onClick: () => openConflictDialog('document', d.id) }, { sep: true }] : []),
     { label: d.pinnedAt ? t('docs.unpin') : t('docs.pin'), onClick: () => togglePinDocument(d.id) },
     { label: t('docs.duplicate'), onClick: () => duplicateDocument(d.id) },
     { sep: true },
@@ -6294,7 +9049,7 @@ function recoverActiveTimer() {
   const ms = Math.max(0, new Date(endIso).getTime() - new Date(at.startedAt).getTime());
   if (task && ms >= 1000) {
     task.sessions = task.sessions || [];
-    task.sessions.push({ start: at.startedAt, end: endIso, ms, rate: effectiveRate(task), recovered: true });
+    task.sessions.push({ id: uid(), start: at.startedAt, end: endIso, ms, rate: effectiveRate(task), recovered: true });
     task.totalMs = (task.totalMs || 0) + ms;
     toast(t('toast.timer_recovered', { name: task.title || t('task.no_name'), time: fmtShort(ms) }));
   }
@@ -6307,7 +9062,11 @@ function recoverActiveTimer() {
 // События
 // ---------------------------------------------------------------------------
 
-el.navItems.forEach((tab) => tab.addEventListener('click', () => openView(tab.dataset.view)));
+el.navItems.forEach((tab) => tab.addEventListener('click', () => {
+  // Узкий веб: чат лежит поверх во всю ширину — вкладка экрана его закрывает.
+  if (aiNarrow()) closeAiPanel();
+  openView(tab.dataset.view);
+}));
 el.navCollapse.addEventListener('click', toggleNav);
 
 // Капсула ведёт на идущую задачу; стоп внутри неё останавливает таймер, не
@@ -6321,8 +9080,7 @@ el.tbStart.addEventListener('click', () => {
 el.tbTimer.addEventListener('click', () => {
   const task = state.activeTimer && getTask(state.activeTimer.taskId);
   if (!task) return;
-  openProject(task.projectId);
-  selectTask(task.id);
+  openTask(task.id);
 });
 el.searchInput.addEventListener('focus', openSearch);
 el.searchInput.addEventListener('input', () => { renderSearch(el.searchInput.value); if (el.searchPanel.hidden) openSearch(); });
@@ -6356,7 +9114,7 @@ el.nowBtn.addEventListener('click', () => {
   if (state.activeTimer && state.activeTimer.taskId === task.id) stopTimer();
   else startTimer(task.id);
 });
-const openNowTask = () => { const task = nowTask(); if (task) { openProject(task.projectId); selectTask(task.id); } };
+const openNowTask = () => { const task = nowTask(); if (task) openTask(task.id); };
 el.nowTitle.addEventListener('click', openNowTask);
 el.nowOpen.addEventListener('click', openNowTask);
 el.boardStatuses.addEventListener('click', openStatusDialog);
@@ -6421,10 +9179,12 @@ el.projTabs.forEach((b) => b.addEventListener('click', () => {
 }));
 el.navNewProject.addEventListener('click', () => openProjectDialog(null));
 window.addEventListener('resize', () => { if (state.ui.view === 'project') renderProjectHeader(); });
-el.projBack.addEventListener('click', () => openView('projects'));
+// Стрелки — «назад» по истории (routeBack); крошки — переход вперёд, на
+// экран, который они называют.
+el.projBack.addEventListener('click', () => routeBack(() => openView('projects')));
 el.crumbProjects.addEventListener('click', () => openView('projects'));
 const backToProject = () => { flushEditor(); state.ui.view = 'project'; render(); scheduleSave(); };
-el.taskBack.addEventListener('click', backToProject);
+el.taskBack.addEventListener('click', () => routeBack(backToProject));
 el.crumbProject.addEventListener('click', backToProject);
 el.taskDoneBtn.addEventListener('click', () => {
   const task = getTask(selectedId);
@@ -6508,7 +9268,7 @@ const OVS_AREAS = [
   '.proj-docs', '#task-list', '#tab-history', '.task-side', '.doc-list', '.led-scroll',
   '.cal-main', '.cal-days', '.cal-day', '.tp-list', '.board-cols', '.board-col-body',
   '.ag-scroll', '.ag-list', '.ag-allday-row', '.pjdlg-body', '.tmdlg', '.rpdlg',
-  '.tag-pop-list', '.ctx-menu', 'textarea',
+  '.tag-pop-list', '.ctx-menu', '.ai-log', '.ai-chats', 'textarea', '.syncdlg-body', '.syncdlg-text',
 ].join(', ');
 const OVS_IDLE = 1000;
 const OVS_MIN_THUMB = 28;
@@ -6931,9 +9691,13 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && dp.open) { closeDatePicker(); return; }
   // Окно повторения лежит поверх окна времени работы, а оно — поверх окна
   // задачи: закрывается самое верхнее.
+  // Окно «Другая версия» зовут и из окна задачи с календаря — оно выше.
+  if (e.key === 'Escape' && !el.syncdlgBackdrop.hidden && el.confirmBackdrop.hidden) { closeSyncDialog(); return; }
   if (e.key === 'Escape' && !el.rpdlgBackdrop.hidden) { closeRepeatDialog(); return; }
   if (e.key === 'Escape' && !el.rmdlgBackdrop.hidden) { closeReminderDialog(); return; }
-  if (e.key === 'Escape' && !el.sldlgBackdrop.hidden) { closeSlotDialog(); return; }
+  // Esc, закрывший вопрос поверх окна (confirmDialog гасит его сам), окно
+  // под вопросом не закрывает.
+  if (e.key === 'Escape' && !el.sldlgBackdrop.hidden) { if (!e.defaultPrevented) closeSlotDialog(); return; }
   if (e.key === 'Escape' && !el.tmdlgBackdrop.hidden) { closeTaskModal(true); return; }
   // Ctrl+F внутри редактора — его собственный поиск по тексту (он уже
   // обработал клавишу и отменил действие по умолчанию).
@@ -6950,6 +9714,1821 @@ document.addEventListener('keydown', (e) => {
     else newTask();
   }
 });
+
+// ---------------------------------------------------------------------------
+// ИИ-агент — чат в острове рейла, с любого экрана (17–19 октября 2026)
+// ---------------------------------------------------------------------------
+// Агент предлагает, человек подтверждает. Правила — в core/ai.js: снимок
+// данных для модели, свободные окна и записанное время (их модель зовёт как
+// инструменты), проверка, применение и отмена предложения, пересечения, разбор
+// потока, проверка и блоки вложений, фраза главного экрана (aiGreeting) и
+// поиск по чатам (aiChatSearch). Здесь — сама панель: главный экран (фраза,
+// поле посередине, чаты под ним) и страница чата (лента, карточки
+// предложений, то же поле внизу), вызов
+// функции ai-chat (supabase/functions/ai-chat — ключ модели и промпт живут
+// там) и круг инструментов. Чаты лежат только в localStorage этого
+// устройства, свои у каждого аккаунта: список — lancible:ai:<uid>:chats,
+// сообщения чата — lancible:ai:<uid>:chat:<id>; в state и в синхронизацию они
+// не попадают. Вложения не хранятся нигде: байты уходят только в тех вызовах
+// хода, к которому приложены, после хода история сжимается
+// (Core.aiCompactHistory), а в ленте остаётся плашка «имя · тип · размер».
+// Вид — «Агент» в styles.css.
+
+const AI_URL = `${SUPABASE_URL}/functions/v1/ai-chat`;
+/** Кругов инструментов подряд после одного сообщения человека. */
+const AI_MAX_ROUNDS = 4;
+/** Сообщений в истории чата (формат Anthropic) и строк ленты. */
+const AI_HISTORY_MAX = 40;
+const AI_ITEMS_MAX = 120;
+/** Инструменты, которые считает ядро на месте: имя → суффикс строк шага. */
+const AI_STEPS = { free_windows: 'windows', time_spent: 'spent' };
+const AI_EXAMPLES = ['ai.example_1', 'ai.example_2', 'ai.example_3'];
+/** Превью последнего ответа в строке списка. */
+const AI_PREVIEW_MAX = 140;
+
+const ai = {
+  uid: null,        // чьи чаты сейчас загружены
+  chats: [],        // список: { id, title, createdAt, updatedAt, preview, count }, свежие сверху
+  chat: null,       // последний открытый чат: { id, title, createdAt, messages, items, draft }
+  page: 'home',     // 'home' — главный экран (фраза, поле, чаты) | 'chat'
+  pageIn: null,     // 'fwd' | 'back' — въезд страницы при следующей отрисовке
+  home: { draft: null }, // набранное на главном, пока открыт чат: { text, attach, err }
+  greet: null,      // фраза над полем: { key, vars } ядра (aiGreeting)
+  greetSeed: Math.floor(Math.random() * 1e6), // счётчик входов на главный: фраза каждый раз другая
+  closing: 0,       // таймер: панель прячется, когда рейл свернулся
+  busy: false,      // идёт ответ — поле и кнопка недоступны
+  busyChat: null,   // чей это ответ: человек мог уйти в список или в другой чат
+  waiting: false,   // ждём слов ответа — три точки
+  live: null,       // строка ленты, в которую сейчас пишет поток
+  liveNode: null,
+  ctrl: null,       // AbortController текущего вызова
+  run: 0,           // номер разговора: aiStop() обрывает всё, что было до него
+  needAuth: false,  // функция ответила 401 — показать вход
+  remaining: null, limit: null, limitUntil: 0,
+  born: new WeakMap(), // строка ленты → когда появилась (0 — история, без появления)
+  typingAt: 0,      // когда показались три точки (волна не сбивается перерисовкой)
+  followRaf: 0, followUntil: 0, // лента едет за растущим ответом
+  attach: [],       // вложения в поле: { id, name, size, kind, mediaType, bytes, data, text, url }
+  attachErr: null,  // { key, params } — строка у поля
+  attachBusy: 0,    // сколько файлов ещё читается
+  attachGen: 0,     // поле очистили — недочитанное в него уже не ляжет
+  asking: new WeakSet(), // карточки, по которым открыт вопрос о пересечениях
+  dragDepth: 0,     // перетаскивание файлов над панелью
+};
+/** Дольше самого долгого появления в ленте (карточка — 0,3 с). */
+const AI_IN_MS = 320;
+
+const aiIndexKey = (id) => `lancible:ai:${id}:chats`;
+const aiChatKey = (id, chatId) => `lancible:ai:${id}:chat:${chatId}`;
+/** Одиночная история до 18 октября 2026 — переносится первым чатом. */
+const aiLegacyKey = (id) => `lancible:ai:${id}`;
+const aiSignedIn = () => !!currentUser && !ai.needAuth;
+const aiBlocks = (content) => (typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : []);
+const aiHasText = (m) => aiBlocks(m.content).some((b) => b && b.type === 'text' && String(b.text || '').trim());
+const aiIsAttachBlock = (b) => !!b && (b.type === 'image' || b.type === 'document');
+const aiTimeZone = () => {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; }
+};
+
+// --- чаты: хранение -------------------------------------------------------------
+
+function aiRead(key) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (err) { console.warn('Чат агента не прочитался:', err); return null; }
+}
+
+function aiWrite(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (err) { console.warn('Чат агента не сохранился:', err); return false; }
+}
+
+function aiForget(key) {
+  try { localStorage.removeItem(key); } catch { /* хранилище недоступно */ }
+}
+
+/** «Удалить данные аккаунта с устройства»: все чаты аккаунта id — список,
+ *  сообщения каждого чата (и тех, что выпали из списка, но остались) и
+ *  одиночная история до 18 октября. Чаты этого аккаунта открыты в панели —
+ *  она пустеет. */
+function aiForgetAccount(id) {
+  if (!id) return;
+  const prefix = aiChatKey(id, '');
+  const keys = [aiIndexKey(id), aiLegacyKey(id)];
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(prefix)) keys.push(k);
+    }
+  } catch { /* хранилище недоступно */ }
+  for (const k of keys) aiForget(k);
+  if (ai.uid === id) {
+    aiStop();
+    aiLoad(null);
+  }
+}
+
+/** Список по правилам ядра (aiChatsNormalize: свежие сверху, не больше ста)
+ *  и сразу в хранилище. Выпавшие из списка чаты уходят и из хранилища — иначе
+ *  их сообщения лежали бы ничьими. Ядро не разобрало — список как есть. */
+function aiSetChats(list) {
+  let next;
+  try { next = Core.aiChatsNormalize(list) || []; } catch (err) {
+    console.error('Список чатов не разобрался:', err);
+    ai.chats = list.filter((c) => c && c.id);
+    return;
+  }
+  const keep = new Set(next.map((c) => c.id));
+  for (const c of list) if (c && c.id && !keep.has(c.id)) aiForget(aiChatKey(ai.uid, c.id));
+  ai.chats = next;
+  if (ai.uid) aiWrite(aiIndexKey(ai.uid), next);
+}
+
+/** Строка списка: название, превью последнего ответа (нет ответа — своего
+ *  сообщения), сколько сообщений и когда. */
+function aiIndexEntry(chat, at) {
+  const msgs = chat.items.filter((it) => it.kind === 'msg');
+  const said = [...msgs].reverse();
+  const last = said.find((it) => it.role !== 'user' && String(it.text || '').trim()) || said.find((it) => String(it.text || '').trim());
+  return { id: chat.id, title: chat.title, createdAt: chat.createdAt || at, updatedAt: at, preview: aiPreview(last ? last.text : ''), count: msgs.length };
+}
+
+/** Превью — одной строкой: без разметки списков и выделения, без управляющих
+ *  символов (aiCleanText). */
+function aiPreview(text) {
+  const plain = String(text || '').replace(/\*\*(.+?)\*\*/g, '$1').replace(/^\s*- /gm, '').replace(/\s+/g, ' ').trim();
+  try { return Core.aiCleanText(plain, AI_PREVIEW_MAX); } catch { return plain.slice(0, AI_PREVIEW_MAX); }
+}
+
+/** Название чата — из первого сообщения (Core.aiChatTitle); без текста —
+ *  по первому вложению. */
+function aiTitleOf(text, files) {
+  const pick = (s) => { try { return Core.aiChatTitle(s) || ''; } catch { return ''; } };
+  return pick(text || '') || (files && files[0] ? pick(files[0].name) : '');
+}
+
+/** Сообщения для localStorage: байтов вложений там нет никогда. Завершённые
+ *  ходы сжимает ядро (aiCompactHistory); вложения хода, который ещё идёт,
+ *  остаются только в памяти — в хранилище вместо них отметка. */
+function aiStorable(messages) {
+  let out = messages;
+  try { out = Core.aiCompactHistory(messages) || messages; } catch (err) { console.warn('История агента не сжалась:', err); }
+  return out.map((m) => {
+    const blocks = aiBlocks(m.content);
+    if (!blocks.some(aiIsAttachBlock)) return m;
+    return { ...m, content: blocks.map((b) => (aiIsAttachBlock(b) ? { type: 'text', text: `[вложение «${b.title || ''}» не сохранено — его нужно приложить заново]` } : b)) };
+  });
+}
+
+/** Чаты аккаунта и перенос прежней одиночной истории. */
+function aiLoad(id) {
+  aiDropDraft(ai.home);
+  aiDropDraft(ai.chat);
+  aiSearchCache.clear();
+  ai.uid = id;
+  ai.chats = [];
+  ai.chat = null;
+  ai.page = 'home';
+  ai.pageIn = null;
+  if (!id) return;
+  const raw = aiRead(aiIndexKey(id));
+  let list = Array.isArray(raw) ? raw : raw && Array.isArray(raw.chats) ? raw.chats : [];
+  const legacy = aiRead(aiLegacyKey(id));
+  if (legacy) list = aiMigrate(id, legacy, list);
+  aiSetChats(list);
+}
+
+/** Прежняя одиночная история (до 18 октября 2026) — первым чатом списка; сама
+ *  она уходит. Не записалось (хранилище полно) — остаётся до следующего раза. */
+function aiMigrate(id, legacy, list) {
+  const messages = Array.isArray(legacy.messages) ? legacy.messages : [];
+  const items = Array.isArray(legacy.items) ? legacy.items.filter((it) => it && it.kind !== 'error') : [];
+  if (!messages.length && !items.length) { aiForget(aiLegacyKey(id)); return list; }
+  const at = Number.isNaN(Date.parse(legacy.updatedAt)) ? new Date().toISOString() : new Date(legacy.updatedAt).toISOString();
+  const first = items.find((it) => it.kind === 'msg' && it.role === 'user');
+  const chat = { id: uid(), title: aiTitleOf(first ? first.text : ''), createdAt: at, messages, items };
+  if (!aiWrite(aiChatKey(id, chat.id), { title: chat.title, createdAt: at, updatedAt: at, messages: aiStorable(messages), items })) return list;
+  const next = [...list, aiIndexEntry(chat, at)];
+  if (!aiWrite(aiIndexKey(id), next)) { aiForget(aiChatKey(id, chat.id)); return list; }
+  aiForget(aiLegacyKey(id));
+  return next;
+}
+
+/** Тексты чатов для поиска в шапке: id → { at, texts } — прочитанное из
+ *  хранилища помнится, пока у чата тот же updatedAt, и каждая буква запроса
+ *  не разбирает все чаты заново. */
+const aiSearchCache = new Map();
+
+/** Чаты текущего аккаунта, где встретился запрос, — по названию и тексту
+ *  сообщений (Core.aiChatSearch). Чаты лежат только на этом устройстве. */
+function aiSearchChats(q) {
+  if (!ai.uid || !ai.chats.length) return [];
+  const list = ai.chats.map((c) => {
+    let hit = aiSearchCache.get(c.id);
+    if (!hit || hit.at !== c.updatedAt) {
+      const chat = aiChatById(c.id);
+      const texts = chat ? chat.items.filter((it) => it.kind === 'msg' && it.text).map((it) => String(it.text)) : [];
+      hit = { at: c.updatedAt, texts };
+      aiSearchCache.set(c.id, hit);
+    }
+    return { id: c.id, title: c.title, updatedAt: c.updatedAt, texts: hit.texts };
+  });
+  try { return Core.aiChatSearch(list, q) || []; } catch (err) { console.warn('Поиск по чатам не вышел:', err); return []; }
+}
+
+/** Чат из хранилища. Тот, на который сейчас идёт ответ, — живой, из памяти. */
+function aiChatById(id) {
+  if (ai.busyChat && ai.busyChat.id === id) return ai.busyChat;
+  if (ai.chat && ai.chat.id === id) return ai.chat;
+  const entry = ai.chats.find((c) => c.id === id);
+  if (!entry) return null;
+  const rec = aiRead(aiChatKey(ai.uid, id)) || {};
+  return {
+    id,
+    title: entry.title || rec.title || '',
+    createdAt: entry.createdAt || rec.createdAt || null,
+    messages: Array.isArray(rec.messages) ? rec.messages : [],
+    items: Array.isArray(rec.items) ? rec.items.filter((it) => it && it.kind !== 'error') : [],
+  };
+}
+
+/** История чата не длиннее AI_HISTORY_MAX сообщений. Начинается она всегда с
+ *  сообщения человека с текстом и без tool_result: ответ на инструмент, чей
+ *  вызов срезан, модель не примет. */
+function aiTrim(chat) {
+  const m = chat.messages;
+  let start = Math.max(0, m.length - AI_HISTORY_MAX);
+  while (start < m.length - 1 && !(m[start].role === 'user' && aiHasText(m[start]))) start += 1;
+  if (start > 0) {
+    chat.messages = m.slice(start);
+    const first = chat.messages[0];
+    if (first.role === 'user') first.content = aiBlocks(first.content).filter((b) => b && b.type !== 'tool_result');
+  }
+  if (chat.items.length > AI_ITEMS_MAX) chat.items = chat.items.slice(-AI_ITEMS_MAX);
+}
+
+/** Чат — в хранилище, его строка — наверх списка. Черновик (ещё ничего не
+ *  отправлено) не хранится. */
+function aiSave(chat) {
+  const c = chat || ai.chat;
+  if (!ai.uid || !c || !c.id) return;
+  aiTrim(c);
+  const at = new Date().toISOString();
+  const items = c.items.filter((it) => it.kind !== 'error');
+  aiWrite(aiChatKey(ai.uid, c.id), { title: c.title, createdAt: c.createdAt, updatedAt: at, messages: aiStorable(c.messages), items });
+  aiSetChats([aiIndexEntry(c, at), ...ai.chats.filter((x) => x.id !== c.id)]);
+  if (!el.aiPanel.hidden && ai.page === 'home' && aiSignedIn()) aiRenderList();
+}
+
+/** Вход, выход, смена языка (зовёт renderAccountBtn). Другой аккаунт — свои
+ *  чаты; выход их не стирает, панель просто встаёт в состояние входа. */
+function aiAccountChanged() {
+  const id = currentUser ? currentUser.id : null;
+  if (id !== ai.uid) {
+    aiStop();
+    aiClearAttach();
+    el.aiInput.value = '';
+    aiLoad(id);
+    ai.remaining = null;
+    ai.limit = null;
+    ai.limitUntil = 0;
+  }
+  ai.needAuth = false;
+  aiRender();
+}
+
+/** Что уже лежит в ленте — история: при открытии чата и смене аккаунта она
+ *  стоит сразу, появляется только новое (aiAppear). */
+function aiHush(chat) {
+  const c = chat || ai.chat;
+  if (!c) return;
+  for (const it of c.items) if (!ai.born.has(it)) ai.born.set(it, 0);
+}
+
+/** Оборвать текущий ответ: вызов, поток и круг инструментов. */
+function aiStop() {
+  ai.run += 1;
+  if (ai.ctrl) { try { ai.ctrl.abort(); } catch { /* уже оборван */ } }
+  ai.ctrl = null;
+  if (ai.live && ai.busyChat) ai.busyChat.items = ai.busyChat.items.filter((it) => it !== ai.live);
+  ai.live = null;
+  ai.liveNode = null;
+  ai.waiting = false;
+  ai.busy = false;
+  ai.busyChat = null;
+}
+
+// --- главный экран, чат и переходы ------------------------------------------------
+//
+// Страниц две: главный экран (ai.page 'home') — сценка и фраза над полем,
+// поле посередине, под ним чаты; и чат ('chat') — лента и то же поле внизу.
+// Поле одно: уходя со страницы, её набранное и вложения уезжают с ней
+// (aiStash), приходя — возвращаются (aiUnstash). Отправка с главного заводит
+// новый чат и открывает его без въезда (aiFlowIn); из списка — въезд справа.
+
+/** Фраза над полем — ядра (Core.aiGreeting): каждый вход на главный экран —
+ *  следующий seed, фраза другая; имя — из профиля. */
+function aiNextGreeting() {
+  ai.greetSeed += 1;
+  try {
+    ai.greet = Core.aiGreeting({ now: Date.now(), name: (currentUser && currentUser.name) || '', seed: ai.greetSeed });
+  } catch (err) {
+    console.warn('Фраза агента не собралась:', err);
+    ai.greet = null;
+  }
+}
+
+/** Сценка главного экрана «дышит» при каждом входе (.ai-breathe, вид —
+ *  «Агент» в styles.css); без движения — стоит. */
+function aiHelloIn() {
+  el.aiHello.classList.remove('ai-breathe');
+  if (el.aiPanel.hidden || el.aiHello.hidden || reducedMotion()) return;
+  void el.aiHello.offsetWidth;
+  el.aiHello.classList.add('ai-breathe');
+}
+
+/** Набранное и вложения уходящей страницы — с ней (owner — ai.home или чат). */
+function aiStash(owner) {
+  if (!owner) return;
+  owner.draft = { text: el.aiInput.value, attach: ai.attach, err: ai.attachErr };
+  ai.attach = [];
+  ai.attachErr = null;
+  ai.attachBusy = 0;
+  ai.attachGen += 1;
+  el.aiInput.value = '';
+}
+
+/** Своё набранное и вложения — в поле пришедшей страницы. */
+function aiUnstash(owner) {
+  const d = owner && owner.draft;
+  if (owner) owner.draft = null;
+  el.aiInput.value = d ? d.text : '';
+  ai.attach = d ? d.attach : [];
+  ai.attachErr = d ? d.err : null;
+}
+
+/** Черновик больше не нужен (открыли другой чат, удалили этот, сменился
+ *  аккаунт): миниатюры его вложений освобождаются. */
+function aiDropDraft(owner) {
+  const d = owner && owner.draft;
+  if (d) for (const it of d.attach) if (it.url) URL.revokeObjectURL(it.url);
+  if (owner) owner.draft = null;
+}
+
+/** Чат из списка или из поиска — въезд справа. Набранное на главном ждёт
+ *  там; у чата — своё, если в нём уже что-то набирали. */
+function aiOpenChat(id) {
+  const chat = aiChatById(id);
+  if (!chat) return;
+  if (ai.page === 'chat' && ai.chat === chat) return;
+  aiStash(ai.page === 'chat' ? ai.chat : ai.home);
+  if (ai.chat && ai.chat !== chat) aiDropDraft(ai.chat);
+  ai.chat = chat;
+  aiUnstash(chat);
+  aiHush(chat);
+  aiGo('chat');
+  if (!ai.busy) el.aiInput.focus({ preventScroll: true });
+}
+
+/** Назад, на главный экран. Чат остаётся в памяти: вернулись в него — поле и
+ *  вложения на месте. Фокус — на строку чата, из которого ушли. */
+function aiBack() {
+  const from = ai.chat && ai.chat.id;
+  aiGoHome();
+  const row = from && el.aiChats.querySelector(`.ai-row[data-id="${CSS.escape(from)}"] .ai-row-open`);
+  (row || el.aiInput).focus({ preventScroll: true });
+}
+
+/** С чата на главный экран — въезд слева, фраза новая. */
+function aiGoHome() {
+  if (ai.page === 'chat') aiStash(ai.chat);
+  aiUnstash(ai.home);
+  aiNextGreeting();
+  aiGo('home');
+  aiHelloIn();
+}
+
+/** Страница панели и её въезд: в чат — справа, на главный — слева. */
+function aiGo(page) {
+  ai.pageIn = page === ai.page ? null : page === 'chat' ? 'fwd' : 'back';
+  ai.page = page;
+  aiRender(true);
+}
+
+/** С поля главного экрана — в только что заведённый чат, без въезда
+ *  страницы: лента проявляется, поле едет вниз со своего прежнего места top0
+ *  (.ai-log-in, .ai-compose-down с --ai-dy; вид — «Агент» в styles.css). */
+function aiFlowIn(top0) {
+  el.aiLog.classList.remove('ai-log-in');
+  el.aiCompose.classList.remove('ai-compose-down');
+  if (reducedMotion() || el.aiLog.hidden) return;
+  const dy = top0 - el.aiCompose.getBoundingClientRect().top;
+  void el.aiLog.offsetWidth;
+  el.aiLog.classList.add('ai-log-in');
+  if (Math.abs(dy) < 1) return;
+  el.aiCompose.style.setProperty('--ai-dy', `${Math.round(dy)}px`);
+  el.aiCompose.classList.add('ai-compose-down');
+}
+
+async function aiDeleteChat(id) {
+  const entry = ai.chats.find((c) => c.id === id);
+  if (!entry) return;
+  const ok = await confirmDialog(t('ai.delete_chat_text', { name: entry.title || t('ai.new_chat') }), { title: t('ai.delete_chat_q') });
+  if (!ok || !ai.chats.some((c) => c.id === id)) return;
+  if (ai.busyChat && ai.busyChat.id === id) aiStop();
+  aiForget(aiChatKey(ai.uid, id));
+  aiSearchCache.delete(id);
+  aiSetChats(ai.chats.filter((c) => c.id !== id));
+  if (ai.chat && ai.chat.id === id) {
+    const open = ai.page === 'chat';
+    aiDropDraft(ai.chat);
+    ai.chat = null;
+    if (open) {
+      aiClearAttach();
+      el.aiInput.value = '';
+      aiGoHome();
+      el.aiInput.focus({ preventScroll: true });
+      return;
+    }
+  }
+  aiRender();
+}
+
+/** «сегодня 14:20», «вчера», «12 окт.»; прошлый год — с годом. */
+function aiChatWhen(iso) {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return '';
+  const d = new Date(ms);
+  const now = new Date();
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ago = Math.round((day(now) - day(d)) / 86400000);
+  if (ago === 0) return t('ai.when_today', { time: hhmm(ms) });
+  if (ago === 1) return t('ai.when_yesterday');
+  const opts = { day: 'numeric', month: 'short' };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString(locale(), opts);
+}
+
+/** Чаты под полем главного экрана; чатов нет — что умеет агент и примеры. */
+function aiRenderList() {
+  if (el.aiList.hidden) return;
+  el.aiListLabel.hidden = !ai.chats.length;
+  if (!ai.chats.length) { el.aiChats.replaceChildren(aiExamplesNode()); return; }
+  el.aiChats.replaceChildren(...ai.chats.map(aiChatRow));
+}
+
+/** Строка чата: название и время, под ними превью и число сообщений; «⋯» —
+ *  удалить (с подтверждением). */
+function aiChatRow(c) {
+  const row = elt('div', 'ai-row');
+  row.dataset.id = c.id;
+  const open = elt('button', 'ai-row-open');
+  open.type = 'button';
+  const top = elt('span', 'ai-row-top');
+  top.append(elt('span', 'ai-row-title', c.title || t('ai.new_chat')), elt('span', 'ai-row-when', aiChatWhen(c.updatedAt)));
+  const sub = elt('span', 'ai-row-sub');
+  const n = Number(c.count) || 0;
+  sub.append(elt('span', 'ai-row-preview', c.preview || ''), elt('span', 'ai-row-count', t('ai.chat_count', { n, plural: pluralForm(n, 'plural.message') })));
+  open.append(top, sub);
+  open.addEventListener('click', () => aiOpenChat(c.id));
+  const more = elt('button', 'icon-btn ai-row-more');
+  more.type = 'button';
+  more.title = t('ai.menu');
+  more.setAttribute('aria-label', t('ai.menu'));
+  more.innerHTML = icon('kebab');
+  more.addEventListener('click', () => openMenu(more, [{ label: t('ai.delete_chat'), danger: true, onClick: () => aiDeleteChat(c.id) }], { toggle: true }));
+  row.append(open, more);
+  return row;
+}
+
+// --- панель ------------------------------------------------------------------
+
+/** Кнопки агента: в рейле и — на узком вебе, где рейла нет, — в нижней плашке. */
+const aiButtons = () => [el.aiBtn, el.mobileAiBtn].filter(Boolean);
+/** Узкий веб: чат поверх во всю ширину (web/responsive.css). */
+const aiNarrow = () => IS_WEB && window.matchMedia('(max-width: 560px)').matches;
+const aiOpen = () => document.body.classList.contains('ai-open');
+
+/** Чат открывается на главном экране: остров рейла раскрывается вправо
+ *  (body.ai-open, вид — «Каркас» и «Агент» в styles.css), панель — в нём. */
+function openAiPanel() {
+  clearTimeout(ai.closing);
+  ai.closing = 0;
+  el.aiPanel.inert = false;
+  el.aiPanel.hidden = false;
+  document.body.classList.add('ai-open');
+  for (const b of aiButtons()) {
+    b.classList.add('on');
+    b.setAttribute('aria-expanded', 'true');
+  }
+  if (ai.page === 'chat') { aiStash(ai.chat); aiUnstash(ai.home); }
+  ai.page = 'home';
+  ai.pageIn = null;
+  aiNextGreeting();
+  aiRender(true);
+  aiHelloIn();
+  if (aiSignedIn()) el.aiInput.focus({ preventScroll: true });
+}
+
+/** Закрыть: рейл сворачивается тем же ходом, панель прячется, когда он
+ *  доехал (без движения и на узком вебе — сразу), а пока едет — inert. */
+function closeAiPanel() {
+  if (!aiOpen()) return;
+  const inside = el.aiPanel.contains(document.activeElement);
+  document.body.classList.remove('ai-open');
+  el.aiPanel.classList.remove('ai-drop');
+  ai.dragDepth = 0;
+  for (const b of aiButtons()) {
+    b.classList.remove('on');
+    b.setAttribute('aria-expanded', 'false');
+  }
+  el.aiPanel.inert = true;
+  const hide = () => { ai.closing = 0; el.aiPanel.hidden = true; el.aiPanel.inert = false; };
+  const rides = parseFloat(getComputedStyle(el.navrail).transitionDuration) > 0;
+  clearTimeout(ai.closing);
+  if (reducedMotion() || aiNarrow() || !rides) hide();
+  else ai.closing = setTimeout(hide, 260);
+  if (inside) (aiNarrow() && el.mobileAiBtn ? el.mobileAiBtn : el.aiBtn).focus({ preventScroll: true });
+}
+
+const toggleAiPanel = () => (aiOpen() ? closeAiPanel() : openAiPanel());
+
+/** Чат из поиска в шапке: панель открывается, если закрыта, и в ней — чат. */
+function aiShowChat(id) {
+  if (!aiOpen()) openAiPanel();
+  aiOpenChat(id);
+}
+
+/** Панель целиком: вход, главный экран или чат. Закрытая — не рисуется. */
+function aiRender(stick) {
+  if (el.aiPanel.hidden) return;
+  const signed = aiSignedIn();
+  if (ai.page === 'chat' && !ai.chat) ai.page = 'home';
+  const chat = signed && ai.page === 'chat' ? ai.chat : null;
+  const home = signed && !chat;
+  el.aiSignin.hidden = signed;
+  el.aiBody.hidden = !signed;
+  el.aiBody.dataset.page = chat ? 'chat' : 'home';
+  el.aiHello.hidden = !home;
+  el.aiList.hidden = !home;
+  el.aiLog.hidden = !chat;
+  el.aiBack.hidden = !chat;
+  el.aiMore.hidden = !chat || !chat.id;
+  el.aiTitle.textContent = chat ? chat.title || t('ai.new_chat') : t('ai.title');
+  el.aiPanel.dataset.drop = t('ai.drop_hint');
+  aiRenderQuota();
+  if (chat) aiRenderLog(stick);
+  else if (home) { aiRenderHello(); aiRenderList(); }
+  if (signed) { aiRenderAttach(); aiSyncCompose(); }
+  aiPageIn();
+}
+
+/** Фраза над полем: ключ — ядра, слова — языка интерфейса. */
+function aiRenderHello() {
+  if (!ai.greet) aiNextGreeting();
+  el.aiPhrase.textContent = ai.greet ? t(ai.greet.key, ai.greet.vars) : t('ai.title');
+}
+
+/** Въезд страницы (.ai-page-fwd / .ai-page-back, вид — «Агент» в styles.css);
+ *  без движения — сразу на месте. */
+function aiPageIn() {
+  const dir = ai.pageIn;
+  ai.pageIn = null;
+  el.aiBody.classList.remove('ai-page-fwd', 'ai-page-back');
+  if (!dir || el.aiBody.hidden || reducedMotion()) return;
+  el.aiLog.classList.remove('ai-log-in');
+  el.aiCompose.classList.remove('ai-compose-down');
+  void el.aiBody.offsetWidth;
+  el.aiBody.classList.add(dir === 'fwd' ? 'ai-page-fwd' : 'ai-page-back');
+}
+
+/** «47 из 50 сегодня» — после первого ответа функции; в шапке и списка, и чата. */
+function aiRenderQuota() {
+  const show = aiSignedIn() && ai.remaining !== null && ai.limit !== null;
+  el.aiQuota.hidden = !show;
+  if (show) el.aiQuota.textContent = t('ai.quota', { remaining: ai.remaining, limit: ai.limit });
+}
+
+/** Поле растёт с текстом до шести строк (потолок — max-height в стилях).
+ *  Отправить можно текст, вложения или то и другое; пока файлы читаются —
+ *  нельзя. */
+function aiSyncCompose() {
+  el.aiInput.disabled = ai.busy;
+  el.aiAttach.disabled = ai.busy;
+  el.aiSend.disabled = ai.busy || ai.attachBusy > 0 || (!el.aiInput.value.trim() && !ai.attach.length);
+  if (el.aiPanel.hidden || el.aiBody.hidden) return;
+  el.aiInput.style.height = 'auto';
+  el.aiInput.style.height = `${el.aiInput.scrollHeight}px`;
+}
+
+function aiSetBusy(on) {
+  ai.busy = on;
+  if (!on) { ai.waiting = false; ai.busyChat = null; }
+  aiSyncCompose();
+  aiRenderLog();
+  // Поле было недоступно и фокус потеряло — вернуть, если человек не ушёл.
+  if (!on && !el.aiPanel.hidden && !el.aiBody.hidden && aiSignedIn()
+    && (document.activeElement === document.body || el.aiPanel.contains(document.activeElement))) {
+    el.aiInput.focus({ preventScroll: true });
+  }
+}
+
+// --- лента -------------------------------------------------------------------
+
+/** Текст модели — только текстом: экранируется весь, абзацы — по пустой
+ *  строке, строки «- …» — списком, звёздочки выделения снимаются. Никакой
+ *  разметки из ответа на страницу не попадает. */
+function aiTextHtml(text) {
+  const out = [];
+  for (const block of String(text || '').replace(/\r\n?/g, '\n').split(/\n[ \t]*\n/)) {
+    let para = [];
+    let list = [];
+    const flushPara = () => { if (para.length) out.push(`<p>${para.join('<br>')}</p>`); para = []; };
+    const flushList = () => { if (list.length) out.push(`<ul>${list.map((l) => `<li>${l}</li>`).join('')}</ul>`); list = []; };
+    for (const line of block.split('\n')) {
+      if (!line.trim()) continue;
+      const clean = escapeHtml(line.replace(/\*\*(.+?)\*\*/g, '$1'));
+      const item = line.match(/^\s*- (.*)$/);
+      if (item) { flushPara(); list.push(escapeHtml(item[1].replace(/\*\*(.+?)\*\*/g, '$1'))); } else { flushList(); para.push(clean); }
+    }
+    flushPara();
+    flushList();
+  }
+  return out.join('');
+}
+
+function aiRenderLog(stick) {
+  if (el.aiPanel.hidden || el.aiLog.hidden || !ai.chat) return;
+  const chat = ai.chat;
+  const answering = ai.busy && ai.busyChat === chat;
+  const log = el.aiLog;
+  const atEnd = stick || log.scrollHeight - log.scrollTop - log.clientHeight < 48;
+  ai.liveNode = null;
+  const nodes = [];
+  const lastApplied = aiLastApplied(chat);
+  for (const it of chat.items) {
+    const n = aiItemNode(it, lastApplied);
+    if (n) nodes.push(aiAppear(n, it));
+  }
+  if (answering && ai.waiting) nodes.push(aiTypingNode());
+  else ai.typingAt = 0;
+  log.replaceChildren(...nodes);
+  if (atEnd) log.scrollTop = log.scrollHeight;
+}
+
+/** Новое в ленте появляется (.ai-in, вид — «Агент» в styles.css): человек
+ *  справа снизу, модель слева, карточка поднимается. Лента перерисовывается
+ *  целиком, поэтому строка помнит не узел, а когда появилась (ai.born):
+ *  перерисованная посреди появления доигрывает его с того же места (--ai-t),
+ *  после — стоит. История (aiHush) и «без движения» — сразу на месте. */
+function aiAppear(node, it) {
+  let at = ai.born.get(it);
+  if (at === undefined) {
+    at = reducedMotion() ? 0 : animNow();
+    ai.born.set(it, at);
+  }
+  const age = animNow() - at;
+  if (at && age < AI_IN_MS) {
+    node.classList.add('ai-in');
+    node.style.setProperty('--ai-t', `${-Math.round(age)}ms`);
+  }
+  return node;
+}
+
+/** Чатов ещё нет: под полем главного экрана — что умеет агент и три
+ *  примера; щелчок подставляет пример в поле. */
+function aiExamplesNode() {
+  const box = elt('div', 'ai-intro');
+  box.append(elt('p', 'ai-hint', t('ai.empty_hint')));
+  const list = elt('div', 'ai-examples');
+  for (const key of AI_EXAMPLES) {
+    const b = elt('button', 'ghost', t(key));
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      el.aiInput.value = t(key);
+      aiSyncCompose();
+      el.aiInput.focus({ preventScroll: true });
+    });
+    list.append(b);
+  }
+  box.append(list);
+  return box;
+}
+
+function aiTypingNode() {
+  const n = elt('div', 'ai-typing');
+  n.setAttribute('role', 'status');
+  n.setAttribute('aria-label', t('ai.thinking'));
+  n.title = t('ai.thinking');
+  n.append(elt('i'), elt('i'), elt('i'));
+  // Волна точек идёт от их появления, а не от каждой перерисовки ленты.
+  if (!reducedMotion()) {
+    if (!ai.typingAt) ai.typingAt = animNow();
+    const age = animNow() - ai.typingAt;
+    n.style.setProperty('--ai-t', `${-Math.round(age)}ms`);
+    if (age < AI_IN_MS) n.classList.add('ai-in');
+  }
+  return n;
+}
+
+/** Сообщение человека: плашки вложений («имя · тип · размер», без
+ *  миниатюр — байтов в истории нет) и текст. */
+function aiUserNode(it) {
+  const n = elt('div', 'ai-msg me');
+  const files = Array.isArray(it.files) ? it.files : [];
+  if (files.length) {
+    const box = elt('div', 'ai-files');
+    for (const f of files) {
+      const plate = elt('div', 'ai-file');
+      plate.innerHTML = icon(f.kind === 'image' ? 'image' : 'doc');
+      plate.append(elt('span', 'ai-file-name', f.name || ''), elt('span', 'ai-file-meta', ['', f.type, aiSize(f.size)].filter((x, i) => !i || x).join(' · ').trim()));
+      box.append(plate);
+    }
+    n.append(box);
+  }
+  if (it.text) n.append(it.text);
+  return n;
+}
+
+function aiItemNode(it, lastApplied) {
+  if (it.kind === 'msg' && it.role === 'user') return aiUserNode(it);
+  if (it.kind === 'msg') {
+    const n = elt('div', 'ai-msg');
+    n.innerHTML = aiTextHtml(it.text);
+    if (it === ai.live) {
+      ai.liveNode = n;
+      // Доросла — высота снова своя: дальше строку раскладывает текст.
+      n.addEventListener('transitionend', (e) => {
+        if (e.target === n && e.propertyName === 'height') n.style.height = '';
+      });
+    }
+    return n;
+  }
+  if (it.kind === 'step') {
+    const name = AI_STEPS[it.tool];
+    if (!name) return null;
+    const done = it.done && !it.failed;
+    const text = !done ? t(`ai.step_${name}`)
+      : name === 'windows' ? t('ai.step_windows_done', { range: it.range || '' })
+      : t('ai.step_spent_done', { time: it.time || '' });
+    return elt('div', 'ai-step', text);
+  }
+  if (it.kind === 'notice') return elt('div', 'ai-step', t(it.key));
+  if (it.kind === 'card') return aiCardNode(it, lastApplied);
+  if (it.kind === 'error') {
+    const n = elt('div', 'ai-error');
+    n.append(elt('span', '', t(it.key, it.params)));
+    if (it.retry) {
+      const b = elt('button', 'linklike', t('ai.retry'));
+      b.type = 'button';
+      // «Подождите N с» — повторить можно, когда время вышло.
+      b.disabled = !!it.retryAt && performance.now() < it.retryAt;
+      b.addEventListener('click', aiRetry);
+      n.append(b);
+    }
+    return n;
+  }
+  return null;
+}
+
+/** Ошибка — строкой в ленту своего чата (ответ мог прийти в чат, из которого
+ *  человек уже ушёл). waitMs — «Повторить» откроется через столько. */
+function aiError(key, retry, chat, params, waitMs) {
+  const c = chat || ai.chat;
+  if (!c) return;
+  const it = { kind: 'error', key, retry: !!retry };
+  if (params) it.params = params;
+  if (waitMs > 0) {
+    it.retryAt = performance.now() + waitMs;
+    setTimeout(() => { if (c === ai.chat && c.items.includes(it)) aiRenderLog(); }, waitMs + 20);
+  }
+  c.items.push(it);
+  if (c === ai.chat) aiRenderLog(true);
+}
+
+// --- вложения ------------------------------------------------------------------
+//
+// Скрепка, перетаскивание на панель и вставка картинки из буфера — один путь
+// (aiAddFiles): байты (FileReader → Uint8Array) проверяет ядро
+// (aiCheckAttachment — по сигнатурам, а не по имени; aiCheckAttachments —
+// число и сумма), картинка перекодируется на устройстве, текст читается
+// строгим UTF-8. Отправка — блоками ядра (aiAttachmentBlocks) перед текстом
+// сообщения.
+
+/** Пределы вложений — ядра (AI_ATTACH). */
+const aiLimits = () => Core.AI_ATTACH;
+
+/** Размер для людей: «512 Б», «240 КБ», «4,2 МБ». */
+function aiSize(bytes) {
+  const n = Number(bytes);
+  if (!Number.isFinite(n) || n < 0) return '';
+  if (n < 1024) return t('ai.size_b', { n });
+  if (n < 1024 * 1024) return t('ai.size_kb', { n: Math.max(1, Math.round(n / 1024)) });
+  const mb = n / (1024 * 1024);
+  return t('ai.size_mb', { n: mb.toLocaleString(locale(), { maximumFractionDigits: mb < 10 ? 1 : 0 }) });
+}
+
+/** Тип на плашке: PNG, JPEG, PDF; у текста — расширение (TXT, MD, CSV). */
+function aiTypeLabel(item) {
+  if (item.kind === 'text') {
+    const ext = (String(item.name || '').match(/\.([a-z0-9]{1,8})$/i) || [])[1];
+    return ext && /^(txt|md|markdown|csv)$/i.test(ext) ? ext.toUpperCase().replace('MARKDOWN', 'MD') : 'TXT';
+  }
+  return (String(item.mediaType || '').split('/')[1] || '').toUpperCase();
+}
+
+/** Байты файла: FileReader → Uint8Array (одинаково в браузере и в Electron). */
+function aiReadBytes(blob) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(new Uint8Array(r.result));
+    r.onerror = () => reject(r.error || new Error('read failed'));
+    r.readAsArrayBuffer(blob);
+  });
+}
+
+/** base64 без переполнения стека на больших файлах — кусками. */
+function aiBase64(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+/** Картинка перекодируется на устройстве: поворот по EXIF, длинная сторона ≤
+ *  AI_ATTACH.imageSide (1568 px), JPEG с качеством imageQuality (0,85), с
+ *  прозрачностью — PNG. Так из файла уходят метаданные (EXIF, GPS) и всё,
+ *  что спрятано рядом с картинкой. */
+async function aiReencode(blob, mediaType) {
+  const lim = aiLimits();
+  const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+  try {
+    const scale = Math.min(1, lim.imageSide / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const alpha = mediaType !== 'image/jpeg' && aiHasAlpha(ctx, w, h);
+    const out = await new Promise((r) => canvas.toBlob(r, alpha ? 'image/png' : 'image/jpeg', lim.imageQuality));
+    if (!out) throw new Error('encode failed');
+    return out;
+  } finally {
+    if (bmp.close) bmp.close();
+  }
+}
+
+/** Есть ли в картинке хоть один не совсем непрозрачный пиксель. */
+function aiHasAlpha(ctx, w, h) {
+  const px = ctx.getImageData(0, 0, w, h).data;
+  for (let i = 3; i < px.length; i += 4) if (px[i] < 255) return true;
+  return false;
+}
+
+/** Ошибка вложения строкой. Ключи ошибок — ядра (ai.err_file_*), пределы в
+ *  тексте — из AI_ATTACH, размером для людей. */
+function aiAttachText(err) {
+  const lim = aiLimits();
+  const p = err.params || {};
+  return t(err.key, {
+    name: p.name || '',
+    max: err.key === 'ai.err_file_count' ? lim.maxCount : aiSize(lim.totalBytes),
+    image: aiSize(lim.imageBytes),
+    pdf: aiSize(lim.pdfBytes),
+    text: aiSize(lim.textBytes),
+  });
+}
+
+/** Отказ ядра → { key, params }: у файла — { ok: false, error, params }, у
+ *  списка ошибка бывает и строкой, и объектом. */
+function aiAttachErrOf(res, name) {
+  const e = res && res.error;
+  const key = typeof e === 'string' ? e : e && (e.error || e.key);
+  const params = (e && typeof e === 'object' && e.params) || (res && res.params) || {};
+  return { key: /^ai\.err_file_/.test(key || '') ? key : 'ai.err_file_type', params: { ...params, name: name || params.name || '' } };
+}
+
+function aiSetAttachErr(err) {
+  ai.attachErr = err;
+  aiRenderAttach();
+}
+
+/** Что уходит в проверку ядра и в его блоки. */
+const aiCheckInput = (it) => ({ name: it.name, size: it.size, bytes: it.bytes, kind: it.kind, mediaType: it.mediaType, text: it.text, data: it.data });
+
+/** Файл → вложение или отказ ({ key, params }). Больше самого большого
+ *  предела — отказ по размеру, файл даже не читается. */
+async function aiPrepareFile(file) {
+  const lim = aiLimits();
+  const raw = String(file.name || '');
+  if (file.size > Math.max(lim.imageBytes, lim.pdfBytes, lim.textBytes)) throw aiAttachErrOf(Core.aiCheckAttachment({ name: raw, size: file.size }), '');
+  let bytes;
+  try { bytes = await aiReadBytes(file); } catch { throw { key: 'ai.err_file_read', params: { name: raw } }; }
+  const check = Core.aiCheckAttachment({ name: raw, size: file.size, bytes });
+  if (!check || !check.ok) throw aiAttachErrOf(check, '');
+  const name = check.name || raw;
+  const fail = (key) => ({ key, params: { name } });
+  const item = { id: uid(), name, kind: check.kind, mediaType: check.mediaType, size: bytes.length, bytes };
+  if (check.kind === 'image') {
+    let blob;
+    try { blob = await aiReencode(new Blob([bytes], { type: check.mediaType }), check.mediaType); } catch { throw fail('ai.err_file_read'); }
+    const out = await aiReadBytes(blob);
+    const again = Core.aiCheckAttachment({ name, size: out.length, bytes: out });
+    if (!again || !again.ok) throw aiAttachErrOf(again, name);
+    Object.assign(item, { mediaType: again.mediaType, size: out.length, bytes: out, blob });
+  } else if (check.kind === 'text') {
+    try { item.text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw fail('ai.err_file_type'); }
+  }
+  if (item.kind !== 'text') item.data = aiBase64(item.bytes);
+  return item;
+}
+
+/** Файлы со скрепки, перетаскивания или из буфера — в поле той страницы, что
+ *  открыта (на главном — к первому сообщению нового чата). Больше
+ *  AI_ATTACH.maxCount — отказ строкой у поля. */
+async function aiAddFiles(files) {
+  const list = [...(files || [])].filter(Boolean);
+  if (!list.length || !aiSignedIn() || ai.busy) return;
+  const gen = ai.attachGen;
+  ai.attachErr = null;
+  const max = (aiLimits() || {}).maxCount || 0;
+  for (const file of list) {
+    if (gen !== ai.attachGen) return;
+    if (ai.attach.length + ai.attachBusy >= max) { aiSetAttachErr({ key: 'ai.err_file_count', params: {} }); break; }
+    ai.attachBusy += 1;
+    aiSyncCompose();
+    try {
+      const item = await aiPrepareFile(file);
+      if (gen !== ai.attachGen) continue;
+      const all = Core.aiCheckAttachments([...ai.attach, item].map(aiCheckInput));
+      if (!all || !all.ok) aiSetAttachErr(aiAttachErrOf(all, item.name));
+      else {
+        if (item.blob) item.url = URL.createObjectURL(item.blob);
+        delete item.blob;
+        ai.attach.push(item);
+      }
+    } catch (err) {
+      if (gen !== ai.attachGen) continue;
+      if (err && err.key) aiSetAttachErr(err);
+      else { console.warn('Вложение не прочиталось:', err); aiSetAttachErr({ key: 'ai.err_file_read', params: { name: file.name || '' } }); }
+    } finally {
+      if (gen === ai.attachGen) ai.attachBusy -= 1;
+      aiRenderAttach();
+      aiSyncCompose();
+    }
+  }
+}
+
+function aiRemoveAttach(item) {
+  ai.attach = ai.attach.filter((x) => x !== item);
+  if (item.url) URL.revokeObjectURL(item.url);
+  ai.attachErr = null;
+  aiRenderAttach();
+  aiSyncCompose();
+  el.aiInput.focus({ preventScroll: true });
+}
+
+/** Поле без вложений: миниатюры освобождаются, недочитанное отбрасывается. */
+function aiClearAttach() {
+  for (const it of ai.attach) if (it.url) URL.revokeObjectURL(it.url);
+  ai.attach = [];
+  ai.attachErr = null;
+  ai.attachBusy = 0;
+  ai.attachGen += 1;
+  if (!el.aiPanel.hidden && !el.aiBody.hidden) aiRenderAttach();
+}
+
+/** Плашки над полем и под ними строка ошибки. */
+function aiRenderAttach() {
+  el.aiAttachList.hidden = !ai.attach.length;
+  el.aiAttachList.replaceChildren(...ai.attach.map(aiChipNode));
+  el.aiAttachError.hidden = !ai.attachErr;
+  el.aiAttachError.textContent = ai.attachErr ? aiAttachText(ai.attachErr) : '';
+}
+
+/** Плашка вложения: у картинки — миниатюра из перекодированных байтов, у
+ *  файла — значок, имя и размер; крестик убирает. */
+function aiChipNode(it) {
+  const chip = elt('div', it.url ? 'ai-chip ai-chip-img' : 'ai-chip');
+  chip.title = `${it.name} · ${aiTypeLabel(it)} · ${aiSize(it.size)}`;
+  if (it.url) {
+    const img = elt('img', 'ai-chip-thumb');
+    img.src = it.url;
+    img.alt = it.name;
+    chip.append(img);
+  } else {
+    chip.insertAdjacentHTML('beforeend', icon('doc'));
+    const words = elt('span', 'ai-chip-words');
+    words.append(elt('span', 'ai-chip-name', it.name), elt('span', 'ai-chip-size', aiSize(it.size)));
+    chip.append(words);
+  }
+  const x = elt('button', 'ai-chip-x');
+  x.type = 'button';
+  x.title = t('ai.attach_remove');
+  x.setAttribute('aria-label', `${t('ai.attach_remove')}: ${it.name}`);
+  x.innerHTML = icon('x');
+  x.addEventListener('click', () => aiRemoveAttach(it));
+  chip.append(x);
+  return chip;
+}
+
+/** Что остаётся от вложения в ленте и истории: имя, тип и размер. */
+const aiFileMeta = (it) => ({ name: it.name, kind: it.kind, type: aiTypeLabel(it), size: it.size });
+
+/** Сервер не принял вложения (400 bad attachment, 413): из неотвеченного
+ *  сообщения они уходят, строка — у сообщения. Остался текст — «Повторить»
+ *  отправит его без них. */
+function aiRejectAttachments(chat) {
+  const last = chat.messages[chat.messages.length - 1];
+  let retry = false;
+  if (last && last.role === 'user') {
+    last.content = aiBlocks(last.content).filter((b) => !aiIsAttachBlock(b));
+    if (aiHasText(last)) retry = true;
+    else if (!last.content.length) chat.messages.pop();
+  }
+  aiSave(chat);
+  aiError('ai.err_attach_server', retry, chat);
+}
+
+// --- карточка предложения ------------------------------------------------------
+
+/** Последняя применённая карточка чата — «Отменить» только у неё. */
+function aiLastApplied(chat) {
+  const items = (chat || ai.chat || { items: [] }).items;
+  for (let i = items.length - 1; i >= 0; i -= 1) {
+    const it = items[i];
+    if (it.kind === 'card' && it.state === 'applied' && it.undo) return it;
+  }
+  return null;
+}
+
+/** Дата для подстроки: «17 окт.», а если время не полночь — «17 окт., 18:00». */
+function aiWhen(iso) {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return String(iso);
+  const hm = hhmm(ms);
+  return hm === '00:00' ? fmtDateShort(iso) : `${fmtDateShort(iso)}, ${hm}`;
+}
+
+/** Подстрока строки предложения: проект · статус · версия · теги · дедлайн ·
+ *  время работы · повтор. Имена ядро уже подставило, даты — сырые. */
+function aiOpSub(sub) {
+  if (!sub) return '';
+  const name = (v) => (v && typeof v === 'object' ? v.name || v.title || '' : v || '');
+  const parts = [name(sub.project), name(sub.status), name(sub.version)];
+  if (Array.isArray(sub.tags)) parts.push(sub.tags.map(name).filter(Boolean).join(', '));
+  if (sub.dueAt) parts.push(t('home.next_due', { date: aiWhen(sub.dueAt) }));
+  const slots = Array.isArray(sub.slots) ? sub.slots.filter((s) => s && !Number.isNaN(Date.parse(s.start)) && !Number.isNaN(Date.parse(s.end))) : [];
+  if (slots.length) parts.push(slotsSummary(slots, null));
+  // Повтор ядро отдаёт описанием ({key, vars} от describeRepeat).
+  if (sub.repeat) parts.push(typeof sub.repeat === 'string' ? sub.repeat : repeatWords(sub.repeat));
+  if (sub.done === true) parts.push(t('task.done_label'));
+  if (sub.done === false) parts.push(t('task.reopen'));
+  if (sub.notes) parts.push(t('tabs.notes'));
+  return parts.filter(Boolean).join(' · ');
+}
+
+/** Куда ведёт строка применённого предложения: созданная или изменённая
+ *  задача, созданный проект — если они ещё есть. */
+function aiLinkOf(card, i) {
+  const l = card.links && card.links[i];
+  if (!l || !l.id) return null;
+  if (l.kind === 'task' && getTask(l.id)) return l;
+  if (l.kind === 'project' && getProject(l.id)) return l;
+  return null;
+}
+
+function aiOpenLink(l) {
+  // На телефонной ширине панель закрывает экран целиком — уступает ему место.
+  if (window.innerWidth <= 480) closeAiPanel();
+  if (l.kind === 'task') selectTask(l.id);
+  else openProject(l.id);
+}
+
+/** Созданные id по порядку операций: ядро отдаёт их списками по видам. */
+function aiLinks(ops, created) {
+  const queue = {
+    create_task: [...((created && created.tasks) || [])],
+    create_project: [...((created && created.projects) || [])],
+  };
+  return ops.map((op) => {
+    if (!op) return null;
+    if (op.op === 'create_task') return { kind: 'task', id: queue.create_task.shift() || null };
+    if (op.op === 'create_project') return { kind: 'project', id: queue.create_project.shift() || null };
+    if (op.op === 'update_task') return { kind: 'task', id: op.id || null };
+    return null;
+  });
+}
+
+/** Пересечения предложенных отрезков с тем, что уже стоит в календаре, и
+ *  между собой (Core.aiSlotConflicts). Пересекаться можно: человек видит
+ *  предупреждение у строки и подтверждает «Применить». Одно и то же
+ *  пересечение (задача и время) — один раз. */
+function aiConflicts(card) {
+  let list = [];
+  try { list = Core.aiSlotConflicts(state, card.ops) || []; } catch (err) { console.error('Пересечения не посчитались:', err); }
+  const seen = new Set();
+  return list.filter((c) => {
+    if (!c) return false;
+    const key = `${c.index}|${c.taskId || c.title}|${c.start}|${c.end}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+/** «10:00–11:00»; не в тот же день, что предложенный отрезок, — с датой. */
+function aiConflictTime(c) {
+  const s = Date.parse(c.start);
+  const e = Date.parse(c.end);
+  if (Number.isNaN(s) || Number.isNaN(e)) return '';
+  const range = `${hhmm(s)}–${hhmm(e)}`;
+  const at = c.slot ? Date.parse(c.slot.start) : NaN;
+  return !Number.isNaN(at) && new Date(at).toDateString() === new Date(s).toDateString() ? range : `${fmtDateShort(c.start)}, ${range}`;
+}
+
+function aiOpNode(row, card, i, conflicts) {
+  const kind = row.kind || (card.ops[i] && card.ops[i].op) || '';
+  const li = elt('li', 'ai-op');
+  // Тег или версия с занятым именем заново не заводятся — ссылка идёт на
+  // существующие (exists): галочка и слово без «нового».
+  const known = !!row.exists;
+  li.innerHTML = icon(known ? 'check' : /^update/.test(kind) ? 'pen-line' : 'plus');
+  const main = elt('div', 'ai-op-main');
+  const title = elt('div', 'ai-op-title');
+  const word = known ? t(kind === 'create_version' ? 'version.label' : 'tag.dialog_edit') : t(`ai.op_${kind}`);
+  title.append(elt('span', 'ai-op-kind', word), ' ');
+  const name = row.title || t('task.no_name');
+  const link = card.state === 'applied' ? aiLinkOf(card, i) : null;
+  if (link) {
+    const b = elt('button', 'ai-op-link', name);
+    b.type = 'button';
+    b.addEventListener('click', () => aiOpenLink(link));
+    title.append(b);
+  } else {
+    title.append(elt('span', 'ai-op-name', name));
+  }
+  main.append(title);
+  const sub = aiOpSub(row.sub);
+  if (sub) main.append(elt('div', 'ai-op-sub', sub));
+  for (const c of conflicts || []) {
+    if (c.index !== i) continue;
+    const warn = elt('div', 'ai-op-warn');
+    warn.innerHTML = icon('danger');
+    warn.append(elt('span', '', t('ai.conflict', { title: c.title || t('task.no_name'), time: aiConflictTime(c) })));
+    main.append(warn);
+  }
+  li.append(main);
+  return li;
+}
+
+/** Ошибки проверки (aiValidate) — ключи перевода с подстановками, у каждой
+ *  номер строки предложения: строка подписывается своим названием. failed —
+ *  проверка прошла, а применить не вышло (данные успели измениться). */
+function aiCardErrors(errors, rows, failed) {
+  const box = elt('div', 'ai-card-error');
+  if (failed) box.append(elt('div', '', t('ai.apply_failed')));
+  const list = elt('ul');
+  for (const e of errors || []) {
+    const msg = t((e && e.message) || 'ai.invalid', (e && e.params) || undefined);
+    const row = e && Number.isInteger(e.index) && e.index >= 0 ? rows[e.index] : null;
+    list.append(elt('li', '', row && row.title ? `${row.title}: ${msg}` : msg));
+  }
+  if (list.childElementCount) box.append(list);
+  return box;
+}
+
+function aiCardNode(card, lastApplied) {
+  const box = elt('div', 'ai-card');
+  box.dataset.id = card.id;
+  if (card.summary) box.append(elt('div', 'ai-card-title', card.summary));
+  let rows = [];
+  try {
+    rows = Core.aiProposalRows(state, card.ops, { statusName: (k) => t(`status.default_${k}`) }) || [];
+  } catch (err) { console.error('Строки предложения не собрались:', err); }
+  const conflicts = card.state === 'open' ? aiConflicts(card) : [];
+  const list = elt('ul', 'ai-ops');
+  rows.forEach((row, i) => list.append(aiOpNode(row, card, i, conflicts)));
+  box.append(list);
+  if (card.state === 'open') {
+    let check = { ok: true, errors: [] };
+    try { check = Core.aiValidate(state, card.ops); } catch (err) { console.error('Предложение не проверилось:', err); check = { ok: false, errors: [] }; }
+    if (!check.ok || card.failed) box.append(aiCardErrors(check.ok ? [] : check.errors, rows, card.failed && check.ok));
+    // Разговор ушёл дальше, а решения нет — модель знает, что карточка ждёт.
+    if (card.sent) box.append(elt('div', 'ai-card-note', t('ai.pending')));
+    const actions = elt('div', 'ai-card-actions');
+    const apply = elt('button', 'btn-accent', t('ai.apply'));
+    apply.type = 'button';
+    apply.dataset.act = 'apply';
+    apply.disabled = !check.ok;
+    apply.addEventListener('click', () => aiApplyCard(card));
+    const decline = elt('button', 'ghost', t('ai.decline'));
+    decline.type = 'button';
+    decline.dataset.act = 'decline';
+    decline.addEventListener('click', () => aiDeclineCard(card));
+    actions.append(apply, decline);
+    box.append(actions);
+  } else {
+    const st = elt('div', 'ai-card-state');
+    const label = card.state === 'applied' ? t('ai.applied', { n: card.ops.length })
+      : card.state === 'undone' ? t('ai.undone') : t('ai.declined');
+    st.append(elt('span', '', label));
+    if (card === lastApplied) {
+      const undo = elt('button', 'linklike', t('ai.undo'));
+      undo.type = 'button';
+      undo.dataset.act = 'undo';
+      undo.addEventListener('click', () => aiUndoCard(card));
+      st.append(undo);
+    }
+    box.append(st);
+  }
+  return box;
+}
+
+/** «Применить». Отрезки пересекаются с другими задачами — сначала вопрос
+ *  «Поставить в то же время?»; «Отмена» оставляет карточку как была. */
+async function aiApplyCard(card) {
+  if (card.state !== 'open' || ai.asking.has(card)) return;
+  const chat = ai.chat;
+  let check;
+  try { check = Core.aiValidate(state, card.ops); } catch (err) { console.error('Предложение не проверилось:', err); check = { ok: false, errors: [] }; }
+  if (!check.ok) { aiRenderLog(); return; }
+  const conflicts = aiConflicts(card);
+  if (conflicts.length) {
+    const shown = conflicts.slice(0, 5).map((c) => `«${c.title || t('task.no_name')}» ${aiConflictTime(c)}`);
+    if (conflicts.length > 5) shown.push('…');
+    ai.asking.add(card);
+    const ok = await confirmDialog(t('ai.conflict_confirm', { list: shown.join(', ') }), {
+      title: t('ai.conflict_title'), okLabel: t('ai.conflict_ok'), cancelLabel: t('common.cancel'), danger: false,
+    });
+    ai.asking.delete(card);
+    if (!ok || card.state !== 'open') return;
+    try { check = Core.aiValidate(state, card.ops); } catch { check = { ok: false, errors: [] }; }
+    if (!check.ok) { aiRenderLog(); return; }
+  }
+  flushEditor();
+  let res;
+  try {
+    // Ядро проверяет ops само и ждёт исходные: нормализованные — для его
+    // внутреннего применения, а не для повторной проверки.
+    res = Core.aiApply(state, card.ops, { uid, now: new Date().toISOString(), statusName: (k) => t(`status.default_${k}`) });
+  } catch (err) {
+    console.error('Предложение агента не применилось:', err);
+    res = null;
+  }
+  if (!res || res.ok === false) {
+    card.failed = true;
+    aiRenderLog();
+    return;
+  }
+  card.state = 'applied';
+  card.failed = false;
+  card.undo = res.undo || null;
+  card.links = aiLinks(card.ops, res.created);
+  // Закрытые предложением задачи с повтором переходят дальше, как с галочки.
+  for (const id of res.closed || []) afterTaskClosed(getTask(id), false);
+  refreshEditorsFromRemote();
+  // Панель не модалка: закрытые предложением строки на странице под ней
+  // уезжают к выполненным и отменённым тем же переездом, что с галочки.
+  flipSoon();
+  render();
+  scheduleSave();
+  toast(t('ai.applied', { n: card.ops.length }));
+  aiSave(chat);
+  aiRenderLog();
+}
+
+function aiDeclineCard(card) {
+  if (card.state !== 'open') return;
+  card.state = 'declined';
+  aiSave(ai.chat);
+  aiRenderLog();
+}
+
+function aiUndoCard(card) {
+  if (card.state !== 'applied' || !card.undo) return;
+  flushEditor();
+  let res;
+  try { res = Core.aiUndo(state, card.undo); } catch (err) { console.error('Предложение агента не отменилось:', err); return; }
+  card.state = 'undone';
+  card.undo = null;
+  refreshEditorsFromRemote();
+  flipSoon();
+  render();
+  scheduleSave();
+  // Что задачу уже меняли после применения (поле правили, по ней записано
+  // время), ядро не отменяет и называет в kept: отмена вышла не полной, и
+  // человек должен это знать. Ядро без kept — обычный тост.
+  const kept = !!(res && Array.isArray(res.kept) && res.kept.length);
+  toast(t(kept ? 'ai.undo_kept' : 'ai.undone'));
+  aiSave(ai.chat);
+  aiRenderLog();
+}
+
+// --- инструменты ---------------------------------------------------------------
+
+function aiAddCard(block, chat) {
+  if (chat.items.some((it) => it.kind === 'card' && it.id === block.id)) return;
+  const input = block.input || {};
+  chat.items.push({
+    kind: 'card', id: block.id, summary: String(input.summary || ''),
+    ops: Array.isArray(input.ops) ? input.ops : [], state: 'open', sent: false,
+  });
+}
+
+function aiAddStep(block, chat) {
+  let step = chat.items.find((it) => it.kind === 'step' && it.id === block.id);
+  if (!step) {
+    step = { kind: 'step', id: block.id, tool: block.name, done: false };
+    chat.items.push(step);
+  }
+  return step;
+}
+
+/** «17 окт. – 31 окт.» — период, в котором искали окна. */
+function aiRange(from, to) {
+  if (Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to))) return '';
+  return `${fmtDateShort(from)} – ${fmtDateShort(to)}`;
+}
+
+/** Часы, в которых искались окна, — для ответа модели: рабочие часы из
+ *  настроек (base, Core.aiWorkHours), а поля, которые модель передала в
+ *  hours («вечером», «в выходные»), — вместо них. Сами окна считает ядро по
+ *  тем же двум входам. */
+function aiToolHours(base, hours) {
+  if (!hours || typeof hours !== 'object') return base;
+  return {
+    start: typeof hours.start === 'string' ? hours.start : base.start,
+    end: typeof hours.end === 'string' ? hours.end : base.end,
+    days: Array.isArray(hours.days) ? hours.days : base.days,
+  };
+}
+
+/** Инструмент, который считает ядро: свободные окна или записанное время.
+ *  now — «сейчас» того же круга, что ушёл модели. */
+function aiRunTool(block, now, chat) {
+  const step = aiAddStep(block, chat);
+  const input = block.input || {};
+  try {
+    let out;
+    if (block.name === 'free_windows') {
+      const base = Core.aiWorkHours(state.settings);
+      out = {
+        windows: Core.aiFreeWindows(state, { from: input.from, to: input.to, minMinutes: input.minMinutes, now, workHours: base, hours: input.hours }),
+        workHours: aiToolHours(base, input.hours),
+      };
+      step.range = aiRange(input.from, input.to);
+    } else {
+      out = Core.aiTimeSpent(state, { from: input.from, to: input.to, projectId: input.projectId, now });
+      step.time = fmtShort(Math.round(Number(out && out.totalMin) || 0) * 60000);
+    }
+    step.done = true;
+    return { type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(out) };
+  } catch (err) {
+    console.error('Инструмент агента не посчитался:', err);
+    step.done = true;
+    step.failed = true;
+    return { type: 'tool_result', tool_use_id: block.id, content: String((err && err.message) || err), is_error: true };
+  }
+}
+
+/** Ответ на propose_changes — решение человека; нет решения — pending, и
+ *  карточка остаётся с кнопками. */
+function aiCardResult(id, chat) {
+  const card = chat.items.find((it) => it.kind === 'card' && it.id === id);
+  if (card) card.sent = true;
+  const status = !card || card.state === 'open' ? 'pending' : card.state === 'applied' ? 'applied' : 'declined';
+  return { type: 'tool_result', tool_use_id: id, content: status };
+}
+
+function aiResultFor(block, now, chat) {
+  if (block.name === 'propose_changes') return aiCardResult(block.id, chat);
+  if (AI_STEPS[block.name]) return aiRunTool(block, now || new Date().toISOString(), chat);
+  return { type: 'tool_result', tool_use_id: block.id, content: `unknown tool: ${block.name}`, is_error: true };
+}
+
+/** Ответы на инструменты из последнего ответа модели, которые ещё не ушли:
+ *  карточки — решением человека, остальные — посчитанные на месте. */
+function aiOpenResults(chat) {
+  const last = chat.messages[chat.messages.length - 1];
+  if (!last || last.role !== 'assistant') return [];
+  return aiBlocks(last.content).filter((b) => b && b.type === 'tool_use').map((b) => aiResultFor(b, null, chat));
+}
+
+// --- вызов функции -------------------------------------------------------------
+
+/** Текст ответа по мере прихода — в живую строку ленты. */
+function aiAccText(acc) {
+  const parts = ((acc && acc.blocks) || []).filter((b) => b && b.type === 'text' && b.text).map((b) => b.text);
+  return parts.length ? parts.join('\n\n') : String((acc && acc.text) || '');
+}
+
+/** Живая строка ответа — в своём чате; рисуется, только если он открыт. */
+function aiLiveText(acc, chat) {
+  const c = chat || ai.busyChat || ai.chat;
+  const text = aiAccText(acc);
+  if (!text || !c) return;
+  if (!ai.live) {
+    ai.live = { kind: 'msg', role: 'assistant', text };
+    c.items.push(ai.live);
+    ai.waiting = false;
+    aiRenderLog();
+    return;
+  }
+  ai.live.text = text;
+  if (c !== ai.chat) return;
+  if (ai.waiting) { ai.waiting = false; aiRenderLog(); return; }
+  if (!ai.liveNode || !ai.liveNode.isConnected) { aiRenderLog(); return; }
+  aiGrowLive(ai.liveNode, aiTextHtml(text));
+}
+
+/** Ответ дописывается: строка растёт плавно, а не прыжком на высоту новой
+ *  строки — высота едет от прежней к новой (.ai-grow, переход height), и
+ *  лента едет за ней вниз, если человек и так был внизу. Прокрутил вверх —
+ *  читать не мешаем. Без движения — сразу. */
+function aiGrowLive(node, html) {
+  const log = el.aiLog;
+  const atEnd = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
+  const from = node.getBoundingClientRect().height;
+  node.style.height = '';
+  node.innerHTML = html;
+  if (!reducedMotion()) {
+    node.classList.add('ai-grow');
+    const to = node.getBoundingClientRect().height;
+    if (to > from + 0.5 && parseFloat(getComputedStyle(node).transitionDuration) > 0) {
+      node.style.height = `${from}px`;
+      void node.offsetHeight;
+      node.style.height = `${to}px`;
+    }
+  }
+  if (atEnd) aiFollow();
+}
+
+/** Лента стоит у низа, пока живой ответ растёт: каждый кадр, ещё ~0,26 с
+ *  после последней строки. Человек прокрутил вверх — перестаёт. */
+function aiFollow() {
+  const log = el.aiLog;
+  if (reducedMotion()) { log.scrollTop = log.scrollHeight; return; }
+  ai.followUntil = animNow() + 260;
+  if (ai.followRaf) return;
+  let last = log.scrollTop;
+  const step = () => {
+    if (el.aiPanel.hidden || log.scrollTop < last - 1 || animNow() > ai.followUntil) { ai.followRaf = 0; return; }
+    log.scrollTop = log.scrollHeight;
+    last = log.scrollTop;
+    ai.followRaf = requestAnimationFrame(step);
+  };
+  step();
+}
+
+function aiOnEvent(ev, acc, chat) {
+  const d = ev && ev.data && typeof ev.data === 'object' ? ev.data : {};
+  const type = (ev && ev.event) === 'lancible' ? 'lancible' : d.type || (ev && ev.event);
+  if (type === 'lancible') {
+    const remaining = acc && acc.remaining !== null && acc.remaining !== undefined ? acc.remaining : d.remaining;
+    const limit = acc && acc.limit !== null && acc.limit !== undefined ? acc.limit : d.limit;
+    if (Number.isFinite(remaining) && Number.isFinite(limit)) { ai.remaining = remaining; ai.limit = limit; aiRenderQuota(); }
+    return;
+  }
+  if (type === 'content_block_start' && d.content_block && d.content_block.type === 'tool_use') {
+    if (AI_STEPS[d.content_block.name]) aiAddStep(d.content_block, chat);
+    ai.waiting = true;
+    aiRenderLog();
+    return;
+  }
+  if (type === 'content_block_delta' && d.delta && d.delta.type === 'text_delta') aiLiveText(acc, chat);
+}
+
+/** Снимок данных и «сейчас» на один круг: все вызовы круга инструментов
+ *  уходят с тем же context и now, что первый, — модель считает от одной
+ *  картины (и кеш промпта на сервере её не теряет). */
+function aiFrame() {
+  const now = new Date().toISOString();
+  const tz = aiTimeZone();
+  const context = Core.aiSnapshot(state, {
+    now, tz, lang: lang(), focus: { view: state.ui.view, projectId: state.ui.projectId, taskId: selectedId },
+  });
+  return { now, tz, lang: lang(), context };
+}
+
+/** Один вызов функции: поток ответа, ошибки. Возвращает собранный ответ
+ *  (acc ядра) или null — тогда ошибка уже в ленте чата. */
+async function aiCall(run, frame, chat) {
+  ai.live = null;
+  ai.liveNode = null;
+  ai.waiting = true;
+  aiRenderLog(true);
+  let token = null;
+  let sid = null;
+  try {
+    const { data } = await sb.auth.getSession();
+    token = data && data.session && data.session.access_token;
+    sid = data && data.session && data.session.user ? data.session.user.id : null;
+  } catch (err) { console.error('Нет сессии для агента:', err); }
+  if (run !== ai.run) return null;
+  // Вкладка отстала или сеанс в общем хранилище — другого аккаунта: вызов
+  // ушёл бы его токеном и тратил бы его лимит (foreignSession).
+  if (scopeStale || (token && sid && currentUser && sid !== currentUser.id)) {
+    showStaleNotice();
+    aiError('accounts.other_tab', false, chat);
+    return null;
+  }
+  if (!token) { ai.needAuth = true; aiRender(); return null; }
+  if (ai.limitUntil > Date.now() && Core.aiCountsAsMessage(chat.messages)) { aiError('ai.limit_reached', false, chat); return null; }
+
+  let res;
+  const ctrl = new AbortController();
+  ai.ctrl = ctrl;
+  try {
+    res = await fetch(AI_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chat.messages, context: frame.context, lang: frame.lang, tz: frame.tz, now: frame.now }),
+      signal: ctrl.signal,
+    });
+  } catch (err) {
+    if (run === ai.run) { console.warn('Агент недоступен по сети:', err); aiError('ai.error_network', true, chat); }
+    return null;
+  }
+  if (run !== ai.run) return null;
+  if (!res.ok) {
+    if (res.status === 401) { ai.needAuth = true; aiRender(); return null; }
+    if (res.status === 404) { aiError('ai.unavailable', false, chat); return null; }
+    if (res.status === 429) {
+      const j = await res.json().catch(() => ({}));
+      if (run !== ai.run) return null;
+      // Частота: не больше нескольких сообщений в минуту — «Подождите N с» и
+      // «Повторить», когда время выйдет. Суточный лимит — ниже.
+      if (j && j.error === 'rate') {
+        const sec = Math.max(1, Math.ceil(Number(j.retryAfter) || Number(res.headers.get('retry-after')) || 10));
+        aiError('ai.rate_wait', true, chat, { n: sec }, sec * 1000);
+        return null;
+      }
+      // Суточный бюджет по цене (19 октября 2026): до полуночи UTC повтор
+      // упадёт так же — без «Повторить». Счётчик сообщений не трогаем: он о
+      // другом, сообщения могли и остаться.
+      if (j && j.error === 'budget') {
+        aiError('ai.budget', false, chat);
+        return null;
+      }
+      ai.remaining = 0;
+      if (Number.isFinite(j && j.limit)) ai.limit = j.limit;
+      ai.limitUntil = Date.parse(j && j.resetAt) || 0;
+      aiRenderQuota();
+      aiError('ai.limit_reached', false, chat);
+      return null;
+    }
+    if (res.status === 400 || res.status === 413) {
+      const j = await res.json().catch(() => ({}));
+      if (run !== ai.run) return null;
+      if (res.status === 413 || (j && j.error === 'bad attachment')) {
+        console.warn('Сервер не принял вложение:', j && j.detail);
+        aiRejectAttachments(chat);
+        return null;
+      }
+      // Переписка длиннее общего предела текста функции: повтор упадёт так
+      // же — без «Повторить», с советом начать новый чат.
+      if (j && j.error === 'too long') {
+        aiError('ai.too_long', false, chat);
+        return null;
+      }
+    }
+    aiError('ai.error_network', true, chat);
+    return null;
+  }
+
+  let acc = Core.aiStreamStep(null, null); // чистый acc ядра
+  let stopped = false;
+  let buf = '';
+  const feed = (chunk, end) => {
+    buf += chunk;
+    // Последний кадр без пустой строки после него — тоже кадр.
+    const { events, rest } = Core.aiParseSse(end ? `${buf}\n\n` : buf);
+    buf = end ? '' : rest;
+    for (const ev of events) {
+      acc = Core.aiStreamStep(acc, ev);
+      if (acc.done || ev.event === 'message_stop') stopped = true;
+      aiOnEvent(ev, acc, chat);
+    }
+  };
+  try {
+    if (res.body && res.body.getReader) {
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (run !== ai.run) { reader.cancel().catch(() => {}); return null; }
+        if (done) { feed(dec.decode(), true); break; }
+        feed(dec.decode(value, { stream: true }), false);
+      }
+    } else {
+      feed(await res.text(), true);
+    }
+  } catch (err) {
+    if (run === ai.run) { console.warn('Поток агента оборвался:', err); aiDropLive(chat); aiError('ai.error_network', true, chat); }
+    return null;
+  }
+  if (run !== ai.run) return null;
+  ai.ctrl = null;
+  if (acc.error || !stopped) {
+    if (acc.error) console.warn('Агент ответил ошибкой:', acc.error);
+    aiDropLive(chat);
+    aiError('ai.error_network', true, chat);
+    return null;
+  }
+  if (ai.live) ai.live.text = aiAccText(acc);
+  ai.live = null;
+  ai.liveNode = null;
+  return acc;
+}
+
+/** Ответ оборвался — недописанный текст уходит: «Повторить» спросит заново. */
+function aiDropLive(chat) {
+  if (ai.live && chat) chat.items = chat.items.filter((it) => it !== ai.live);
+  ai.live = null;
+  ai.liveNode = null;
+}
+
+/** Ход кончился: вложения сделали своё — в истории вместо них отметка
+ *  (Core.aiCompactHistory), байты больше никуда не уходят. */
+function aiEndTurn(chat) {
+  try { chat.messages = Core.aiCompactHistory(chat.messages) || chat.messages; } catch (err) { console.warn('История агента не сжалась:', err); }
+  aiSave(chat);
+}
+
+/** Ответ модели и круг инструментов: свободные окна и записанное время
+ *  считаются на месте и сразу уходят следующим вызовом — не больше
+ *  AI_MAX_ROUNDS кругов подряд; предложение ждёт решения человека. Ответ
+ *  пишется в свой чат, даже если человек ушёл в список или в другой. */
+async function aiRun(chat) {
+  const c = chat || ai.chat;
+  if (ai.busy || !c) return;
+  const run = ai.run;
+  ai.busyChat = c;
+  aiSetBusy(true);
+  try {
+    if (typeof Core.aiSnapshot !== 'function') { aiError('ai.unavailable', false, c); return; }
+    let frame;
+    try { frame = aiFrame(); } catch (err) { console.error('Снимок для агента не собрался:', err); aiError('ai.unavailable', false, c); return; }
+    for (let round = 0; ; round += 1) {
+      const acc = await aiCall(run, frame, c);
+      if (!acc || run !== ai.run) return;
+      // Блоки — как отдало ядро, thinking с подписью тоже: модели их надо
+      // вернуть неизменными. Пустой ответ в историю не кладётся.
+      const msg = Core.aiAssistantMessage(acc);
+      const content = aiBlocks(msg && msg.content);
+      if (acc.stopReason === 'refusal') {
+        // Отказ модели. Без слов — вопрос человека из истории уходит: иначе
+        // он ушёл бы снова со следующим сообщением и получил бы тот же отказ.
+        if (content.length) c.messages.push(msg);
+        else if (c.messages.length && c.messages[c.messages.length - 1].role === 'user') c.messages.pop();
+        c.items.push({ kind: 'notice', key: 'ai.refused' });
+        aiEndTurn(c);
+        return;
+      }
+      if (!content.length) { aiEndTurn(c); return; }
+      c.messages.push(msg);
+      const uses = content.filter((b) => b && b.type === 'tool_use');
+      for (const b of uses) if (b.name === 'propose_changes') aiAddCard(b, c);
+      const more = uses.some((b) => b.name !== 'propose_changes');
+      if (!more || round >= AI_MAX_ROUNDS) { aiEndTurn(c); return; }
+      c.messages.push({ role: 'user', content: uses.map((b) => aiResultFor(b, frame.now, c)) });
+      aiSave(c);
+    }
+  } finally {
+    if (run === ai.run) aiSetBusy(false);
+  }
+}
+
+/** Сообщение человека: ответы на открытые инструменты, блоки вложений, текст.
+ *  С главного экрана — первое сообщение нового чата: чат заводится в списке и
+ *  открывается без въезда, поле съезжает вниз (aiFlowIn). */
+function aiSend(raw) {
+  const text = String(raw || '').trim();
+  const fromHome = ai.page !== 'chat';
+  let chat = fromHome ? null : ai.chat;
+  const files = ai.attach.slice();
+  if ((!text && !files.length) || ai.busy || ai.attachBusy || (!fromHome && !chat)) return;
+  if (!aiSignedIn()) { aiRender(); return; }
+  // Отставшая вкладка агента не зовёт: набранное остаётся в поле.
+  if (staleGuard()) return;
+  let blocks = [];
+  if (files.length) {
+    const check = Core.aiCheckAttachments(files.map(aiCheckInput));
+    if (!check || !check.ok) { aiSetAttachErr(aiAttachErrOf(check, '')); return; }
+    try { blocks = Core.aiAttachmentBlocks(files.map(aiCheckInput)) || []; } catch (err) {
+      console.error('Вложения не собрались в блоки:', err);
+      aiSetAttachErr({ key: 'ai.err_file_type', params: { name: files[0].name } });
+      return;
+    }
+  }
+  const top0 = fromHome ? el.aiCompose.getBoundingClientRect().top : 0;
+  if (fromHome) {
+    if (ai.chat) aiDropDraft(ai.chat);
+    chat = { id: uid(), title: aiTitleOf(text, files), createdAt: new Date().toISOString(), messages: [], items: [], draft: null };
+    ai.chat = chat;
+  }
+  chat.items = chat.items.filter((it) => it.kind !== 'error');
+  const said = [...blocks, ...(text ? [{ type: 'text', text }] : [])];
+  const last = chat.messages[chat.messages.length - 1];
+  // Прошлый вызов не дошёл — сообщение человека уже в истории: новое
+  // дописывается к нему, роли должны чередоваться.
+  if (last && last.role === 'user') last.content = [...aiBlocks(last.content), ...said];
+  else chat.messages.push({ role: 'user', content: [...aiOpenResults(chat), ...said] });
+  const item = { kind: 'msg', role: 'user', text };
+  if (files.length) item.files = files.map(aiFileMeta);
+  chat.items.push(item);
+  el.aiInput.value = '';
+  aiClearAttach();
+  aiSave(chat);
+  if (fromHome) {
+    ai.page = 'chat';
+    ai.pageIn = null;
+    aiRender(true);
+    aiFlowIn(top0);
+  } else aiRender(true);
+  aiRun(chat);
+}
+
+function aiRetry() {
+  const chat = ai.chat;
+  if (ai.busy || !chat) return;
+  chat.items = chat.items.filter((it) => it.kind !== 'error');
+  const last = chat.messages[chat.messages.length - 1];
+  if (!last || last.role !== 'user') { aiRenderLog(); return; }
+  aiRun(chat);
+}
+
+for (const b of aiButtons()) b.addEventListener('click', toggleAiPanel);
+el.aiClose.addEventListener('click', closeAiPanel);
+el.aiBack.addEventListener('click', aiBack);
+// Классы перехода с главного в новый чат снимаются, когда он доиграл: иначе
+// следующий раз их нечем было бы перезапустить.
+el.aiLog.addEventListener('animationend', (e) => { if (e.target === el.aiLog) el.aiLog.classList.remove('ai-log-in'); });
+el.aiCompose.addEventListener('animationend', (e) => { if (e.target === el.aiCompose) el.aiCompose.classList.remove('ai-compose-down'); });
+el.aiHello.addEventListener('animationend', (e) => { if (e.target.classList.contains('es-art')) el.aiHello.classList.remove('ai-breathe'); });
+el.aiMore.addEventListener('click', () => {
+  const id = ai.chat && ai.chat.id;
+  if (id) openMenu(el.aiMore, [{ label: t('ai.delete_chat'), danger: true, onClick: () => aiDeleteChat(id) }], { toggle: true });
+});
+el.aiSigninBtn.addEventListener('click', () => openAuthModal('signin'));
+/** Enter — отправить, Shift+Enter — перенос строки. */
+function aiOnKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); aiSend(el.aiInput.value); }
+}
+function aiOnSubmit(e) {
+  e.preventDefault();
+  aiSend(el.aiInput.value);
+}
+el.aiCompose.addEventListener('submit', aiOnSubmit);
+el.aiInput.addEventListener('input', aiSyncCompose);
+el.aiInput.addEventListener('keydown', aiOnKey);
+// Скрепка — системное окно выбора файла (в нём — расширения из AI_ATTACH);
+// выбранное — тем же путём, что перетаскивание и буфер.
+function aiOnFilePicked() {
+  const files = [...(el.aiFile.files || [])];
+  el.aiFile.value = '';
+  aiAddFiles(files);
+}
+// Ctrl+V с картинкой (или файлом) в буфере — вложение; текст вставляется как
+// всегда.
+function aiOnPaste(e) {
+  const items = [...((e.clipboardData && e.clipboardData.items) || [])];
+  const files = items.filter((it) => it.kind === 'file').map((it) => it.getAsFile()).filter(Boolean);
+  if (!files.length) return;
+  e.preventDefault();
+  aiAddFiles(files);
+}
+// Файлы, перетащенные на панель: пока они над ней — подсказка поверх
+// (.ai-drop); отпустили — во вложения поля открытой страницы.
+function aiDragsFiles(e) {
+  return aiSignedIn() && !!e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+}
+function aiOnDrag(e) {
+  if (!aiDragsFiles(e)) return;
+  if (e.type === 'dragleave') {
+    ai.dragDepth = Math.max(0, ai.dragDepth - 1);
+    if (!ai.dragDepth) el.aiPanel.classList.remove('ai-drop');
+    return;
+  }
+  e.preventDefault();
+  if (e.type === 'dragover') { e.dataTransfer.dropEffect = 'copy'; return; }
+  if (e.type === 'dragenter') { ai.dragDepth += 1; el.aiPanel.classList.add('ai-drop'); return; }
+  ai.dragDepth = 0;
+  el.aiPanel.classList.remove('ai-drop');
+  aiAddFiles(e.dataTransfer.files);
+}
+el.aiFile.accept = Core.AI_ATTACH.accept;
+el.aiAttach.addEventListener('click', () => el.aiFile.click());
+el.aiFile.addEventListener('change', aiOnFilePicked);
+el.aiInput.addEventListener('paste', aiOnPaste);
+for (const type of ['dragenter', 'dragover', 'dragleave', 'drop']) el.aiPanel.addEventListener(type, aiOnDrag);
+// Esc при фокусе внутри панели — закрыть её. Открытое меню («⋯») и окно
+// подтверждения закрываются первыми: их ловят свои обработчики, а этот до
+// них ещё не дошёл бы.
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !aiOpen() || !el.aiPanel.contains(document.activeElement)) return;
+  if (!el.ctxMenu.hidden || !el.confirmBackdrop.hidden) return;
+  closeAiPanel();
+}, true);
 
 // ---------------------------------------------------------------------------
 // Старт
@@ -7011,6 +11590,14 @@ async function init() {
   renderCurrency();
   buildSwatches();
 
+  // Чья область открыта — до загрузки: у каждого аккаунта свои данные.
+  let session = null;
+  await loadDeviceId();
+  try {
+    session = await prepareAccountsOnStart();
+  } catch (err) {
+    console.error('Не удалось открыть аккаунт:', err);
+  }
   try {
     const loaded = await window.api.load();
     if (loaded && typeof loaded === 'object') state = loaded;
@@ -7018,6 +11605,11 @@ async function init() {
     console.error('Не удалось загрузить данные:', err);
     toast(t('toast.load_error'));
   }
+  // Пачка журнала области: очередь своих правок пережила перезапуск.
+  takeSync2(state, scopeUid);
+  scopeSwitching = false;
+  // Первая область загружена — смены области (openScope) больше не ждут.
+  scopeQueueOpen();
 
   migrate();
   reopenDueTasks(Date.now());
@@ -7034,6 +11626,11 @@ async function init() {
   selectedId = null;
   setCalMode(calState.mode);
   scheduleSave();
+  refreshDeviceScopes();
+  // Первая синхронизация — уже с данными своей области. Её ждёт startRoute.
+  (session ? afterSignedIn({ silent: true }) : Promise.resolve())
+    .catch((err) => console.error('Не удалось восстановить сессию:', err))
+    .finally(firstSyncDone);
   await startRoute(); // открывает экран из адреса и рисует его
 
   const skeleton = $('app-skeleton');
@@ -7127,6 +11724,7 @@ function renderVersionDialog() {
     markDuplicate();
     nameInput.addEventListener('input', (e) => {
       v.name = e.target.value;
+      touchProject(v.projectId);
       markDuplicate();
       render();
       scheduleSave();
@@ -7141,6 +11739,7 @@ function renderVersionDialog() {
         const other = list[act === 'up' ? i - 1 : i + 1];
         if (!other) return;
         [v.order, other.order] = [other.order, v.order];
+        touchProject(v.projectId);
         renderVersionDialog();
         render();
         scheduleSave();
@@ -7163,6 +11762,7 @@ function openReleaseMenu(anchor, v) {
       selected: !v.releasedAt,
       onClick: () => {
         v.releasedAt = null;
+        touchProject(v.projectId);
         renderVersionDialog();
         render();
         scheduleSave();
@@ -7174,6 +11774,7 @@ function openReleaseMenu(anchor, v) {
       onClick: () => {
         openDatePicker(anchor, dayKey(v.releasedAt ? new Date(v.releasedAt) : new Date()), (key) => {
           v.releasedAt = keyToDate(key).toISOString();
+          touchProject(v.projectId);
           renderVersionDialog();
           render();
           scheduleSave();
@@ -7190,6 +11791,7 @@ function addVersion() {
   state.versions.push({
     id: uid(), projectId: pid, name: t('version.add'), releasedAt: null, order: list.length,
   });
+  touchProject(pid);
   renderVersionDialog();
   render();
   scheduleSave();
@@ -7214,6 +11816,7 @@ async function deleteVersion(v) {
   }
   state.versions = state.versions.filter((x) => x.id !== v.id);
   versionsOf(v.projectId).forEach((x, i) => { x.order = i; });
+  touchProject(v.projectId);
   renderVersionDialog();
   render();
   scheduleSave();
@@ -7403,7 +12006,7 @@ function calGroupHead(g) {
     ${icon('chevron-down', 'icon cdl-chev')}
     <span class="cdl-group-dot"></span>
     <span class="cdl-group-name">${escapeHtml(g.project ? g.project.name : t('xlsx.no_project'))}</span>
-    <span class="cdl-group-tot">${fmtDur(g.ms)} · ${fmtMoney(g.money, currencyOf(g.project ? g.project.id : null))}</span>`;
+    <span class="cdl-group-tot">${escapeHtml(fmtDurMoney(g.ms, g.money, currencyOf(g.project ? g.project.id : null)))}</span>`;
   b.addEventListener('click', () => toggleCalGroup(g.id, b.closest('.cdl-group'), b));
   return b;
 }
@@ -7475,6 +12078,7 @@ function addSessionSpan(task, startMs, endMs) {
   const ms = endMs - startMs;
   task.sessions = task.sessions || [];
   task.sessions.push({
+    id: uid(),
     start: new Date(startMs).toISOString(),
     end: new Date(endMs).toISOString(),
     ms,
@@ -7619,15 +12223,20 @@ function renderAgendaTime() {
   }
 }
 
-/** Плановый блок «времени работы»: полоса во всю ширину столбца под записями.
- *  Клик открывает задачу (см. agendaEndDrag): протянуть по нему можно, как по
- *  пустому месту, — запись заведётся. */
+/** Плановый блок «времени работы»: полоса под записями — во всю ширину
+ *  столбца, а с другими планами в тот же час — колонками (col, cols из
+ *  views.js), как записи. Поля по 1 px. Клик открывает задачу (см.
+ *  agendaEndDrag): протянуть по нему можно, как по пустому месту, — запись
+ *  заведётся. */
 function agendaPlan(p) {
   const node = document.createElement('div');
   node.className = 'ag-plan';
   node.style.setProperty('--pc', p.color);
   node.style.top = `${Core.dayFraction(p.start) * 100}%`;
   node.style.height = `${((p.end - p.start) / Core.DAY) * 100}%`;
+  const cols = p.cols || 1;
+  node.style.left = `calc(${((p.col || 0) / cols) * 100}% + 1px)`;
+  node.style.width = `calc(${(1 / cols) * 100}% - 2px)`;
   node.dataset.taskId = p.taskId;
   node.dataset.slotId = p.slotId || '';
   const range = `${fmtTime(p.start).slice(0, 5)}–${fmtTime(p.end).slice(0, 5)}`;
@@ -7860,7 +12469,7 @@ function agendaEndDrag(e) {
     let { start, end } = agDrag;
     // Простой щелчок по пустому месту — час с этой отметки, как в Google.
     if (!moved || end - start < AG_MIN_MIN * 60000) end = start + 3_600_000;
-    openAgendaDraft(Core.clampSpan(agDrag.dayStart, start, end, AG_MIN_MIN));
+    createOnAgenda(Core.clampSpan(agDrag.dayStart, start, end, AG_MIN_MIN));
     return;
   }
 
@@ -7916,6 +12525,15 @@ function revealProjectOnTime(projectId) {
   if (statsFilter.projectId === 'all' || statsFilter.projectId === projectId) return;
   statsFilter.projectId = 'all';
   statsFilter.versionId = 'all';
+}
+
+/** Новое с сетки — в любой час и любой день. Стоит в этом промежутке чужой
+ *  план — сначала вопрос (confirmSlotOverlap); «Отмена» — как будто и не
+ *  тянули. */
+async function createOnAgenda(span) {
+  const overlaps = Core.slotOverlaps(state.tasks, span, null);
+  if (overlaps.length && !(await confirmSlotOverlap(overlaps, false))) return;
+  openAgendaDraft(span);
 }
 
 /** Новая запись. Черновик задачи заводится сразу: только так окно может
@@ -7998,7 +12616,7 @@ function renderTaskModal() {
   // Проект меняют только у черновика: у заведённой задачи за ним тянутся
   // её статус и версия, и переезд был бы не переключателем, а переносом.
   el.tmdlgProj.disabled = !tmdlg.fresh;
-  el.tmdlgTot.textContent = `${fmtDur(taskElapsedMs(task))} · ${fmtMoney(earnedOf(task), currencyOf(task.projectId))}`;
+  el.tmdlgTot.textContent = fmtDurMoney(taskElapsedMs(task), earnedOf(task), currencyOf(task.projectId));
   el.tmdlgOpen.textContent = t(tmdlg.fresh ? 'common.cancel' : 'agenda.open_task');
   el.tmdlgDone.textContent = t(tmdlg.fresh ? 'agenda.create_btn' : 'common.done');
   renderTmdlgFound();
@@ -8138,8 +12756,7 @@ el.tmdlgOpen.addEventListener('click', () => {
   closeTaskModal(false);
   const task = getTask(id);
   if (!task) return;
-  openProject(task.projectId);
-  selectTask(task.id);
+  openTask(task.id);
 });
 
 el.tmdlgDone.addEventListener('click', () => closeTaskModal(false));
@@ -8228,8 +12845,13 @@ function repeatLabel(rule) {
 
 /** То же правило словами для середины фразы: «каждую неделю», «по Пн, Ср». */
 function repeatPhrase(rule) {
-  const d = Core.describeRepeat(rule);
-  if (!d) return '';
+  return repeatWords(Core.describeRepeat(rule));
+}
+
+/** Описание правила от ядра ({key, vars}, describeRepeat) словами текущего
+ *  языка — его же отдаёт строка предложения агента (aiProposalRows). */
+function repeatWords(d) {
+  if (!d || !d.key) return '';
   const vars = { ...d.vars };
   if (Array.isArray(vars.days)) vars.days = vars.days.map(weekdayName).join(', ');
   return t(d.key, vars);
@@ -8318,9 +12940,22 @@ function dialogTask(id, close) {
 
 function openRepeatDialog(task) {
   rpdlg.taskId = task.id;
-  rpdlg.rule = Core.normalizeRepeat(task.repeat) || presetRule('week');
+  rpdlg.rule = Core.normalizeRepeat(task.repeat) || Core.normalizeRepeat(presetRule('week'));
+  // Дата окончания — день («2026-12-31»): так её читает nextDue ядра. Правило
+  // с телефона приходит с моментом времени (ISO) — окно приводит его к дню.
+  const at = rpdlg.rule.ends.at;
+  if (at && at.includes('T') && Number.isFinite(Date.parse(at))) rpdlg.rule.ends.at = dayKey(new Date(at));
   renderRepeatDialog();
   el.rpdlgBackdrop.hidden = false;
+}
+
+/** Правка правила в окне — как patch листа телефона (RepeatSheet): каждое
+ *  изменение проходит через normalizeRepeat ядра, поэтому окно всегда
+ *  показывает то правило, которое уйдёт по «Готово», а не черновик, который
+ *  ядро потом поправит молча (дни недели у «дня», число вне 1…99). */
+function patchRepeatRule(next) {
+  rpdlg.rule = Core.normalizeRepeat({ ...rpdlg.rule, ...next });
+  renderRepeatDialog();
 }
 function closeRepeatDialog() {
   el.rpdlgBackdrop.hidden = true;
@@ -8341,27 +12976,27 @@ function renderRepeatDialog() {
   if (document.activeElement !== el.rpEvery) el.rpEvery.value = String(r.every);
   el.rpUnit.textContent = t(REPEAT_UNIT_KEY[r.freq]);
 
-  el.rpDays.hidden = r.freq !== 'week';
+  // Дни недели — только у недели, как WeekdayChips на телефоне.
+  el.rpDaysBlock.hidden = r.freq !== 'week';
   if (r.freq === 'week') {
     el.rpDays.innerHTML = '';
     // Неделя начинается с понедельника — как во всём приложении.
     for (const d of [1, 2, 3, 4, 5, 6, 0]) {
+      const on = r.weekdays.includes(d);
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'rp-day' + (r.weekdays.includes(d) ? ' on' : '');
+      b.className = 'rp-day' + (on ? ' on' : '');
       b.dataset.day = String(d);
+      b.setAttribute('aria-pressed', String(on));
       b.textContent = weekdayName(d);
       b.addEventListener('click', () => {
-        r.weekdays = r.weekdays.includes(d)
-          ? r.weekdays.filter((x) => x !== d)
-          : [...r.weekdays, d].sort((a, b2) => a - b2);
-        renderRepeatDialog();
+        patchRepeatRule({ weekdays: on ? r.weekdays.filter((x) => x !== d) : [...r.weekdays, d] });
       });
       el.rpDays.appendChild(b);
     }
   }
 
-  el.rpMonthSeg.hidden = r.freq !== 'month';
+  el.rpMonthBlock.hidden = r.freq !== 'month';
   markSegment(el.rpMonthSeg, 'mode', r.monthMode);
   markSegment(el.rpFromSeg, 'from', r.from);
   markSegment(el.rpEndsSeg, 'ends', r.ends.kind);
@@ -8377,15 +13012,15 @@ function renderRepeatDialog() {
   if (r.ends.kind === 'after' && document.activeElement !== el.rpCount) el.rpCount.value = String(r.ends.count);
   if (r.ends.kind === 'on') el.rpUntil.textContent = fmtDpBtn(r.ends.at || dayKey(new Date()));
 
-  el.rpHistory.classList.toggle('on', !!r.keepHistory);
   el.rpHistory.setAttribute('aria-pressed', String(!!r.keepHistory));
 
-  // Сводка: правило словами и ближайшие сроки. Без неё «каждый второй
-  // вторник месяца» проверить нечем — приходится закрывать окно и смотреть.
+  // Сводка — как InfoRow листа телефона: значок повтора, правило словами
+  // (describeRepeat ядра) и ближайшие сроки. Без неё «каждый второй вторник
+  // месяца» проверить нечем — приходится закрывать окно и смотреть.
   const base = anchor ? new Date(anchor).getTime() : Date.now();
   const soon = Core.upcomingDue(r, base, base + (400 * 86400000), 3);
-  el.rpPreview.innerHTML = '<span class="rp-summary-mark">↻</span>'
-    + `<span class="rp-summary-main"><b>${escapeHtml(repeatLabel(r))}</b>`
+  el.rpPreview.innerHTML = icon('refresh', 'icon rp-summary-mark')
+    + `<span class="rp-summary-main"><span class="rp-summary-text">${escapeHtml(repeatLabel(r))}</span>`
     + (soon.length ? `<span class="rp-summary-dates">${soon.map((ms) => escapeHtml(fmtDateShort(ms))).join(' · ')}</span>` : '')
     + '</span>';
   applyStaticTranslations();
@@ -8393,50 +13028,45 @@ function renderRepeatDialog() {
 
 el.rpEvery.addEventListener('input', () => {
   const n = parseInt(el.rpEvery.value.replace(/\D/g, ''), 10);
-  rpdlg.rule.every = Number.isFinite(n) && n > 0 ? Math.min(99, n) : 1;
-  renderRepeatDialog();
+  patchRepeatRule({ every: Number.isFinite(n) && n > 0 ? n : 1 });
 });
+// Пустое поле или ноль, пока его правят, — 1, но в самом поле это видно
+// только после ухода из него: стирать цифру, чтобы набрать другую, можно.
+el.rpEvery.addEventListener('blur', () => { el.rpEvery.value = String(rpdlg.rule.every); });
 el.rpCount.addEventListener('input', () => {
   const n = parseInt(el.rpCount.value.replace(/\D/g, ''), 10);
-  rpdlg.rule.ends.count = Number.isFinite(n) && n > 0 ? Math.min(999, n) : 1;
-  renderRepeatDialog();
+  patchRepeatRule({ ends: { ...rpdlg.rule.ends, count: Number.isFinite(n) && n > 0 ? n : 1 } });
 });
+el.rpCount.addEventListener('blur', () => { el.rpCount.value = String(rpdlg.rule.ends.count); });
 el.rpFreqSeg.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-freq]');
   if (!b) return;
-  rpdlg.rule.freq = b.dataset.freq;
-  renderRepeatDialog();
+  patchRepeatRule({ freq: b.dataset.freq });
 });
 el.rpMonthSeg.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-mode]');
   if (!b) return;
-  rpdlg.rule.monthMode = b.dataset.mode;
-  renderRepeatDialog();
+  patchRepeatRule({ monthMode: b.dataset.mode });
 });
 el.rpFromSeg.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-from]');
   if (!b) return;
-  rpdlg.rule.from = b.dataset.from;
-  renderRepeatDialog();
+  patchRepeatRule({ from: b.dataset.from });
 });
 el.rpEndsSeg.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-ends]');
   if (!b) return;
-  rpdlg.rule.ends.kind = b.dataset.ends;
-  if (b.dataset.ends === 'on' && !rpdlg.rule.ends.at) {
-    rpdlg.rule.ends.at = dayKey(new Date(Core.addDaysMs(Date.now(), 90)));
-  }
-  renderRepeatDialog();
+  const ends = { ...rpdlg.rule.ends, kind: b.dataset.ends };
+  if (ends.kind === 'on' && !ends.at) ends.at = dayKey(new Date(Core.addDaysMs(Date.now(), 90)));
+  patchRepeatRule({ ends });
 });
 el.rpUntil.addEventListener('click', () => {
   openDatePicker(el.rpUntil, rpdlg.rule.ends.at || dayKey(new Date()), (key) => {
-    rpdlg.rule.ends.at = key;
-    renderRepeatDialog();
+    patchRepeatRule({ ends: { ...rpdlg.rule.ends, at: key } });
   });
 });
 el.rpHistory.addEventListener('click', () => {
-  rpdlg.rule.keepHistory = !rpdlg.rule.keepHistory;
-  renderRepeatDialog();
+  patchRepeatRule({ keepHistory: !rpdlg.rule.keepHistory });
 });
 el.rpdlgCancel.addEventListener('click', closeRepeatDialog);
 el.rpdlgOff.addEventListener('click', () => {
@@ -8584,6 +13214,37 @@ function putSlot(task, slot) {
   scheduleSave();
 }
 
+/** Время задачи ничем не ограничено (18 октября 2026): ни рабочими часами, ни
+ *  днями, и два дела в один час — можно. Но это повод спросить: «В этом
+ *  промежутке уже есть задача «X» (10:00–11:00). Создать в то же время?»;
+ *  несколько — до трёх по имени и «и ещё N». overlaps — ответ
+ *  Core.slotOverlaps; edit — правка заведённого отрезка («Сохранить»), иначе
+ *  создание («Создать»).
+ *  @returns Promise<boolean> — ставить в то же время */
+function confirmSlotOverlap(overlaps, edit) {
+  const seen = new Set();
+  const list = overlaps.filter((o) => {
+    const key = `${o.taskId}|${o.start}|${o.end}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const item = (o) => t('slot.overlap_item', {
+    title: o.title || t('task.no_name'),
+    time: `${hhmm(Date.parse(o.start))}–${hhmm(Date.parse(o.end))}`,
+  });
+  const shown = list.slice(0, 3).map(item).join(', ');
+  const rest = list.length - 3;
+  const what = list.length === 1
+    ? t('slot.overlap_one', { item: item(list[0]) })
+    : t('slot.overlap_many', { list: rest > 0 ? `${shown} ${t('slot.overlap_more', { n: rest })}` : shown });
+  return confirmDialog(`${what} ${t(edit ? 'slot.overlap_q_save' : 'slot.overlap_q_create')}`, {
+    title: t('slot.overlap_title'),
+    okLabel: t(edit ? 'common.save' : 'agenda.create_btn'),
+    danger: false,
+  });
+}
+
 function deleteSlot(task, id) {
   task.slots = (Array.isArray(task.slots) ? task.slots : []).filter((x) => !(x && x.id === id));
   task.updatedAt = new Date().toISOString();
@@ -8650,8 +13311,24 @@ function saveSlotDialog() {
     start: new Date(sldlg.start).toISOString(),
     end: new Date(sldlg.end).toISOString(),
   });
-  closeSlotDialog();
-  putSlot(task, slot);
+  // Чужой план в этом промежутке — вопрос, а не запрет; «Отмена» оставляет
+  // окно как было. Правка, не сдвинувшая время, заново не спрашивает.
+  const moved = !sldlg.old || Date.parse(sldlg.old.start) !== sldlg.start || Date.parse(sldlg.old.end) !== sldlg.end;
+  const overlaps = moved ? Core.slotOverlaps(state.tasks, slot, task.id) : [];
+  if (!overlaps.length) {
+    closeSlotDialog();
+    putSlot(task, slot);
+    return;
+  }
+  const { id, taskId } = sldlg;
+  return confirmSlotOverlap(overlaps, !!sldlg.old).then((ok) => {
+    // Пока висел вопрос, окно могли закрыть, а приём облака — заменить задачи.
+    if (!ok || el.sldlgBackdrop.hidden || sldlg.taskId !== taskId || sldlg.id !== id) return;
+    const live = dialogTask(taskId, closeSlotDialog);
+    if (!live) return;
+    closeSlotDialog();
+    putSlot(live, slot);
+  });
 }
 
 el.sldlgSave.addEventListener('click', saveSlotDialog);

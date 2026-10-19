@@ -12,7 +12,10 @@ import { AccessibilityInfo } from 'react-native';
 import { render, fireEvent, within, waitFor, act } from '@testing-library/react-native';
 import ProjectsScreen from '../src/screens/ProjectsScreen';
 import TasksScreen from '../src/screens/TasksScreen';
-import HomeScreen from '../src/screens/HomeScreen';
+import ChatListScreen from '../src/screens/ChatListScreen';
+import ChatThreadScreen from '../src/screens/ChatThreadScreen';
+import { CHAT_ART } from '../src/components/chat/ChatGreeting';
+import { useAiChat, aiStop, aiAccount, aiNewChat } from '../src/lib/aiChat';
 import StatsScreen from '../src/screens/StatsScreen';
 import DocumentsScreen from '../src/screens/DocumentsScreen';
 import ProjectScreen from '../src/screens/ProjectScreen';
@@ -22,13 +25,14 @@ import SearchScreen from '../src/screens/SearchScreen';
 import TagsScreen from '../src/screens/TagsScreen';
 import BottomSheet from '../src/components/BottomSheet';
 import NewProjectSheet from '../src/components/NewProjectSheet';
-import EntrySheet from '../src/components/EntrySheet';
+import AuthSheet from '../src/components/AuthSheet';
 import TagEditSheet from '../src/components/TagEditSheet';
 import TagPickerSheet from '../src/components/TagPickerSheet';
 import VersionsEditor from '../src/components/VersionsEditor';
 import { deckLayers } from '../src/components/ProjectsEmpty';
 import { artElements } from '../src/lib/art';
 import { useAppStore } from '../src/store/useAppStore';
+import { useAuthStore } from '../src/store/useAuthStore';
 import { useSheetStore, openSheet } from '../src/store/useSheetStore';
 import { t } from '../src/lib/i18n';
 
@@ -53,7 +57,7 @@ jest.mock('../src/components/AppTextInput', () => {
 
 const HIDDEN = { includeHiddenElements: true };
 const nav = () => ({
-  navigate: jest.fn(), setOptions: jest.fn(), goBack: jest.fn(), addListener: jest.fn(() => () => {}),
+  navigate: jest.fn(), push: jest.fn(), setOptions: jest.fn(), goBack: jest.fn(), addListener: jest.fn(() => () => {}),
   getState: () => ({ routes: [], index: 0 }),
 });
 const project = { id: 'p1', name: 'Сайт', color: '#87ff65', createdAt: '2026-10-01T00:00:00.000Z' };
@@ -203,22 +207,54 @@ describe('«Задачи»', () => {
   });
 });
 
-describe('«Сегодня»', () => {
-  test('день без записей — «Новая запись», тот же лист, что «+» в шапке', async () => {
-    const s = await render(<HomeScreen navigation={nav()} />);
-    const empty = emptyWith(s, 'time');
-    empty.getByText(t('ru', 'today.no_entries'));
-    await fireEvent.press(empty.getByText(t('ru', 'agenda.new_entry')));
-    expect(sheetType()).toBe(EntrySheet);
+describe('«Чат-бот»', () => {
+  // Выход — пока экран ещё на месте (общая уборка дерева идёт после).
+  afterEach(() => act(async () => { useAuthStore.setState({ status: 'signedOut', user: null }); }));
+
+  test('без входа — «Войти», тот же лист входа, что в «Меню»', async () => {
+    useAuthStore.setState({ status: 'signedOut', user: null });
+    const s = await render(<ChatListScreen navigation={nav()} />);
+    const empty = emptyWith(s, 'tasks');
+    empty.getByText(t('ru', 'ai.signin_title'));
+    await fireEvent.press(empty.getByText(t('ru', 'ai.signin_btn')));
+    expect(sheetType()).toBe(AuthSheet);
   });
 
-  test('проектов нет — «Начните с проекта» и лист нового проекта', async () => {
-    seed({ projects: [], statuses: [] });
-    const s = await render(<HomeScreen navigation={nav()} />);
-    const empty = emptyWith(s, 'projects');
-    empty.getByText(t('ru', 'empty.start_project'));
-    await fireEvent.press(empty.getByText(t('ru', 'deck.new_project')));
-    expect(sheetType()).toBe(NewProjectSheet);
+  // Круг 21 (19 октября 2026): пустоты у главного экрана нет — там поле со
+  // сценкой chat и фразой; без чатов под полем — что умеет агент и примеры.
+  test('чатов нет — сценка chat и фраза над полем, под ним что умеет агент и три примера; пример встаёт в поле, кнопки нет', async () => {
+    aiStop();
+    useAiChat.setState({ uid: null, loaded: false, chats: [], chatId: null, opened: false });
+    useAuthStore.setState({ status: 'signedIn', user: { id: 'u-list', email: 'a@b.c' } });
+    const navigation = nav();
+    const s = await render(<ChatListScreen navigation={navigation} />);
+    const hero = within(await waitFor(() => s.getByTestId('chat-hero')));
+    hero.getByTestId(`art-${CHAT_ART}`, HIDDEN);
+    expect(artElements(CHAT_ART).length).toBeGreaterThan(0);
+    hero.getByTestId('chat-phrase');
+    const below = within(s.getByTestId('chat-examples'));
+    below.getByText(t('ru', 'ai.empty_hint'));
+    expect(s.queryByTestId('empty-state')).toBeNull();
+    expect(s.queryByTestId('primary-button')).toBeNull();
+    await fireEvent.press(below.getByText(t('ru', 'ai.example_1')));
+    expect(hero.getByTestId('chat-input').props.value).toBe(t('ru', 'ai.example_1'));
+    expect(mockFocus).toHaveBeenCalled();
+    expect(navigation.push).not.toHaveBeenCalled();
+  });
+
+  test('новый чат пуст — что умеет агент и три примера, без кнопки; пример встаёт в поле', async () => {
+    aiStop();
+    useAiChat.setState({ uid: null, loaded: false, chats: [], chatId: null, opened: false });
+    useAuthStore.setState({ status: 'signedIn', user: { id: 'u-empty', email: 'a@b.c' } });
+    await act(async () => { await aiAccount('u-empty'); });
+    const chatId = aiNewChat();
+    const s = await render(<ChatThreadScreen navigation={nav()} route={{ params: { chatId } }} />);
+    const empty = await waitFor(() => emptyWith(s, 'tasks'));
+    empty.getByText(t('ru', 'ai.empty_hint'));
+    expect(empty.queryByTestId('primary-button')).toBeNull();
+    await fireEvent.press(s.getByText(t('ru', 'ai.example_2')));
+    expect(s.getByTestId('chat-input').props.value).toBe(t('ru', 'ai.example_2'));
+    expect(mockFocus).toHaveBeenCalled();
   });
 });
 

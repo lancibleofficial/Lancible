@@ -22,6 +22,10 @@
 // (buildAllProjectsSheets: итоги и по листу на проект), остальные периоды —
 // один лист записей (buildPeriodSheets). Один проект — в его валюте и по его
 // ставкам, несколько — в основной.
+//
+// «Личное» (useModeFlags → Core.modeFlags): деньги в файл не идут. Лист
+// передаёт построителям { money: false }, и ядро собирает таблицы сразу без
+// колонок ставки и суммы.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -36,6 +40,7 @@ import Export from '../core/export.js';
 import { useAppStore, getProject } from '../store/useAppStore';
 import { useRates, useRatesMain, currencyOf } from '../hooks/useRates';
 import { useReduceMotion } from '../hooks/useReduceMotion';
+import { useModeFlags } from '../hooks/useModeFlags';
 import { buildPeriodSheets, buildAllProjectsSheets } from '../lib/xlsxReports';
 import { runExport } from '../lib/exportRunner';
 import { dayKey, keyToDate } from '../lib/calendarMath';
@@ -83,6 +88,7 @@ export default function ExportPeriodSheet({ lang, projectId }) {
   const showToast = useAppStore((s) => s.showToast);
   const rates = useRates();
   const ratesMain = useRatesMain();
+  const { money } = useModeFlags();
 
   const today = dayKey(new Date());
   const ids = projects.map((p) => p.id);
@@ -121,7 +127,7 @@ export default function ExportPeriodSheet({ lang, projectId }) {
     if (!range) {
       runExport(
         `Lancible — ${picked ? projectsText : t(lang, 'export.all_projects')} — ${today}`,
-        buildAllProjectsSheets(plan.picked, (id) => plan.tasks.filter((x) => x.projectId === id), lang, currency, r),
+        buildAllProjectsSheets(plan.picked, (id) => plan.tasks.filter((x) => x.projectId === id), lang, currency, r, { money }),
         lang,
         showToast,
       );
@@ -129,7 +135,7 @@ export default function ExportPeriodSheet({ lang, projectId }) {
     }
     runExport(
       `Lancible — ${t(lang, 'export.period')}${picked ? ` — ${projectsText}` : ''} — ${dayKey(range.from)} — ${dayKey(range.to)}`,
-      buildPeriodSheets(plan.tasks, (id) => getProject(projects, id), lang, currency, r, range),
+      buildPeriodSheets(plan.tasks, (id) => getProject(projects, id), lang, currency, r, range, { money }),
       lang,
       showToast,
     );

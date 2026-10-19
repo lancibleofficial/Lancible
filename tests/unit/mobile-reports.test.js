@@ -121,3 +121,19 @@ test('лист периода зовёт выборку проекта по за
   const [sheet] = api.buildPeriodSheets(tasks, (id) => (id === 'p1' ? { name: 'Клиент' } : null), 'ru', 'RUB', 100);
   assert.equal(sheet.rows[1][2], 'Клиент');
 });
+
+test('{ money: false } последним аргументом доходит до ядра: листы без ставки и суммы; без него — с деньгами', () => {
+  const { api } = loadAdapter();
+  const t1 = mkTask('A', [ses('2026-06-10T10:00:00Z', 2)], { projectId: 'p1' });
+  const sheetsOf = (opts) => [
+    ...api.buildTaskSheets(t1, { name: 'П' }, 'ru', 'RUB', 100, opts),
+    ...api.buildAllProjectsSheets([{ id: 'p1', name: 'A' }], () => [t1], 'ru', 'RUB', 100, opts),
+    ...api.buildPeriodSheets([t1], () => ({ name: 'П' }), 'ru', 'RUB', 100, undefined, opts),
+  ];
+  const moneyLabels = /xlsx\.(rate|rate_now|sum|earned)\b/;
+  assert.match(JSON.stringify(sheetsOf()), moneyLabels, 'без флага деньги в листах есть');
+  assert.match(JSON.stringify(sheetsOf({ money: true })), moneyLabels);
+  const free = JSON.stringify(sheetsOf({ money: false }));
+  assert.doesNotMatch(free, moneyLabels, 'money: false — подписей денег нет ни в одном листе');
+  assert.ok(!free.includes('₽'), 'и валюты нет');
+});

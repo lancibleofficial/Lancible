@@ -9,9 +9,20 @@
 // Холст размером с видимую часть, а не со весь документ: у холста высотой в
 // двадцать экранов кончается память. Он лежит поверх прокрутки и
 // перерисовывается при прокрутке.
+//
+// С высотой по тексту (autoHeight — живой редактор на странице задачи
+// телефона) своей прокрутки нет, а окно WebView бывает выше текста: холст
+// тогда — до низа окна (не ниже 100vh) во всю ширину и ниже самого нижнего
+// штриха на INK_ROOM, а высота редактора для хозяина (index.js:
+// contentHeight) тоже доходит до штрихов. Рисовать можно по всему окну, а не
+// только по тексту, и штрих под текстом растит WebView, а не обрезается
+// (17 октября 2026).
 import { h, icon } from './util.js';
 import { menu, modal } from './ui.js';
-import { InkSurface, InkToolbar } from './ink.js';
+import { InkSurface, InkToolbar, strokeBounds } from './ink.js';
+
+/** Запас под самым нижним штрихом, CSS px: дорисовать ниже есть куда. */
+export const INK_ROOM = 40;
 
 export class InkOverlay {
   /** ctx: { root, t, toast, inkSettings, setInkSettings, getInk(), setInk(list),
@@ -23,6 +34,7 @@ export class InkOverlay {
     this.dom = h('div', { class: 'led-overlay' }, this.canvas);
     this.offsets = new Map();
     this.cache = new WeakMap();
+    this.bounds = new WeakMap();
     this.toolbar = new InkToolbar(ctx, {
       surface: () => this.surface,
       settings: () => ctx.inkSettings(),
@@ -69,6 +81,10 @@ export class InkOverlay {
     ctx.scroller.addEventListener('scroll', this.onScroll, { passive: true });
     this.ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => { this.measure(); this.render(); }) : null;
     if (this.ro) { this.ro.observe(ctx.scroller); this.ro.observe(ctx.page); }
+    // Высота по тексту: слой — до низа окна, а окно (WebView) растёт и
+    // сжимается само, когда хозяин подставляет высоту.
+    this.onResize = () => this.render();
+    if (ctx.autoHeight) window.addEventListener('resize', this.onResize);
     this.onKey = (e) => {
       if (!this.on) return;
       const mod = e.metaKey || e.ctrlKey;
@@ -198,27 +214,56 @@ export class InkOverlay {
     this.render();
   }
 
+  /** Видны ли пометки: скрытые не рисуются, пока слой не открыт для рисования. */
+  shown() { return this.on || (this.strokes().length > 0 && !this.ctx.hidden()); }
+
+  /** Низ самого нижнего видимого штриха — в координатах слоя (от верха
+   *  прокрутки), или null, если штрихов нет. */
+  inkBottom() {
+    if (!this.shown()) return null;
+    let y = null;
+    for (const st of this.placed()) {
+      let b = this.bounds.get(st);
+      if (!b) { b = strokeBounds(st); this.bounds.set(st, b); }
+      if (y == null || b.y1 > y) y = b.y1;
+    }
+    return y == null ? null : y + this.pageTopInScroller() - this.ctx.scroller.scrollTop;
+  }
+
+  /** Высота слоя: видимая часть прокрутки, а с высотой по тексту — ещё и
+   *  до низа окна и под самый нижний штрих с запасом. */
+  layerHeight() {
+    const sc = this.ctx.scroller;
+    if (!this.ctx.autoHeight) return sc.clientHeight;
+    const top = sc.getBoundingClientRect().top + window.scrollY;
+    const ink = this.inkBottom();
+    return Math.ceil(Math.max(sc.clientHeight, window.innerHeight - top, ink == null ? 0 : ink + INK_ROOM));
+  }
+
   render() {
     if (!this.dom.isConnected) return;
-    // Холст — ровно по видимой части прокрутки.
+    // Холст — по видимой части прокрутки (с высотой по тексту — layerHeight).
     const sc = this.ctx.scroller;
+    if (this.ctx.autoHeight) this.measure();
     this.dom.style.top = `${sc.offsetTop}px`;
-    this.dom.style.height = `${sc.clientHeight}px`;
+    this.dom.style.height = `${this.layerHeight()}px`;
     this.dom.style.width = `${sc.clientWidth}px`;
     this.dom.style.left = `${sc.offsetLeft}px`;
-    // Скрытые пометки не рисуются, пока слой не открыт для рисования.
-    if (!this.on && (!this.strokes().length || this.ctx.hidden())) {
+    if (!this.shown()) {
       const c = this.canvas.getContext('2d');
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      return;
+    } else {
+      this.measure();
+      this.surface.render();
     }
-    this.measure();
-    this.surface.render();
+    // Хозяину — новая высота: штрихи могли уйти ниже текста.
+    if (this.ctx.onRender) this.ctx.onRender();
   }
 
   destroy() {
     this.ctx.scroller.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('resize', this.onResize);
     document.removeEventListener('keydown', this.onKey, true);
     if (this.ro) this.ro.disconnect();
     this.surface.destroy();

@@ -24,7 +24,7 @@ const ZONES = {
     area: 'Веб, десктоп, лендинг',
     check: 'e2e и тесты лендинга; web/index.html — вслед за src/renderer/index.html; после правки редактора — npm run build:editor',
     paths: [
-      'src/main.js', 'src/preload.js', 'src/xlsx.js', 'src/renderer/**', 'src/editor/**',
+      'src/main.js', 'src/preload.js', 'src/xlsx.js', 'src/data-store.js', 'src/renderer/**', 'src/editor/**',
       'mobile/src/editor/editorBundle.js', 'web/**', 'landing/**',
       'scripts/build-editor.js', 'scripts/build-landing-app.js', 'scripts/serve-web.js',
       'scripts/sync-web-assets.js', 'scripts/shot.js', 'scripts/xlsx-check.js',

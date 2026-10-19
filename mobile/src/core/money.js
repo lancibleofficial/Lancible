@@ -138,6 +138,11 @@
     const old = (index !== null && index !== undefined) ? sessions[index] : null;
     let totalMs;
     if (old) {
+      // id записи сохраняется: без него правка через диалог выглядела бы для
+      // синхронизации как «снять старую + добавить новую», и параллельная
+      // правка той же записи на другом устройстве удвоила бы время
+      // (core/oplog.js узнаёт записи по id).
+      if (old.id) entry.id = old.id;
       if (Number.isFinite(Number(old.rate))) entry.rate = Number(old.rate);
       sessions[index] = entry;
       totalMs = Math.max(0, (task.totalMs || 0) - old.ms + span.ms);

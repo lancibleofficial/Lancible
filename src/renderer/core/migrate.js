@@ -56,7 +56,7 @@
    */
   function migrate(state, deps) {
     const { t, uid, langs, palette, currencies, sym2code, defaultProjectNameKey } = deps;
-    const { DEFAULT_STATUSES, STATUS_KINDS } = S;
+    const { STATUS_KINDS } = S;
 
     if (!Array.isArray(state.tasks)) state.tasks = [];
     if (!Array.isArray(state.projects)) state.projects = [];
@@ -105,14 +105,19 @@
     const template = legacy.length ? legacy : null;
     const remap = new Map(); // `${projectId}:${oldId}` -> новый id
 
+    // id копий — от проекта, а не случайные (S.defaultStatusKey): два
+    // устройства, получившие один и тот же проект без статусов, заводят ему
+    // одинаковый набор, и журнал правок их не задваивает. Набор по умолчанию
+    // — ровно то, что получает новый проект (makeProjectStatuses).
     for (const p of state.projects) {
       if (state.statuses.some((s) => s.projectId === p.id)) continue;
-      const source = template || DEFAULT_STATUSES.map((s, i) => ({
-        id: `d${i}`, name: t(`status.default_${s.key}`), color: s.color, kind: s.kind, order: i, builtin: true,
-      }));
-      source.forEach((s, i) => {
+      if (!template) {
+        state.statuses.push(...S.makeProjectStatuses(p.id, (key) => t(`status.default_${key}`)));
+        continue;
+      }
+      template.forEach((s, i) => {
         const copy = {
-          id: uid(), projectId: p.id, name: s.name, color: s.color,
+          id: S.defaultStatusKey(p.id, s.id || `legacy${i}`), projectId: p.id, name: s.name, color: s.color,
           kind: s.kind, order: Number.isFinite(Number(s.order)) ? s.order : i, builtin: !!s.builtin,
         };
         remap.set(`${p.id}:${s.id}`, copy.id);

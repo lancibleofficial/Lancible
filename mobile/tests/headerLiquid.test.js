@@ -266,48 +266,47 @@ describe('смена вкладки: название каплей, кнопки
     expect(within(header).queryByText(t('ru', 'nav.projects'))).toBeNull();
   });
 
-  test('«Проекты» → «Сегодня»: лупа и колокольчик стекают в каплю, три кнопки набухают', async () => {
+  test('«Проекты» → «Цифры»: лупа и колокольчик стекают в каплю, две свои кнопки набухают', async () => {
     const { screen, header } = await openApp();
     const swollen = swells().length;
 
-    await fireEvent.press(tabButton(screen, 'nav.home'));
-    await waitBtn(within(header), 'agenda.new_entry');
-    await waitFor(() => expect(swells()).toHaveLength(swollen + 3));
+    await fireEvent.press(tabButton(screen, 'nav.stats'));
+    await waitBtn(within(header), 'menu.export_excel');
+    await waitFor(() => expect(swells()).toHaveLength(swollen + 2));
     expect(drains()).toHaveLength(2);
     expect(drains().map(([to]) => to)).toEqual([0, 0]);
     // Стекли — их нет; пришедшие стоят.
     expect(within(header).queryByRole('button', { name: t('ru', 'search.placeholder') })).toBeNull();
     expect(within(header).queryByTestId('notif-bell')).toBeNull();
-    btn(within(header), 'today.pick_day');
-    expect(within(header).getAllByTestId('header-slot')).toHaveLength(3);
+    btn(within(header), 'filter.project');
+    expect(within(header).getAllByTestId('header-slot')).toHaveLength(2);
   });
 
-  test('«Проекты» → «Меню»: колокольчик остаётся, лупа стекает; «Меню» → «Задачи» — лупа возвращается', async () => {
+  test('«Проекты» → «Меню» → «Задачи»: лупа и колокольчик везде одни и те же — ничего не стекает и не набухает', async () => {
+    // С 19 октября 2026 в шапке «Меню» тоже лупа (поиск), поэтому при смене
+    // вкладок обе кнопки остаются на месте теми же элементами.
     const { screen, header } = await openApp();
     const bell = within(header).getByTestId('notif-bell');
     await fireEvent.press(tabButton(screen, 'nav.menu'));
-    // Пока «Меню» строится, стоят кнопки «Проектов»; потом остаётся одна.
-    await waitFor(() => expect(within(header).getAllByTestId('header-slot')).toHaveLength(1));
-    // «Меню»: один колокольчик, и он тот же, что был у «Проектов» (лупа ушла).
+    await waitFor(() => expect(within(header).getAllByTestId('header-slot')).toHaveLength(2));
     expect(within(header).getByTestId('notif-bell')).toBe(bell);
-    expect(within(header).queryByRole('button', { name: t('ru', 'search.placeholder') })).toBeNull();
-    await waitFor(() => expect(drains()).toHaveLength(1));
-    // Колокольчик остался на месте — набухла бы капля, если бы пересоздали.
+    expect(drains()).toHaveLength(0);
     expect(swells()).toHaveLength(2);
 
     await fireEvent.press(tabButton(screen, 'nav.tasks'));
     await tasksBuilt(header);
-    // Лупа вернулась, колокольчик остался.
     await waitFor(() => expect(within(header).getAllByTestId('header-slot')).toHaveLength(2));
-    await waitFor(() => expect(swells()).toHaveLength(3));
+    expect(within(header).getByTestId('notif-bell')).toBe(bell);
+    expect(drains()).toHaveLength(0);
+    expect(swells()).toHaveLength(2);
   });
 
   test('кнопка набухает из капли: на полпути место уже, форма меньше, видна не полностью; в конце — 36 и 1', async () => {
     const { screen, header } = await openApp();
     // Пружина «замирает» на полпути капли.
     withSpring.mockImplementation((to, cfg, cb) => (cfg === LIQUID.swell ? 0.16 : springImpl(to, cfg, cb)));
-    await fireEvent.press(tabButton(screen, 'nav.home'));
-    await waitBtn(within(header), 'agenda.new_entry');
+    await fireEvent.press(tabButton(screen, 'nav.stats'));
+    await waitBtn(within(header), 'menu.export_excel');
     // Пришедшая — первое из видимых мест (стекающие лупа и колокольчик скрыты от чтения).
     await waitFor(() => expect(flat(within(header).getAllByTestId('header-slot')[0]).width).toBeLessThan(36));
     const slot = within(header).getAllByTestId('header-slot')[0];
@@ -339,8 +338,8 @@ describe('смена вкладки: название каплей, кнопки
     });
     // Новая вкладка: «Плюс» остаётся (та же кнопка), «Поиск» уходит, «Календарь» приходит.
     const plus = s.getByLabelText('Плюс');
-    await s.rerender(at('Home', [B, C]));
-    await s.rerender(at('Home', [B, C]));
+    await s.rerender(at('Stats', [B, C]));
+    await s.rerender(at('Stats', [B, C]));
     expect(finish).toHaveLength(1);
     expect(drains()[0][0]).toBe(0);
     expect(s.getByLabelText('Плюс')).toBe(plus); // не пересоздавалась
@@ -378,8 +377,8 @@ describe('смена вкладки: название каплей, кнопки
     const { screen, header } = await openApp();
     const bg = screen.getByTestId('root-header-bg');
     const content = within(header).getByTestId('root-header-content');
-    await fireEvent.press(tabButton(screen, 'nav.home'));
-    await waitBtn(within(header), 'agenda.new_entry');
+    await fireEvent.press(tabButton(screen, 'nav.stats'));
+    await waitBtn(within(header), 'menu.export_excel');
     expect(within(header).getByTestId('root-header-content')).toBe(content);
     expect(screen.getByTestId('root-header-bg')).toBe(bg);
     for (const layer of [header, bg, content]) {
@@ -392,14 +391,14 @@ describe('смена вкладки: название каплей, кнопки
   test('«уменьшение движения» — название и кнопки меняются сразу, ничего не играет', async () => {
     mockReduced = true;
     const { screen, header } = await openApp();
-    await fireEvent.press(tabButton(screen, 'nav.home'));
-    await waitBtn(within(header), 'agenda.new_entry');
+    await fireEvent.press(tabButton(screen, 'nav.stats'));
+    await waitBtn(within(header), 'menu.export_excel');
     expect(within(header).queryByTestId('notif-bell')).toBeNull();
-    within(header).getByText(t('ru', 'nav.home'));
+    within(header).getByText(t('ru', 'nav.stats'));
     expect(swells()).toHaveLength(0);
     expect(drains()).toHaveLength(0);
     expect(titles()).toHaveLength(0);
-    expect(within(header).getAllByTestId('header-slot')).toHaveLength(3);
+    expect(within(header).getAllByTestId('header-slot')).toHaveLength(2);
   });
 });
 
@@ -486,7 +485,7 @@ describe('числа и формы шапки', () => {
       const menu = reconcileSlots(prev, [mk(Bell, {})], true, makeId);
       expect(menu.find((s) => s.id === 2)).toMatchObject({ visible: true, entering: false });
       expect(menu.find((s) => s.id === 1)).toMatchObject({ visible: false });
-      // «Сегодня»: три новых — обе прежние уходят, три приходят.
+      // Вкладка с тремя своими кнопками: обе прежние уходят, три приходят.
       const home = reconcileSlots(prev, [mk(Btn, { icon: 'plus' }), mk(Btn, { icon: 'calendar' }), mk(Btn, { icon: 'panel' })], true, makeId);
       expect(home.filter((s) => s.visible).map((s) => s.entering)).toEqual([true, true, true]);
       expect(home.filter((s) => !s.visible).map((s) => s.id).sort()).toEqual([1, 2]);

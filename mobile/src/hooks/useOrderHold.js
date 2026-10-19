@@ -49,9 +49,15 @@
 //   моменту уже стоит, как у moveSoon. Не в фокусе и при «уменьшении движения»
 //   — всё сразу. Нажатие на строку, которую держат, ничего не делает.
 //
+// Ответ хука — тот же объект, пока в нём ничего не поменялось (20 октября):
+// колода отдаёт его карточкам под memo, и смена страницы не перерисовывает
+// карточки, у которых ничего не поменялось. Всё, что меняет ответ, — в ключе:
+// свои правки хук делает через redraw (счётчик), таймер, фокус и «уменьшение
+// движения» приходят сами, layout зависит ещё и от времени.
+//
 // Хук ничего не знает про экраны: ему нужен только navigation (blur/focus;
 // без него — вечно в фокусе, как в тестах без навигатора) и таймер из стора.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LinearTransition, Easing } from 'react-native-reanimated';
 import { useAppStore } from '../store/useAppStore';
 import { useReduceMotion } from './useReduceMotion';
@@ -97,7 +103,7 @@ export function useOrderHold(navigation, { always = false } = {}) {
   const timerId = useAppStore((s) => (s.activeTimer ? s.activeTimer.taskId : null));
   const [focused, setFocused] = useState(() => !navigation || !navigation.isFocused || navigation.isFocused());
   const [away, setAway] = useState(0);
-  const [, redraw] = useState(0);
+  const [drawn, redraw] = useState(0);
   const ref = useRef(null);
   if (!ref.current) ref.current = { timerId, shown: new Map(), held: null, frozen: false, rising: null, tail: 0, marks: new Map(), timers: new Set(), pending: new Set() };
   const st = ref.current;
@@ -211,8 +217,13 @@ export function useOrderHold(navigation, { always = false } = {}) {
 
   const view = (tasks) => (st.marks.size ? tasks.map((task) => st.marks.get(task.id) || task) : tasks);
 
-  return {
-    rows, frozen: st.frozen, layout: armed ? MOVE : undefined, rising: st.rising, focused, moveSoon,
-    markNow, view, marked: (id) => st.marks.has(id), holding: st.marks.size > 0,
-  };
+  // Тот же объект, пока ответ тот же (шапка файла): функции читают st —
+  // он один на весь век хука, — а из отрисовки берут только still и focused,
+  // и оба в ключе.
+  const layout = armed ? MOVE : undefined;
+  const holding = st.marks.size > 0;
+  return useMemo(() => ({
+    rows, frozen: st.frozen, layout, rising: st.rising, focused, moveSoon,
+    markNow, view, marked: (id) => st.marks.has(id), holding,
+  }), [drawn, timerId, focused, still, layout, st.frozen, st.rising, holding]);
 }

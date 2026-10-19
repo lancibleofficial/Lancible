@@ -14,7 +14,9 @@
  *   #/doc/<id>                   документ
  *   #/stats[/<режим>]            статистика (бывшее «Время»); режим — day |
  *                                week | month | agenda
- *   #/settings                   настройки
+ *   #/settings[/<раздел>]        настройки; раздел — main | work | account |
+ *                                data | about | feedback, без него — список
+ *                                разделов
  *
  * Старое имя #/time разбирается как #/stats: ссылки, отправленные до
  * переименования, продолжают работать, а адрес заменяется на новый.
@@ -56,6 +58,9 @@
   /** Вкладки проекта; первая — по умолчанию, в адресе её нет. */
   const ROUTE_PROJECT_TABS = ['list', 'board', 'versions', 'docs'];
   const ROUTE_TIME_MODES = ['day', 'week', 'month', 'agenda'];
+  /** Разделы настроек (17 октября 2026): каждый — своя страница, тот же
+   *  набор и порядок, что в меню телефона. */
+  const ROUTE_SETTINGS_SECTIONS = ['main', 'work', 'account', 'data', 'about', 'feedback'];
 
   /** Вход в аккаунт возвращает человека на страницу с токенами в хэше
    *  (#access_token=…, #error_description=…): их разбирает клиент базы, и
@@ -98,6 +103,11 @@
       return { view };
     }
     if (view === 'time') return ROUTE_TIME_MODES.includes(parts[1]) ? { view, mode: parts[1] } : { view };
+    // Незнакомый раздел — список разделов: сами настройки есть всегда.
+    if (view === 'settings') {
+      const section = (parts[1] || '').toLowerCase();
+      return ROUTE_SETTINGS_SECTIONS.includes(section) ? { view, section } : { view };
+    }
     return { view };
   }
 
@@ -121,14 +131,17 @@
     if (r.view === 'task') return id ? `#/task/${id}` : '#/today';
     if (r.view === 'docs') return id ? `#/doc/${id}` : '#/docs';
     if (r.view === 'time') return ROUTE_TIME_MODES.includes(r.mode) ? `#/stats/${r.mode}` : '#/stats';
+    if (r.view === 'settings') return ROUTE_SETTINGS_SECTIONS.includes(r.section) ? `#/settings/${r.section}` : '#/settings';
     return `#/${name}`;
   }
 
   /** Какой это экран, без вкладки и режима: смена экрана — новая запись в
-   *  истории браузера, смена вкладки проекта или режима внутри экрана — нет. */
+   *  истории браузера, смена вкладки проекта или режима внутри экрана — нет.
+   *  Раздел настроек — свой экран: из него «назад» ведёт в список разделов. */
   function routeKey(route) {
     const r = route || {};
-    return `${r.view || HOME}:${r.id || ''}`;
+    const sub = r.view === 'settings' && ROUTE_SETTINGS_SECTIONS.includes(r.section) ? r.section : (r.id || '');
+    return `${r.view || HOME}:${sub}`;
   }
 
   /** Ссылка, которую можно отправить: адрес приложения без прежнего хэша и
@@ -146,7 +159,7 @@
     return m ? parsePath(m[1]) : null;
   }
 
-  const api = { parseRoute, buildRoute, routeKey, routeLink, deepLinkRoute, isAuthHash, ROUTE_PROJECT_TABS, ROUTE_TIME_MODES };
+  const api = { parseRoute, buildRoute, routeKey, routeLink, deepLinkRoute, isAuthHash, ROUTE_PROJECT_TABS, ROUTE_TIME_MODES, ROUTE_SETTINGS_SECTIONS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

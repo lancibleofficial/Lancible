@@ -13,10 +13,17 @@ import ProjectStatusesScreen from '../screens/ProjectStatusesScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import SearchScreen from '../screens/SearchScreen';
 import TagsScreen from '../screens/TagsScreen';
+import ChatThreadScreen, { chatThreadOptions } from '../screens/ChatThreadScreen';
 import { t } from '../lib/i18n';
 import { IOS_NATIVE_HEADER, leftTitleOptions } from './nativeHeader';
 
-export const DETAIL_ROUTES = ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents', 'Notifications', 'Search', 'Tags'];
+// Разделы настроек и обратная связь (17 октября 2026) живут только в стеке
+// «Меню» (navigation/MenuStack.js), но таббар и общая шапка вкладки на них
+// прячутся так же. Чат с агентом (18 октября 2026) — с круга 21 (19 октября)
+// тоже деталь любого стека: поиск находит чаты с любой вкладки, и чат встаёт
+// поверх поиска, а «назад» возвращает к нему, как у задачи. Название чата и
+// счётчик ставит сам экран (setOptions), ход — chatThreadOptions.
+export const DETAIL_ROUTES = ['Project', 'TaskDetail', 'ProjectStatuses', 'Editor', 'Documents', 'Notifications', 'Search', 'Tags', 'SettingsSection', 'Feedback', 'ChatThread'];
 
 /** Экраны деталей для Stack.Navigator. Зовётся внутри навигатора, язык —
  *  для заголовков, которые не ставит сам экран. */
@@ -32,5 +39,6 @@ export function detailScreens(Stack, lang) {
     <Stack.Screen key="Notifications" name="Notifications" component={NotificationsScreen} options={leftTitleOptions(t(lang, 'notif.title'))} />,
     <Stack.Screen key="Search" name="Search" component={SearchScreen} options={{ headerShown: IOS_NATIVE_HEADER, title: '' }} />,
     <Stack.Screen key="Tags" name="Tags" component={TagsScreen} options={leftTitleOptions(t(lang, 'settings.section_tags'))} />,
+    <Stack.Screen key="ChatThread" name="ChatThread" component={ChatThreadScreen} options={chatThreadOptions} />,
   ];
 }

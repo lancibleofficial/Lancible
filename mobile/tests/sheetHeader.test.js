@@ -13,9 +13,7 @@ import BottomSheet from '../src/components/BottomSheet';
 import ActionSheetContent from '../src/components/ActionSheetContent';
 import ChangePasswordSheet from '../src/components/ChangePasswordSheet';
 import ColorPickerSheet from '../src/components/ColorPickerSheet';
-import DatePickSheet from '../src/components/DatePickSheet';
 import DueSheet from '../src/components/DueSheet';
-import EntrySheet from '../src/components/EntrySheet';
 import ExportPeriodSheet from '../src/components/ExportPeriodSheet';
 import MenuSheet from '../src/components/MenuSheet';
 import NewProjectSheet from '../src/components/NewProjectSheet';
@@ -111,9 +109,7 @@ describe('заголовок листа живёт в шапке и не дуб�
     ['ActionSheetContent', 'Удалить запись?', () => <ActionSheetContent title="Удалить запись?" message="Это нельзя отменить." actions={[{ label: 'Удалить', onPress: noop }]} />],
     ['ChangePasswordSheet', t('ru', 'profile.change_password'), () => <ChangePasswordSheet />],
     ['ColorPickerSheet', 'Цвет статуса', () => <ColorPickerSheet title="Цвет статуса" value="#87ff65" onSelect={noop} />],
-    ['DatePickSheet', 'Выберите день', () => <DatePickSheet title="Выберите день" valueKey="2026-10-10" onPick={noop} />],
     ['DueSheet', t('ru', 'due.label'), () => <DueSheet task={task} lang="ru" onApply={noop} onClear={noop} />],
-    ['EntrySheet', t('ru', 'agenda.create_title'), () => <EntrySheet initial={{ start: 1_700_000_000_000, end: 1_700_003_600_000 }} />],
     ['ExportPeriodSheet', t('ru', 'export.title'), () => <ExportPeriodSheet lang="ru" onConfirm={noop} onCancel={noop} />],
     ['MenuSheet', 'Проект «Сайт»', () => <MenuSheet title="Проект «Сайт»" items={[{ key: 'a', label: 'Настройки', onPress: noop }]} />],
     ['NewProjectSheet', t('ru', 'project.new_title'), () => <NewProjectSheet onCreated={noop} onCancel={noop} />],

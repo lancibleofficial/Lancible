@@ -282,6 +282,26 @@ test('slotItems: отрезок через полночь режется на д
   ]);
 });
 
+test('slotDayMarks: метки месяца — по дню первые limit кусков по началу, остальные счётом', () => {
+  // Месяц на вебе (17 октября 2026): в клетке дня — первая метка «времени
+  // работы» и «+N»; подсказка называет все. Куски — те же, что у недели.
+  const tasks = [
+    { id: 'a', projectId: 'p', slots: [slot(at(6, 10, 14), at(6, 10, 15))] },
+    { id: 'b', projectId: 'q', slots: [{ id: 's2', start: iso(at(6, 10, 9)), end: iso(at(6, 10, 10)) }, { id: 's3', start: iso(at(6, 12, 23)), end: iso(at(6, 13, 1)) }] },
+    { id: 'c', projectId: 'p', done: true, slots: [slot(at(6, 11, 9), at(6, 11, 10))] },
+  ];
+  const days = L.slotDayMarks(tasks, at(6, 10), 5, 1);
+  assert.equal(days.length, 5);
+  assert.deepEqual(days[0].marks.map((m) => [m.taskId, stamp(m.start)]), [['b', '2026-06-10 09:00']], 'первой — ранняя');
+  assert.equal(days[0].more, 1);
+  assert.deepEqual(days[0].all.map((m) => m.taskId), ['b', 'a']);
+  assert.deepEqual(days[1], { marks: [], more: 0, all: [] }, 'у закрытой задачи меток нет');
+  assert.deepEqual(days[2].marks.map((m) => stamp(m.end)), ['2026-06-13 00:00'], 'через полночь — кусок до полуночи');
+  assert.deepEqual(days[3].marks.map((m) => stamp(m.start)), ['2026-06-13 00:00'], 'и кусок после');
+  assert.equal(L.slotDayMarks(tasks, at(6, 10), 1, 0)[0].more, 2, 'limit 0 — только счёт');
+  assert.deepEqual(L.slotDayMarks(tasks, at(6, 10), 0, 3), []);
+});
+
 test('slotItems: закрытые и отменённые задачи плановых блоков не дают', () => {
   const s = [slot(at(6, 10, 9), at(6, 10, 10))];
   const repeat = { freq: 'day', every: 1 };
@@ -306,6 +326,69 @@ test('slotItems: recurring — у задачи есть живое правил�
   assert.equal(L.slotRule({ repeat: { freq: 'day' } }).freq, 'day');
   assert.equal(L.slotRule({ repeat: null }), null);
   assert.equal(L.slotRule(null), null);
+});
+
+// --- пересечения (18 октября 2026) ---------------------------------------------
+// Время задачи ничем не ограничено: пересечение — повод спросить, а не запрет.
+
+test('slotOverlaps: чужие вхождения, задевающие отрезок, — целиком и по началу', () => {
+  const tasks = [
+    { id: 'a', projectId: 'p', title: 'Вёрстка', slots: [slot(at(6, 10, 10), at(6, 10, 11))] },
+    { id: 'b', projectId: 'p', title: 'Созвон', slots: [{ id: 'x', start: iso(at(6, 10, 9)), end: iso(at(6, 10, 10, 30)) }] },
+    { id: 'c', projectId: 'p', title: 'Вечер', slots: [slot(at(6, 10, 18), at(6, 10, 19))] },
+  ];
+  const got = L.slotOverlaps(tasks, { start: iso(at(6, 10, 10, 15)), end: iso(at(6, 10, 12)) }, null);
+  assert.deepEqual(got.map((x) => [x.taskId, x.title, stamp(Date.parse(x.start)), stamp(Date.parse(x.end))]), [
+    ['b', 'Созвон', '2026-06-10 09:00', '2026-06-10 10:30'],
+    ['a', 'Вёрстка', '2026-06-10 10:00', '2026-06-10 11:00'],
+  ], 'вхождение целиком, не обрезанное по отрезку; «Вечер» не задет');
+  assert.deepEqual(Object.keys(got[0]).sort(), ['end', 'start', 'taskId', 'title']);
+  assert.equal(typeof got[0].start, 'string', 'ISO, как у отрезков');
+});
+
+test('slotOverlaps: касание краями — не пересечение', () => {
+  const tasks = [{ id: 'a', projectId: 'p', title: 'А', slots: [slot(at(6, 10, 10), at(6, 10, 11))] }];
+  assert.deepEqual(L.slotOverlaps(tasks, { start: iso(at(6, 10, 11)), end: iso(at(6, 10, 12)) }), [], 'сразу после');
+  assert.deepEqual(L.slotOverlaps(tasks, { start: iso(at(6, 10, 9)), end: iso(at(6, 10, 10)) }), [], 'сразу до');
+  assert.equal(L.slotOverlaps(tasks, { start: iso(at(6, 10, 10, 59)), end: iso(at(6, 10, 12)) }).length, 1, 'минута внахлёст — уже пересечение');
+  assert.equal(L.slotOverlaps(tasks, { start: at(6, 10, 9), end: at(6, 10, 13) }).length, 1, 'числа тоже понимает; отрезок поверх целиком');
+});
+
+test('slotOverlaps: повторы задачи считаются — по её правилу, как на календаре', () => {
+  // Отрезок среды 10 июня, задача повторяется по Пн и Ср: в среду 17 июня он
+  // тоже стоит, а во вторник 16-го — нет.
+  const tasks = [{ id: 'w', projectId: 'p', title: 'Планёрка', repeat: { freq: 'week', every: 1, weekdays: [1, 3] }, slots: [slot(at(6, 10, 10), at(6, 10, 11))] }];
+  const on = (d) => L.slotOverlaps(tasks, { start: iso(at(6, d, 10, 30)), end: iso(at(6, d, 12)) }).map((x) => stamp(Date.parse(x.start)));
+  assert.deepEqual(on(17), ['2026-06-17 10:00'], 'среда через неделю');
+  assert.deepEqual(on(15), ['2026-06-15 10:00'], 'понедельник');
+  assert.deepEqual(on(16), [], 'вторник — не день правила');
+  assert.deepEqual(on(3), [], 'до первого вхождения отрезка повторов нет');
+});
+
+test('slotOverlaps: закрытые, отменённые и своя задача не считаются; мусор — пусто', () => {
+  const s = [slot(at(6, 10, 10), at(6, 10, 11))];
+  const tasks = [
+    { id: 'own', projectId: 'p', title: 'Своя', slots: s },
+    { id: 'done', projectId: 'p', title: 'Сделана', done: true, slots: s },
+    { id: 'cancelled', projectId: 'p', title: 'Отменена', cancelled: true, slots: s },
+    { id: 'none', projectId: 'p', title: 'Без отрезков' },
+    null,
+  ];
+  const span = { start: iso(at(6, 10, 10)), end: iso(at(6, 10, 11)) };
+  assert.deepEqual(L.slotOverlaps(tasks, span, 'own'), []);
+  assert.deepEqual(L.slotOverlaps(tasks, span).map((x) => x.taskId), ['own'], 'без исключения своя тоже видна');
+  assert.deepEqual(L.slotOverlaps(tasks, { start: span.end, end: span.start }), [], 'конец не позже начала — пусто');
+  assert.deepEqual(L.slotOverlaps(tasks, null), []);
+  assert.deepEqual(L.slotOverlaps(null, span), []);
+  assert.deepEqual(L.slotOverlaps([{ id: 'n', slots: s }], span).map((x) => x.title), [''], 'без названия — пустая строка, подпись ставит клиент');
+});
+
+test('slotOverlaps: время ничем не ограничено — ночь субботы такой же отрезок', () => {
+  // 13 июня 2026 — суббота. Рабочие часы агента (будни 09–18) ручного
+  // создания не касаются: и пересечение, и его отсутствие считаются в любой час.
+  const tasks = [{ id: 'a', projectId: 'p', title: 'Ночная', slots: [slot(at(6, 13, 23), at(6, 14, 0, 30))] }];
+  assert.deepEqual(L.slotOverlaps(tasks, { start: iso(at(6, 14, 0)), end: iso(at(6, 14, 1)) }).map((x) => x.taskId), ['a'], 'через полночь — одно вхождение');
+  assert.deepEqual(L.slotOverlaps(tasks, { start: iso(at(6, 13, 21)), end: iso(at(6, 13, 23)) }), []);
 });
 
 // --- повтор задачи --------------------------------------------------------------
@@ -704,6 +787,13 @@ test('planUntick: без reopenAt снимать нечего; счётчик н
   assert.equal(L.planUntick(null), null);
   assert.deepEqual(L.planUntick({ id: 't', repeat: daily({ done: 0 }), reopenAt: iso(at(6, 11)) }).repeat.done, 0);
   assert.deepEqual(L.planUntick({ id: 't', repeat: null, reopenAt: iso(at(6, 11)) }), { reopenAt: null }, 'правила нет — только ожидание');
+});
+
+test('slotOverlaps не трогает задачи', () => {
+  const tasks = [{ id: 'a', projectId: 'p', title: 'А', repeat: { freq: 'day', every: 1 }, slots: [slot(at(6, 10, 10), at(6, 10, 11), { repeat: { freq: 'week' } })] }];
+  const before = JSON.stringify(tasks);
+  L.slotOverlaps(tasks, { start: iso(at(6, 11, 10)), end: iso(at(6, 11, 12)) }, null);
+  assert.equal(JSON.stringify(tasks), before);
 });
 
 test('функции отрезков не трогают задачи', () => {

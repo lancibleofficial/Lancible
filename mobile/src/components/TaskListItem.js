@@ -8,6 +8,7 @@ import { TagBadgeFit } from './TagBadge';
 import TagPickerSheet from './TagPickerSheet';
 import { LiquidCheck } from './Liquid';
 import PinMark from './PinMark';
+import ConflictMark from './ConflictMark';
 import RunningClock from './RunningClock';
 import { tagsOf } from '../lib/tags';
 import { rowStatus, isCancelled } from '../lib/statuses';
@@ -121,6 +122,7 @@ export default function TaskListItem({ task, onPress, showStatus = true, keepPin
             {v.title}
           </Text>
           <PinMark pinnedAt={task.pinnedAt} keep={keepPin} size={11} style={styles.pin} />
+          <ConflictMark id={task.id} size={11} style={styles.pin} />
         </View>
         {(v.running || v.version || v.repeat || due || (showStatus && status)) ? (
           <View style={styles.meta}>

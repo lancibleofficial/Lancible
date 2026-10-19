@@ -10,10 +10,12 @@ import { useLiquidEnabled, useLiquidGlide, useLiquidPresence } from '../componen
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { LIQUID, TAB_POP_KICK } from '../lib/liquid';
 import { useColors, spacing } from '../theme';
+import { openTaskOnTop } from './openTask';
 
-// Пять вкладок макета B2: Проекты · Задачи · Сегодня · Цифры · Меню.
-// Внутренние имена Home и Menu прежние — на них ссылаются переходы.
-const ICON_NAMES = { Projects: 'folder', Tasks: 'tasks', Home: 'today', Stats: 'chart', Menu: 'menu' };
+// Пять вкладок: Проекты · Задачи · Чат-бот · Цифры · Меню. «Чат-бот» (Chat)
+// с 18 октября 2026 стоит на месте «Сегодня»; значок — тот же, что у кнопки
+// агента на вебе (comments).
+const ICON_NAMES = { Projects: 'folder', Tasks: 'tasks', Chat: 'comments', Stats: 'chart', Menu: 'menu' };
 
 // Место под иконку вкладки и плашка активной — одного размера.
 const SLOT_W = 46;
@@ -136,7 +138,7 @@ export default function MainTabBar({ state, navigation, descriptors }) {
     >
       <TimerMiniPlayer
         presence={mini}
-        onOpen={(taskId) => navigation.navigate('Home', { screen: 'TaskDetail', params: { taskId } })}
+        onOpen={(taskId) => openTaskOnTop(navigation, taskId)}
       />
       <View style={styles.bar} onLayout={onBarLayout} testID="tab-bar">
         <Animated.View pointerEvents="none" style={[styles.plate, glide.style]} testID="tab-bar-plate" />

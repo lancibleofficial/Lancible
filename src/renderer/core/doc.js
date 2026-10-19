@@ -72,7 +72,9 @@
     return empty;
   }
 
-  const ATOMS = new Set(['image', 'chart', 'drawing', 'horizontal_rule']);
+  // pdfpage — страница PDF со слоями (src/editor/pdfpage.js, 17 октября 2026):
+  // документ из одних страниц — не пустой, иначе вставка от ИИ заменила бы его.
+  const ATOMS = new Set(['image', 'chart', 'drawing', 'horizontal_rule', 'pdfpage']);
 
   function walk(node, fn) {
     fn(node);
@@ -363,6 +365,9 @@
       case 'drawing':
         textLine(ops, '[✎]', {});
         break;
+      case 'pdfpage':
+        textLine(ops, `[PDF, стр. ${(node.attrs && node.attrs.page) || 1}]`, {});
+        break;
       case 'horizontal_rule':
         textLine(ops, '———', {});
         break;
@@ -496,6 +501,7 @@
       }
       case 'chart': return mdChart(node);
       case 'drawing': return '*[✎]*';
+      case 'pdfpage': return `*[PDF, стр. ${(node.attrs && node.attrs.page) || 1}]*`;
       default: return (node.content || []).map((c) => mdBlock(c, indent, images)).join('\n\n');
     }
   }

@@ -192,7 +192,7 @@ const RootHeaderLayoutContext = createContext({ ownTab: null, heights: {}, fallb
 
 /** Подпись вкладки для шапки, пока строится её экран (Skeleton), и для
  *  панели вкладок запуска. Порядок — как на панели. */
-export const TAB_TITLES = { Projects: 'nav.projects', Tasks: 'nav.tasks', Home: 'nav.home', Stats: 'nav.stats', Menu: 'nav.menu' };
+export const TAB_TITLES = { Projects: 'nav.projects', Tasks: 'nav.tasks', Chat: 'ai.tab', Stats: 'nav.stats', Menu: 'nav.menu' };
 
 /** Что стоит в шапке хоста, пока вкладка ещё ничего не отдала. */
 const EMPTY_SPEC = { title: '', count: null, children: null };

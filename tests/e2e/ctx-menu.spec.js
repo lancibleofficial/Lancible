@@ -295,7 +295,7 @@ test('язык: повторный щелчок по кнопке закрыва
 
 test('строка языка в настройках закрывает список так же', async ({ page }) => {
   await seed(page, 'dark');
-  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
+  await page.evaluate(() => openSettings('main')); // язык — в разделе «Основное»
   const row = page.locator('#settings-lang-row');
   const menu = page.locator('#ctx-menu');
   await row.click();

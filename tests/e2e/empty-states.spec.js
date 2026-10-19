@@ -306,7 +306,7 @@ const PLACES = {
   },
   'настройки-теги': {
     seed: {},
-    go: () => { state.ui.view = 'settings'; render(); },
+    go: () => openSettings('work'), // теги — в разделе «Работа»
     box: '#tags-list .empty-state', title: 'Общих тегов пока нет', size: 'sm', art: 'tags',
   },
   'окно-проекта-теги': {

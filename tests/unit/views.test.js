@@ -9,7 +9,7 @@
 // без версии, повторения и дедлайна. Эти ветки закрыты здесь.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { taskRowView, deckTasks, deckPinTop, holdOrder } = require('../../src/renderer/core/views.js');
+const { taskRowView, deckTasks, deckPinTop, holdOrder, projectActivityMs, projectsByActivity } = require('../../src/renderer/core/views.js');
 
 const NOW = new Date(2026, 5, 10, 12).getTime();
 const HOUR = 3_600_000;
@@ -243,7 +243,19 @@ test('плановые блоки: в своём дне, с названием �
   const wed = grid.days[2];
   assert.equal(wed.planned.length, 2, 'на сетке — отдельно от записей');
   assert.equal(wed.blocks.length, 1);
-  assert.ok(!('col' in wed.planned[0]), 'плановые блоки в раскладку по колонкам не входят');
+  assert.deepEqual(wed.planned.map((p) => [p.col, p.cols]), [[0, 1], [0, 1]], 'не пересекаются — каждый во всю ширину');
+});
+
+test('плановые блоки в один час стоят рядом колонками; записи их раскладку не трогают', () => {
+  const slot = (id, h, dur) => ({ id, start: new Date(at(10, h)).toISOString(), end: new Date(at(10, h) + dur * 3600000).toISOString() });
+  const tasks = [
+    { id: 'a', projectId: 'p1', title: 'А', sessions: [ses(10, 10)], slots: [slot('sa', 10, 2)] },
+    { id: 'b', projectId: 'p2', title: 'Б', sessions: [], slots: [slot('sb', 11, 1)] },
+    { id: 'c', projectId: 'p2', title: 'В', sessions: [], slots: [slot('sc', 14, 1)] },
+  ];
+  const wed = agendaTimeView(tasks, calCtx({ from: new Date(2026, 5, 8).getTime(), days: 7 })).days[2];
+  assert.deepEqual(wed.planned.map((p) => [p.taskId, p.col, p.cols]), [['a', 0, 2], ['b', 1, 2], ['c', 0, 1]]);
+  assert.deepEqual(wed.blocks.map((x) => [x.col, x.cols]), [[0, 1]], 'запись — своя раскладка, во всю ширину');
 });
 
 test('дни календаря не трогают задачи', () => {
@@ -321,4 +333,66 @@ test('заморозка: перерисовка с теми же данными
   const first = holdOrder(held, ['c', 'a', 'b']);
   assert.deepEqual(holdOrder(first, ['c', 'a', 'b']), first);
   assert.deepEqual(held, ['a', 'b', 'c'], 'исходный порядок не переставлен');
+});
+
+// --- порядок проектов по свежести (19 октября 2026) ---------------------------
+//
+// «Проекты» и списки проектов веба, колода телефона: первым — проект, который
+// меняли последним, — в нём самом или в его задачах; новый проект — первым.
+// Закрепление порядок не меняет (закреплённые — группа левой панели веба).
+
+const iso = (h) => new Date(NOW + h * HOUR).toISOString();
+const ids = (list) => list.map((p) => p.id);
+
+test('проекты по свежести: правка задачи поднимает её проект первым', () => {
+  const projects = [
+    { id: 'a', createdAt: iso(-30) },
+    { id: 'b', createdAt: iso(-20) },
+    { id: 'c', createdAt: iso(-10) },
+  ];
+  assert.deepEqual(ids(projectsByActivity(projects, [])), ['c', 'b', 'a'], 'без правок — новые первыми');
+  const tasks = [{ id: 't1', projectId: 'a', updatedAt: iso(-1) }];
+  assert.deepEqual(ids(projectsByActivity(projects, tasks)), ['a', 'c', 'b']);
+});
+
+test('проекты по свежести: считается и правка самого проекта, и конец записи времени', () => {
+  const projects = [
+    { id: 'a', createdAt: iso(-30), updatedAt: iso(-2) },
+    { id: 'b', createdAt: iso(-20) },
+    { id: 'c', createdAt: iso(-10) },
+  ];
+  assert.deepEqual(ids(projectsByActivity(projects, [])), ['a', 'c', 'b'], 'переименовали «a» — он первый');
+  // У задачи «b» нет свежего updatedAt, но запись времени кончилась позже всех.
+  const tasks = [{ id: 't1', projectId: 'b', updatedAt: iso(-25), sessions: [{ start: iso(-3), end: iso(-1) }] }];
+  assert.deepEqual(ids(projectsByActivity(projects, tasks)), ['b', 'a', 'c']);
+  assert.equal(projectActivityMs(projects[1], tasks), NOW - HOUR);
+  // Запись без конца — по её началу.
+  assert.equal(projectActivityMs(projects[1], [{ projectId: 'b', sessions: [{ start: iso(-4) }] }]), Math.max(NOW - 4 * HOUR, Date.parse(iso(-20))));
+});
+
+test('проекты по свежести: новый проект — первым; закрепление порядок не меняет', () => {
+  const projects = [
+    { id: 'old', createdAt: iso(-48), pinnedAt: iso(-47) },
+    { id: 'mid', createdAt: iso(-24) },
+  ];
+  const tasks = [{ id: 't1', projectId: 'mid', updatedAt: iso(-5) }];
+  assert.deepEqual(ids(projectsByActivity(projects, tasks)), ['mid', 'old'], 'закреплённый не встаёт первым');
+  const added = [...projects, { id: 'new', createdAt: iso(0), updatedAt: iso(0) }];
+  assert.deepEqual(ids(projectsByActivity(added, tasks)), ['new', 'mid', 'old']);
+});
+
+test('проекты по свежести: равенство — новее созданный, дальше как лежали; исходный массив цел', () => {
+  const same = iso(-1);
+  const projects = [
+    { id: 'x', createdAt: iso(-9), updatedAt: same },
+    { id: 'y', createdAt: iso(-3), updatedAt: same },
+    { id: 'z' },
+    { id: 'w' },
+  ];
+  const before = ids(projects);
+  assert.deepEqual(ids(projectsByActivity(projects, [])), ['y', 'x', 'z', 'w']);
+  assert.deepEqual(ids(projects), before, 'сортирует копию');
+  // Битые даты не роняют и считаются нулём.
+  assert.deepEqual(ids(projectsByActivity([{ id: 'q', updatedAt: 'не дата' }, { id: 'r', createdAt: iso(-1) }], [{ projectId: 'q', updatedAt: 'тоже' }])), ['r', 'q']);
+  assert.deepEqual(projectsByActivity(null, null), []);
 });

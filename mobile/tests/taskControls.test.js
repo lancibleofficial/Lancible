@@ -7,8 +7,8 @@
 // свой taskCheckRadius (8: та же доля стороны, с 12 галочка 24 стала бы
 // кругом), и оба меньше половины стороны: кружок не вернётся. Тест не мерит на
 // глаз, а обходит места, где такая кнопка рисуется: строку задачи (TaskRow) во
-// всех состояниях, строку списка проекта (TaskListItem), «последнюю задачу» на
-// «Сегодня», таймер на странице задачи, плашку идущей задачи, скелет строки —
+// всех состояниях, строку списка проекта (TaskListItem), таймер на странице
+// задачи, плашку идущей задачи, скелет строки —
 // и исходники: новая кнопка старта или галочка со своим скруглением покажет
 // себя здесь, а не на глаз у людей.
 import { readFileSync, readdirSync, statSync } from 'fs';
@@ -18,7 +18,6 @@ import { render } from '@testing-library/react-native';
 import TaskRow from '../src/components/TaskRow';
 import TaskListItem from '../src/components/TaskListItem';
 import TimerMiniPlayer from '../src/components/TimerMiniPlayer';
-import HomeScreen from '../src/screens/HomeScreen';
 import TaskDetailScreen from '../src/screens/TaskDetailScreen';
 import { useAppStore } from '../src/store/useAppStore';
 // colors — тёмная палитра: тема в тестах тёмная.
@@ -128,13 +127,6 @@ describe('строка списка проекта (TaskListItem): галочк�
   });
 });
 
-test('«Сегодня»: кнопка старта у последней задачи', async () => {
-  const screen = await render(<HomeScreen navigation={nav()} route={{ params: {} }} />);
-  const starts = screen.queryAllByLabelText(t('ru', 'timer.start'));
-  expectSquares(starts);
-  expect(flat(starts[0])).toMatchObject({ width: 46, height: 46 });
-});
-
 describe('страница задачи: кнопка таймера', () => {
   const open = () => render(<TaskDetailScreen navigation={nav()} route={{ params: { taskId: 't1' } }} />);
 
@@ -205,7 +197,7 @@ describe('исходники: галочки и кнопки старта не �
 
   test('обход нашёл все места, где они рисуются', () => {
     const where = new Set(found.map((f) => f.file));
-    for (const f of ['components/TaskRow.js', 'components/TaskListItem.js', 'components/TimerMiniPlayer.js', 'screens/HomeScreen.js', 'screens/TaskDetailScreen.js']) {
+    for (const f of ['components/TaskRow.js', 'components/TaskListItem.js', 'components/TimerMiniPlayer.js', 'screens/TaskDetailScreen.js']) {
       expect([...where]).toContain(f);
     }
   });

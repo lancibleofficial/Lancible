@@ -6,11 +6,12 @@ import { Field } from './AppTextInput';
 import PrimaryButton from './PrimaryButton';
 import ChoiceList from './ChoiceList';
 import { Block, Hint } from './RepeatControls';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore, currentAccount } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
-import { setSheetFooter, closeSheet } from '../store/useSheetStore';
+import { setSheetFooter, useCloseOwnSheet, useSheetHeader } from '../store/useSheetStore';
 import { useColors, spacing, fontSize, buttonHeight, buttonRadius } from '../theme';
 import { t } from '../lib/i18n';
+import Accounts from '../core/accounts.js';
 
 // Тот же четырёхцветный логотип, что в src/renderer/index.html — своя
 // раскраска, не монохромная как у остальных иконок (Icon.js), поэтому не
@@ -34,17 +35,36 @@ const TAB_KEY = { signin: 'auth.sign_in', signup: 'auth.create_account' };
 // две строки с галочкой (общий ChoiceList, 12 октября 2026; были сегменты —
 // в листах их нет), как выбор вида в остальных листах. Подписи полей — общий
 // Block. «Войти через Google» — серая, как вторичная кнопка подвала.
-export default function AuthSheet({ initialTab = 'signin' }) {
+//
+// Несколько аккаунтов (17 октября 2026): вход всегда добавляет аккаунт —
+// прежний остаётся в списке, вошедший становится текущим со своей областью
+// данных (store/useAuthStore.js). mode="add" — «Добавить аккаунт» из
+// раздела «Аккаунт»: заголовок листа и подсказка, что текущий останется.
+// У гостя с данными — подсказка, что они останутся «Без аккаунта» и в новый
+// аккаунт не перейдут. email — почта заранее («Войти заново»).
+export default function AuthSheet({ initialTab = 'signin', mode, email: initialEmail = '' }) {
   const lang = useAppStore((s) => s.settings.lang);
   const colors = useColors();
   const styles = makeStyles(colors);
   const [tab, setTab] = useState(initialTab);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
+  const current = useAuthStore(currentAccount);
+  const guestHasData = useAuthStore((s) => !s.current && s.guestHasData);
+  useSheetHeader(mode === 'add' ? t(lang, 'accounts.add') : null);
+  const keepHint = mode === 'add' && current
+    ? t(lang, 'accounts.add_note', { name: Accounts.accountLabel(current, (k) => t(lang, k)) })
+    : guestHasData ? t(lang, 'accounts.add_note_guest') : null;
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [offerSignup, setOfferSignup] = useState(false);
   const { authError, signIn, signUp, signInWithGoogle, clearAuthError } = useAuthStore();
+  // Вход вернулся — закрываем этот лист, но не тот, что успел встать на его
+  // место: вопрос «Перенести данные?» (lib/accounts.js: askMoveGuest)
+  // открывается, пока вход ещё идёт, и closeSheet() закрыл бы его до того,
+  // как человек успеет выбрать. (До журнала правок, 17 октября 2026, так же
+  // вставал вопрос «какие данные оставить».)
+  const closeSheet = useCloseOwnSheet();
 
   function switchTab(next) {
     setTab(next);
@@ -129,6 +149,7 @@ export default function AuthSheet({ initialTab = 'signin' }) {
 
       {authError ? <Hint danger>{t(lang, authError)}</Hint> : null}
       {offerSignup ? <Hint>{t(lang, 'auth.no_account')}</Hint> : null}
+      {keepHint ? <Hint testID="auth-keep-hint">{keepHint}</Hint> : null}
     </View>
   );
 }

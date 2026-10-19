@@ -287,16 +287,17 @@ test('заголовок вкладки называет экран и сущн�
   await nav(page, 'settings');
   await expect(page).toHaveTitle('Настройки — Lancible');
   await nav(page, 'time');
-  await expect(page).toHaveTitle('Статистика — Lancible');
+  await expect(page).toHaveTitle('Время — Lancible');
 });
 
-test('экран «Статистика»: пункт меню и заголовок вкладки — на четырёх языках', async ({ page }) => {
-  // До 11 октября экран назывался «Время» (uk — «Час», kk — «Уақыт»). Теперь
-  // это статистика: адрес #/stats уже был, имя в меню приводится к нему.
-  // «Время» в смысле длительности («Записи времени», колонка «Время») не
-  // трогали — меряется только пункт рейла, мобильный таб и заголовок вкладки.
+test('экран «Время»: пункт меню и заголовок вкладки — на четырёх языках', async ({ page }) => {
+  // 11 октября экран переименовали в «Статистику», 17 октября — обратно во
+  // «Время» (uk — «Час», kk — «Уақыт»), ключ nav.stats стал nav.time. Адрес
+  // остался #/stats, чтобы не ломать ссылки; подпись блока внутри экрана
+  // («Показать статистику») — другое и осталась. Меряется пункт рейла,
+  // мобильный таб и заголовок вкладки.
   await start(page);
-  const names = { ru: 'Статистика', en: 'Stats', uk: 'Статистика', kk: 'Статистика' };
+  const names = { ru: 'Время', en: 'Time', uk: 'Час', kk: 'Уақыт' };
   for (const [lang, name] of Object.entries(names)) {
     await page.evaluate((l) => setLang(l), lang);
     await nav(page, 'time');
@@ -386,8 +387,10 @@ test('ссылка на веб считается от страницы, на к
 
 /** Вошедший пользователь и облако, которое отвечает не сразу. Подменяется
  *  клиент базы — ровно те методы, что зовёт приложение при запуске (так же,
- *  как в auth.spec.js): сессия, пользователь, профиль и чтение sync_state.
- *  delay — через сколько отвечает облако; null — не отвечает никогда. */
+ *  как в auth.spec.js): сессия, пользователь, профиль и первая связь с
+ *  журналом правок — слепков и журнала нет, данные лежат в sync_state (как у
+ *  аккаунта до журнала). delay — через сколько отвечает облако; null — не
+ *  отвечает никогда. Запрос — цепочка, как у supabase-js. */
 const signedInWithCloud = (page, { cloud, delay }) => page.addInitScript(({ cloud, delay }) => {
   let real;
   const patch = (client) => {
@@ -396,19 +399,25 @@ const signedInWithCloud = (page, { cloud, delay }) => page.addInitScript(({ clou
     client.auth.getUser = async () => ({ data: { user } });
     client.channel = () => ({ on() { return this; }, subscribe() { return this; } });
     client.removeChannel = () => {};
-    client.from = (table) => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: async () => {
-            if (table === 'profiles') return { data: { name: 'Turan', terms_version: '2099-01-01', age_confirmed: true }, error: null };
-            if (delay === null) return new Promise(() => {});
-            await new Promise((resolve) => setTimeout(resolve, delay));
-            return { data: { data: cloud, updated_at: new Date().toISOString() }, error: null };
-          },
-        }),
-      }),
-      upsert: async () => ({ error: null }),
-    });
+    client.from = (table) => {
+      const q = {
+        select: () => q,
+        eq: () => q,
+        gt: () => q,
+        order: () => q,
+        limit: () => q,
+        upsert: () => q,
+        insert: () => q,
+        maybeSingle: async () => {
+          if (table === 'profiles') return { data: { name: 'Turan', terms_version: '2099-01-01', age_confirmed: true }, error: null };
+          if (delay === null) return new Promise(() => {});
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          return { data: { data: cloud, updated_at: new Date().toISOString(), updated_by: 'old-client', mirror_seq: null }, error: null };
+        },
+        then: (resolve, reject) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+      };
+      return q;
+    };
     return client;
   };
   // window.supabase собирает UMD-файл; createClient оборачивается, когда его

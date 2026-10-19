@@ -8,7 +8,9 @@
 // прозрачный фон. Без них iOS показал бы свои SF Symbols и шеврон.
 //
 // Рисуем в Electron-окне на canvas и снимаем PNG (тот же приём, что в
-// make-icon.js). Запуск: npx electron scripts/make-ios-icons.js
+// make-icon.js). Запуск: npx electron scripts/make-ios-icons.js — все;
+// npx electron scripts/make-ios-icons.js comments — только названные (новая
+// иконка не переписывает остальные картинки).
 const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -22,11 +24,13 @@ const ASSETS = path.join(__dirname, '..', 'mobile', 'assets');
 // символ в стеклянной кнопке. «Назад» — узкий шеврон без полей слева,
 // иначе он отъехал бы от края дальше системного.
 const SETS = [
-  { dir: 'tabs', w: 26, h: 26, names: ['folder', 'tasks', 'today', 'chart', 'menu'] },
+  { dir: 'tabs', w: 26, h: 26, names: ['folder', 'tasks', 'comments', 'chart', 'menu'] },
   { dir: 'header', w: 22, h: 22, names: ['search', 'bell', 'plus', 'calendar', 'panel', 'list', 'download', 'kebab', 'check', 'docs'] },
   { dir: 'header', w: 13, h: 24, names: ['chevron-left'], file: 'back' },
 ];
 const SCALES = [1, 2, 3];
+// Имена из командной строки — рисовать только их (имя файла или иконки).
+const ONLY = process.argv.slice(2).filter((a) => /^[a-z][a-z0-9-]*$/.test(a));
 
 /** Рамка иконки вписывается в высоту h и встаёт по центру ширины w. */
 const draw = (icon, w, h, k) => `(async () => {
@@ -51,6 +55,7 @@ app.whenReady().then(async () => {
     const dir = path.join(ASSETS, set.dir);
     fs.mkdirSync(dir, { recursive: true });
     for (const name of set.names) {
+      if (ONLY.length && !ONLY.includes(name) && !ONLY.includes(set.file || name)) continue;
       const icon = ICONS[name];
       if (!icon) throw new Error(`в core/icons.js нет иконки ${name}`);
       for (const k of SCALES) {

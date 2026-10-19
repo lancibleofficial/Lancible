@@ -22,22 +22,40 @@ const M = schema.marks;
 
 /** У каждого блока верхнего уровня свой bid, и он не повторяется. Вставка
  *  копирует bid вместе с блоком — у второго экземпляра номер меняется, у
- *  первого остаётся: пометки от руки держатся за первый. */
+ *  первого остаётся: пометки от руки держатся за первый.
+ *
+ *  Вложенным блокам (график в списке, цитате, ячейке) bid не раздаётся —
+ *  его ставят, когда он нужен (index.js: editChartOnHost). Но и у них он не
+ *  повторяется (19 октября 2026): после «Дублировать», дубля строки или
+ *  вставки у копии номер новый, иначе правка хозяина по bid попала бы в
+ *  первый экземпляр. Верхний уровень — первым: его номер не уступается
+ *  вложенной копии, даже если она выше по документу. */
+const hasBid = (node) => !!(node.type.spec.attrs && 'bid' in node.type.spec.attrs);
+
 export const blockIds = new Plugin({
   key: new PluginKey('led-bids'),
   appendTransaction(trs, _old, state) {
     if (!trs.some((tr) => tr.docChanged) && !trs.some((tr) => tr.getMeta('led-init'))) return null;
     const seen = new Set();
     let tr = null;
+    const renew = (node, pos) => {
+      const bid = shortId();
+      tr = tr || state.tr;
+      tr.setNodeMarkup(pos, null, Object.assign({}, node.attrs, { bid }));
+      return bid;
+    };
     state.doc.forEach((node, pos) => {
-      if (!node.type.spec.attrs || !('bid' in node.type.spec.attrs)) return;
+      if (!hasBid(node)) return;
       let bid = node.attrs.bid;
-      if (!bid || seen.has(bid)) {
-        bid = shortId();
-        tr = tr || state.tr;
-        tr.setNodeMarkup(pos, null, Object.assign({}, node.attrs, { bid }));
-      }
+      if (!bid || seen.has(bid)) bid = renew(node, pos);
       seen.add(bid);
+    });
+    state.doc.descendants((node, pos, parent) => {
+      if (node.isInline) return false;
+      if (parent !== state.doc && hasBid(node) && node.attrs.bid) {
+        seen.add(seen.has(node.attrs.bid) ? renew(node, pos) : node.attrs.bid);
+      }
+      return !node.isTextblock;
     });
     if (tr) tr.setMeta('addToHistory', false);
     return tr;
@@ -189,6 +207,44 @@ export function buildInputRules(opts) {
   ];
   if (opts.smartTypography()) rules.push(...quoteRules(opts.getLang));
   return inputRules({ rules });
+}
+
+// --- вставка адреса -----------------------------------------------------------------
+
+/** Один адрес и ничего больше: http, https или mailto, без пробелов и
+ *  переводов строки внутри (по краям обрезаются — их приносит копирование
+ *  из адресной строки и из чатов). Возвращает адрес или null. Другие схемы
+ *  (javascript:, file:, ftp:) — null: ссылкой из буфера они не становятся. */
+export function singleUrl(text) {
+  const v = String(text == null ? '' : text).trim();
+  if (!v || /\s/.test(v)) return null;
+  if (!/^(https?:\/\/[^/?#]|mailto:[^@]+@[^@]+\.[^@]+$)/i.test(v)) return null;
+  try {
+    const u = new URL(v);
+    return /^(https?|mailto):$/.test(u.protocol) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Ctrl+V адреса на выделенный текст (index.js: onPaste): текст остаётся, а
+ *  на выделение ложится ссылка с этим адресом. Команда ProseMirror; false —
+ *  вставлять как обычно: в буфере не один адрес, выделения нет, выделен не
+ *  текст (блок, ячейки, всё сразу) или ссылку здесь не поставить (код). */
+export function linkOnPaste(text) {
+  const href = singleUrl(text);
+  return (state, dispatch) => {
+    const sel = state.selection;
+    if (!href || sel.empty || !(sel instanceof TextSelection)) return false;
+    let fits = false;
+    state.doc.nodesBetween(sel.from, sel.to, (node) => {
+      if (fits) return false;
+      if (node.inlineContent && node.type.allowsMarkType(M.link)) fits = true;
+      return !fits;
+    });
+    if (!fits) return false;
+    return C.setLink(href)(state, dispatch);
+  };
 }
 
 // --- клавиши ------------------------------------------------------------------------

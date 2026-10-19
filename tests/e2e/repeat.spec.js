@@ -163,21 +163,29 @@ test('своё время напоминания уезжает на день в
 
 test('возврат задачи при приёме облака уходит обратно в облако', async ({ page }) => {
   // Отпечаток «что уже в облаке» снимался после возврата: возврат считался
-  // отправленным, и второе устройство продолжало видеть задачу закрытой.
+  // отправленным, и второе устройство продолжало видеть задачу закрытой. С
+  // журналом правок (17 октября 2026) то же правило: возврат — своя правка
+  // этого устройства, и после приёма она ложится в очередь отправки.
   const ids = await seed(page);
   const got = await page.evaluate((id) => {
     const task = getTask(id);
     task.repeat = Core.normalizeRepeat({ freq: 'day', every: 1 });
     setTaskDone(task, true);
-    // С другого устройства пришло то же, а день возврата уже наступил.
-    const remote = JSON.parse(JSON.stringify(syncPayload()));
-    remote.tasks.find((x) => x.id === id).reopenAt = new Date(Date.now() - 60000).toISOString();
-    applyRemoteData(remote);
-    const synced = JSON.parse(lastSyncedJSON).tasks.find((x) => x.id === id);
-    return { open: !getTask(id).done, syncedDone: synced.done, pending: lastSyncedJSON !== JSON.stringify(syncPayload()) };
+    // Область связана с журналом: пачка знает задачу закрытой.
+    syncBundle = Core.bootstrapFromSnapshot({ seq: 0, data: JSON.parse(JSON.stringify(syncPayload())) }, [], { deviceId });
+    // С другого устройства пришла правка: день возврата уже наступил.
+    const at = new Date(Date.now() - 60000).toISOString();
+    syncBundle = Core.mergeIncoming(syncBundle, [{
+      op_id: '00000000-0000-4000-8000-0000000000aa', device_id: 'win-other', entity: 'task', entity_id: id,
+      field: 'reopenAt', value: at, at, base_seq: 0, seq: 1,
+    }], { deviceId });
+    applyRemoteData(listsCopy(syncBundle.state));
+    const synced = syncBundle.state.tasks.find((x) => x.id === id);
+    const ops = commitLive();
+    return { open: !getTask(id).done, syncedDone: synced.done, pending: ops.some((o) => o.entityId === id && o.field === 'done' && o.value === false) };
   }, ids.noDue);
   expect(got.open, 'задача вернулась').toBe(true);
-  expect(got.syncedDone, 'отпечаток — то, что пришло').toBe(true);
+  expect(got.syncedDone, 'в пачке — то, что пришло').toBe(true);
   expect(got.pending, 'возврат ждёт отправки').toBe(true);
 });
 
@@ -193,8 +201,9 @@ test('строка «Повторение» открывает окно повт
   await page.locator('#rpdlg-save').click();
   await expect(page.locator('#repeat-value')).toHaveText('Каждую неделю');
   await expect(page.locator('#repeat-next')).toBeVisible();
-  // Значок в списке: повторяющуюся задачу видно, не открывая её.
-  await page.locator('#task-back').click();
+  // Значок в списке: повторяющуюся задачу видно, не открывая её. В проект —
+  // крошкой: задача открыта с «Сегодня», и стрелка «назад» вела бы туда.
+  await page.locator('#crumb-project').click();
   await expect(page.locator('#task-list .task-repeat-mark')).toHaveCount(1);
 });
 
@@ -306,6 +315,128 @@ test('окно тонкой настройки собирает правило �
   expect(rule.ends).toMatchObject({ kind: 'after', count: 4 });
   expect(rule.keepHistory).toBe(true);
   await expect(page.locator('#repeat-value')).toHaveText('Каждые 2 нед., по Пн, Чт');
+});
+
+// --- Окно по образцу листа телефона (17 октября 2026) -----------------------
+
+test('окно повторения устроено как лист телефона: подписи над выбором, общие детали, порядок', async ({ page }) => {
+  await seed(page);
+  await page.locator('#task-repeat').click();
+  await expect(page.locator('#rpdlg-backdrop')).toBeVisible();
+  // Неделя по умолчанию: видны частота, «каждые N», дни, отсчёт (у задачи
+  // есть дедлайн), окончание, копии и сводка — в порядке RepeatSheet.
+  const blocks = await page.evaluate(() => [...document.querySelectorAll('#rpdlg-backdrop .rpdlg > :not(.modal-title):not(.modal-buttons)')]
+    .filter((n) => !n.hidden)
+    .map((n) => (n.querySelector('.sgroup-label') || {}).textContent || n.id || n.className));
+  expect(blocks).toEqual(['Как часто', 'Повторять каждые', 'В дни', 'Отсчёт', 'Окончание', 'rp-block', 'rp-preview']);
+  // Только общие детали: сегменты, поле, остров со строкой-переключателем.
+  for (const id of ['rp-freq-seg', 'rp-from-seg', 'rp-ends-seg', 'rp-month-seg']) {
+    await expect(page.locator(`#${id}`)).toHaveClass(/\bsegmented\b/);
+  }
+  await expect(page.locator('#rp-history')).toHaveClass(/\bsrow\b.*\bswitch\b|\bswitch\b.*\bsrow\b/);
+  await expect(page.locator('#rp-history')).toHaveAttribute('aria-pressed', 'false');
+  expect(await page.locator('#rp-history').evaluate((n) => n.parentElement.classList.contains('sgroup'))).toBe(true);
+  await expect(page.locator('#rp-history-hint')).toHaveText('Каждый раз в списке останется завершённая задача со своим временем');
+  // Подпись над выбором — та же деталь, что подпись группы в свойствах задачи.
+  const label = await page.evaluate(() => {
+    const cs = getComputedStyle(document.querySelector('#rpdlg-backdrop .sgroup-label'));
+    return { size: cs.fontSize, color: cs.color, transform: cs.textTransform };
+  });
+  const faint = await page.evaluate(() => {
+    const probe = document.createElement('i');
+    probe.style.color = 'var(--text-faint)';
+    document.body.appendChild(probe);
+    const c = getComputedStyle(probe).color;
+    probe.remove();
+    return c;
+  });
+  expect(label).toEqual({ size: '12px', color: faint, transform: 'none' });
+  // Дни недели — квадраты на --panel-2, как WeekdayChips телефона.
+  const day = await page.locator('.rp-day').first().evaluate((n) => {
+    const r = n.getBoundingClientRect();
+    const probe = document.createElement('i');
+    probe.style.background = 'var(--panel-2)';
+    document.body.appendChild(probe);
+    const panel2 = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return { square: Math.abs(r.width - r.height) < 1, bg: getComputedStyle(n).backgroundColor, panel2 };
+  });
+  expect(day.square).toBe(true);
+  expect(day.bg).toBe(day.panel2);
+  // Месяц: дни уходят, появляется режим месяца; «До даты» — кнопка даты.
+  await page.locator('#rp-freq-seg button[data-freq="month"]').click();
+  await expect(page.locator('#rp-days-block')).toBeHidden();
+  await expect(page.locator('#rp-month-seg')).toBeVisible();
+  await page.locator('#rp-ends-seg button[data-ends="on"]').click();
+  await expect(page.locator('#rp-until')).toHaveClass(/\bdp-btn\b/);
+  await expect(page.locator('#rp-until')).toBeVisible();
+  // Системных выпадашек в окне нет.
+  await expect(page.locator('#rpdlg-backdrop select')).toHaveCount(0);
+});
+
+test('неделя, Пн/Ср/Пт, после 5 раз: правило нормализовано ядром, подсказка — словами describeRepeat', async ({ page }) => {
+  await seed(page);
+  // Окно задачи без правила: начинается с недели без дней.
+  await page.locator('#task-repeat').click();
+  await expect(page.locator('#rpdlg-backdrop')).toBeVisible();
+  await page.locator('#rp-freq-seg button[data-freq="day"]').click();
+  await page.locator('#rp-freq-seg button[data-freq="week"]').click();
+  await expect(page.locator('#rp-freq-seg button.on')).toHaveAttribute('data-freq', 'week');
+  for (const d of ['Пн', 'Ср', 'Пт']) await page.locator('.rp-day', { hasText: d }).click();
+  await expect(page.locator('.rp-day.on')).toHaveText(['Пн', 'Ср', 'Пт']);
+  await expect(page.locator('.rp-day.on').first()).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#rp-ends-seg button[data-ends="after"]').click();
+  await page.locator('#rp-count').fill('5');
+
+  // Подсказка внизу — правило словами ядра, тем же, что уйдёт по «Готово».
+  const expected = await page.evaluate(() => {
+    const d = Core.describeRepeat(rpdlg.rule);
+    const words = t(d.key, { ...d.vars, days: d.vars.days.map(weekdayName).join(', ') });
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  });
+  expect(expected).toBe('По Пн, Ср, Пт');
+  await expect(page.locator('#rp-preview .rp-summary-text')).toHaveText(expected);
+  await expect(page.locator('#rp-preview .rp-summary-dates')).toBeVisible();
+
+  await page.locator('#rpdlg-save').click();
+  await expect(page.locator('#rpdlg-backdrop')).toBeHidden();
+  const { rule, normalized } = await page.evaluate(() => {
+    const task = state.tasks.find((x) => x.title === 'Отчёт клиенту');
+    return { rule: task.repeat, normalized: Core.normalizeRepeat(task.repeat) };
+  });
+  expect(rule, 'в задаче — правило ровно в том виде, что отдаёт normalizeRepeat').toEqual(normalized);
+  expect(rule).toMatchObject({ freq: 'week', every: 1, weekdays: [1, 3, 5], monthMode: 'day', from: 'schedule', keepHistory: false, done: 0 });
+  expect(rule.ends).toMatchObject({ kind: 'after', count: 5 });
+  await expect(page.locator('#repeat-value')).toHaveText(expected);
+});
+
+test('окно повторения стоит по центру общим механизмом и помещается в окно', async ({ page }) => {
+  await seed(page);
+  for (const size of [{ width: 1280, height: 800 }, { width: 375, height: 700 }]) {
+    await page.setViewportSize(size);
+    await page.locator('#task-repeat').click();
+    await expect(page.locator('#rpdlg-backdrop')).toBeVisible();
+    await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))));
+    const box = await page.evaluate(() => {
+      const back = document.getElementById('rpdlg-backdrop');
+      const r = back.querySelector('.modal').getBoundingClientRect();
+      const cs = getComputedStyle(back);
+      return {
+        left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+        win: document.documentElement.clientWidth, h: window.innerHeight,
+        display: cs.display, justify: cs.justifyContent,
+      };
+    });
+    // Подложка — общее правило всех модалок (ui-rules.test.js): flex по центру.
+    expect(box.display).toBe('flex');
+    expect(box.justify).toBe('center');
+    expect(Math.abs((box.left + box.right) / 2 - box.win / 2), `${size.width}: смещение от центра`).toBeLessThanOrEqual(1);
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(box.win);
+    expect(box.bottom, `${size.width}: низ окна за экраном`).toBeLessThanOrEqual(box.h);
+    await page.locator('#rpdlg-cancel').click();
+    await expect(page.locator('#rpdlg-backdrop')).toBeHidden();
+  }
 });
 
 test('«Не повторяется» из окна снимает правило', async ({ page }) => {

@@ -128,6 +128,8 @@ async function rebuild(tasks, langCode, enabled) {
         identifier: entry.key,
         content: {
           ...notificationContent(entry, task, langCode),
+          // Касание открывает эту задачу (navigation/useNotificationOpen.js).
+          data: { taskId: task.id },
           ...(Platform.OS === 'android' && androidChannelReady ? { channelId: 'deadlines' } : null),
         },
         trigger: { type: SchedulableTriggerInputTypes.DATE, date: new Date(entry.at) },

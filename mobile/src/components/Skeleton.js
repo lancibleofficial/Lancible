@@ -4,8 +4,11 @@ import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import MainTabBar from '../navigation/MainTabBar';
 import { PendingTabHeader, TAB_TITLES } from './TabHeader';
 import { useAppStore } from '../store/useAppStore';
+import Text from './AppText';
+import EmptyState from './EmptyState';
+import PrimaryButton from './PrimaryButton';
 import { t } from '../lib/i18n';
-import { useColors, spacing, screenPadding, radius, taskControlRadius, taskCheckRadius } from '../theme';
+import { useColors, spacing, screenPadding, radius, fontSize, taskControlRadius, taskCheckRadius, buttonHeight } from '../theme';
 
 // Заглушки на время загрузки. Смысл не в украшении: приложение читает данные
 // из хранилища не мгновенно, а тяжёлая вкладка (171 строка задач, календарь
@@ -20,7 +23,7 @@ import { useColors, spacing, screenPadding, radius, taskControlRadius, taskCheck
 // рисуют их настоящими — название в шапке (PendingTabHeader) и саму панель
 // (MainTabBar, ниже в AppSkeleton), а полосы и пульс — только в странице.
 //
-// У каждой вкладки свой — по её нынешней раскладке (колода, инбокс, неделя,
+// У каждой вкладки свой — по её нынешней раскладке (колода, инбокс, чат,
 // календарь, меню). AppSkeleton — запуск: «Проекты» и панель вкладок.
 // Скелетоны вкладок показывает навигация (withTabPage), пока вкладка
 // строится в первый раз, — экраны о них не знают.
@@ -153,32 +156,31 @@ export function TasksSkeleton() {
   );
 }
 
-/** «Сегодня»: неделя столбиками, последняя задача, записи дня. */
-export function TodaySkeleton() {
+/** «Чат-бот» — список чатов (с 18 октября 2026, круг 20): острова строк —
+ *  название и время, две строки превью, число сообщений. */
+export function ChatSkeleton() {
   const s = useStyles();
+  // Как главный экран (круг 21): сценка, фраза и поле — серединой посередине,
+  // под ними прежние чаты.
   return (
     <View style={s.page}>
-      <SkHeader tab="Home" />
-      <View style={s.gutter}>
-        <View style={s.island}>
-          <Skeleton width={110} height={14} />
-          <View style={s.bars}>
-            {[34, 58, 22, 70, 46, 12, 30].map((h, i) => (
-              <View key={i} style={s.barCol}>
-                <Skeleton width={22} height={h} radius={6} />
-                <Skeleton width={14} height={9} />
-              </View>
-            ))}
+      <SkHeader tab="Chat" />
+      <View style={[s.gutter, s.chatHero]}>
+        <Skeleton width={120} height={88} radius={radius.xl} />
+        <Skeleton width="58%" height={20} />
+        <Skeleton width="100%" height={buttonHeight} radius={radius.lg} />
+      </View>
+      <View style={[s.gutter, s.chatList]}>
+        {[0, 1].map((i) => (
+          <View key={i} style={s.chatItem}>
+            <View style={[s.row, { justifyContent: 'space-between' }]}>
+              <Skeleton width="56%" height={14} />
+              <Skeleton width={38} height={10} />
+            </View>
+            <Skeleton width="92%" height={10} />
+            <Skeleton width="64%" height={10} />
           </View>
-        </View>
-        <View style={[s.island, s.row]}>
-          <View style={{ flex: 1, gap: 6 }}>
-            <Skeleton width="60%" height={15} />
-            <Skeleton width="36%" height={11} />
-          </View>
-          <Skeleton width={92} height={40} radius={radius.md} />
-        </View>
-        <SkListIsland rows={4} />
+        ))}
       </View>
     </View>
   );
@@ -274,6 +276,52 @@ export function AppSkeleton() {
   );
 }
 
+/** Смена аккаунта (17 октября 2026): пока открывается область другого
+ *  аккаунта, вкладок нет — их экраны смотрели бы на чужие данные. На их месте
+ *  тихая подпись «Переключаю…», а панель вкладок остаётся на месте, с
+ *  «Меню» выбранным: переключают из него, и панель не мигает. */
+export function SwitchingScreen() {
+  const s = useStyles();
+  const colors = useColors();
+  const lang = useAppStore((st) => st.settings.lang);
+  return (
+    <View style={s.page} testID="switching-screen">
+      <View style={s.switching}>
+        <Text style={{ color: colors.textDim, fontSize: fontSize.sm }}>{t(lang, 'accounts.switching')}</Text>
+      </View>
+      <LaunchTabBar index={LAUNCH_ROUTES.findIndex((r) => r.name === 'Menu')} />
+    </View>
+  );
+}
+
+/** Область данных не прочиталась (19 октября 2026, useAppStore: scopeError):
+ *  отказ хранилища, битая запись. Вкладок нет — их экраны показали бы пустое
+ *  или чужое, а запись закрыта, чтобы нечитаемая не легла пустой. Ошибка
+ *  стоит, пока человек не ответит: «Повторить» читает снова; у области
+ *  аккаунта — ещё и выход к данным «Без аккаунта» (иначе с этого экрана
+ *  никуда, «Меню» за ним). Слова и кнопки — общий EmptyState.
+ *  @param scope — { uid }; onRetry(); onGuest() */
+export function ScopeErrorScreen({ scope, onRetry, onGuest }) {
+  const s = useStyles();
+  const lang = useAppStore((st) => st.settings.lang);
+  return (
+    <View style={[s.page, s.switching]} testID="scope-error-screen">
+      <EmptyState
+        art="docs"
+        title={t(lang, 'accounts.read_failed_title')}
+        text={t(lang, 'accounts.read_failed_text')}
+        actionLabel={t(lang, 'accounts.read_retry')}
+        onAction={onRetry}
+        primary
+        testID="scope-error"
+      />
+      {scope && scope.uid && onGuest ? (
+        <PrimaryButton title={t(lang, 'accounts.read_open_guest')} variant="ghost" onPress={onGuest} style={s.errorGuest} testID="scope-error-guest" />
+      ) : null}
+    </View>
+  );
+}
+
 function useStyles() {
   const colors = useColors();
   return makeStyles(colors);
@@ -297,9 +345,13 @@ const makeStyles = (colors) => StyleSheet.create({
   taskText: { flex: 1, gap: 7 },
   groupLabel: { marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.xs },
   listRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 52, paddingHorizontal: screenPadding },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 90 },
-  barCol: { alignItems: 'center', gap: 6 },
+  chatHero: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: spacing.lg, paddingTop: spacing.sm },
+  chatList: { flex: 1, paddingTop: spacing.lg, gap: spacing.sm },
+  // Поля — как у острова строки (Island): lg по бокам, md + 2 сверху и снизу.
+  chatItem: { backgroundColor: colors.panel, borderRadius: radius.lg, padding: spacing.lg, paddingVertical: spacing.md + 2, gap: 8 },
   calRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  switching: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorGuest: { width: 'auto', alignSelf: 'center', paddingHorizontal: spacing.xl },
 });
 
 export default Skeleton;

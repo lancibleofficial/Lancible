@@ -68,7 +68,8 @@ test('идёт таймер: в мете часы вместо статуса, �
   expect(texts[1]).toBe(taskRowMeta(useAppStore.getState().tasks[0], { statuses: useAppStore.getState().statuses, colors, lang: 'ru' })[1].text);
   expect(s.queryByText('В работе')).toBeNull();
   expect(s.queryByTestId('task-dot-t1')).toBeNull();
-  expect(s.queryByText(new RegExp(t('ru', 'task.running_now')))).toBeNull();
+  // Подписи «идёт сейчас» нет (ключ ушёл со словаря вместе с «Сегодня», 18 октября 2026).
+  expect(s.queryByText(/идёт сейчас/)).toBeNull();
   expect(s.getByLabelText(t('ru', 'timer.stop'))).toBeTruthy();
   // Часы — акцентные (accentInk), полужирные (AppText ставит вес семейством), цифры одной ширины.
   expect(flat(s.getByTestId('task-clock-t1'))).toMatchObject({ color: colors.accentInk, fontFamily: 'Onest-SemiBold', fontVariant: ['tabular-nums'] });

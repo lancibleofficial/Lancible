@@ -15,6 +15,11 @@ import { menu } from './ui.js';
 const GROW_MARGIN = 60;
 const GROW_STEP = 240;
 
+/** Вид рисунка по его узлу на странице — контекстной панели телефона
+ *  (index.js: drawingEdit открывает выделенный рисунок на правку). */
+const VIEWS = new WeakMap();
+export const drawingViewOf = (dom) => (dom ? VIEWS.get(dom) || null : null);
+
 export class DrawingView {
   constructor(node, view, getPos, ctx) {
     this.node = node;
@@ -39,6 +44,7 @@ export class DrawingView {
     });
     this.toolbar.dom.classList.add('led-draw-bar');
     this.dom = h('div', { class: 'led-drawing', contenteditable: 'false' }, this.toolbar.dom, this.area, this.grip);
+    VIEWS.set(this.dom, this);
 
     this.save = debounce(() => this.flush(), 300);
     this.surface = new InkSurface({
@@ -69,7 +75,14 @@ export class DrawingView {
     };
     document.addEventListener('pointerdown', this.onOutside, true);
 
-    this.ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => this.layout()) : null;
+    // Перерисовка — в следующем кадре, а не в самом колбэке: высота идёт от
+    // ширины, и перерисовка внутри колбэка меняла размер того же узла —
+    // браузер слал window.onerror «ResizeObserver loop completed with
+    // undelivered notifications» (телефон, после вставки; 17 октября 2026).
+    this.ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
+      cancelAnimationFrame(this.roFrame);
+      this.roFrame = requestAnimationFrame(() => this.layout());
+    }) : null;
     if (this.ro) this.ro.observe(this.dom);
     this.paintBg();
     this.paintHint();
@@ -284,6 +297,7 @@ export class DrawingView {
     this.surface.destroy();
     document.removeEventListener('pointerdown', this.onOutside, true);
     if (this.ro) this.ro.disconnect();
+    cancelAnimationFrame(this.roFrame);
     if (this.active) this.ctx.onDrawingActive(this, false);
   }
 }

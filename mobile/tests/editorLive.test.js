@@ -19,12 +19,13 @@ import EditorScreen from '../src/screens/EditorScreen';
 import DocumentsScreen from '../src/screens/DocumentsScreen';
 import BottomSheet from '../src/components/BottomSheet';
 import { EDITOR_BASE_URL } from '../src/components/DocEditor';
-import { TOOLBAR_HEIGHT } from '../src/components/EditorToolbar';
+import { TOOLBAR_SPACE } from '../src/components/EditorToolbar';
 import { SAVE_MS } from '../src/hooks/useEditorSession';
 import { useAppStore } from '../src/store/useAppStore';
 import { useSheetStore } from '../src/store/useSheetStore';
 import { shareTextFile } from '../src/lib/exportRunner';
 import { pickPhoto } from '../src/lib/photoPicker';
+import * as Clipboard from 'expo-clipboard';
 import DocCore from '../src/core/doc.js';
 import { EDITOR_CSS, EDITOR_JS } from '../src/editor/editorBundle';
 import { spacing } from '../src/theme';
@@ -45,6 +46,8 @@ jest.mock('react-native-webview', () => {
 jest.mock('../src/lib/exportRunner', () => ({ runExport: jest.fn(), shareTextFile: jest.fn(async () => {}) }));
 // Системный выбор файла — нативный: подменён, отдаёт то, что задаст тест.
 jest.mock('../src/lib/photoPicker', () => ({ pickPhoto: jest.fn(), PHOTO_TOO_BIG: 'photo_too_big', PHOTO_MAX_BYTES: 2 * 1024 * 1024 }));
+// Буфер обмена — нативный: подменён (без модуля — tests/nativeOptional.test.js).
+jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }));
 
 const NOTES = DocCore.writeNotes({ v: 1, doc: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Старое' }] }] }, comments: [], ink: [] });
 const container = (text) => ({ v: 1, doc: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] }, comments: [], ink: [] });
@@ -105,8 +108,10 @@ describe('заметки задачи — живой редактор на ст�
     expect(global.__web.source.html).toMatch(/autoHeight: !!S\.live/);
     // Страница не прокручивается сама — её прокручивает экран задачи.
     expect(global.__web.scrollEnabled).toBe(false);
-    await say({ type: 'height', px: 420, height: 420 });
-    expect(StyleSheet.flatten(q.getByTestId('doc-editor').props.style).height).toBe(420);
+    // Текст выше экрана — поле растёт за ним (короче — оно всё равно до низа
+    // экрана: notesFullHeight.test.js).
+    await say({ type: 'height', px: 4200, height: 4200 });
+    expect(StyleSheet.flatten(q.getByTestId('doc-editor').props.style).height).toBe(4200);
   });
 
   test('полноэкранного режима нет: ни кнопки, ни перехода — только точка «сохранено» в строке тегов', async () => {
@@ -134,8 +139,9 @@ describe('заметки задачи — живой редактор на ст�
     // Прокрутка 700 по высоте, поле начинается на 120.
     await act(async () => { q.getByTestId('task-scroll').props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 700 } } }); });
     await act(async () => { q.getByTestId('task-notes').props.onLayout({ nativeEvent: { layout: { x: 10, y: 120, width: 370, height: 96 } } }); });
-    // Свёрнутый шит — 130 (без системной панели в тестах), и воздух.
-    const toSheet = 700 - 120 - 130 - spacing.lg;
+    // Свёрнутый шит — 130 (без системной панели в тестах); воздуха под полем
+    // нет (17 октября 2026) — оно ровно до шита.
+    const toSheet = 700 - 120 - 130;
     expect(height()).toBe(toSheet);
     expect(notesMinHeight({ viewH: 700, top: 120, sheetH: 130 })).toBe(toSheet);
     await say({ type: 'height', px: 200, height: 200 });
@@ -145,14 +151,15 @@ describe('заметки задачи — живой редактор на ст�
     // Длинный текст растит поле.
     expect(height()).toBe(900);
     await say({ type: 'height', px: 200, height: 200 });
-    // Клавиатура 300: поле — до панели над ней.
+    // Клавиатура 300: поле — до панели над ней (остров и воздух под ним).
     await keyboard(true);
-    expect(height()).toBe(700 - 120 - 300 - TOOLBAR_HEIGHT - spacing.lg);
-    // Пока шит внизу, страница не держит под него места — короткий текст не листается.
-    expect(StyleSheet.flatten(q.getByTestId('task-scroll').props.contentContainerStyle).paddingBottom).toBe(spacing.lg);
+    expect(height()).toBe(700 - 120 - 300 - TOOLBAR_SPACE);
+    // Пока шит внизу, страница не держит под него места (клавиатуру с панелью
+    // добавляет сама прокрутка) — короткий текст не листается.
+    expect(StyleSheet.flatten(q.getByTestId('task-scroll').props.contentContainerStyle).paddingBottom).toBe(0);
     await keyboard(false);
     expect(height()).toBe(toSheet);
-    expect(StyleSheet.flatten(q.getByTestId('task-scroll').props.contentContainerStyle).paddingBottom).toBe(130 + spacing.lg);
+    expect(StyleSheet.flatten(q.getByTestId('task-scroll').props.contentContainerStyle).paddingBottom).toBe(130);
     // Пустое место под коротким текстом — сам #host страницы: касание по нему
     // ловит редактор (src/editor/index.js: onBlankDown).
     expect(global.__web.source.html).toMatch(/#host{min-height:100vh;}/);
@@ -241,8 +248,9 @@ describe('заметки задачи — живой редактор на ст�
   test('курсор под клавиатурой — докрутить вниз, над шапкой — вверх, виден — стоять', () => {
     const kbTop = 544;
     const base = { boxTop: 200, kbTop, viewTop: 100 };
-    // Низ курсора на 520 + воздух: под панелью (544 − 48).
-    expect(caretShift({ ...base, caret: { top: 300, bottom: 320 } })).toBe(200 + 320 + CARET_GAP - (kbTop - TOOLBAR_HEIGHT));
+    // Низ курсора на 520 + воздух: под панелью (544 − 48 − 8: остров и воздух
+    // между ним и клавиатурой).
+    expect(caretShift({ ...base, caret: { top: 300, bottom: 320 } })).toBe(200 + 320 + CARET_GAP - (kbTop - TOOLBAR_SPACE));
     expect(caretShift({ ...base, caret: { top: 20, bottom: 40 } })).toBe(0);
     expect(caretShift({ ...base, boxTop: -400, caret: { top: 420, bottom: 440 } })).toBe(-(100 - (-400 + 420 - CARET_GAP)));
   });
@@ -327,9 +335,29 @@ describe('редактор документа', () => {
     await say({ type: 'export', kind: 'html', name: 'Бриф.html', mime: 'text/html', text: '<p>x</p>' });
     expect(shareTextFile).toHaveBeenLastCalledWith('Бриф.html', 'text/html', '<p>x</p>', 'ru', expect.any(Function));
     await typing();
+    // «Экспорт» — лист выбора (17 октября 2026): Markdown собирает телефон,
+    // PDF — редактор (exportPdf → export kind pdf, editorPdf.test.js).
     await fireEvent.press(q.getByTestId('tb-more'));
     await fireEvent.press(q.getByTestId('tb-export'));
+    expect(shareTextFile).not.toHaveBeenCalledWith('Бриф.md', expect.anything(), expect.anything(), expect.anything(), expect.anything());
+    await fireEvent.press(q.getByTestId('menu-export-md'));
     expect(shareTextFile).toHaveBeenLastCalledWith('Бриф.md', 'text/markdown', expect.stringContaining('Текст брифа'), 'ru', expect.any(Function));
+    await fireEvent.press(q.getByTestId('tb-more'));
+    await fireEvent.press(q.getByTestId('tb-export'));
+    await fireEvent.press(q.getByTestId('menu-export-pdf'));
+    expect(lastPosted('exec')).toEqual({ type: 'exec', name: 'exportPdf' });
+  });
+
+  test('«Копировать» (export kind copy): текст пишет в буфер телефон — тост «скопировано»; не вышло — тост «не вышло»', async () => {
+    await editor({ id: 'd1' });
+    await say({ type: 'export', kind: 'copy', text: 'Текст брифа' });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(Clipboard.setStringAsync).toHaveBeenLastCalledWith('Текст брифа');
+    expect(useAppStore.getState().toastMessage).toBe(t('ru', 'editor.copied'));
+    Clipboard.setStringAsync.mockRejectedValueOnce(new Error('нет'));
+    await say({ type: 'export', kind: 'copy', text: 'ещё' });
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    expect(useAppStore.getState().toastMessage).toBe(t('ru', 'toast.export_failed'));
   });
 
 });
@@ -409,5 +437,32 @@ describe('уходя со страницы, набранное не теряет
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe('картинки гостя — аккаунту (assets-adopt, 17 октября 2026)', () => {
+  // Данные «Без аккаунта» перенесли в аккаунт (useAuthStore: moveGuestData —
+  // accounts.test.js), а картинки гостя в хранилище страницы редактора ничьи
+  // и в облако не уходят. Отдаёт их странице ближайший готовый редактор.
+  test('редактора нет — uid ждёт; открыли — уходит по ready один раз, стор его снимает', async () => {
+    useAppStore.setState({ assetAdopt: 'u-ann' });
+    await editor({ id: 'd1' });
+    // Страница ещё грузится — посланное до ready она бы не получила.
+    expect(posted('assets-adopt')).toEqual([]);
+    await say({ type: 'ready' });
+    expect(posted('assets-adopt')).toEqual([{ type: 'assets-adopt', userId: 'u-ann' }]);
+    expect(useAppStore.getState().assetAdopt).toBeNull();
+    // Перезагрузка страницы (тема) — второй раз не шлётся.
+    await say({ type: 'ready' });
+    expect(posted('assets-adopt')).toHaveLength(1);
+  });
+
+  test('редактор уже открыт и готов — перенос отдаёт картинки сразу', async () => {
+    await task();
+    await say({ type: 'ready' });
+    expect(posted('assets-adopt')).toEqual([]);
+    await act(async () => { useAppStore.getState().queueAssetAdopt('u-bob'); });
+    expect(posted('assets-adopt')).toEqual([{ type: 'assets-adopt', userId: 'u-bob' }]);
+    expect(useAppStore.getState().assetAdopt).toBeNull();
   });
 });

@@ -189,18 +189,23 @@ test('окна повторения, отрезка и напоминания п
     sldlgBackdrop: { hidden: true }, sldlgDelete: {}, rmdlgBackdrop: { hidden: true }, rmdlgDelete: {},
     rmKindSeg: { querySelector: () => null },
   };
-  const Core = { normalizeSlot: (s) => s, describeReminder: () => null, slotsOf: () => [], remindersOf: () => [] };
+  let overlaps = [];
+  const Core = { normalizeSlot: (s) => s, describeReminder: () => null, slotsOf: () => [], remindersOf: () => [], slotOverlaps: () => overlaps };
   const writes = [];
   const toasts = [];
+  const asked = [];
+  let answer = null;
   const noop = () => {};
   const d = new Function(
     'state', 'el', 'Core', 'uid', 'toast', 't', 'putSlot', 'applyReminders', 'reminderFromDialog',
     'renderSlotDialog', 'renderReminderDialog', 'closeDatePicker', 'closeTimePicker', 'ensureNotifPermission',
+    'confirmSlotOverlap',
     `${src}\nreturn { openSlotDialog, saveSlotDialog, openReminderDialog, saveReminderDialog };`,
   )(
     state, el, Core, () => 'new', (m) => toasts.push(m), (k) => k,
     (task) => writes.push(['slot', task]), (task) => writes.push(['reminder', task]),
     () => ({ kind: 'at', at: '2026-10-14T09:00:00.000Z' }), noop, noop, noop, noop, noop,
+    (list, edit) => { asked.push([list.length, edit]); return Promise.resolve(answer); },
   );
 
   for (const [kind, open, save, backdrop] of [
@@ -225,4 +230,60 @@ test('окна повторения, отрезка и напоминания п
     assert.equal(backdrop.hidden, true, `${kind}: окно закрыто`);
     assert.deepEqual(toasts, ['sync.updated_toast'], `${kind}: и сказано почему`);
   }
+});
+
+test('отрезок поверх чужого плана: сначала вопрос, «Отмена» ничего не меняет, «Создать» — в живую задачу', async () => {
+  // Время задачи ничем не ограничено (18 октября 2026): пересечение — повод
+  // спросить, а не запрет. Вопрос — confirmSlotOverlap, пересечения — ядро.
+  const src = [
+    constSource('getTask'), constSource('sldlg'), fnSource('dialogTask'),
+    fnSource('openSlotDialog'), fnSource('closeSlotDialog'), fnSource('saveSlotDialog'),
+  ].join('\n');
+  assert.match(fnSource('saveSlotDialog'), /Core\.slotOverlaps\(state\.tasks, slot, task\.id\)/, 'своя задача из пересечений исключена');
+  const state = { tasks: [] };
+  const el = { sldlgBackdrop: { hidden: true }, sldlgDelete: {} };
+  const one = [{ taskId: 'b', title: 'Б', start: '2026-10-14T10:00:00.000Z', end: '2026-10-14T11:00:00.000Z' }];
+  let overlaps = one;
+  let answer = false;
+  const asked = [];
+  const writes = [];
+  const noop = () => {};
+  const d = new Function(
+    'state', 'el', 'Core', 'uid', 'toast', 't', 'putSlot', 'renderSlotDialog', 'closeDatePicker', 'closeTimePicker', 'confirmSlotOverlap',
+    `${src}\nreturn { openSlotDialog, saveSlotDialog };`,
+  )(
+    state, el, { normalizeSlot: (s) => s, slotOverlaps: () => overlaps }, () => 'new', noop, (k) => k,
+    (task, slot) => writes.push([task, slot]), noop, noop, noop,
+    (list, edit) => { asked.push([list.length, edit]); return Promise.resolve(answer); },
+  );
+
+  state.tasks = [{ id: 'a', title: 'А' }];
+  d.openSlotDialog(state.tasks[0], null);
+  await d.saveSlotDialog();
+  assert.deepEqual(asked, [[1, false]], 'спросили — как о создании');
+  assert.deepEqual(writes, [], '«Отмена» — ничего не записано');
+  assert.equal(el.sldlgBackdrop.hidden, false, 'и окно отрезка осталось, как было');
+
+  answer = true;
+  state.tasks = state.tasks.map((x) => ({ ...x })); // облако, пока висел вопрос
+  await d.saveSlotDialog();
+  assert.equal(writes.length, 1, '«Создать» — записано');
+  assert.equal(writes[0][0], state.tasks[0], 'в задачу из state.tasks');
+  assert.equal(el.sldlgBackdrop.hidden, true);
+
+  // Правка без сдвига времени заново не спрашивает.
+  asked.length = 0;
+  writes.length = 0;
+  d.openSlotDialog(state.tasks[0], { id: 's', start: '2026-10-14T10:30:00.000Z', end: '2026-10-14T11:30:00.000Z' });
+  await d.saveSlotDialog();
+  assert.deepEqual(asked, [], 'время то же — вопроса нет');
+  assert.equal(writes.length, 1);
+
+  // Пересечений нет — сразу, без вопроса.
+  overlaps = [];
+  writes.length = 0;
+  d.openSlotDialog(state.tasks[0], null);
+  d.saveSlotDialog();
+  assert.equal(writes.length, 1, 'записано сразу');
+  assert.deepEqual(asked, []);
 });

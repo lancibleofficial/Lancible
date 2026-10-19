@@ -83,7 +83,7 @@ export default function EditorScreen({ route, navigation }) {
         <SavedDot lang={lang} saved={session.saved} />
       </View>
       <Reanimated.View style={[styles.body, inset]}>
-        <DocEditor {...session.editorProps} placeholder={t(lang, 'editor.placeholder')} />
+        <DocEditor key={session.editorKey} {...session.editorProps} placeholder={t(lang, 'editor.placeholder')} />
       </Reanimated.View>
       <EditorToolbar {...session.toolbarProps} />
     </View>

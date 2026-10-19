@@ -3,9 +3,13 @@
 // функция принимает обычные параметры и возвращает простой объект-результат
 // ({ok, errorKey, needsOnboarding, ...}), который экран сам превращает в
 // useState/Alert.
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import { sb } from './supabaseClient';
+//
+// expo-web-browser и expo-linking нужны только входу через Google и грузятся
+// там же, по требованию (20 октября 2026): этот файл грузится на старте, и
+// без нативной части любого из них падал бы весь запуск (так в Expo Go на
+// iPhone вышло с expo-document-picker — lib/filePicker.js). Нет модуля —
+// отказ входа через Google, а не запуска.
+import { sb, isolatedClient } from './supabaseClient';
 import Legal from '../core/legal.js';
 import { useAppStore } from '../store/useAppStore';
 
@@ -74,6 +78,10 @@ export async function signUp(email, password) {
 // Expo Go (кнопка есть, но нажатие в Expo Go просто ничего не откроет).
 export async function signInWithGoogle() {
   try {
+    /* eslint-disable global-require */
+    const WebBrowser = require('expo-web-browser');
+    const Linking = require('expo-linking');
+    /* eslint-enable global-require */
     const redirectTo = Linking.createURL('auth-callback');
     const { data, error } = await sb.auth.signInWithOAuth({
       provider: 'google',
@@ -305,4 +313,31 @@ export async function changePassword(newPassword) {
 
 export async function signOut() {
   await sb.auth.signOut();
+}
+
+/** Отозвать на сервере сеанс аккаунта, который сейчас не открыт: его копию
+ *  стирают с телефона («Удалить данные аккаунта с устройства»), токены из
+ *  списка больше не нужны — пусть и не действуют (17 октября 2026, как
+ *  revokeAccountSession у веба). Отдельный клиент без сохранения сеанса
+ *  (supabaseClient.js: isolatedClient): основной sb держит сеанс открытого
+ *  аккаунта, его трогать нельзя. setSession проверяет токены у сервера
+ *  (просрочен доступ — обновит refresh-токеном), signOut({ scope: 'local' }) —
+ *  один POST /logout этим сеансом. Нет сети или токен уже мёртв — не беда:
+ *  копия стирается всё равно, а сеанс без refresh-токена на телефоне сам
+ *  истечёт. Ошибок наружу не бросает. */
+export async function revokeAccountSession(entry) {
+  if (!entry || !entry.refreshToken || entry.needsSignIn) return false;
+  try {
+    const client = isolatedClient(entry.uid);
+    const { error } = entry.accessToken
+      ? await client.auth.setSession({ access_token: entry.accessToken, refresh_token: entry.refreshToken })
+      : await client.auth.refreshSession({ refresh_token: entry.refreshToken });
+    if (error) throw error;
+    const out = await client.auth.signOut({ scope: 'local' });
+    if (out && out.error) throw out.error;
+    return true;
+  } catch (err) {
+    console.error('Не удалось отозвать сеанс аккаунта:', err);
+    return false;
+  }
 }

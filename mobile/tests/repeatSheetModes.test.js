@@ -9,7 +9,8 @@
 // повтора больше нет (core/slots.js) — режима «slot» у листа тоже.
 import { render, fireEvent, within } from '@testing-library/react-native';
 import BottomSheet from '../src/components/BottomSheet';
-import RepeatSheet from '../src/components/RepeatSheet';
+import RepeatSheet, { endDayKey } from '../src/components/RepeatSheet';
+import { fixRepeatEnds } from '../src/lib/migrate';
 import Repeat from '../src/core/repeat.js';
 import { useAppStore } from '../src/store/useAppStore';
 import { useSheetStore, openSheet } from '../src/store/useSheetStore';
@@ -123,7 +124,52 @@ describe('строки с галочкой', () => {
     expect(s.getByTestId('repeat-ends-at').props.accessibilityState.expanded).toBe(false);
     await done(s);
     expect(onApply.mock.calls[0][0].ends.kind).toBe('on');
-    expect(new Date(onApply.mock.calls[0][0].ends.at).getDate()).toBe(20);
+    // День окончания — ключом дня, как его ждёт ядро (17 октября 2026; был ISO-момент).
+    const now = new Date();
+    expect(onApply.mock.calls[0][0].ends.at).toBe(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-20`);
+  });
+});
+
+// 17 октября 2026: лист писал «До даты» ISO-моментом, а nextDue ядра ждёт
+// день (`${ends.at}T23:59:59`) — серия с окончанием не кончалась никогда.
+describe('окончание «До даты» — днём', () => {
+  test('записанный день ядро понимает: после него следующего срока нет', async () => {
+    const onApply = jest.fn();
+    const s = await show({ rule: { ...custom, every: 1, weekdays: [], ends: { kind: 'on', count: 10, at: '2026-10-20' } }, onApply });
+    await done(s);
+    const rule = onApply.mock.calls[0][0];
+    expect(rule.ends.at).toBe('2026-10-20');
+    expect(Repeat.nextDue(rule, new Date(2026, 9, 12, 10, 0).getTime())).toBe(new Date(2026, 9, 19, 10, 0).getTime());
+    expect(Repeat.nextDue(rule, new Date(2026, 9, 19, 10, 0).getTime())).toBeNull();
+  });
+
+  test('старое значение ISO-моментом читается днём: строка показывает его, «Готово» пишет ключ дня', async () => {
+    const onApply = jest.fn();
+    const old = new Date(2026, 11, 31).toISOString();
+    const s = await show({ rule: { ...custom, ends: { kind: 'on', count: 10, at: old } }, onApply });
+    within(s.getByTestId('repeat-ends-at')).getByText(new Date(2026, 11, 31).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }));
+    await done(s);
+    expect(onApply.mock.calls[0][0].ends.at).toBe('2026-12-31');
+  });
+
+  test('endDayKey: день остаётся днём, момент — местным днём, мусор — null', () => {
+    expect(endDayKey('2026-12-31')).toBe('2026-12-31');
+    expect(endDayKey(new Date(2026, 0, 5, 0, 0).toISOString())).toBe('2026-01-05');
+    expect(endDayKey('завтра')).toBeNull();
+    expect(endDayKey(null)).toBeNull();
+  });
+
+  test('при чтении сохранённого состояния старые окончания приводятся к дню, повторный прогон ничего не меняет', () => {
+    const tasks = [
+      { id: 'a', repeat: { ...custom, ends: { kind: 'on', count: 10, at: new Date(2026, 11, 31).toISOString() } } },
+      { id: 'b', repeat: { ...custom, ends: { kind: 'on', count: 10, at: '2026-11-01' } } },
+      { id: 'c', repeat: null },
+    ];
+    fixRepeatEnds(tasks);
+    expect(tasks.map((x) => x.repeat && x.repeat.ends.at)).toEqual(['2026-12-31', '2026-11-01', null]);
+    const again = JSON.stringify(tasks);
+    fixRepeatEnds(tasks);
+    expect(JSON.stringify(tasks)).toBe(again);
   });
 });
 

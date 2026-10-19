@@ -127,11 +127,15 @@ test('строка-переключатель стоит внизу формы, 
   expect(sw.y + sw.height, 'и не вылезает из окна').toBeLessThanOrEqual(modal.y + modal.height);
 });
 
-test('«Создать аккаунт» в настройках открывает регистрацию, «Войти» — вход', async ({ page }) => {
+test('верхний блок настроек гостю открывает вход, «Создать аккаунт» в окне — регистрацию', async ({ page }) => {
   await open(page);
   await page.locator('.nav-item[data-view="settings"]').first().click();
 
-  await page.locator('#settings-signup-btn').click();
+  // С 19 октября 2026 своих кнопок «Войти» и «Создать аккаунт» у блока нет:
+  // весь блок — вход, регистрация — строкой внизу окна.
+  await page.locator('#settings-profile').click();
+  await expect(title(page)).toHaveText('Вход');
+  await switchBtn(page).click();
   await expect(page.locator('#auth-step-credentials')).toBeVisible();
   await expect(title(page)).toHaveText('Регистрация');
   await expect(submit(page)).toHaveText('Создать аккаунт');
@@ -140,7 +144,8 @@ test('«Создать аккаунт» в настройках открывае
   await page.locator('#auth-cancel').click();
   await expect(page.locator('#auth-backdrop')).toBeHidden();
 
-  await page.locator('#settings-signin-btn').click();
+  // Гостю верхний блок настроек — и есть вход (19 октября 2026).
+  await page.locator('#settings-profile').click();
   await expect(title(page)).toHaveText('Вход');
   await expect(submit(page)).toHaveText('Войти');
   await expect(password(page)).toHaveAttribute('autocomplete', 'current-password');

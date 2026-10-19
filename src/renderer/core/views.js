@@ -187,9 +187,11 @@
           tooltip: `${t('agenda.deadline')} · ${fmtTime(dl.at)}`,
         })),
         blocks: A.layoutOverlaps(d.segments),
-        // Плановые блоки — отдельно от записей: они лежат полосой во всю
-        // ширину под ними и в раскладку по колонкам не входят.
-        planned: d.planned,
+        // Плановые блоки — отдельно от записей: они лежат слоем под ними, и
+        // записи их не теснят. Но друг друга теснят (с 18 октября 2026):
+        // время задачи ничем не ограничено, и два плана в один час стоят
+        // рядом колонками, как записи, а не один поверх другого.
+        planned: A.layoutOverlaps(d.planned),
       })),
       // Полночь не подписываем: её метка висела бы над первой линией и
       // читалась подписью ко всей сетке.
@@ -216,6 +218,45 @@
     const updMs = (task) => (task.updatedAt ? new Date(task.updatedAt).getTime() : 0);
     return tasks.filter((task) => !task.done)
       .sort((a, b) => (b.id === pinTaskId) - (a.id === pinTaskId) || updMs(b) - updMs(a));
+  }
+
+  /** Когда проект меняли в последний раз (мс): позднее из его updatedAt и
+   *  createdAt, updatedAt его задач и конца последней записи времени (у
+   *  записи без конца — её начала). Нет ни одной отметки — 0. */
+  function projectActivityMs(project, tasks) {
+    const ms = (v) => {
+      const n = v ? new Date(v).getTime() : 0;
+      return Number.isFinite(n) ? n : 0;
+    };
+    let at = Math.max(ms(project.updatedAt), ms(project.createdAt));
+    for (const task of tasks || []) {
+      if (task.projectId !== project.id) continue;
+      at = Math.max(at, ms(task.updatedAt));
+      for (const s of task.sessions || []) at = Math.max(at, ms(s.end || s.start));
+    }
+    return at;
+  }
+
+  /** Проекты по свежести — одно правило на «Проекты» и списки проектов веба
+   *  и колоду телефона (19 октября 2026): первым — тот, что меняли последним
+   *  (projectActivityMs: сам проект, его задачи, записи времени); новый
+   *  проект — первым. Равны — первым новее созданный, дальше — как лежали.
+   *  Закрепление порядок не меняет: закреплённые — своя группа в левой
+   *  панели веба. Возвращает новый массив тех же объектов. */
+  function projectsByActivity(projects, tasks) {
+    const byProject = new Map();
+    for (const task of tasks || []) {
+      if (!byProject.has(task.projectId)) byProject.set(task.projectId, []);
+      byProject.get(task.projectId).push(task);
+    }
+    const created = (p) => {
+      const n = p.createdAt ? new Date(p.createdAt).getTime() : 0;
+      return Number.isFinite(n) ? n : 0;
+    };
+    return (projects || [])
+      .map((p, i) => ({ p, i, at: projectActivityMs(p, byProject.get(p.id)), made: created(p) }))
+      .sort((a, b) => (b.at - a.at) || (b.made - a.made) || (a.i - b.i))
+      .map((x) => x.p);
   }
 
   /** Какая задача стоит в карточках первой как идущая. Берётся на входе на
@@ -335,7 +376,7 @@
     return rows;
   }
 
-  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView, deckTasks, deckPinTop, holdOrder, projectListGroups, versionRows };
+  const api = { taskRowView, agendaDays, agendaMonthView, agendaTimeView, deckTasks, deckPinTop, holdOrder, projectActivityMs, projectsByActivity, projectListGroups, versionRows };
 
   if (isNode) module.exports = api;
   else Object.assign((global.Core = global.Core || {}), api);

@@ -7,6 +7,11 @@
  *   - вызывающий удаляется вместе с картинками, его токен больше не годится;
  *   - второго пользователя и его картинки это не задевает.
  *
+ * Без сети (19 октября 2026): сама функция (index.ts, типы снимает esbuild) на
+ * подменах базы и хранилища — снимки экрана из обратной связи стираются до
+ * удаления пользователя, только свои и только по имени <uuid>.<тип>, а сбой
+ * их стирания удаление не держит, но виден в ответе и в логе.
+ *
  * Пока функция не выложена (404), тест — todo. Живая часть заводит двух
  * настоящих пользователей — только по LANCIBLE_ACCOUNT_TEST=1 (в GitHub —
  * ручной запуск). Пустоту папки удалённого проверяет служебный ключ из
@@ -46,6 +51,198 @@ function serviceKey() {
     return m ? m[1].trim().replace(/^["']|["']$/g, '') : null;
   } catch { return null; }
 }
+
+// --- без сети: функция на подменах ------------------------------------------
+
+const SRC = path.join(__dirname, '..', '..', 'supabase', 'functions', 'delete-account', 'index.ts');
+
+/** База и хранилище на подмене. objects — пути по корзинам; feedback — строки
+ *  таблицы; fail — какие шаги ответят ошибкой. calls — что и в каком порядке
+ *  позвала функция. */
+function fakeAdmin({ objects = {}, feedback = [], fail = {} } = {}) {
+  const store = Object.fromEntries(Object.entries(objects).map(([b, list]) => [b, new Set(list)]));
+  const calls = [];
+  const client = {
+    auth: {
+      getUser: async (jwt) => (jwt === 'user-token'
+        ? { data: { user: { id: 'u1' } }, error: null }
+        : { data: { user: null }, error: { message: 'invalid JWT' } }),
+      admin: {
+        deleteUser: async (id) => { calls.push(['deleteUser', id]); return { error: null }; },
+      },
+    },
+    storage: {
+      from(bucket) {
+        const set = store[bucket] || (store[bucket] = new Set());
+        return {
+          list: async (prefix) => {
+            calls.push(['list', bucket, prefix]);
+            if (fail.list) return { data: null, error: { message: 'list failed' } };
+            return { data: [...set].filter((p) => p.startsWith(`${prefix}/`)).map((p) => ({ id: p, name: p.slice(prefix.length + 1) })), error: null };
+          },
+          remove: async (paths) => {
+            calls.push(['remove', bucket, paths.slice()]);
+            if (fail.remove === bucket) return { data: null, error: { message: `remove from ${bucket} failed` } };
+            if (fail.throwRemove === bucket) throw new TypeError('fetch failed');
+            const gone = paths.filter((p) => set.delete(p));
+            return { data: gone.map((name) => ({ name })), error: null };
+          },
+        };
+      },
+    },
+    from(table) {
+      assert.equal(table, 'feedback');
+      const q = { filters: [], range: null, cols: null };
+      const b = {
+        select(cols) { q.cols = cols; return b; },
+        eq(k, v) { q.filters.push((r) => r[k] === v); return b; },
+        not(k, op, v) { assert.deepEqual([op, v], ['is', null]); q.filters.push((r) => r[k] !== null); return b; },
+        range(from, to) { q.range = [from, to]; return b; },
+        then(ok, bad) {
+          return Promise.resolve().then(() => {
+            calls.push(['select feedback', q.cols]);
+            if (fail.feedback) return { data: null, error: fail.feedback };
+            const rows = feedback.filter((r) => q.filters.every((f) => f(r))).slice(q.range[0], q.range[1] + 1);
+            return { data: rows.map((r) => ({ screenshot_path: r.screenshot_path })), error: null };
+          }).then(ok, bad);
+        },
+      };
+      return b;
+    },
+  };
+  return { client, store, calls };
+}
+
+let loaded = null;
+/** index.ts → JS без типов → модуль из data: URL; Deno.serve отдаёт обработчик. */
+async function loadFunction() {
+  if (loaded) return loaded;
+  let esbuild;
+  try { esbuild = require('esbuild'); } catch { return null; }
+  const { code } = await esbuild.transform(fs.readFileSync(SRC, 'utf8'), { loader: 'ts', format: 'esm' });
+  const js = code.replace(/import\s*\{\s*createClient\s*\}\s*from\s*["']jsr:@supabase\/supabase-js@2["'];?/, 'const { createClient } = globalThis.__deleteAccount.supabase;');
+  assert.notEqual(js, code, 'импорт supabase-js в index.ts поменялся — поправить подмену');
+  const box = { db: null, handler: null };
+  const env = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'service' };
+  globalThis.__deleteAccount = { supabase: { createClient: () => box.db.client } };
+  globalThis.Deno = { env: { get: (k) => env[k] }, serve: (h) => { box.handler = h; } };
+  box.mod = await import(`data:text/javascript;base64,${Buffer.from(js).toString('base64')}`);
+  assert.equal(typeof box.handler, 'function', 'функция не позвала Deno.serve');
+  loaded = box;
+  return box;
+}
+
+/** Один вызов функции на свежей подмене; console.error — в errors. */
+async function invokeOffline(t, db, token = 'user-token') {
+  const fn = await loadFunction();
+  if (!fn) { t.skip('нет esbuild — npm install'); return null; }
+  fn.db = db;
+  const errors = [];
+  const realError = console.error;
+  console.error = (...a) => { errors.push(a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ')); };
+  try {
+    const res = await fn.handler(new Request('https://example.supabase.co/functions/v1/delete-account', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: '{}',
+    }));
+    return { status: res.status, json: await res.json(), errors };
+  } finally {
+    console.error = realError;
+  }
+}
+
+const SHOT = '0b6f3c9e-1d2a-4f5b-8c7d-9e0f1a2b3c4d.png';
+const OTHER = '7a1b2c3d-4e5f-4a6b-9c8d-0e1f2a3b4c5d.jpg';
+const people = () => ({
+  objects: { 'doc-assets': ['u1/a.png', 'u2/b.png'], feedback: [SHOT, OTHER, 'u2/secret.png'] },
+  feedback: [
+    { user_id: 'u1', screenshot_path: SHOT },
+    { user_id: 'u1', screenshot_path: null },
+    { user_id: 'u1', screenshot_path: '../doc-assets/u2/b.png' },
+    { user_id: 'u1', screenshot_path: 'u2/secret.png' },
+    { user_id: 'u2', screenshot_path: OTHER },
+  ],
+});
+
+test('delete-account без сети: снимки обратной связи стираются до удаления — только свои и только по имени <uuid>.<тип>', async (t) => {
+  const db = fakeAdmin(people());
+  const r = await invokeOffline(t, db);
+  if (!r) return;
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json, { deleted: true });
+  assert.deepEqual([...db.store.feedback].sort(), [OTHER, 'u2/secret.png'].sort(), 'свой снимок стёрт, чужие на месте');
+  assert.deepEqual([...db.store['doc-assets']], ['u2/b.png'], 'картинки — как раньше, только своя папка');
+  const shots = db.calls.filter((c) => c[0] === 'remove' && c[1] === 'feedback');
+  assert.deepEqual(shots, [['remove', 'feedback', [SHOT]]], 'путь «../…» и чужая папка из своей же строки в стирание не попали');
+  const order = db.calls.map((c) => c[0]);
+  assert.ok(order.indexOf('select feedback') < order.indexOf('deleteUser'), 'пути берутся до удаления: потом строк уже нет (cascade)');
+  assert.deepEqual(db.calls.filter((c) => c[0] === 'deleteUser'), [['deleteUser', 'u1']]);
+  assert.deepEqual(r.errors, []);
+});
+
+test('delete-account без сети: снимки не стёрлись — аккаунт всё равно удалён, сбой — в ответе и в логе', async (t) => {
+  const db = fakeAdmin({ ...people(), fail: { remove: 'feedback' } });
+  const r = await invokeOffline(t, db);
+  if (!r) return;
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json, { deleted: true, screenshots: 'remain', detail: 'remove from feedback failed' });
+  assert.deepEqual(db.calls.filter((c) => c[0] === 'deleteUser'), [['deleteUser', 'u1']]);
+  assert.equal(r.errors.length, 1);
+  assert.match(r.errors[0], /feedback screenshots remain/);
+  assert.ok(r.errors[0].includes(SHOT), 'в логе — какие пути остались, чтобы стереть руками');
+  assert.ok(!r.errors[0].includes('u1'), 'uid в лог не пишется');
+
+  // Строки не прочитались — то же самое.
+  const db2 = fakeAdmin({ ...people(), fail: { feedback: { code: '57014', message: 'canceling statement due to statement timeout' } } });
+  const r2 = await invokeOffline(t, db2);
+  assert.equal(r2.status, 200);
+  assert.equal(r2.json.screenshots, 'remain');
+  assert.deepEqual(db2.calls.filter((c) => c[0] === 'deleteUser'), [['deleteUser', 'u1']]);
+
+  // Хранилище не ответило вовсе (исключение, а не ошибка в ответе) — тоже.
+  const db3 = fakeAdmin({ ...people(), fail: { throwRemove: 'feedback' } });
+  const r3 = await invokeOffline(t, db3);
+  assert.equal(r3.status, 200);
+  assert.deepEqual(r3.json, { deleted: true, screenshots: 'remain', detail: 'fetch failed' });
+  assert.deepEqual(db3.calls.filter((c) => c[0] === 'deleteUser'), [['deleteUser', 'u1']]);
+});
+
+test('delete-account без сети: removeScreenshots листает строки страницами по 1000 и не стирает одно имя дважды', async (t) => {
+  const fn = await loadFunction();
+  if (!fn) { t.skip('нет esbuild'); return; }
+  const { removeScreenshots } = fn.mod;
+  const names = Array.from({ length: 2300 }, (_, i) => `${String(i).padStart(8, '0')}-0000-4000-8000-000000000000.webp`);
+  const db = fakeAdmin({
+    objects: { feedback: names },
+    feedback: [...names, names[0], names[1]].map((p) => ({ user_id: 'u1', screenshot_path: p })),
+  });
+  assert.equal(await removeScreenshots(db.client, 'u1'), null);
+  assert.equal(db.store.feedback.size, 0, 'стёрты все 2300');
+  assert.equal(db.calls.filter((c) => c[0] === 'select feedback').length, 3, 'строки — тремя страницами');
+  const removed = db.calls.filter((c) => c[0] === 'remove').flatMap((c) => c[2]);
+  assert.equal(removed.length, 2300, 'повтор имени в двух строках — одно стирание');
+  assert.ok(db.calls.filter((c) => c[0] === 'remove').every((c) => c[2].length <= 1000), 'стирание — пачками по 1000');
+});
+
+test('delete-account без сети: таблицы feedback ещё нет — удаление как раньше; картинки не стёрлись — 409, снимки и аккаунт целы', async (t) => {
+  const db = fakeAdmin({ ...people(), fail: { feedback: { code: 'PGRST205', message: "Could not find the table 'public.feedback' in the schema cache" } } });
+  const r = await invokeOffline(t, db);
+  if (!r) return;
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json, { deleted: true }, 'feedback.sql не выполнен — стирать нечего, это не сбой');
+  assert.deepEqual(r.errors, []);
+
+  const db2 = fakeAdmin({ ...people(), fail: { list: true } });
+  const r2 = await invokeOffline(t, db2);
+  assert.equal(r2.status, 409);
+  assert.equal(r2.json.error, 'assets remain');
+  assert.ok(db2.store.feedback.has(SHOT), 'аккаунт остаётся — и снимок вместе с ним');
+  assert.equal(db2.calls.filter((c) => c[0] === 'deleteUser').length, 0);
+
+  const anon = await invokeOffline(t, fakeAdmin(people()), 'not-a-user');
+  assert.equal(anon.status, 401);
+});
+
+// --- выложенная функция ------------------------------------------------------
 
 const created = [];
 

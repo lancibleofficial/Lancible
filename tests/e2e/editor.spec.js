@@ -131,7 +131,8 @@ test('меню «/»: таблица вставляется с клавиату�
   expect(m.radius).toBeGreaterThan(6);
   expect(m.bar.width).toBeLessThan(m.ed.width - 40);
   expect(m.bar.top).toBeGreaterThanOrEqual(m.table.bottom);
-  // Строк и столбцов в острове на десктопе нет — они на разделителях.
+  // Строк и столбцов в острове на десктопе нет — они на ручках слева и
+  // сверху таблицы (tests/e2e/editor-table-handles.spec.js).
   await expect(bar.locator('[data-tt="rowBelow"], [data-tt="colRight"]')).toHaveCount(0);
   await bar.locator('[data-tt="tableDel"]').click();
   expect(await tableShape(page)).toEqual({ rows: 0, cols: 0 });
@@ -139,63 +140,8 @@ test('меню «/»: таблица вставляется с клавиату�
   expect(notes.lancible.doc.content.some((n) => n.type === 'table')).toBe(false);
 });
 
-/** Навести на линию таблицы и открыть меню шестерёнки. kind — 'col' или 'row'. */
-/** Где указатель стоял на линии в последний раз — шестерёнка должна быть рядом. */
-let lastPointer = null;
-async function lineMenu(page, kind, row, col) {
-  const cell = page.locator('#editor-wrap .led-pm table tr').nth(row).locator('td, th').nth(col);
-  const box = await cell.boundingBox();
-  lastPointer = kind === 'col' ? { x: box.x + box.width - 2, y: box.y + box.height / 2 } : { x: box.x + box.width / 2, y: box.y + box.height - 2 };
-  await page.mouse.move(lastPointer.x, lastPointer.y);
-  const line = page.locator('#editor-wrap .led-tline');
-  await expect(line).toBeVisible();
-  // Линия горит акцентом — тем же цветом, что ручка ширины столбца.
-  const accent = await page.evaluate(() => {
-    const probe = document.createElement('div');
-    probe.style.background = 'var(--accent)';
-    document.body.append(probe);
-    const c = getComputedStyle(probe).backgroundColor;
-    probe.remove();
-    return c;
-  });
-  await expect(line).toHaveCSS('background-color', accent);
-  const gear = page.locator('#editor-wrap .led-tgear');
-  await expect(gear).toBeVisible();
-  await gear.click();
-  return page.locator('.led-pop .ctx-item');
-}
-
-test('разделители таблицы: шестерёнка вставляет и удаляет столбцы и строки', async ({ page }) => {
-  await openTask(page);
-  await pm(page).click();
-  await page.evaluate(() => editor.exec('table', { rows: 3, cols: 3, header: true }));
-  // Шестерёнка — рядом с указателем (круг 4): до неё не надо тянуться к
-  // краю таблицы. Не на самой линии — там тянут ширину столбца.
-  const near = async (what) => {
-    const g = await page.locator('#editor-wrap .led-tgear').boundingBox();
-    const cx = g.x + g.width / 2; const cy = g.y + g.height / 2;
-    expect(Math.hypot(cx - lastPointer.x, cy - lastPointer.y), `${what}: шестерёнка рядом с указателем`).toBeLessThan(30);
-    return g;
-  };
-  // Вертикальная линия между 1-м и 2-м столбцом.
-  let items = await lineMenu(page, 'col', 1, 0);
-  const g1 = await near('столбец');
-  expect(g1.x, 'шестерёнка правее линии, а не на ней').toBeGreaterThan(lastPointer.x + 2);
-  await items.filter({ hasText: 'Вставить столбец здесь' }).click();
-  expect(await tableShape(page)).toEqual({ rows: 3, cols: 4 });
-  items = await lineMenu(page, 'col', 1, 0);
-  await items.filter({ hasText: 'Удалить столбец справа' }).click();
-  expect(await tableShape(page)).toEqual({ rows: 3, cols: 3 });
-  // Горизонтальная линия под первой строкой данных.
-  items = await lineMenu(page, 'row', 1, 1);
-  const g2 = await near('строка');
-  expect(g2.y, 'шестерёнка ниже линии, а не на ней').toBeGreaterThan(lastPointer.y + 2);
-  await items.filter({ hasText: 'Вставить строку здесь' }).click();
-  expect(await tableShape(page)).toEqual({ rows: 4, cols: 3 });
-  items = await lineMenu(page, 'row', 1, 1);
-  await items.filter({ hasText: 'Удалить строку выше' }).click();
-  expect(await tableShape(page)).toEqual({ rows: 3, cols: 3 });
-});
+// Ручки строк и столбцов (до 17 октября — шестерёнка на разделителях) —
+// tests/e2e/editor-table-handles.spec.js.
 
 test('график из таблицы: числа переезжают в график, график — в документ', async ({ page }) => {
   const id = await openTask(page);
@@ -884,6 +830,61 @@ test('нативная панель: ссылку и фото спрашивае
   expect(await lastMsg(page, 'export')).toMatchObject({ kind: 'md', mime: 'text/markdown', text: expect.stringContaining('[сайт](https://example.com)') });
 });
 
+// График на телефоне (протокол 2, 17 октября 2026): окно правки — нижний
+// лист хозяина. Команда «график», касание графика и «график из таблицы»
+// шлют chart, ответ receive({ type: 'chart' }) вставляет или заменяет узел.
+test('нативная панель: график правит хозяин — сообщение chart, ответ вставляет и заменяет', async ({ page }) => {
+  await phoneEditor(page);
+  await page.evaluate(() => __ped.exec('chart'));
+  await expect(page.locator('#ledmodal-backdrop'), 'окна правки в WebView нет').toHaveCount(0);
+  const ask = await lastMsg(page, 'chart');
+  expect(ask.id, 'новый график — без id').toBeNull();
+  // spec — вид, название и строки первого ряда образца (defaultChart).
+  expect(ask.spec).toEqual({ kind: 'bar', title: '', rows: [
+    { label: 'Янв', value: 4 }, { label: 'Фев', value: 7 }, { label: 'Мар', value: 5 }, { label: 'Апр', value: 9 },
+  ] });
+  const chartAttrs = () => page.evaluate(() => __ped.getContent().doc.content.filter((n) => n.type === 'chart').map((n) => ({ bid: n.attrs.bid, chart: n.attrs.chart })));
+  await page.evaluate(() => __ped.receive({ type: 'chart', id: null, spec: { kind: 'line', title: 'Часы', rows: [{ label: 'Янв', value: 10 }, { label: 'Фев', value: '14,5' }] } }));
+  await expect(page.locator('#phone-ed .led-pm .led-chart svg.type-line')).toHaveCount(1);
+  let charts = await chartAttrs();
+  expect(charts).toHaveLength(1);
+  expect(charts[0].chart).toMatchObject({ type: 'line', title: 'Часы', labels: ['Янв', 'Фев'], legend: true, values: false, stacked: false });
+  expect(charts[0].chart.series).toEqual([{ name: 'Ряд 1', values: [10, 14.5] }]);
+  const { bid } = charts[0];
+  expect(bid, 'у графика есть bid — по нему хозяин его заменит').toBeTruthy();
+  // Касание графика — снова лист, теперь с id и нынешними данными.
+  await page.locator('#phone-ed .led-pm .led-chart .led-chart-body').click();
+  await expect(page.locator('#ledmodal-backdrop')).toHaveCount(0);
+  await expect.poll(async () => (await msgs(page, 'chart')).length).toBe(2);
+  expect(await lastMsg(page, 'chart')).toEqual({ type: 'chart', id: bid, spec: { kind: 'line', title: 'Часы', rows: [{ label: 'Янв', value: 10 }, { label: 'Фев', value: 14.5 }] } });
+  // Повторный receive с id — заменяет тот же узел, а не вставляет второй.
+  await page.evaluate((id) => __ped.receive({ type: 'chart', id, spec: { kind: 'pie', title: 'Доли', rows: [{ label: 'А', value: 1 }, { label: 'Б', value: 3 }, { label: 'В', value: 2 }] } }), bid);
+  await expect(page.locator('#phone-ed .led-pm .led-chart svg.type-pie')).toHaveCount(1);
+  charts = await chartAttrs();
+  expect(charts).toHaveLength(1);
+  expect(charts[0].bid).toBe(bid);
+  expect(charts[0].chart).toMatchObject({ type: 'pie', title: 'Доли', labels: ['А', 'Б', 'В'] });
+  expect(charts[0].chart.series[0].values).toEqual([1, 3, 2]);
+  // Узла нет (документ сменился) — ошибка хозяину, документ цел.
+  await page.evaluate(() => __ped.receive({ type: 'chart', id: 'нет-такого', spec: { kind: 'bar', title: '', rows: [] } }));
+  expect(await lastMsg(page, 'error')).toMatchObject({ message: expect.stringContaining('нет-такого') });
+  expect(await chartAttrs()).toHaveLength(1);
+});
+
+test('нативная панель: график из таблицы — числа таблицы хозяину, новый график под таблицей', async ({ page }) => {
+  await phoneEditor(page);
+  await page.evaluate(() => __ped.exec('table', { rows: 3, cols: 2, header: true }));
+  const k = page.keyboard;
+  for (const [i, cell] of ['Месяц', 'Часы', 'Янв', '10', 'Фев', '14,5'].entries()) { await k.type(cell); if (i < 5) await k.press('Tab'); }
+  await page.evaluate(() => __ped.exec('toChart'));
+  await expect(page.locator('#ledmodal-backdrop')).toHaveCount(0);
+  const ask = await lastMsg(page, 'chart');
+  expect(ask).toEqual({ type: 'chart', id: null, spec: { kind: 'bar', title: '', rows: [{ label: 'Янв', value: 10 }, { label: 'Фев', value: 14.5 }] } });
+  await page.evaluate((spec) => __ped.receive({ type: 'chart', id: null, spec }), ask.spec);
+  const types = await page.evaluate(() => __ped.getContent().doc.content.map((n) => n.type));
+  expect(types.indexOf('chart'), 'график — сразу под таблицей').toBe(types.indexOf('table') + 1);
+});
+
 // Телефон масштаба не шлёт с 13 октября 2026; setZoom остался у редактора.
 test('масштаб текста: растёт шрифт страницы, галочка остаётся 24', async ({ page }) => {
   await phoneEditor(page);
@@ -902,8 +903,12 @@ test('масштаб текста: растёт шрифт страницы, г�
   await expect.poll(async () => (await lastMsg(page, 'format')).state.zoom).toBe(0.8);
 });
 
-test('панель над выделением на телефоне: четыре кнопки над началом выделения', async ({ page }) => {
-  await phoneEditor(page);
+// Веб на телефоне (mobile без nativeToolbar): панель над выделением —
+// четыре кнопки под палец. В приложении (nativeToolbar) её с 18 октября
+// 2026 нет — Ж, К, ссылка и цвет в панели над клавиатурой
+// (tests/e2e/editor-context.spec.js).
+test('панель над выделением на телефоне (веб): четыре кнопки над началом выделения', async ({ page }) => {
+  await phoneEditor(page, { nativeToolbar: false });
   for (let i = 0; i < 5; i++) await page.keyboard.press('Enter');
   await page.keyboard.type('выделим слово');
   for (let i = 0; i < 5; i++) await page.keyboard.press('Shift+ArrowLeft');
@@ -953,7 +958,9 @@ test('касание пустого места под текстом — фок�
   await expect(page.locator('#phone-ed .led-pm p').last()).toHaveText('вторая!');
   // Касание по самому тексту — как раньше: курсор туда, куда коснулись.
   await page.locator('#phone-ed .led-pm p').first().click({ position: { x: 2, y: 5 } });
-  expect(await page.evaluate(() => __ped.view.state.selection.head)).toBeLessThan(5);
+  // Курсор от щелчка по тексту ProseMirror читает из selectionchange —
+  // событием позже щелчка, поэтому с ожиданием, а не сразу.
+  await expect.poll(() => page.evaluate(() => __ped.view.state.selection.head)).toBeLessThan(5);
 });
 
 test('под таблицей касание пустого места — новый абзац, а не последняя ячейка', async ({ page }) => {
@@ -986,4 +993,174 @@ test('высота по тексту: сообщение height растёт в�
   expect(first.px, 'пустая заметка — не во весь экран').toBeLessThan(300);
   for (let i = 0; i < 12; i++) { await page.keyboard.type(`строка ${i}`); await page.keyboard.press('Enter'); }
   await expect.poll(async () => (await lastMsg(page, 'height')).px).toBeGreaterThan(first.px + 200);
+});
+
+// 19 октября 2026, эмулятор: после вставки картинки в заметки последняя
+// строка под ней наполовину уходила под парящую панель. Картинка догружается и
+// растит документ, курсор под ней уезжает вниз, а хозяин держал прокрутку по
+// прежнему caret. Теперь поменялась высота — курсор приходит заново
+// (HostBridge.height, после ResizeObserver, то есть после раскладки): с
+// фокусом в тексте и только если сдвинулся. Рост документа выше курсора здесь
+// делаем стилем — так же, как его делает догрузка картинки, графика или
+// рисунка: выделение то же, транзакции нет, ProseMirror ничего не знает.
+test.describe('высота поменялась — курсор заново', () => {
+  /** Запас под первым и под последним абзацем — двумя переменными на корне. */
+  async function rig(page) {
+    await page.addStyleTag({ content: `
+      #phone-ed .led-pm > p:first-child { padding-bottom: var(--grow-top, 0px); }
+      #phone-ed .led-pm > p:last-child { padding-bottom: var(--grow-bottom, 0px); }` });
+    return (top, bottom) => page.evaluate(([t, b]) => {
+      const el = document.getElementById('phone-ed');
+      el.style.setProperty('--grow-top', t + 'px');
+      el.style.setProperty('--grow-bottom', b + 'px');
+    }, [top, bottom]);
+  }
+
+  /** Курсор в конце второго абзаца, фокус в тексте, первый caret пришёл. */
+  async function twoParagraphs(page) {
+    await phoneEditor(page, { autoHeight: true });
+    await page.keyboard.type('первая');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('вторая');
+    await expect.poll(async () => (await lastMsg(page, 'caret') || {}).top).toBeGreaterThan(0);
+    // Все отложенные сообщения отправлены — дальше считаем только новые.
+    await page.waitForTimeout(150);
+    return lastMsg(page, 'caret');
+  }
+
+  test('документ вырос выше курсора — новый caret с bottom ниже прежнего', async ({ page }) => {
+    const before = await twoParagraphs(page);
+    const grow = await rig(page);
+    const n = (await msgs(page, 'caret')).length;
+    const h0 = (await lastMsg(page, 'height')).px;
+    await grow(120, 0);
+    await expect.poll(async () => (await lastMsg(page, 'height')).px, 'документ вырос — height').toBe(h0 + 120);
+    await expect.poll(async () => (await lastMsg(page, 'caret')).bottom, 'и курсор прислан заново').toBe(before.bottom + 120);
+    const after = await lastMsg(page, 'caret');
+    expect(after.top).toBe(before.top + 120);
+    expect((await msgs(page, 'caret')).length, 'одним сообщением, а не россыпью').toBe(n + 1);
+    // Прислано то, что на самом деле: координаты страницы, как у обычного caret.
+    const real = await page.evaluate(() => { const c = __ped.view.coordsAtPos(__ped.view.state.selection.head); return { top: Math.round(c.top + scrollY), bottom: Math.round(c.bottom + scrollY) }; });
+    expect({ top: after.top, bottom: after.bottom }).toEqual(real);
+    // Документ просел обратно — курсор тоже возвращается.
+    await grow(0, 0);
+    await expect.poll(async () => (await lastMsg(page, 'caret')).bottom).toBe(before.bottom);
+  });
+
+  test('без фокуса в тексте курсор не шлётся, тот же — не повторяется', async ({ page }) => {
+    const before = await twoParagraphs(page);
+    const grow = await rig(page);
+    const heights = async () => (await msgs(page, 'height')).length;
+    // Запас под последним абзацем: документ вырос, курсор там же — повтора нет.
+    const h0 = await heights();
+    await grow(0, 90);
+    await expect.poll(heights, 'документ вырос — height пришёл').toBeGreaterThan(h0);
+    await page.waitForTimeout(150);
+    expect((await lastMsg(page, 'caret')).bottom, 'курсор не сдвинулся — прежний').toBe(before.bottom);
+    const n = (await msgs(page, 'caret')).length;
+    await grow(0, 140);
+    await expect.poll(heights).toBeGreaterThan(h0 + 1);
+    await page.waitForTimeout(150);
+    expect((await msgs(page, 'caret')).length, 'то же положение — тот же caret не повторяется').toBe(n);
+    // Фокус ушёл: документ меняет высоту — caret не шлётся ни при росте, ни при убыли.
+    await page.evaluate(() => document.activeElement.blur());
+    expect(await page.evaluate(() => __ped.view.hasFocus())).toBe(false);
+    await page.waitForTimeout(150);
+    const blurred = (await msgs(page, 'caret')).length;
+    const h1 = await heights();
+    await grow(300, 140);
+    await expect.poll(heights).toBeGreaterThan(h1);
+    await grow(0, 0);
+    await expect.poll(heights).toBeGreaterThan(h1 + 1);
+    await page.waitForTimeout(150);
+    expect((await msgs(page, 'caret')).length, 'без фокуса caret не шлётся').toBe(blurred);
+  });
+
+  test('картинка на пустой строке: после загрузки в caret курсор под ней', async ({ page }) => {
+    await phoneEditor(page, { autoHeight: true });
+    await page.keyboard.type('первая');
+    await page.keyboard.press('Enter');
+    const dataUrl = await page.evaluate(() => {
+      const c = document.createElement('canvas'); c.width = 600; c.height = 400;
+      const x = c.getContext('2d'); x.fillStyle = '#4a90d9'; x.fillRect(0, 0, 600, 400);
+      return c.toDataURL('image/png');
+    });
+    await page.evaluate((u) => __ped.receive({ type: 'insertImage', dataUrl: u, name: 'photo.png' }), dataUrl);
+    await expect(page.locator('#phone-ed .led-pm figure img')).toHaveCount(1);
+    await expect.poll(() => page.evaluate(() => { const i = document.querySelector('#phone-ed .led-pm figure img'); return i.complete && i.naturalWidth > 0; })).toBe(true);
+    const real = async () => page.evaluate(() => { const c = __ped.view.coordsAtPos(__ped.view.state.selection.head); return { top: Math.round(c.top + scrollY), bottom: Math.round(c.bottom + scrollY) }; });
+    const fig = await page.evaluate(() => document.querySelector('#phone-ed .led-pm figure').getBoundingClientRect().bottom + scrollY);
+    // Курсор — в пустой строке под картинкой, и хозяин знает это место точно.
+    await expect.poll(async () => { const m = await lastMsg(page, 'caret'); return { top: m.top, bottom: m.bottom }; }).toEqual(await real());
+    expect((await lastMsg(page, 'caret')).top, 'курсор ниже картинки').toBeGreaterThan(fig - 1);
+  });
+});
+
+// Меню «/» пальцем (17 октября 2026, жалоба с эмулятора телефона): касание
+// пункта подсвечивало его, но команда не уходила. Наведение перерисовывало
+// меню целиком (paint → replaceChildren), и кнопка, которой коснулись,
+// исчезала из документа между mouseenter и click, которые касание шлёт
+// следом, — click не приходил. Теперь наведение только переставляет
+// подсветку, а касание выбирает пункт по pointerup, не уводя фокус из текста.
+test.describe('меню «/» пальцем', () => {
+  test.use({ hasTouch: true, viewport: { width: 375, height: 740 } });
+
+  /** Набрать «/» и коснуться пункта меню с этой подписью. */
+  async function tapSlash(page, label) {
+    await page.keyboard.type('/');
+    const menu = page.locator('.led-slash');
+    await expect(menu).toBeVisible();
+    const item = menu.locator('.ctx-item', { hasText: label }).first();
+    await item.scrollIntoViewIfNeeded();
+    const b = await item.boundingBox();
+    await page.touchscreen.tap(b.x + b.width / 2, b.y + b.height / 2);
+    await expect(menu).toBeHidden();
+  }
+
+  test('касание пункта «Заголовок 1» делает заголовок, фокус остаётся в тексте', async ({ page }) => {
+    await phoneEditor(page);
+    await page.keyboard.type('план');
+    await page.keyboard.press('Enter');
+    await tapSlash(page, 'Заголовок 1');
+    await expect(page.locator('#phone-ed .led-pm h1')).toHaveCount(1);
+    await expect(page.locator('#phone-ed .led-pm'), '«/» ушёл вместе с меню').not.toContainText('/');
+    expect(await page.evaluate(() => __ped.view.hasFocus()), 'клавиатура не закрылась').toBe(true);
+    await page.keyboard.type('Итоги');
+    await expect(page.locator('#phone-ed .led-pm h1')).toHaveText('Итоги');
+  });
+
+  test('касание «Таблицы» и «Графика» — каждый пункт, а не только первый', async ({ page }) => {
+    await phoneEditor(page);
+    await tapSlash(page, 'Таблица');
+    await expect(page.locator('#phone-ed .led-pm table')).toHaveCount(1);
+    await page.evaluate(() => __ped.focusEnd());
+    await tapSlash(page, 'График');
+    expect(await lastMsg(page, 'chart'), 'график на телефоне — лист хозяина').toMatchObject({ type: 'chart', id: null });
+  });
+});
+
+// После вставки графика страница телефона ловила window.onerror «ResizeObserver
+// loop completed with undelivered notifications» (17 октября 2026): высота
+// графика идёт от ширины, и перерисовка прямо в колбэке ResizeObserver меняла
+// размер того же узла. Теперь перерисовка — в следующем кадре (chart.js,
+// drawing.js). Ошибку браузер шлёт событием error окна, не исключением.
+test('вставка графика и рисунка — без ошибки ResizeObserver', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__errs = [];
+    window.addEventListener('error', (e) => window.__errs.push(String(e.message)));
+  });
+  await page.setViewportSize({ width: 375, height: 740 });
+  await phoneEditor(page, { autoHeight: true });
+  await page.evaluate(() => __ped.receive({ type: 'chart', id: null, spec: { kind: 'bar', title: 'Часы', rows: [{ label: 'Пн', value: 3 }, { label: 'Вт', value: 5 }] } }));
+  await expect(page.locator('#phone-ed .led-pm .led-chart svg rect.led-series-0')).toHaveCount(2);
+  await page.evaluate(() => __ped.exec('drawing'));
+  await expect(page.locator('#phone-ed .led-pm .led-drawing')).toHaveCount(1);
+  // Несколько кадров: ошибка цикла приходит после отрисовки.
+  await page.evaluate(() => new Promise((r) => { let n = 0; const tick = () => (++n < 10 ? requestAnimationFrame(tick) : r()); requestAnimationFrame(tick); }));
+  // И смена ширины — график перерисовывается под неё, тоже без ошибки.
+  const w0 = await page.evaluate(() => document.querySelector('#phone-ed .led-chart svg').getAttribute('viewBox'));
+  await page.evaluate(() => { document.getElementById('phone-ed').style.width = '320px'; });
+  await expect.poll(() => page.evaluate(() => document.querySelector('#phone-ed .led-chart svg').getAttribute('viewBox'))).not.toBe(w0);
+  await page.evaluate(() => new Promise((r) => { let n = 0; const tick = () => (++n < 10 ? requestAnimationFrame(tick) : r()); requestAnimationFrame(tick); }));
+  expect(await page.evaluate(() => window.__errs.filter((m) => /ResizeObserver/.test(m)))).toEqual([]);
 });

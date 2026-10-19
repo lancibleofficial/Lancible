@@ -17,7 +17,7 @@ import { join } from 'path';
 import { Platform, StyleSheet, processColor } from 'react-native';
 import { render, renderHook, fireEvent } from '@testing-library/react-native';
 import Switch from '../src/components/Switch';
-import SettingsScreen from '../src/screens/SettingsScreen';
+import SettingsSectionScreen from '../src/screens/SettingsSectionScreen';
 import OnboardingScreen from '../src/screens/auth/OnboardingScreen';
 import RepeatSheet from '../src/components/RepeatSheet';
 import { useAppStore } from '../src/store/useAppStore';
@@ -254,8 +254,9 @@ describe('Android: нативный MaterialSwitch, когда модуль со
     expect(s.height + 2 * s.marginVertical).toBe(switchSize.height);
   });
 
+  // С 17 октября 2026 тема и напоминания — в разделе «Основное» меню.
   test('меню: переключатели темы и напоминаний — нативные, с подписями', async () => {
-    const screen = await render(<SettingsScreen navigation={{ navigate: noop }} />);
+    const screen = await render(<SettingsSectionScreen navigation={{ navigate: noop }} route={{ params: { section: 'main' } }} />);
     const switches = screen.getAllByRole('switch');
     expect(switches.length).toBeGreaterThanOrEqual(2);
     for (const sw of switches) {
@@ -330,7 +331,7 @@ describe('все переключатели приложения — этот к
 
   test('меню: переключатели темы, напоминаний — на Android свои, с подписями', async () => {
     setOS('android');
-    const screen = await render(<SettingsScreen navigation={{ navigate: noop }} />);
+    const screen = await render(<SettingsSectionScreen navigation={{ navigate: noop }} route={{ params: { section: 'main' } }} />);
     const switches = screen.getAllByRole('switch');
     expect(switches.length).toBeGreaterThanOrEqual(2);
     for (const sw of switches) {

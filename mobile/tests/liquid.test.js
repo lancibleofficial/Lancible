@@ -102,7 +102,7 @@ beforeEach(() => {
 // --- 1. Панель вкладок ------------------------------------------------------
 
 describe('панель вкладок: анимация — только в момент выбора, один раз', () => {
-  const routes = ['Projects', 'Tasks', 'Home', 'Stats', 'Menu'].map((name) => ({ key: name, name }));
+  const routes = ['Projects', 'Tasks', 'Chat', 'Stats', 'Menu'].map((name) => ({ key: name, name }));
   const props = (index) => ({
     state: { index, routes },
     descriptors: Object.fromEntries(routes.map((r) => [r.key, { options: { tabBarLabel: r.name } }])),
@@ -149,13 +149,13 @@ describe('панель вкладок: анимация — только в мо
     expect(glides()).toHaveLength(0);
     expect(pops()).toHaveLength(0);
 
-    await fireEvent.press(screen.getByRole('button', { name: t('ru', 'nav.home') }));
+    await fireEvent.press(screen.getByRole('button', { name: t('ru', 'ai.tab') }));
     await act(async () => { await new Promise((r) => setTimeout(r, 1500)); });
     expect(glides()).toHaveLength(1);
     expect(pops()).toHaveLength(1);
 
     // Нажатие на уже открытую вкладку — не выбор: ничего не играет.
-    await fireEvent.press(screen.getByRole('button', { name: t('ru', 'nav.home') }));
+    await fireEvent.press(screen.getByRole('button', { name: t('ru', 'ai.tab') }));
     await act(async () => { await new Promise((r) => setTimeout(r, 100)); });
     expect(glides()).toHaveLength(1);
     expect(pops()).toHaveLength(1);
@@ -342,7 +342,7 @@ describe('плашка идущей задачи: вытягивается ка�
   });
 
   test('пока плашка стекает, место над панелью вкладок ещё её — страница не прыгает', async () => {
-    const routes = ['Projects', 'Tasks', 'Home', 'Stats', 'Menu'].map((name) => ({ key: name, name }));
+    const routes = ['Projects', 'Tasks', 'Chat', 'Stats', 'Menu'].map((name) => ({ key: name, name }));
     const bar = () => (
       <MainTabBar
         state={{ index: 0, routes }}

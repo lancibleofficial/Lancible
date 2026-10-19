@@ -347,3 +347,12 @@ test('ряд картинок: старые версии и Markdown получ�
   assert.equal(D.docToMarkdown(doc), '![https://x/a.png](https://x/a.png)\n\n![https://x/b.png](https://x/b.png)\n');
   assert.equal(D.isDocEmpty({ doc }), false, 'ряд из картинок — не пустой документ');
 });
+
+test('страница PDF — содержимое: документ из одних страниц не пустой, в Markdown и Delta она видна', () => {
+  const page = { type: 'pdfpage', attrs: { bid: 'p1', src: 'a1', page: 2, w: 595, h: 842, preview: 'p', overlays: [], lines: null } };
+  const doc = { type: 'doc', content: [page] };
+  assert.equal(D.isDocEmpty({ v: 1, doc, comments: [] }), false);
+  assert.ok(D.docToMarkdown(doc).includes('[PDF, стр. 2]'));
+  const ops = D.docToDelta(doc);
+  assert.ok(JSON.stringify(ops).includes('[PDF, стр. 2]'));
+});

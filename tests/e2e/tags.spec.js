@@ -35,7 +35,7 @@ async function seedProject(page) {
 }
 
 async function openSettings(page) {
-  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
+  await page.evaluate(() => openSettings('work')); // теги — в разделе «Работа»
   await expect(page.locator('#tags-list')).toBeVisible();
 }
 
@@ -55,7 +55,7 @@ test('пустой список объясняет, что такое теги, 
 
 test('тег создаётся и появляется в списке с пометкой, что он не используется', async ({ page }) => {
   await createTag(page, 'Срочное');
-  const row = page.locator('#tags-list .settings-row-btn');
+  const row = page.locator('#tags-list .srow');
   await expect(row).toHaveCount(1);
   await expect(row).toContainText('Срочное');
   await expect(row).toContainText('не используется');
@@ -190,10 +190,10 @@ test('удаление тега предупреждает, скольких о�
   }, pid);
 
   await openSettings(page);
-  await expect(page.locator('#tags-list .settings-row-btn')).toContainText('проектов: 1');
-  await expect(page.locator('#tags-list .settings-row-btn')).toContainText('задач: 2');
+  await expect(page.locator('#tags-list .srow')).toContainText('проектов: 1');
+  await expect(page.locator('#tags-list .srow')).toContainText('задач: 2');
 
-  await page.locator('#tags-list .settings-row-btn').click();
+  await page.locator('#tags-list .srow').click();
   await page.locator('#tagdlg-delete').click();
   await expect(page.locator('#confirm-text')).toContainText('проектов: 1 · задач: 2');
 
@@ -265,7 +265,7 @@ test('бейдж красится цветом тега и читается в �
 
 test('у неиспользуемого тега удаление не пугает лишними подробностями', async ({ page }) => {
   await createTag(page, 'Черновик');
-  await page.locator('#tags-list .settings-row-btn').click();
+  await page.locator('#tags-list .srow').click();
   await page.locator('#tagdlg-delete').click();
   await expect(page.locator('#confirm-text')).toHaveText('Удалить тег «Черновик»?');
 });
@@ -464,6 +464,9 @@ test('окно «Новый тег»: поле названия — общее (
   await expect(page.locator('#tagdlg-backdrop')).toBeVisible();
   const field = page.locator('#tagdlg-name');
   await expect(field).toHaveClass(/\bfield\b/);
+  // Окно въезжает (popIn, scale 0.96 → 1): на лету рамки окна и поля
+  // сжаты, а отступы из стилей — нет, и «во всю ширину» не сходится на ~1 px.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))));
   const m = await page.evaluate(() => {
     const probe = document.createElement('input');
     probe.className = 'field';

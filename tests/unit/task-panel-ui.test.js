@@ -122,10 +122,12 @@ test('выбор времени — один: поле и подсказки, д
 });
 
 test('валюта в настройках — та же строка-кнопка, что «Язык»', () => {
+  // С 17 октября 2026 строки настроек — общие .srow (как SettingRow телефона);
+  // валюта прячется в «личном» режиме (.if-money), язык — никогда.
   for (const [name, html] of PAGES) {
-    assert.match(html, /<button type="button" class="settings-row settings-row-btn" id="settings-lang-row">/, name);
-    assert.match(html, /<button type="button" class="settings-row settings-row-btn settings-row-last" id="settings-currency-row">/, `${name}: валюта не строкой`);
-    assert.match(html, /<span class="settings-row-value" id="settings-currency-value"><\/span>/, name);
+    assert.match(html, /<button type="button" class="srow" id="settings-lang-row">/, name);
+    assert.match(html, /<button type="button" class="srow if-money" id="settings-currency-row">/, `${name}: валюта не строкой`);
+    assert.match(html, /<span class="srow-value" id="settings-currency-value"><\/span>/, name);
     assert.ok(!html.includes('id="settings-currency"'), `${name}: осталась кнопка-поле валюты`);
   }
 });

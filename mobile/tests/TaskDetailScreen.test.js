@@ -8,7 +8,7 @@ import { StyleSheet, DeviceEventEmitter } from 'react-native';
 import { render, renderHook, fireEvent, within, act } from '@testing-library/react-native';
 import * as KeyboardLib from 'react-native-keyboard-controller';
 import TaskDetailScreen from '../src/screens/TaskDetailScreen';
-import { TOOLBAR_HIDE_DELAY } from '../src/components/EditorToolbar';
+import { TOOLBAR_HIDE_DELAY, TOOLBAR_GAP, TOOLBAR_SPACE } from '../src/components/EditorToolbar';
 import { useAppStore } from '../src/store/useAppStore';
 import { useSheetStore } from '../src/store/useSheetStore';
 import { colors, buttonHeight, useColors, fontSize, radius } from '../src/theme';
@@ -121,12 +121,16 @@ describe('панель редактора и шит с таймером', () => 
       await act(async () => { global.__docEditor.onFormat({ focused: true }); });
       await kb(true);
       // Кадры: клавиатура уже съехала, а событие о закрытии ещё не пришло —
-      // шит ждёт внизу, панель едет с клавиатурой (её подъём — 0).
+      // шит ждёт внизу, панель едет с клавиатурой (её подъём — 0, остров —
+      // на воздух TOOLBAR_GAP над низом экрана).
       KeyboardLib.useReanimatedKeyboardAnimation().progress.value = 0;
       KeyboardLib.useReanimatedKeyboardAnimation().height.value = 0;
       await q.rerender(<><TaskDetailScreen navigation={nav()} route={{ params: { taskId: 't1' } }} /><BottomSheet /></>);
       expect(ty(q.getByTestId('task-sheet')) - down).toBeGreaterThanOrEqual(130);
-      expect(Math.abs(ty(q.getByTestId('editor-toolbar').parent))).toBe(0);
+      expect(ty(q.getByTestId('editor-toolbar').parent)).toBe(-TOOLBAR_GAP);
+      // Остров с воздухом целиком ниже верха свёрнутого шита (130) — шит
+      // закрывает его весь.
+      expect(TOOLBAR_SPACE).toBeLessThan(130);
       // Событие пришло — шит возвращается; панель ещё на месте, но под ним.
       await kb(false);
       expect(ty(q.getByTestId('task-sheet'))).toBe(down);
@@ -213,7 +217,8 @@ describe('свойства задачи', () => {
     expect(s.getAllByText('Сайт')).toHaveLength(1);
     await fireEvent.press(s.getByLabelText(t('ru', 'project.opts')));
     const items = useSheetStore.getState().content.props.items;
-    expect(items.map((i) => i.key)).toEqual(['project', 'export', 'delete']);
+    // «Дублировать» — с 17 октября 2026 (duplicateTask.test.js).
+    expect(items.map((i) => i.key)).toEqual(['project', 'duplicate', 'export', 'delete']);
     expect(items[0].label).toBe(t('ru', 'task.open_project'));
   });
 

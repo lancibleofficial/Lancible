@@ -4,6 +4,10 @@ import { WebView } from 'react-native-webview';
 import { EDITOR_CSS, EDITOR_JS, EDITOR_VIEWPORT } from '../editor/editorBundle';
 import { editorCssVars, useColors, useThemeMode } from '../theme';
 import { createBridge, inline, parseMessage } from '../lib/editorBridge';
+import { loadPdfModuleText, pdfModuleScript } from '../lib/editorPdf';
+import { useAppStore } from '../store/useAppStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { useAssetForget, dropAssetForget } from '../lib/assetForget';
 
 // Редактор текста на телефоне — тот же, что на десктопе и в вебе
 // (src/editor/, ProseMirror), внутри WebView. Сборка лежит строкой в
@@ -26,6 +30,12 @@ import { createBridge, inline, parseMessage } from '../lib/editorBridge';
 // масштабируется (user-scalable=no), и масштаба текста нет: с 13 октября
 // 2026 щипок убран — он мешал писать.
 //
+// PDF-модуль (17 октября 2026, протокол 3): pdf.js и pdf-lib в строку
+// редактора не входят — по сообщению pdf-module этот компонент сам
+// впрыскивает ассет mobile/assets/editor-pdf.txt (lib/editorPdf.js), один
+// раз на загрузку страницы: смена темы пересобирает страницу — и модуль
+// впрыскивается заново по следующему запросу.
+//
 // baseUrl — настоящий адрес, а не about:blank: у страницы без адреса нет
 // своего хранилища, и картинки (IndexedDB, см. src/editor/assets.js) жили бы
 // только до закрытия экрана.
@@ -33,6 +43,9 @@ export const EDITOR_BASE_URL = 'https://lancible.vercel.app/app/';
 const BASE_URL = EDITOR_BASE_URL;
 const EDITOR_ORIGIN = 'https://lancible.vercel.app';
 const MIN_HEIGHT = 96;
+/** Сколько ждать ответа впрыснутого PDF-модуля, мс (редактор ждёт столько же:
+ *  src/editor/pdf.js, MODULE_WAIT_MS). */
+export const PDF_MODULE_WAIT_MS = 30000;
 
 // Окно закрыто (13 октября 2026). Страница — своя, строкой из сборки, и
 // уходить с неё WebView незачем: ссылка из документа (http, https, mailto) —
@@ -90,7 +103,9 @@ ${init.live ? LIVE_CSS : ''}
 (function(){
   var S = ${inline(init)};
   function post(m){ try { window.ReactNativeWebView.postMessage(JSON.stringify(m)); } catch (e) {} }
-  window.onerror = function(msg, src, line){ post({ type: 'error', message: String(msg) + ' @' + line }); };
+  // «ResizeObserver loop…» — предупреждение браузера, а не поломка: после
+  // вставки графика (высота страницы растёт) оно сыпалось в журнал ошибкой.
+  window.onerror = function(msg, src, line){ if (/ResizeObserver loop/.test(String(msg))) return true; post({ type: 'error', message: String(msg) + ' @' + line }); };
   var ed = LancibleEditor.create(document.getElementById('host'), {
     content: S.content,
     mobile: true,
@@ -105,7 +120,12 @@ ${init.live ? LIVE_CSS : ''}
     user: function(){ return S.user; },
     settings: function(){ return S.settings || {}; },
     onSettings: function(patch){ S.settings = Object.assign({}, S.settings || {}, patch); post({ type: 'settings', patch: patch }); },
-    assets: LancibleEditor.createAssetStore({ remote: function(){ return S.auth; } }),
+    // Хозяин картинки — открытая область (uid аккаунта, у гостя null), как у
+    // десктопа и веба (owner: () => scopeUid), а не тот, чьё облако сейчас
+    // открыто: с выключенной синхронизацией, посреди переключения или пока
+    // сеанс не пришёл облака нет, и картинка без owner стала бы «гостевой»
+    // навсегда (src/editor/assets.js: ownerNow).
+    assets: LancibleEditor.createAssetStore({ remote: function(){ return S.auth; }, owner: function(){ return S.owner || null; } }),
     onChange: function(c){ post({ type: 'change', content: c }); },
     toast: function(m){ post({ type: 'toast', message: m }); },
     openUrl: function(href){ post({ type: 'open', href: href }); }
@@ -119,6 +139,7 @@ ${init.live ? LIVE_CSS : ''}
     // insertImage, setLink, getState. Остальное — страницы.
     if (ed.receive(m)) return;
     if (m.type === 'auth') { S.auth = m.auth; if (m.auth) ed.assets.flush(); }
+    else if (m.type === 'owner') { S.owner = m.owner || null; }
     else if (m.type === 'lang') { S.lang = m.lang; }
     else if (m.type === 'flush') ed.flush();
     else if (m.type === 'requeue') {
@@ -148,25 +169,44 @@ ${init.live ? LIVE_CSS : ''}
  *  minHeight — живой: не ниже стольких точек (до низа видимой страницы);
  *  onFormat(state), onCaret({ top, bottom }), onInk({ on, tool, color, size }),
  *  onHeight(px), onImagePick({ purpose }), onLink({ href, needText }),
- *  onExport({ kind, name, mime, text }), onReady() — сообщения моста
- *  (lib/editorBridge.js);
+ *  onExport({ kind, name, mime, text, base64? }), onChart({ id, spec }), onError(message),
+ *  onPdfPick(), onAutoscroll({ dy }), onGesture({ on }), onContext({ kind, state }),
+ *  onReady() — сообщения моста (lib/editorBridge.js);
  *  onToast(message);
  *  requeue — id картинок, которые надо снова выгрузить в облако
- *  (стор: assetRequeue); onRequeued(ids) — редактор поставил их в очередь.
- * ref: send(msg), flush() и команды моста (createBridge) — exec, setContent, focus, blur, getState, insertImage, setLink, ink, inkTool,
- *  inkColor, inkSize.
+ *  (стор: assetRequeue); onRequeued(ids) — редактор поставил их в очередь;
+ *  adopt — id аккаунта, которому отдать картинки, вставленные без аккаунта
+ *  (стор: assetAdopt), или null; onAdopted(userId) — страница его получила.
+ * Сам (без пропсов) редактор знает открытую область (хозяин новых картинок,
+ *  owner), отдаёт ей гостевые картинки своего документа (assets-adopt
+ *  referenced) и шлёт очередь стирания картинок убранных аккаунтов
+ *  (lib/assetForget.js: assets-forget → assets-forgotten).
+ * ref: send(msg), flush() и команды моста (createBridge) — exec, setContent, focus, blur, getState, insertImage, setLink, chart, ink, inkTool,
+ *  inkColor, inkSize, pdfFile, pdfModuleReady, viewport.
  */
 const DocEditor = forwardRef(function DocEditor(props, ref) {
   const {
     content, onChange, lang, user, settings, onSettings, auth, live, minHeight = 0, onToast, placeholder, requeue, onRequeued,
-    onFormat, onCaret, onInk, onHeight, onImagePick, onLink, onExport, onReady,
+    adopt, onAdopted,
+    onFormat, onCaret, onInk, onHeight, onImagePick, onLink, onExport, onChart, onError, onReady,
+    onPdfPick, onAutoscroll, onGesture, onContext,
   } = props;
   const colors = useColors();
   const mode = useThemeMode();
   const webRef = useRef(null);
   const [height, setHeight] = useState(MIN_HEIGHT);
+  // Чья область открыта — хозяин вставленных картинок (у гостя null).
+  const owner = useAppStore((s) => s.scopeUid) || null;
+  // Область — аккаунт, и он вошёл: гостевые картинки открытого документа —
+  // его (протокол 5). Документ этой области, значит, и картинки в нём её:
+  // вставлены, пока облака не было (синхронизация выключена, сеанс не
+  // пришёл, до 19 октября телефон писал им owner: null). Гостю — никогда.
+  const signedUid = useAuthStore((s) => (s.status === 'signedIn' && s.user ? s.user.id : null));
+  const adoptOwn = owner && signedUid === owner ? owner : null;
+  // Чьи картинки стереть с устройства (аккаунт убран с телефона).
+  const forgetKey = useAssetForget((s) => s.uids.join(','));
   const initRef = useRef({
-    content, lang, user, settings, auth, placeholder,
+    content, lang, user, settings, auth, placeholder, owner,
     live: !!live,
   });
 
@@ -176,7 +216,12 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
 
   const send = (msg) => webRef.current?.postMessage(JSON.stringify(msg));
   const bridge = useMemo(() => createBridge(send), []);
-  useImperativeHandle(ref, () => ({ send, flush: () => send({ type: 'flush' }), ...bridge }));
+  // Новый документ в странице (setContent) — его гостевые картинки тоже
+  // аккаунту: сообщения страница разбирает по порядку, adopt увидит уже его.
+  useImperativeHandle(ref, () => ({
+    send, flush: () => send({ type: 'flush' }), ...bridge,
+    setContent: (content) => { bridge.setContent(content); sendAdoptOwn(); },
+  }));
 
   // Сообщение, посланное до «ready», страница не получит: WebView ещё грузит
   // её. Поэтому всё, что может поменяться после первого рендера, страница
@@ -184,10 +229,14 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
   // (useEditorAuth) приходит асинхронно, раньше страницы, и в облако с
   // телефона не уходило ни одной картинки.
   const ready = useRef(false);
-  const latest = useRef({ auth, lang });
-  latest.current = { auth, lang };
+  const latest = useRef({ auth, lang, owner, adoptOwn });
+  latest.current = { auth, lang, owner, adoptOwn };
 
   useEffect(() => { send({ type: 'auth', auth: auth || null }); }, [auth && auth.accessToken]);
+  useEffect(() => {
+    initRef.current = { ...initRef.current, owner };
+    send({ type: 'owner', owner });
+  }, [owner]);
   useEffect(() => { send({ type: 'lang', lang }); }, [lang]);
 
   // Список на возврат — тоже по «ready», и пока редактор открыт — при каждой
@@ -197,6 +246,62 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
     if (ready.current && requeue && requeue.length) send({ type: 'requeue', ids: requeue });
   }
   useEffect(sendRequeue, [requeueKey]);
+
+  // Картинки гостя — аккаунту (assets-adopt, протокол 3): данные «Без
+  // аккаунта» перенесли в аккаунт. Хранилище картинок у всех страниц
+  // редактора общее, хватает одной: эта отдаёт, если уже готова, или по
+  // своему ready; дальше стор uid снимает (onAdopted) — другим не слать.
+  function sendAdopt() {
+    if (!ready.current || !adopt) return;
+    send({ type: 'assets-adopt', userId: adopt });
+    if (onAdopted) onAdopted(adopt);
+  }
+  useEffect(sendAdopt, [adopt]);
+
+  // Гостевые картинки открытого документа — аккаунту области (referenced:
+  // только те, на которые документ ссылается; остальные гостевые не
+  // трогаются). По ready (документ страница получает при создании) и когда
+  // аккаунт вошёл, пока редактор открыт.
+  function sendAdoptOwn() {
+    const userId = latest.current.adoptOwn;
+    if (ready.current && userId) send({ type: 'assets-adopt', userId, referenced: true });
+  }
+  useEffect(sendAdoptOwn, [adoptOwn]);
+
+  // Картинки аккаунтов, убранных с телефона, — стереть (lib/assetForget.js).
+  // Хранилище общее у всех страниц: шлёт каждая готовая, с очереди uid снимает
+  // первый ответ. Своя область — не стирается (её туда и не ставят: открытие
+  // области снимает её с очереди).
+  function sendForget() {
+    if (!ready.current) return;
+    for (const userId of useAssetForget.getState().uids) {
+      if (userId !== latest.current.owner) send({ type: 'assets-forget', userId });
+    }
+  }
+  useEffect(sendForget, [forgetKey]);
+
+  // PDF-модуль на этой загрузке страницы: loaded — уже исполнен (ответ
+  // впрыснутой строки, pdf-module-loaded), loading — с какого времени ассет
+  // читается или строка в пути; ответ редактору тогда даст она сама. Не
+  // ответила за PDF_MODULE_WAIT_MS (столько ждёт и редактор) — следующий
+  // запрос впрыскивает снова.
+  const pdfMod = useRef({ loaded: false, loading: 0 });
+  function injectPdfModule() {
+    const st = pdfMod.current;
+    if (st.loaded) { bridge.pdfModuleReady(); return; }
+    if (st.loading && Date.now() - st.loading < PDF_MODULE_WAIT_MS) return;
+    st.loading = Date.now();
+    loadPdfModuleText().then(
+      (text) => {
+        if (!webRef.current || !webRef.current.injectJavaScript) throw new Error('WebView закрыт');
+        webRef.current.injectJavaScript(pdfModuleScript(text));
+      },
+    ).catch((err) => {
+      st.loading = 0;
+      console.error('[editor] PDF-модуль:', err);
+      bridge.pdfModuleReady((err && err.message) || String(err));
+    });
+  }
 
   function onMessage(e) {
     if (!fromEditor(e.nativeEvent.url)) return;
@@ -224,17 +329,38 @@ const DocEditor = forwardRef(function DocEditor(props, ref) {
       case 'image-pick': if (onImagePick) onImagePick(msg); break;
       case 'link': if (onLink) onLink(msg); break;
       case 'export': if (onExport) onExport(msg); break;
+      case 'chart': if (onChart) onChart(msg); break;
+      case 'pdf-pick': if (onPdfPick) onPdfPick(msg); break;
+      case 'pdf-module': injectPdfModule(); break;
+      case 'pdf-module-loaded':
+        pdfMod.current = { loaded: !!msg.ok, loading: 0 };
+        if (!msg.ok) console.error('[editor] PDF-модуль не исполнился:', msg.error);
+        break;
+      case 'autoscroll': if (onAutoscroll) onAutoscroll(msg); break;
+      case 'gesture': if (onGesture) onGesture(msg); break;
+      // Что выделено (протокол 4): панель меняет содержимое (EditorToolbar).
+      case 'context': if (onContext) onContext(msg); break;
       case 'ready':
         ready.current = true;
+        // Новая загрузка страницы — модуля в ней нет.
+        pdfMod.current = { loaded: false, loading: 0 };
         send({ type: 'auth', auth: latest.current.auth || null });
+        send({ type: 'owner', owner: latest.current.owner });
         send({ type: 'lang', lang: latest.current.lang });
         sendRequeue();
+        sendAdopt();
+        sendAdoptOwn();
+        sendForget();
         // Панели — всё заново: что под курсором и какое перо.
         bridge.getState();
         if (onReady) onReady();
         break;
       case 'requeued': if (onRequeued) onRequeued(msg.ids); break;
-      case 'error': console.error('[editor]', msg.message); break;
+      case 'assets-forgotten': if (msg.userId) dropAssetForget(msg.userId); break;
+      case 'error':
+        console.error('[editor]', msg.message);
+        if (onError) onError(String(msg.message || ''));
+        break;
       default: break;
     }
   }

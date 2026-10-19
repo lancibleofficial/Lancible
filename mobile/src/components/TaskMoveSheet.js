@@ -8,6 +8,7 @@ import { View, StyleSheet } from 'react-native';
 import ChoiceList from './ChoiceList';
 import { Block } from './RepeatControls';
 import { useAppStore } from '../store/useAppStore';
+import { useModeFlags } from '../hooks/useModeFlags';
 import { orderedStatuses } from '../lib/statuses';
 import { closeSheet, useSheetHeader } from '../store/useSheetStore';
 import { useColors, spacing } from '../theme';
@@ -23,6 +24,7 @@ export default function TaskMoveSheet({ taskId }) {
   const setTaskStatus = useAppStore((s) => s.setTaskStatus);
   const startTimer = useAppStore((s) => s.startTimer);
   const stopTimer = useAppStore((s) => s.stopTimer);
+  const { timer } = useModeFlags();
   // Название задачи — заголовок в общей шапке листа (в одну строку).
   useSheetHeader(task ? (task.title || t(lang, 'task.no_name')) : '');
 
@@ -43,7 +45,9 @@ export default function TaskMoveSheet({ taskId }) {
         />
       </Block>
 
-      {/* Таймер — действие, а не выбор: своим списком из одной строки ниже. */}
+      {/* Таймер — действие, а не выбор: своим списком из одной строки ниже.
+          Таймер выключен (Core.modeFlags) — запуска нет; идущий можно остановить. */}
+      {timer || running ? (
       <ChoiceList
         options={[{
           value: 'timer',
@@ -55,6 +59,7 @@ export default function TaskMoveSheet({ taskId }) {
         style={styles.timer}
         testID="move-timer"
       />
+      ) : null}
     </View>
   );
 }

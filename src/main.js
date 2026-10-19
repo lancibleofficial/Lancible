@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const { autoUpdater } = require('electron-updater');
 const { buildWorkbook } = require('./xlsx');
 const { deepLinkRoute } = require('./renderer/core/route.js');
+const { createDataStore, registerAccountHandlers } = require('./data-store');
 
 // Скачивание — только по явному запросу из рендерера (кнопка "Обновить"),
 // не автоматически в фоне.
@@ -15,35 +16,20 @@ const { deepLinkRoute } = require('./renderer/core/route.js');
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = false;
 
-const DATA_FILE = path.join(app.getPath('userData'), 'data.json');
+// Данные на диске — src/data-store.js. С 17 октября 2026 у каждого аккаунта
+// своя область: гость — прежний data.json (его данные никуда не переезжают),
+// аккаунт — data-<uid>.json рядом; область выбирает рендерер до load()
+// (data:scope). Список аккаунтов — accounts.json там же.
 const LEGACY_DATA_FILE = path.join(app.getPath('appData'), 'task-timer', 'data.json');
-const EMPTY_STATE = { tasks: [], activeTimer: null };
+const dataStore = createDataStore(app.getPath('userData'), { legacyFile: LEGACY_DATA_FILE });
+/** Данные открытого в прошлый раз аккаунта (или гостя) — окну нужна их тема
+ *  до того, как рендерер сам выберет область и загрузит её. */
+const initialData = () => {
+  const acc = dataStore.loadAccounts();
+  return dataStore.peek(acc && acc.current) || dataStore.peek(null);
+};
 // Цвета кнопок окна, которые страница прислала в прошлый запуск (см. ниже).
 const WINDOW_COLORS_FILE = path.join(app.getPath('userData'), 'window-colors.json');
-
-function loadData() {
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-  } catch {
-    /* нет своего файла — пробуем данные со старого имени приложения */
-  }
-  try {
-    if (fs.existsSync(LEGACY_DATA_FILE)) {
-      const data = JSON.parse(fs.readFileSync(LEGACY_DATA_FILE, 'utf-8'));
-      saveData(data); // переносим в %APPDATA%\Lancible
-      return data;
-    }
-  } catch {
-    /* игнорируем — начнём с чистого состояния */
-  }
-  return structuredClone(EMPTY_STATE);
-}
-
-function saveData(data) {
-  const tmp = `${DATA_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tmp, DATA_FILE); // атомарная замена, чтобы не потерять файл при сбое
-}
 
 let mainWindow = null;
 
@@ -413,11 +399,9 @@ app.whenReady().then(() => {
   }
 
   ipcMain.handle('app:version', () => app.getVersion());
-  ipcMain.handle('data:load', () => loadData());
-  ipcMain.handle('data:save', (_event, data) => {
-    saveData(data);
-    return true;
-  });
+  ipcMain.handle('data:load', () => dataStore.load());
+  ipcMain.handle('data:save', (_event, data) => dataStore.save(data));
+  registerAccountHandlers(ipcMain, dataStore);
   ipcMain.handle('clipboard:write', (_event, text) => {
     clipboard.writeText(String(text ?? ''));
     return true;
@@ -477,7 +461,7 @@ app.whenReady().then(() => {
 
   setupAutoUpdater();
 
-  createWindow(loadData());
+  createWindow(initialData());
   if (app.isPackaged) {
     const quietCheck = () => checkForUpdate().catch((err) => console.error('[autoUpdater] check:', err.message));
     // Небольшая задержка, чтобы не мешать первому рендеру окна.
@@ -486,7 +470,7 @@ app.whenReady().then(() => {
   }
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow(loadData());
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(initialData());
   });
 });
 

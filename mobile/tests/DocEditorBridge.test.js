@@ -10,8 +10,13 @@
 // WebView подменён: у него нативная часть. Посланные в него сообщения
 // копятся в global.__posted.
 import { Linking, StyleSheet } from 'react-native';
-import { render, act } from '@testing-library/react-native';
+import { render, act, waitFor } from '@testing-library/react-native';
 import DocEditor, { EDITOR_BASE_URL, fromEditor } from '../src/components/DocEditor';
+import { useAppStore } from '../src/store/useAppStore';
+import { useAuthStore } from '../src/store/useAuthStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAssetForget, queueAssetForget, loadAssetForget, ASSET_FORGET_KEY } from '../src/lib/assetForget';
+import { parseMessage } from '../src/lib/editorBridge';
 
 jest.mock('react-native-webview', () => {
   const React = require('react');
@@ -125,5 +130,150 @@ describe('окно редактора закрыто от чужого', () => {
     expect(fromEditor('about:blank', 'android')).toBe(true);
     expect(fromEditor('about:blank', 'ios')).toBe(false);
     expect(fromEditor('https://evil.example', 'android')).toBe(false);
+  });
+});
+
+// 19 октября 2026 (ревью редактора, находка 2): хранилище картинок создавалось
+// без owner, и хозяином записи становился тот, чьё облако сейчас открыто
+// (src/editor/assets.js: ownerNow). С выключенной синхронизацией, посреди
+// переключения или пока сеанс не пришёл облака нет — картинка получала
+// owner: null навсегда и в облако не уходила никогда. Теперь хозяин — открытая
+// область, как у десктопа и веба (owner: () => scopeUid).
+describe('хозяин картинок — открытая область', () => {
+  /** Исполнить скрипт страницы (последний <script>) с подменённым редактором:
+   *  что получило хранилище картинок и как страница принимает сообщения. */
+  function runPage(html) {
+    const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    const code = scripts[scripts.length - 1];
+    const got = { storeOpts: null, posted: [], listeners: [] };
+    const assets = { flush: jest.fn(), requeue: jest.fn(async () => 0) };
+    const LancibleEditor = {
+      createAssetStore: (o) => { got.storeOpts = o; return assets; },
+      create: (_host, opts) => ({ receive: () => false, flush: jest.fn(), assets: opts.assets }),
+    };
+    const doc = { getElementById: () => ({}), addEventListener: (_t, fn) => got.listeners.push(fn) };
+    const win = { ReactNativeWebView: { postMessage: (m) => got.posted.push(JSON.parse(m)) }, addEventListener: () => {} };
+    // eslint-disable-next-line no-new-func
+    new Function('LancibleEditor', 'document', 'window', code)(LancibleEditor, doc, win);
+    got.send = (m) => got.listeners.forEach((fn) => fn({ data: JSON.stringify(m) }));
+    return got;
+  }
+
+  afterEach(() => useAppStore.setState({ scopeUid: null }));
+
+  test('аккаунт без открытого облака (синхронизация выключена, сеанса нет) — хозяин всё равно его uid', async () => {
+    useAppStore.setState({ scopeUid: 'u1' });
+    await render(<DocEditor content={null} lang="ru" auth={null} />);
+    const page = runPage(global.__web.source.html);
+    expect(typeof page.storeOpts.owner).toBe('function');
+    expect(page.storeOpts.owner()).toBe('u1');
+    expect(page.storeOpts.remote()).toBeNull();
+  });
+
+  test('гость — null; хозяин приходит и сообщением owner, и заново по «ready»', async () => {
+    useAppStore.setState({ scopeUid: null });
+    const view = await render(<DocEditor content={null} lang="ru" auth={null} />);
+    const page = runPage(global.__web.source.html);
+    expect(page.storeOpts.owner()).toBeNull();
+    page.send({ type: 'owner', owner: 'u2' });
+    expect(page.storeOpts.owner()).toBe('u2');
+    // Область сменилась, пока редактор открыт, — странице уходит новый хозяин.
+    await act(async () => { useAppStore.setState({ scopeUid: 'u3' }); });
+    await view.rerender(<DocEditor content={null} lang="ru" auth={null} />);
+    expect(last('owner')).toEqual({ type: 'owner', owner: 'u3' });
+    global.__posted = [];
+    await say({ type: 'ready' });
+    expect(last('owner')).toEqual({ type: 'owner', owner: 'u3' });
+  });
+});
+
+// 19 октября 2026, протокол 5 редактора (src/editor/host.js): гостевые
+// картинки открытого документа — аккаунту области (assets-adopt referenced) и
+// стирание картинок аккаунта, убранного с телефона (assets-forget →
+// assets-forgotten, очередь — lib/assetForget.js).
+describe('картинки аккаунта: протокол 5', () => {
+  const posted = (type) => global.__posted.filter((m) => m.type === type);
+  const signedAs = (uid) => useAuthStore.setState({ status: uid ? 'signedIn' : 'signedOut', user: uid ? { id: uid, email: `${uid}@example.com` } : null, current: uid });
+
+  afterEach(async () => {
+    useAppStore.setState({ scopeUid: null });
+    signedAs(null);
+    useAssetForget.setState({ uids: [] });
+    await AsyncStorage.removeItem(ASSET_FORGET_KEY);
+  });
+
+  test('область аккаунта, и он вошёл: по ready — assets-adopt referenced для этого аккаунта', async () => {
+    useAppStore.setState({ scopeUid: 'u1' });
+    signedAs('u1');
+    await render(<DocEditor content={null} lang="ru" auth={null} />);
+    // До ready страница сообщение потеряла бы — его и не шлём.
+    expect(posted('assets-adopt')).toEqual([]);
+    await say({ type: 'ready' });
+    expect(posted('assets-adopt')).toEqual([{ type: 'assets-adopt', userId: 'u1', referenced: true }]);
+  });
+
+  test('после setContent — тоже: новый документ, его картинки (сообщение идёт следом за документом)', async () => {
+    useAppStore.setState({ scopeUid: 'u1' });
+    signedAs('u1');
+    const ref = { current: null };
+    await render(<DocEditor ref={ref} content={null} lang="ru" auth={null} />);
+    await say({ type: 'ready' });
+    global.__posted = [];
+    await act(async () => { ref.current.setContent({ v: 1 }); });
+    expect(global.__posted.map((m) => m.type)).toEqual(['setContent', 'assets-adopt']);
+    expect(global.__posted[1]).toEqual({ type: 'assets-adopt', userId: 'u1', referenced: true });
+  });
+
+  test('гостю — никогда; аккаунт без входа — тоже; вошёл, пока редактор открыт, — сразу', async () => {
+    useAppStore.setState({ scopeUid: null });
+    signedAs(null);
+    let view = await render(<DocEditor content={null} lang="ru" auth={null} />);
+    await say({ type: 'ready' });
+    expect(posted('assets-adopt')).toEqual([]);
+    await view.unmount();
+
+    useAppStore.setState({ scopeUid: 'u1' });
+    signedAs(null);
+    view = await render(<DocEditor content={null} lang="ru" auth={null} />);
+    await say({ type: 'ready' });
+    expect(posted('assets-adopt')).toEqual([]);
+    // Сеанс другого аккаунта (переключение) — не этот.
+    await act(async () => { signedAs('u2'); useAuthStore.setState({ current: 'u1' }); });
+    expect(posted('assets-adopt')).toEqual([]);
+    await act(async () => { signedAs('u1'); });
+    expect(posted('assets-adopt')).toEqual([{ type: 'assets-adopt', userId: 'u1', referenced: true }]);
+  });
+
+  test('стирание: очередь — в AsyncStorage; ближайший редактор шлёт assets-forget по ready, uid уходит по ответу', async () => {
+    await queueAssetForget('u-old');
+    expect(JSON.parse(await AsyncStorage.getItem(ASSET_FORGET_KEY))).toEqual(['u-old']);
+    useAppStore.setState({ scopeUid: 'u1' });
+    await render(<DocEditor content={null} lang="ru" auth={null} />);
+    expect(posted('assets-forget')).toEqual([]);
+    await say({ type: 'ready' });
+    expect(posted('assets-forget')).toEqual([{ type: 'assets-forget', userId: 'u-old' }]);
+    // Ответ про другой аккаунт очередь не снимает.
+    await say({ type: 'assets-forgotten', userId: 'u-other', n: 0 });
+    expect(useAssetForget.getState().uids).toEqual(['u-old']);
+    await say({ type: 'assets-forgotten', userId: 'u-old', n: 3 });
+    await waitFor(() => expect(useAssetForget.getState().uids).toEqual([]));
+    expect(JSON.parse(await AsyncStorage.getItem(ASSET_FORGET_KEY))).toEqual([]);
+  });
+
+  test('редактор открыт, когда аккаунт убрали, — стирание уходит сразу; очередь после перезапуска читается из хранилища', async () => {
+    await render(<DocEditor content={null} lang="ru" auth={null} />);
+    await say({ type: 'ready' });
+    await act(async () => { await queueAssetForget('u-gone'); });
+    expect(posted('assets-forget')).toEqual([{ type: 'assets-forget', userId: 'u-gone' }]);
+    // «Перезапуск»: в памяти пусто, в хранилище — то, что не успело уйти.
+    useAssetForget.setState({ uids: [] });
+    await AsyncStorage.setItem(ASSET_FORGET_KEY, JSON.stringify(['u-left']));
+    await loadAssetForget();
+    expect(useAssetForget.getState().uids).toEqual(['u-left']);
+  });
+
+  test('ответ редактора разбирается: userId строкой, n числом', () => {
+    expect(parseMessage(JSON.stringify({ type: 'assets-forgotten', userId: 'u1', n: '2' }))).toEqual({ type: 'assets-forgotten', userId: 'u1', n: 2 });
+    expect(parseMessage(JSON.stringify({ type: 'assets-forgotten', userId: 5 }))).toEqual({ type: 'assets-forgotten', userId: null, n: 0 });
   });
 });

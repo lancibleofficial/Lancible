@@ -9,6 +9,7 @@ import { KeyboardProvider } from './src/lib/keyboard';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import RootNavigator from './src/navigation/RootNavigator';
+import { navigationRef } from './src/navigation/navRef';
 import Toast from './src/components/Toast';
 import BottomSheet from './src/components/BottomSheet';
 import { useColors, useThemeMode } from './src/theme';
@@ -81,7 +82,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
         <SafeAreaProvider>
-          <NavigationContainer theme={navTheme}>
+          <NavigationContainer ref={navigationRef} theme={navTheme}>
             <RootNavigator />
           </NavigationContainer>
           <Toast />

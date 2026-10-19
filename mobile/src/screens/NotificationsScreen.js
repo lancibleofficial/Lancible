@@ -19,6 +19,7 @@ import Reminders from '../core/reminders.js';
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import { useColors, spacing, screenPadding, fontSize, gap } from '../theme';
 import { t } from '../lib/i18n';
+import { pushTask } from '../navigation/openTask';
 
 export default function NotificationsScreen({ navigation }) {
   const colors = useColors();
@@ -42,7 +43,7 @@ export default function NotificationsScreen({ navigation }) {
 
   function onOpen(task) {
     openProject(task.projectId);
-    navigation.navigate('TaskDetail', { taskId: task.id });
+    pushTask(navigation, task.id);
   }
 
   return (

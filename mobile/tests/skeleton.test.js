@@ -7,11 +7,11 @@
 // и панели его быть не должно, а в содержимом — должен. iOS 26 — отдельный
 // файл, skeleton.ios26.test.js.
 import { render, within } from '@testing-library/react-native';
-import { AppSkeleton, ProjectsSkeleton, TasksSkeleton, TodaySkeleton, StatsSkeleton, MenuSkeleton } from '../src/components/Skeleton';
+import { AppSkeleton, ProjectsSkeleton, TasksSkeleton, ChatSkeleton, StatsSkeleton, MenuSkeleton } from '../src/components/Skeleton';
 import { useAppStore } from '../src/store/useAppStore';
 import { t } from '../src/lib/i18n';
 
-const TAB_KEYS = ['nav.projects', 'nav.tasks', 'nav.home', 'nav.stats', 'nav.menu'];
+const TAB_KEYS = ['nav.projects', 'nav.tasks', 'ai.tab', 'nav.stats', 'nav.menu'];
 
 beforeEach(() => {
   useAppStore.setState({ settings: { ...useAppStore.getState().settings, lang: 'ru' } });
@@ -64,7 +64,7 @@ describe('запуск: AppSkeleton', () => {
 describe.each([
   ['«Проекты»', ProjectsSkeleton, 'nav.projects'],
   ['«Задачи»', TasksSkeleton, 'nav.tasks'],
-  ['«Сегодня»', TodaySkeleton, 'nav.home'],
+  ['«Чат-бот»', ChatSkeleton, 'ai.tab'],
   ['«Цифры»', StatsSkeleton, 'nav.stats'],
   ['«Меню»', MenuSkeleton, 'nav.menu'],
 ])('заглушка вкладки %s', (_name, Sk, titleKey) => {

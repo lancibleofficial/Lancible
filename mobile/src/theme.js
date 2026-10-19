@@ -175,6 +175,10 @@ export function editorCssVars(mode) {
     '--shadow-pop': sh.pop, '--shadow-modal': sh.modal,
     '--ease': 'cubic-bezier(0.22, 0.61, 0.36, 1)', '--radius': '14px', '--radius-sm': '10px',
     '--font-ui': "'Onest', -apple-system, Roboto, 'Segoe UI', sans-serif", '--font-display': 'var(--font-ui)', '--fw-text': '400',
+    // Бумага страницы PDF (src/editor/pdfpage.js): лист белый и чернила тёмные в
+    // обеих темах — это страница документа, а не панель приложения. Без них
+    // замазка в тёмной теме была бы тёмной (запасные --panel/--text).
+    '--led-paper': '#ffffff', '--led-paper-ink': '#1d1f22',
   };
   for (const [k, v] of Object.entries(editorHues[m])) vars[`--led-c-${k}`] = v;
   for (const [k, v] of Object.entries(editorHighlights[m])) vars[`--led-hl-${k}`] = v;
@@ -191,6 +195,12 @@ export function editorSwatches(mode) {
   const c = m === 'light' ? light : dark;
   return { hues: { ink: c.text, ...editorHues[m] }, highlights: editorHighlights[m] };
 }
+
+/** Тень плавающего поверх страницы — плашки идущей задачи (TimerMiniPlayer) и
+ *  острова панели редактора (EditorToolbar): boxShadow, равномерно размытая со
+ *  всех сторон, а не elevation (системная тень Android темнела к середине
+ *  нижнего края). Цвет — shadow своей темы, поверхность под ней — floating. */
+export const floatingShadow = (c) => [{ offsetX: 0, offsetY: 4, blurRadius: 18, spreadDistance: 0, color: c.shadow }];
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
 

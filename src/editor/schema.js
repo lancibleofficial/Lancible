@@ -270,6 +270,62 @@ export const nodes = {
     }, node)],
   },
 
+  // Страница PDF со слоями поверх (17 октября 2026, src/editor/pdfpage.js,
+  // DESIGN.md «Редактор PDF»). Сама страница не правится: она — превью
+  // (preview, PNG в хранилище картинок) и ссылка на исходный файл (src) для
+  // выгрузки с векторной страницей. Правится то, что поверх, — overlays:
+  // текст, картинки, прямоугольники, стрелки, маркер, замазка; геометрия —
+  // в pt страницы от левого верхнего угла (pdfgeom.js). w × h — размер
+  // страницы в pt, как его отдаёт pdf.js (с учётом поворота). lines — на
+  // волну 2 («заменить текст»): строки распознанного текста
+  // [{ x, y, w, h, size, text }]; пока null.
+  pdfpage: {
+    group: 'block',
+    atom: true,
+    draggable: false,
+    attrs: {
+      bid: { default: null },
+      src: { default: '' },
+      page: { default: 1 },
+      w: { default: 595 },
+      h: { default: 842 },
+      preview: { default: '' },
+      overlays: { default: [] },
+      lines: { default: null },
+    },
+    parseDOM: [{
+      tag: 'div.led-pdfpage[data-pdf]',
+      getAttrs: (dom) => {
+        try {
+          const json = (k, d) => (dom.getAttribute(k) ? JSON.parse(dom.getAttribute(k)) : d);
+          return {
+            src: dom.getAttribute('data-pdf') || '',
+            page: Number(dom.dataset.page) || 1,
+            w: Number(dom.dataset.w) || 595,
+            h: Number(dom.dataset.h) || 842,
+            preview: dom.dataset.preview || '',
+            overlays: json('data-overlays', []),
+            lines: json('data-lines', null),
+            bid: readBid(dom),
+          };
+        } catch { return false; }
+      },
+    }],
+    toDOM: (node) => {
+      const a = node.attrs;
+      return ['div', withBlock({
+        class: 'led-pdfpage',
+        'data-pdf': a.src || '',
+        'data-page': a.page,
+        'data-w': a.w,
+        'data-h': a.h,
+        'data-preview': a.preview || '',
+        'data-overlays': JSON.stringify(a.overlays || []),
+        'data-lines': a.lines ? JSON.stringify(a.lines) : null,
+      }, node)];
+    },
+  },
+
   text: { group: 'inline' },
 
   hard_break: {

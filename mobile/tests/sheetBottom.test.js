@@ -16,9 +16,7 @@ import ActionSheetContent from '../src/components/ActionSheetContent';
 import AuthSheet from '../src/components/AuthSheet';
 import ChangePasswordSheet from '../src/components/ChangePasswordSheet';
 import ColorPickerSheet from '../src/components/ColorPickerSheet';
-import DatePickSheet from '../src/components/DatePickSheet';
 import DueSheet from '../src/components/DueSheet';
-import EntrySheet from '../src/components/EntrySheet';
 import ExportPeriodSheet from '../src/components/ExportPeriodSheet';
 import MenuSheet from '../src/components/MenuSheet';
 import NewProjectSheet from '../src/components/NewProjectSheet';
@@ -76,9 +74,7 @@ const SHEETS = [
   ['AuthSheet', () => <AuthSheet />],
   ['ChangePasswordSheet', () => <ChangePasswordSheet />],
   ['ColorPickerSheet', () => <ColorPickerSheet title="Цвет" value="#87ff65" onSelect={noop} />],
-  ['DatePickSheet', () => <DatePickSheet title="День" valueKey="2026-10-10" onPick={noop} />],
   ['DueSheet', () => <DueSheet task={task} lang="ru" onApply={noop} onClear={noop} />],
-  ['EntrySheet', () => <EntrySheet initial={{ start: 1_700_000_000_000, end: 1_700_003_600_000 }} />],
   ['ExportPeriodSheet', () => <ExportPeriodSheet lang="ru" />],
   ['MenuSheet (меню проекта)', () => <MenuSheet title="Сайт" items={['Задача', 'Настройки', 'Статусы', 'Быстрый доступ', 'Экспорт'].map((label) => ({ key: label, label, icon: 'settings', onPress: noop })).concat([{ key: 'del', label: 'Удалить проект', icon: 'trash', danger: true, separated: true, onPress: noop }])} />],
   ['NewProjectSheet', () => <NewProjectSheet onCreated={noop} onCancel={noop} />],

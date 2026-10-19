@@ -9,18 +9,26 @@
 // Напоминаний у отрезка нет (с 11 октября 2026): «до начала» — общий список
 // задачи (ReminderSheet). Сами правила (разбор, вхождения) — в ядре
 // (core/slots.js, tests/unit/slots.test.js).
+//
+// Ни рабочих часов, ни рабочих дней у отрезка нет (18 октября 2026): часы —
+// все 24, суббота 23:00 сохраняется без вопроса. Чужой отрезок в том же
+// промежутке (Core.slotOverlaps, с повторами) — страница этого же листа
+// «Время уже занято»: «В этом промежутке уже есть задача «X» (10:00–11:00).
+// Создать в то же время?» с «Создать» и «Отмена»; у правки — «Сохранить».
+// Слова и правила — те же, что у окна отрезка на вебе.
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { StyleSheet } from 'react-native';
 import { render, renderHook, fireEvent, within } from '@testing-library/react-native';
 import BottomSheet from '../src/components/BottomSheet';
-import SlotSheet from '../src/components/SlotSheet';
+import SlotSheet, { overlapText } from '../src/components/SlotSheet';
 import SlotListSheet from '../src/components/SlotListSheet';
 import { useAppStore } from '../src/store/useAppStore';
 import { useSheetStore, openSheet } from '../src/store/useSheetStore';
 import { useColors } from '../src/theme';
 import Slots from '../src/core/slots.js';
 import { t, T } from '../src/lib/i18n';
+import { hm } from '../src/lib/sessions';
 
 const flat = (node) => StyleSheet.flatten(node.props.style) || {};
 // Суббота 17 октября 2026 — день для проверок «по будням» (ближайший — понедельник 19-го).
@@ -209,4 +217,119 @@ test('список отрезков: тап по строке — отрезок
   expect(useSheetStore.getState().content).toBe(content);
   expect(slotsOfStore()).toHaveLength(2);
   s.getByTestId('slot-list-add');
+});
+
+describe('пересечение с другой задачей — вопрос страницей этого же листа', () => {
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const other = (start, end, extra) => ({ ...baseTask, id: 't2', title: 'Созвон', repeat: null, slots: [{ id: 'o1', start, end }], ...extra });
+  const withOther = (o, ownSlots = []) => useAppStore.setState((st) => ({ tasks: [{ ...st.tasks[0], slots: ownSlots }, o] }));
+  const t1Slots = () => Slots.slotsOf(useAppStore.getState().tasks.find((x) => x.id === 't1'));
+  // Новый отрезок встаёт сегодня на ближайший целый час (ночью — на 10:00).
+  const nextHour = () => { const h = new Date().getHours() + 1; return h <= 22 ? h : 10; };
+  const today = (h) => { const d = new Date(); d.setHours(h, 0, 0, 0); return d.toISOString(); };
+  const question = (title, from, to, verb = 'Создать') => `В этом промежутке уже есть задача «${title}» (${from}–${to}). ${verb} в то же время?`;
+
+  test('новый отрезок поверх чужого: «Сохранить» спрашивает; «Отмена» — назад к форме, ничего не пишет; «Создать» создаёт', async () => {
+    const h = nextHour();
+    withOther(other(today(h), today(h + 1)));
+    const s = await show(null);
+    await fireEvent.press(footerButtons(s)[0]);
+    s.getByText(question('Созвон', `${pad2(h)}:00`, `${pad2(h + 1)}:00`));
+    expect(footerButtons(s).map(label)).toEqual(['Создать', 'Отмена']);
+    head(s).getByText('Время уже занято');
+    head(s).getByLabelText(t('ru', 'common.back'));
+    expect(t1Slots()).toEqual([]);
+    // «Отмена» — к форме: лист открыт, отрезка нет.
+    await fireEvent.press(footerButtons(s)[1]);
+    s.getByTestId('slot-date');
+    expect(t1Slots()).toEqual([]);
+    expect(useSheetStore.getState().content).not.toBeNull();
+    // Снова «Сохранить» → «Создать»: отрезок в задаче, лист закрыт.
+    await fireEvent.press(footerButtons(s)[0]);
+    await fireEvent.press(footerButtons(s)[0]);
+    expect(t1Slots()).toHaveLength(1);
+    expect(hm(t1Slots()[0].start)).toBe(`${pad2(h)}:00`);
+    expect(useSheetStore.getState().content).toBeNull();
+  });
+
+  test('правка своего отрезка поверх чужого — «Сохранить в то же время?»; «Сохранить» переносит', async () => {
+    withOther(other(iso(17, 13), iso(17, 14)), [slot()]);
+    const s = await show('sl1');
+    // Конец 12:00 → 14:00: 10:00–14:00 накрывает чужие 13:00–14:00.
+    await fireEvent.press(s.getByText(t('ru', 'sdlg.end_label')));
+    await fireEvent.press(within(s.getByTestId('time-columns')).getByText('14'));
+    await fireEvent.press(footerButtons(s)[0]);
+    s.getByText(question('Созвон', '13:00', '14:00', 'Сохранить'));
+    expect(footerButtons(s).map(label)).toEqual(['Сохранить', 'Отмена']);
+    expect(hm(t1Slots()[0].end)).toBe('12:00');
+    await fireEvent.press(footerButtons(s)[0]);
+    expect(hm(t1Slots()[0].end)).toBe('14:00');
+    expect(useSheetStore.getState().content).toBeNull();
+  });
+
+  test('из списка отрезков «Создать» возвращает к списку, а не закрывает лист', async () => {
+    const h = nextHour();
+    withOther(other(today(h), today(h + 1)), [slot()]);
+    openSheet(<SlotListSheet taskId="t1" />);
+    const s = await render(<BottomSheet />);
+    const content = useSheetStore.getState().content;
+    await fireEvent.press(s.getByTestId('slot-list-add'));
+    await fireEvent.press(footerButtons(s)[0]);
+    s.getByText(question('Созвон', `${pad2(h)}:00`, `${pad2(h + 1)}:00`));
+    await fireEvent.press(footerButtons(s)[0]);
+    expect(useSheetStore.getState().content).toBe(content);
+    s.getByTestId('slot-list-add');
+    expect(t1Slots()).toHaveLength(2);
+  });
+
+  test('правка, не сдвинувшая время, заново не спрашивает', async () => {
+    withOther(other(iso(17, 11), iso(17, 12)), [slot()]);
+    const s = await show('sl1');
+    await fireEvent.press(footerButtons(s)[0]);
+    expect(s.queryByText(/в то же время/)).toBeNull();
+    expect(useSheetStore.getState().content).toBeNull();
+  });
+
+  test.each([
+    ['касание краями', (h) => other(today(h + 1), today(h + 2))],
+    ['закрытая задача', (h) => other(today(h), today(h + 1), { done: true })],
+  ])('%s — не пересечение: сохраняется без вопроса', async (_, make) => {
+    withOther(make(nextHour()));
+    const s = await show(null);
+    await fireEvent.press(footerButtons(s)[0]);
+    expect(t1Slots()).toHaveLength(1);
+    expect(useSheetStore.getState().content).toBeNull();
+  });
+
+  test('суббота 23:00 — без вопроса и без рабочих часов: столбцы часов — все 24', async () => {
+    // Суббота 17 октября 2026; у другой задачи — утро того же дня.
+    withOther(other(iso(17, 10), iso(17, 11)), [slot()]);
+    const s = await show('sl1');
+    await fireEvent.press(s.getByText(t('ru', 'sdlg.start_label')));
+    const cols = within(s.getByTestId('time-columns'));
+    for (const hh of ['01', '06', '23']) cols.getByText(hh);
+    await fireEvent.press(cols.getByText('23'));
+    await fireEvent.press(s.getByText(t('ru', 'sdlg.end_label')));
+    await fireEvent.press(within(s.getByTestId('time-columns')).getByText('23'));
+    await fireEvent.press(within(s.getByTestId('time-columns')).getByText('55'));
+    within(s.getByTestId('slot-start')).getByText('23:00');
+    within(s.getByTestId('slot-end')).getByText('23:55');
+    await fireEvent.press(footerButtons(s)[0]);
+    expect(s.queryByText(/в то же время/)).toBeNull();
+    const saved = t1Slots()[0];
+    expect(new Date(saved.start).getDay()).toBe(6);
+    expect(hm(saved.start)).toBe('23:00');
+    expect(hm(saved.end)).toBe('23:55');
+    expect(useSheetStore.getState().content).toBeNull();
+  });
+
+  test('несколько задач — до трёх по имени и «и ещё N»; одно вхождение дважды — один раз', () => {
+    const hit = (title, h) => ({ taskId: title, title, start: iso(17, h), end: iso(17, h + 1) });
+    expect(overlapText([hit('А', 10), hit('Б', 11), hit('А', 10)], 'ru'))
+      .toBe('В этом промежутке уже есть задачи: «А» (10:00–11:00), «Б» (11:00–12:00). Создать в то же время?');
+    expect(overlapText([hit('А', 10), hit('Б', 11), hit('В', 12), hit('Г', 13), hit('Д', 14)], 'ru', true))
+      .toBe('В этом промежутке уже есть задачи: «А» (10:00–11:00), «Б» (11:00–12:00), «В» (12:00–13:00) и ещё 2. Сохранить в то же время?');
+    expect(overlapText([{ ...hit('', 10) }], 'ru')).toContain('«Без названия»');
+    for (const lang of ['ru', 'en', 'uk', 'kk']) expect(overlapText([hit('А', 10)], lang)).toContain('А');
+  });
 });

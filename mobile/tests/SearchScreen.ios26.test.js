@@ -51,8 +51,8 @@ test('строка поиска не прячет шапку и не прыга�
   expect(options.headerBackVisible).toBeUndefined();
   expect(options.unstable_headerLeftItems).toBeUndefined();
   // Своей шапки на JS нет — только список.
-  expect(screen.queryByPlaceholderText('Поиск задач и проектов')).toBeNull();
-  expect(bar.placeholder).toBe('Поиск задач и проектов');
+  expect(screen.queryByPlaceholderText('Поиск задач, проектов и чатов')).toBeNull();
+  expect(bar.placeholder).toBe('Поиск задач, проектов и чатов');
 
   // Ввод в строке ищет по экрану.
   await act(() => bar.onChangeText({ nativeEvent: { text: 'глав' } }));

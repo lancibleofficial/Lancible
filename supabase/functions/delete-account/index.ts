@@ -10,6 +10,10 @@
 // служебным ключом, и клиент получает понятный ответ:
 //
 //   200 { deleted: true }          — аккаунт и картинки удалены
+//   200 { deleted: true, screenshots: 'remain', detail }
+//                                  — аккаунт удалён, а снимки экрана из
+//                                    обратной связи стереть не вышло: пути
+//                                    — в логе функции, стереть руками
 //   401 { error: 'not signed in' } — нет входа или токен не пользователя
 //   405                            — не POST
 //   409 { error: 'assets remain' } — картинки стереть не вышло; аккаунт цел,
@@ -19,12 +23,25 @@
 // Старый путь (стирание на клиенте + delete_my_account) и страж остаются для
 // установленных версий приложения.
 //
+// Обратная связь (19 октября 2026, supabase/feedback.sql): строки feedback
+// этого пользователя уходят каскадом вместе с ним, а снимки экрана в бакете
+// feedback — нет, и стереть их клиент не может (политик у бакета нет).
+// Поэтому до удаления функция служебным ключом берёт screenshot_path из его
+// строк и стирает эти файлы. Сбой здесь удаление не держит: человек просил
+// удалить аккаунт, и отказ из-за снимка был бы хуже. Сбой пишется в лог
+// (пути — <uuid>.png, без uid и почты) и в ответ.
+//
 // Секреты заводить не нужно: SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY у Edge
 // Functions есть по умолчанию. Выкладка — supabase/functions/README.md.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const BUCKET = 'doc-assets';
+const FEEDBACK_BUCKET = 'feedback';
+// Снимок обратной связи клиент кладёт в корень бакета как <uuid>.<png|jpg|webp>
+// (app.js, mobile/src/lib/feedback.js). Путь в строку пишет сам клиент,
+// поэтому стираются только такие имена: «../…» или чужая папка не пройдут.
+const SHOT_RE = /^[A-Za-z0-9-]{1,100}\.(?:png|jpe?g|webp)$/i;
 const PAGE = 1000;
 // Предел кругов стирания: 100 × 1000 картинок — с запасом на любого
 // человека. Дальше — 409, а не цикл без конца на сервере у всех.
@@ -72,6 +89,12 @@ Deno.serve(async (req) => {
     if (!removed || !removed.length) return reply(409, { error: 'assets remain', detail: 'nothing removed' });
   }
 
+  // Снимки обратной связи — после картинок: если те не стёрлись (409),
+  // аккаунт остаётся, и снимки вместе с ним.
+  const shots = await removeScreenshots(admin, uid)
+    .catch((e) => ({ detail: String((e as Error)?.message || e), paths: [] as string[] }));
+  if (shots) console.error('delete-account: feedback screenshots remain', shots.detail, shots.paths);
+
   // Строки в таблицах уходят каскадом от auth.users. Если картинка успела
   // доехать между стиранием и удалением, страж из storage.sql откажет —
   // это тот же 409: повторить.
@@ -80,5 +103,37 @@ Deno.serve(async (req) => {
     if (/account assets remain/i.test(delErr.message)) return reply(409, { error: 'assets remain' });
     return reply(500, { error: 'delete failed', detail: delErr.message });
   }
-  return reply(200, { deleted: true });
+  return reply(200, shots ? { deleted: true, screenshots: 'remain', detail: shots.detail } : { deleted: true });
 });
+
+/** Стирает снимки экрана из строк feedback пользователя uid. null — всё
+ *  стёрто, стирать нечего или таблицы ещё нет (feedback.sql не выполнен);
+ *  иначе — почему не вышло и какие пути остались. Экспорт — как у ai-chat:
+ *  функцию зовёт обработчик Deno.serve, которого граф кода не разбирает. */
+export async function removeScreenshots(admin: ReturnType<typeof createClient>, uid: string): Promise<{ detail: string; paths: string[] } | null> {
+  const paths: string[] = [];
+  for (let round = 0; ; round++) {
+    if (round >= MAX_ROUNDS) return { detail: 'too many rounds', paths };
+    const from = round * PAGE;
+    const { data, error } = await admin.from('feedback')
+      .select('screenshot_path')
+      .eq('user_id', uid)
+      .not('screenshot_path', 'is', null)
+      .range(from, from + PAGE - 1);
+    if (error) {
+      if (error.code === 'PGRST205' || error.code === '42P01') return null;
+      return { detail: error.message, paths };
+    }
+    const rows = (data || []) as { screenshot_path: unknown }[];
+    for (const r of rows) {
+      const p = r.screenshot_path;
+      if (typeof p === 'string' && SHOT_RE.test(p) && !paths.includes(p)) paths.push(p);
+    }
+    if (rows.length < PAGE) break;
+  }
+  for (let i = 0; i < paths.length; i += PAGE) {
+    const { error } = await admin.storage.from(FEEDBACK_BUCKET).remove(paths.slice(i, i + PAGE));
+    if (error) return { detail: error.message, paths: paths.slice(i) };
+  }
+  return null;
+}

@@ -273,6 +273,9 @@ test('выбор версии стоит в строке фильтра у пр�
   await page.locator('#tf-version').click();
   await page.locator('#ctx-menu .ctx-item', { hasText: 'v1.3' }).click();
   await expect(page.locator('.ph-version-name')).toHaveText('v1.3');
+  // У цвета переход 0.12 с: мгновенное чтение ловит промежуточный оттенок
+  // (19 октября прогон упал на rgb(69, 69, 77)). Ждём установившийся цвет.
+  await expect(page.locator('#tf-version')).toHaveCSS('color', m.nameColor);
   const picked = await page.evaluate(() => {
     const cs = getComputedStyle(document.getElementById('tf-version'));
     return { color: cs.color, weight: cs.fontWeight, border: cs.borderStyle };

@@ -17,7 +17,7 @@ const COMMANDS = [
   'bullet', 'ordered', 'tasks',
   'table', 'image', 'imageUrl', 'chart', 'drawing', 'quote', 'callout', 'codeblock', 'hr',
   'annotate', 'comment', 'find', 'outline', 'comments', 'view',
-  'exportMd', 'exportHtml', 'copyMd', 'print', 'shortcuts',
+  'exportMd', 'exportHtml', 'exportPdf', 'copyMd', 'print', 'shortcuts',
 ];
 
 const bar = (page, scope) => page.locator(`${scope} .led-toolbar`);

@@ -9,10 +9,9 @@ import { setSheetFooter, clearSheetFooter, closeSheet, useSheetHeader } from '..
 import { spacing } from '../theme';
 import { t } from '../lib/i18n';
 
-/** Смена пароля: два поля и «Сохранить».
- *  @param embedded страница листа профиля (ProfileSheet): без своего
- *    заголовка — его и стрелку «назад» ставит профиль. */
-export default function ChangePasswordSheet({ embedded }) {
+/** Смена пароля: два поля и «Сохранить». Открывается строкой «Изменить
+ *  пароль ›» раздела «Аккаунт». */
+export default function ChangePasswordSheet() {
   const lang = useAppStore((s) => s.settings.lang);
   const showToast = useAppStore((s) => s.showToast);
   const changePassword = useAuthStore((s) => s.changePassword);
@@ -20,7 +19,7 @@ export default function ChangePasswordSheet({ embedded }) {
   const [pw2, setPw2] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  useSheetHeader(embedded ? null : t(lang, 'profile.change_password'));
+  useSheetHeader(t(lang, 'profile.change_password'));
 
   async function save() {
     if (pw.length < 6) { setError(t(lang, 'profile.password_too_short')); return; }

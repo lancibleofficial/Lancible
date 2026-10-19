@@ -2,10 +2,11 @@
 //
 // Сама логика лежит в src/core/status.js — это побайтная копия файла
 // десктопа, её сверяет tests/unit/mobile-core.test.js. Здесь только обёртки:
-// подставляют язык и генератор идентификаторов, потому что на десктопе это
-// делает app.js, а не ядро.
+// подставляют язык, потому что на десктопе это делает app.js, а не ядро.
+// id набора по умолчанию ядро даёт само, постоянные — `${projectId}:st:${key}`
+// (17 октября 2026): два устройства, заведшие один проект, не задваивают
+// статусы.
 import Core from '../core/status.js';
-import { uid } from './migrate';
 import { t } from './i18n';
 
 export const { STATUS_KINDS, CLOSING_KINDS, DEFAULT_STATUSES } = Core;
@@ -54,5 +55,5 @@ export function rowStatus(statuses, task, done, lang) {
  *  заведении: дальше это обычные пользовательские строки, которые можно
  *  переименовать, и подменять их на смене языка было бы неправильно. */
 export function seedProjectStatuses(projectId, lang) {
-  return Core.makeProjectStatuses(projectId, (key) => t(lang, `status.default_${key}`), uid);
+  return Core.makeProjectStatuses(projectId, (key) => t(lang, `status.default_${key}`));
 }

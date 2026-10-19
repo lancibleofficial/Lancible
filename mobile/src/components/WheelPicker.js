@@ -17,16 +17,23 @@
 //
 // По кругу — повторением списка: значение стоит в средней копии, после
 // остановки барабан незаметно возвращается в неё же.
+//
+// TimeWheels — время двумя барабанами через двоеточие (часы — все 24, минуты
+// — все подряд): одна деталь на дедлайн (DueSheet) и рабочие часы
+// (WorkHoursSheet), вынесена сюда 18 октября 2026.
 import { useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, { useSharedValue, useAnimatedScrollHandler, useAnimatedStyle, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import Text from './AppText';
-import { useColors, radius, displayFamily } from '../theme';
+import { useColors, radius, spacing, displayFamily } from '../theme';
 
 export const WHEEL_ITEM_H = 40;
 const VISIBLE = 5;
 const COPIES = 7;
+const pad2 = (n) => String(n).padStart(2, '0');
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
 
 /** Индекс строки (в повторённом списке) → индекс значения. */
 export function wheelValueIndex(row, len) {
@@ -101,7 +108,22 @@ export default function WheelPicker({ values, value, onChange, format = String, 
   );
 }
 
+/** Время двумя барабанами: hour 0…23 и minute 0…59, по кругу. */
+export function TimeWheels({ hour, minute, onHour, onMinute, accessibilityLabel }) {
+  const colors = useColors();
+  const styles = makeStyles(colors);
+  return (
+    <View style={styles.timeRow}>
+      <WheelPicker values={HOURS} value={hour} onChange={onHour} format={pad2} accessibilityLabel={accessibilityLabel} />
+      <Text style={styles.timeColon}>:</Text>
+      <WheelPicker values={MINUTES} value={minute} onChange={onMinute} format={pad2} accessibilityLabel={accessibilityLabel} />
+    </View>
+  );
+}
+
 const makeStyles = (colors) => StyleSheet.create({
+  timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+  timeColon: { color: colors.text, fontSize: 24, fontWeight: '700' },
   wrap: { height: WHEEL_ITEM_H * VISIBLE },
   pad: { paddingVertical: WHEEL_ITEM_H * Math.floor(VISIBLE / 2) },
   // Полоса выбора посередине: непрозрачная заливка закрывает бледный список.

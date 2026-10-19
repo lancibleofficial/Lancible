@@ -11,6 +11,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const zlib = require('node:zlib');
 const { buildWorkbook } = require('../src/xlsx');
+const { createDataStore, registerAccountHandlers } = require('../src/data-store');
 
 const RESULT = path.join(__dirname, 'smoke-result.json');
 const errors = [];
@@ -78,11 +79,23 @@ const lastOverlay = () => overlayCalls[overlayCalls.length - 1];
 // Задержка ответа на data:load: пока она не нулевая, окно ещё грузит данные.
 // Нужна одной проверке — ссылке lancible://, пришедшей до конца запуска.
 let loadDelayMs = 0;
+// Несколько аккаунтов (17 октября 2026): области аккаунтов и их список —
+// настоящий src/data-store.js, тот же, что у main.js, только во временной
+// папке. Гость, как и раньше, — подмена в памяти (store): на ней стоят
+// остальные проверки.
+const DATA_DIR = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'lancible-smoke-'));
+const fileStore = createDataStore(DATA_DIR);
+const guestScope = () => fileStore.scopeFile() === path.join(DATA_DIR, 'data.json');
+registerAccountHandlers(ipcMain, fileStore);
 ipcMain.handle('data:load', async () => {
   if (loadDelayMs) await new Promise((r) => setTimeout(r, loadDelayMs));
-  return store;
+  return guestScope() ? store : fileStore.load();
 });
-ipcMain.handle('data:save', (_e, d) => { store = d; return true; });
+ipcMain.handle('data:save', (_e, d) => {
+  if (guestScope()) store = d;
+  else fileStore.save(d);
+  return true;
+});
 ipcMain.handle('clipboard:write', () => true);
 ipcMain.handle('theme:set-overlay', (_e, theme, colors) => { overlayCalls.push({ theme, colors }); return true; });
 // Что main отвечает окну про обновление: состояние (update:status) и итог
@@ -366,7 +379,8 @@ async function run() {
   // той же причине, что и у кнопки обновления: см. комментарий дальше.
   const appVersion = app.getVersion();
   const footer = await inPage(win, 'подвал настроек', `(async () => {
-    openView('settings');
+    // С 17 октября настройки — по разделам: подвал с версией — в «О приложении».
+    openSettings('about');
     await new Promise((r) => setTimeout(r, 60));
     const link = need('#settings-update-check');
     const out = {
@@ -652,6 +666,40 @@ async function run() {
     return out;
   })()`);
 
+  // --- несколько аккаунтов: своя область — свой файл ---------------------------
+  //
+  // Окно открывает область аккаунта (openScope, как при входе), заводит в ней
+  // задачу — она ложится в data-<uid>.json, а не в данные гостя; список
+  // аккаунтов — в accounts.json. Назад к гостю — его задачи на месте.
+  const SMOKE_UID = '5a0e0c1e-0000-4000-8000-000000000017';
+  const accountsInPage = await inPage(win, 'аккаунты', `(async () => {
+    const out = {};
+    const guestTasks = state.tasks.length;
+    await openScope('${SMOKE_UID}');
+    out.accountScopeOpened = scopeUid === '${SMOKE_UID}';
+    out.accountScopeEmpty = state.tasks.length === 0;
+    state.projects.push({ id: 'smoke-acc-p', name: 'Проект аккаунта' });
+    state.tasks.push({ id: 'smoke-acc-t', projectId: 'smoke-acc-p', title: 'Задача аккаунта' });
+    migrate();
+    savePending = true;
+    await saveNow();
+    await openScope(null);
+    out.guestBack = scopeUid === null && state.tasks.length === guestTasks
+      && !state.tasks.some((x) => x.title === 'Задача аккаунта');
+    return out;
+  })()`);
+  const accountFile = path.join(DATA_DIR, `data-${SMOKE_UID}.json`);
+  const accountData = (() => { try { return JSON.parse(fs.readFileSync(accountFile, 'utf-8')); } catch { return null; } })();
+  const accountsFile = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'accounts.json'), 'utf-8')); } catch { return null; } })();
+  const accounts = {
+    ...accountsInPage,
+    dataFileWritten: !!accountData && (accountData.tasks || []).some((x) => x.title === 'Задача аккаунта'),
+    guestFileUntouched: !fs.existsSync(path.join(DATA_DIR, 'data.json')),
+    guestStoreUntouched: !(store.tasks || []).some((x) => x.title === 'Задача аккаунта'),
+    accountsListWritten: !!accountsFile && (accountsFile.list || []).some((e) => e.uid === SMOKE_UID) && accountsFile.current === null,
+  };
+  try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch { /* временная папка */ }
+
   const unzip = (buf) => {
     const files = {};
     let i = 0;
@@ -680,6 +728,7 @@ async function run() {
     overlaySyncedOnThemeChange: overlayCalls.some((c) => c.theme === 'light') && overlayCalls.some((c) => c.theme === 'dark'),
     titlebar,
     scrollbar,
+    accounts,
     errors,
   };
   result.failed = [
@@ -688,6 +737,7 @@ async function run() {
     ...falseChecks('routes', routes),
     ...falseChecks('titlebar', titlebar),
     ...falseChecks('scrollbar', scrollbar),
+    ...falseChecks('accounts', accounts),
     ...(exportOk ? [] : ['exportOk']),
     ...(result.overlaySyncedOnThemeChange ? [] : ['overlaySyncedOnThemeChange']),
   ];

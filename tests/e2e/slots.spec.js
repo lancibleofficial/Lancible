@@ -354,6 +354,10 @@ test('протяжка по плановому блоку заводит зап�
   await page.mouse.down();
   await page.mouse.move(box.x + box.width / 2, box.y + 40, { steps: 4 });
   await page.mouse.up();
+  // С 18 октября 2026 протяжка поверх плана сначала спрашивает, ставить ли в
+  // то же время (slot-overlaps.spec.js); «Создать» — дальше как прежде.
+  await expect(page.locator('#confirm-backdrop')).toBeVisible();
+  await page.locator('#confirm-ok').click();
   await expect(page.locator('#tmdlg-backdrop')).toBeVisible();
   // Черновик новой задачи с записью, а не окно задачи отрезка.
   expect(await page.evaluate(() => state.tasks.length)).toBe(3);
@@ -378,6 +382,92 @@ test('в списке «Повестка» плановые отрезки — �
   await expect(row).toContainText('10:00–12:00');
   await expect(row).toContainText('Вёрстка карточек');
   await expect(row.locator('.ag-list-tag')).toHaveText('Запланировано');
+});
+
+// Месяц (17 октября 2026): плановые куски — метками в клетке дня, как блоки
+// недели и строки «Расписания». Клетка дня — .cal-cell с числом .cc-num.
+const monthCell = (page, day) => page.locator('#cal-days .cal-cell:not(.empty)').filter({
+  has: page.locator('.cc-num', { hasText: new RegExp(`^${day}$`) }),
+});
+
+test('месяц: «время работы» — меткой в клетке дня, пунктиром цвета проекта, отдельно от записей', async ({ page }) => {
+  const ids = await seed(page);
+  await putSlot(page, ids.task, 10, 0, 120);
+  // Запись времени того же дня — чтобы метку было с чем спутать.
+  await page.evaluate((id) => {
+    const task = getTask(id);
+    const now = new Date();
+    const s = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
+    task.sessions.push({ id: uid(), start: s.toISOString(), end: new Date(s.getTime() + 3600e3).toISOString(), ms: 3600e3, rate: null });
+    task.totalMs = 3600e3;
+    render();
+  }, ids.task);
+  await showTime(page, 'month');
+  const cell = monthCell(page, 10);
+  await expect(cell).toHaveCount(1);
+  const mark = cell.locator('.cc-plans .cc-plan');
+  await expect(mark).toHaveCount(1);
+  await expect(mark).toHaveText('10:00–12:00');
+  await expect(cell.locator('.cc-plans')).toHaveAttribute('title', 'Запланировано: 10:00–12:00 Вёрстка карточек');
+  // Запись времени — сплошным текстом рядом, не в строке меток.
+  await expect(cell.locator('.cc-time')).toBeVisible();
+  await expect(cell.locator('.cc-plans .cc-time')).toHaveCount(0);
+  // Вид — из семейства планового блока: пунктир, цвет проекта в рамке, тихая подпись.
+  const look = await mark.evaluate((n) => {
+    const cs = getComputedStyle(n);
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--text-dim)';
+    n.parentNode.appendChild(probe);
+    const dim = getComputedStyle(probe).color;
+    probe.remove();
+    return { style: cs.borderTopStyle, border: cs.borderTopColor, color: cs.color, dim, pc: cs.getPropertyValue('--pc').trim() };
+  });
+  expect(look.style).toBe('dashed');
+  expect(look.pc).toBe('#87ff65');
+  expect(look.border).toMatch(/135, 255, 101|0\.529|0\.53/); // #87ff65 в смеси 55%
+  expect(look.color).toBe(look.dim);
+  // В соседних днях меток нет.
+  await expect(monthCell(page, 11).locator('.cc-plan')).toHaveCount(0);
+  await expect(monthCell(page, 9).locator('.cc-plan')).toHaveCount(0);
+});
+
+test('месяц: несколько кусков за день — первая по началу и «+N»; закрытая задача меток не даёт', async ({ page }) => {
+  const ids = await seed(page);
+  await putSlot(page, ids.task, 14, 0, 60);
+  await putSlot(page, ids.other, 9, 30, 30);
+  await putSlot(page, ids.other, 16, 0, 45);
+  await showTime(page, 'month');
+  const cell = monthCell(page, 10);
+  await expect(cell.locator('.cc-plan')).toHaveText(['09:30–10:00']);
+  await expect(cell.locator('.cc-plan-more')).toHaveText('+2');
+  await expect(cell.locator('.cc-plans')).toHaveAttribute('title', 'Запланировано: 09:30–10:00 Без отрезков; 14:00–15:00 Вёрстка карточек; 16:00–16:45 Без отрезков');
+  await page.evaluate((id) => { setTaskDone(getTask(id), true); render(); }, ids.other);
+  await expect(cell.locator('.cc-plan')).toHaveText(['14:00–15:00']);
+  await expect(cell.locator('.cc-plan-more')).toHaveCount(0);
+  await page.evaluate((id) => { setTaskDone(getTask(id), true); render(); }, ids.task);
+  await expect(cell.locator('.cc-plans')).toHaveCount(0);
+});
+
+test('месяц: повтор задачи даёт метки во всех днях вхождений; метка не вылезает из клетки на 1280 и 375', async ({ page }) => {
+  const ids = await seed(page);
+  await page.evaluate((id) => { getTask(id).repeat = { freq: 'week', every: 1, weekdays: [1, 3] }; }, ids.task);
+  await putSlot(page, ids.task, 10, 0, 120);
+  await showTime(page, 'month');
+  // Июнь 2026: понедельники и среды с 10-го — 10, 15, 17, 22, 24, 29.
+  for (const d of [10, 15, 17, 22, 24, 29]) await expect(monthCell(page, d).locator('.cc-plan'), `день ${d}`).toHaveCount(1);
+  for (const d of [11, 12, 16]) await expect(monthCell(page, d).locator('.cc-plan'), `день ${d}`).toHaveCount(0);
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 860 });
+    await page.evaluate(() => render());
+    const out = await page.evaluate(() => [...document.querySelectorAll('#cal-days .cc-plans')].map((n) => {
+      const cell = n.closest('.cal-cell').getBoundingClientRect();
+      const r = n.getBoundingClientRect();
+      return r.right <= cell.right + 0.5 && r.left >= cell.left - 0.5 && r.bottom <= cell.bottom + 0.5;
+    }));
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.every(Boolean), `ширина ${width}: метка вылезла из клетки`).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `ширина ${width}: горизонтальная прокрутка`).toBe(true);
+  }
 });
 
 test('напоминание «до начала» попадает в колокольчик и срабатывает один раз на вхождение', async ({ page }) => {

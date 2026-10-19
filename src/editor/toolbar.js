@@ -65,10 +65,10 @@ const STEPS_MOBILE = [
 // экспорт…) стоят в меню всегда. В «…» свёрнутая группа — одним пунктом «›».
 const MENUS = {
   format: ['underline', 'strike', '|', 'fontSize', 'fontFamily', 'color', 'highlight', '|', 'align', 'outdent', 'indent', '|', 'code', 'sup', 'sub', '|', 'clear'],
-  insert: ['table', 'image', 'imageUrl', 'chart', 'drawing', '|', 'quote', 'callout', 'codeblock', 'hr'],
+  insert: ['table', 'image', 'imageUrl', 'pdf', 'chart', 'drawing', '|', 'quote', 'callout', 'codeblock', 'hr'],
   lists: ['bullet', 'ordered', 'tasks'],
   more: ['undo', 'redo', 'block', 'bold', 'italic', 'link', 'lists', 'format', 'insert', '|',
-    'annotate', 'comment', 'find', 'outline', 'comments', 'view', '|', 'exportMd', 'exportHtml', 'copyMd', 'print', '|', 'shortcuts'],
+    'annotate', 'comment', 'find', 'outline', 'comments', 'view', '|', 'exportMd', 'exportHtml', 'exportPdf', 'copyMd', 'print', '|', 'shortcuts'],
 };
 
 /** Черты меню: без двух подряд и без черты с краю. */
@@ -385,7 +385,7 @@ export class Toolbar {
 
   openGroup(name, anchor) {
     const E = this.menuItems(anchor);
-    const ids = tidy(MENUS[name].filter((id) => id === '|' || !this.slots[id] || !this.inRow(id)));
+    const ids = tidy(MENUS[name].filter((id) => id === '|' || ((!this.slots[id] || !this.inRow(id)) && !(E[id] && E[id].hidden))));
     const items = ids.map((id) => {
       if (id === '|') return 'sep';
       const it = Object.assign({ cmd: id }, E[id]);
@@ -433,6 +433,8 @@ export class Toolbar {
       table: { icon: 'table', label: t('block.table'), sub: true, run: () => this.tableMenu(anchor) },
       image: { icon: 'image', label: t('block.image'), run: () => ed.pickImage() },
       imageUrl: { icon: 'link', label: t('block.image_url'), run: () => ed.imageFromUrl(anchor) },
+      // PDF — веб и десктоп; с нативной панелью (телефон) пункта нет.
+      pdf: { icon: 'pdf', label: t('block.pdf'), run: () => ed.pickPdf() },
       chart: { icon: 'chart', label: t('block.chart'), run: () => ed.insertChart() },
       drawing: { icon: 'draw', label: t('block.drawing'), run: () => ed.insertDrawing() },
       quote: { icon: 'quote', label: t('block.quote'), kbd: 'Mod-Shift-b', active: !!fs.quote, run: run(C.toggleQuote) },
@@ -450,6 +452,7 @@ export class Toolbar {
       insert: Object.assign({ icon: 'plus', label: t('block.insert'), active: this.groupOn('insert') }, open('insert')),
       exportMd: { icon: 'download', label: t('export.markdown'), run: () => ed.exportAs('md') },
       exportHtml: { icon: 'download', label: t('export.html'), run: () => ed.exportAs('html') },
+      exportPdf: { icon: 'pdf', label: t('export.pdf'), run: () => ed.exportPdf() },
       copyMd: { icon: 'copy', label: t('export.copy_md'), run: () => ed.copyMarkdown() },
       print: { icon: 'printer', label: t('export.print'), kbd: 'Mod-p', run: () => ed.print() },
       shortcuts: { icon: 'info', label: t('help.shortcuts'), kbd: 'Mod-/', run: () => ed.showShortcuts() },
@@ -515,9 +518,11 @@ export class Toolbar {
   }
 
   /** Остров таблицы: плавает под таблицей, пока курсор в ней, — тем же
-   *  видом, что панель над выделением. Строки и столбцы вставляются и
-   *  удаляются шестерёнкой на разделителях (tablehandles.js); на телефоне
-   *  наводить нечем, и там эти кнопки остаются здесь. */
+   *  видом, что панель над выделением. Строки и столбцы — ручками слева и
+   *  сверху таблицы (tablehandles.js) и на телефоне тоже: с 17 октября 2026
+   *  кнопок строк и столбцов, повторявших меню ручек, на острове нет. Здесь —
+   *  то, чего у ручек нет: объединить, разделить, строка заголовков, заливка,
+   *  график из таблицы, удалить таблицу. */
   buildTableBar() {
     const { ed } = this;
     const t = ed.t;
@@ -531,17 +536,7 @@ export class Toolbar {
       split: btn('split', t('table.split'), run(T.split), { 'data-tt': 'split' }),
     };
     const sep = () => h('span', { class: 'led-bar-sep' });
-    const rowsCols = ed.isMobile ? [
-      btn('rowBefore', t('table.row_above'), run(T.rowAbove), { 'data-tt': 'rowAbove' }),
-      btn('rowAfter', t('table.row_below'), run(T.rowBelow), { 'data-tt': 'rowBelow' }),
-      btn('colBefore', t('table.col_left'), run(T.colLeft), { 'data-tt': 'colLeft' }),
-      btn('colAfter', t('table.col_right'), run(T.colRight), { 'data-tt': 'colRight' }),
-      btn('rows', t('table.row_delete'), run(T.rowDel), { 'data-tt': 'rowDel' }),
-      btn('columns', t('table.col_delete'), run(T.colDel), { 'data-tt': 'colDel' }),
-      sep(),
-    ] : [];
     return h('div', { class: 'led-tablebar', hidden: true, role: 'toolbar', 'aria-label': t('table.tools') },
-      ...rowsCols,
       this.tb.merge, this.tb.split,
       btn('header', t('table.header_row'), run(T.headerRow), { 'data-tt': 'headerRow' }),
       fill,

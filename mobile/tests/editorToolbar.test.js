@@ -20,15 +20,26 @@
 // Пока курсор в списке (format.list), в главной строке сразу после чек-листа
 // встают два слова — «Вложить» и «Вынести»; вне списка их нет. Значков и
 // шеврона по-прежнему нет.
+//
+// 19 октября 2026 (пользователь: «панель инструментов сделаем парящей со
+// скруглёнными углами, но при открытой клавиатуре — над клавиатурой»):
+// панель — остров. От краёв экрана — боковое поле страницы, скругление
+// острова, поверхность и тень плавающего (как у плашки идущей задачи), от
+// опоры — воздух TOOLBAR_GAP. Всё — токенами theme.js.
+import fs from 'fs';
+import path from 'path';
 import { StyleSheet } from 'react-native';
 import { render, fireEvent, renderHook, act, within } from '@testing-library/react-native';
+import * as KeyboardLib from 'react-native-keyboard-controller';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import EditorToolbar, {
-  MAIN_ROW, LIST_TOOLS, GROUP_ROWS, INK_ROW, HUES, INK_COLORS, TOOLBAR_HEIGHT, TOOLBAR_BUTTON, TOOLBAR_HIDE_DELAY, useToolbarVisible,
+  MAIN_ROW, LIST_TOOLS, GROUP_ROWS, INK_ROW, HUES, INK_COLORS, TOOLBAR_HEIGHT, TOOLBAR_BUTTON, TOOLBAR_HIDE_DELAY, TOOLBAR_GAP, TOOLBAR_SPACE,
+  useToolbarVisible, useEditorInset,
 } from '../src/components/EditorToolbar';
 import { EMPTY_FORMAT, normalizeFormat, parseMessage, createBridge, sameFormat } from '../src/lib/editorBridge';
 import { ICONS } from '../src/core/icons';
 import { useAppStore } from '../src/store/useAppStore';
-import { editorSwatches, displayFamily } from '../src/theme';
+import { editorSwatches, displayFamily, useColors, floatingShadow, radius, spacing, screenPadding } from '../src/theme';
 import { t } from '../src/lib/i18n';
 
 const actions = () => ({
@@ -265,20 +276,25 @@ describe('группы раскрываются на месте строки', (
     q.getByTestId('tb-row-main');
   });
 
-  test('«⋯» → редкое: повтор, график, комментарий, найти, экспорт', async () => {
+  test('«⋯» → редкое: повтор, график, PDF, комментарий, найти, экспорт', async () => {
     const a = actions();
     const q = await bar({ actions: a });
     await fireEvent.press(q.getByTestId('tb-more'));
-    expect(buttons(q, 'more')).toEqual(['tb-back', 'tb-redo', 'tb-chart', 'tb-comment', 'tb-find', 'tb-export']);
+    expect(buttons(q, 'more')).toEqual(['tb-back', 'tb-redo', 'tb-chart', 'tb-pdf', 'tb-comment', 'tb-find', 'tb-export']);
     await fireEvent.press(q.getByTestId('tb-export'));
     expect(a.exportDoc).toHaveBeenCalled();
+    // «PDF» (17 октября 2026) — команда редактора: файл он попросит у телефона (pdf-pick).
+    await fireEvent.press(q.getByTestId('tb-more'));
+    await fireEvent.press(q.getByTestId('tb-pdf'));
+    expect(a.exec).toHaveBeenLastCalledWith('pdf', undefined);
+    q.getByTestId('tb-row-main');
   });
 
   test('курсор в таблице — в «⋯» инструменты таблицы', async () => {
     const a = actions();
     const q = await bar({ actions: a, format: fmt({ inTable: true }) });
     await fireEvent.press(q.getByTestId('tb-more'));
-    expect(buttons(q, 'more')).toEqual(['tb-back', 'tb-redo', 'tb-rowBelow', 'tb-colRight', 'tb-rowDel', 'tb-colDel', 'tb-tableDel', 'tb-chart', 'tb-comment', 'tb-find', 'tb-export']);
+    expect(buttons(q, 'more')).toEqual(['tb-back', 'tb-redo', 'tb-rowBelow', 'tb-colRight', 'tb-rowDel', 'tb-colDel', 'tb-tableDel', 'tb-chart', 'tb-pdf', 'tb-comment', 'tb-find', 'tb-export']);
     await fireEvent.press(q.getByTestId('tb-rowBelow'));
     expect(a.exec).toHaveBeenLastCalledWith('rowBelow', undefined);
   });
@@ -402,6 +418,116 @@ describe('видимость', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  test('панель держало одно выделение (instant) — уходит сразу, без задержки клавиатуры', async () => {
+    // 18 октября 2026, протокол 4: без клавиатуры обычная строка иначе
+    // мелькнула бы на 300 мс над шитом (editorContext.test.js).
+    jest.useFakeTimers();
+    try {
+      const { result, rerender } = await renderHook(({ want, instant }) => useToolbarVisible(want, instant), { initialProps: { want: true, instant: false } });
+      await rerender({ want: false, instant: true });
+      expect(result.current).toBe(false);
+      await rerender({ want: true, instant: false });
+      expect(result.current).toBe(true);
+      // Без instant — прежняя задержка.
+      await rerender({ want: false, instant: false });
+      expect(result.current).toBe(true);
+      await act(async () => { jest.advanceTimersByTime(TOOLBAR_HIDE_DELAY + 10); });
+      expect(result.current).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe('парящий остров (19 октября 2026)', () => {
+  const flat = (q, id) => StyleSheet.flatten(q.getByTestId(id).props.style);
+  const lift = (q) => (flat(q, 'editor-toolbar-dock').transform || []).find((x) => 'translateY' in x).translateY;
+  /** Клавиатура по кадрам (подмена библиотеки): высота — вниз, минусом. */
+  const kbFrames = (h) => { KeyboardLib.useReanimatedKeyboardAnimation().height.value = -h; };
+  afterEach(() => { kbFrames(0); useSafeAreaInsets().bottom = 0; });
+
+  test('остров: скругление острова, поверхность и тень плавающего — токенами темы; линий нет', async () => {
+    for (const theme of ['dark', 'light']) {
+      await act(async () => { useAppStore.setState({ settings: { ...useAppStore.getState().settings, theme } }); });
+      const hook = await renderHook(() => useColors());
+      const palette = hook.result.current;
+      await hook.unmount();
+      const q = await bar();
+      const s = flat(q, 'editor-toolbar');
+      expect(s.height).toBe(TOOLBAR_HEIGHT);
+      expect(s.borderRadius).toBe(radius.lg);
+      expect(s.backgroundColor).toBe(palette.floating);
+      expect(s.boxShadow).toEqual(floatingShadow(palette));
+      expect(s.boxShadow[0].color).toBe(palette.shadow);
+      // Тень — boxShadow, не системная elevation; рамок и линии сверху нет.
+      expect(s.elevation || 0).toBe(0);
+      expect(s.borderWidth || 0).toBe(0);
+      expect(s.borderTopWidth || 0).toBe(0);
+      await q.unmount();
+    }
+  });
+
+  test('строка листается внутри острова и режется его скруглением; тень на внешнем слое не срезана', async () => {
+    const q = await bar();
+    const outer = flat(q, 'editor-toolbar');
+    const clip = flat(q, 'editor-toolbar-clip');
+    expect(clip).toMatchObject({ flex: 1, flexDirection: 'row', overflow: 'hidden', borderRadius: radius.lg });
+    expect(outer.overflow).not.toBe('hidden');
+    const inner = within(q.getByTestId('editor-toolbar-clip'));
+    expect(inner.getByTestId('tb-row-main').props.horizontal).toBe(true);
+    inner.getByTestId('tb-pen-mode');
+  });
+
+  test('тень одна на всё плавающее — в theme.js; плашка идущей задачи берёт её же', () => {
+    expect(floatingShadow({ shadow: 'X' })).toEqual([expect.objectContaining({ color: 'X', blurRadius: expect.any(Number), spreadDistance: 0 })]);
+    const read = (f) => fs.readFileSync(path.join(__dirname, '..', 'src', 'components', f), 'utf8');
+    expect(read('TimerMiniPlayer.js')).toMatch(/boxShadow: floatingShadow\(colors\)/);
+    // Своих чисел тени у панели нет.
+    expect(read('EditorToolbar.js')).not.toMatch(/blurRadius|elevation:/);
+  });
+
+  test('в доке: от краёв экрана — боковое поле страницы, от опоры — воздух TOOLBAR_GAP', async () => {
+    expect(TOOLBAR_GAP).toBe(spacing.sm);
+    expect(TOOLBAR_SPACE).toBe(TOOLBAR_HEIGHT + TOOLBAR_GAP);
+    const q = await render(<EditorToolbar lang="ru" format={fmt()} actions={actions()} />);
+    expect(flat(q, 'editor-toolbar-dock')).toMatchObject({ position: 'absolute', left: screenPadding, right: screenPadding, bottom: 0 });
+    // Ни клавиатуры, ни системной панели — у низа экрана, с воздухом.
+    expect(lift(q)).toBe(-TOOLBAR_GAP);
+    // Опора ниже — число (верх свёрнутого шита): над ней с тем же воздухом.
+    await q.rerender(<EditorToolbar lang="ru" format={fmt()} actions={actions()} floor={130} />);
+    expect(lift(q)).toBe(-(130 + TOOLBAR_GAP));
+  });
+
+  test('клавиатура открыта — остров над ней с воздухом; без неё — над системной панелью жестов', async () => {
+    useSafeAreaInsets().bottom = 24;
+    const q = await render(<EditorToolbar lang="ru" format={fmt()} actions={actions()} />);
+    expect(lift(q)).toBe(-(24 + TOOLBAR_GAP));
+    kbFrames(300);
+    await q.rerender(<EditorToolbar lang="ru" format={fmt({ bold: true })} actions={actions()} />);
+    expect(lift(q)).toBe(-(300 + TOOLBAR_GAP));
+    // Шит выше клавиатуры не бывает, но выше — всегда то, что выше.
+    await q.rerender(<EditorToolbar lang="ru" format={fmt()} actions={actions()} floor={130} />);
+    expect(lift(q)).toBe(-(300 + TOOLBAR_GAP));
+  });
+
+  test('строка пера — в том же острове и на том же месте', async () => {
+    const q = await render(<EditorToolbar lang="ru" format={fmt()} actions={actions()} inkOn />);
+    q.getByTestId('tb-row-ink');
+    within(q.getByTestId('editor-toolbar-clip')).getByTestId('tb-row-ink');
+    expect(flat(q, 'editor-toolbar').borderRadius).toBe(radius.lg);
+    expect(lift(q)).toBe(-TOOLBAR_GAP);
+  });
+
+  test('документ на весь экран: снизу места на клавиатуру, остров и воздух под ним', async () => {
+    const shown = await renderHook(() => useEditorInset(true));
+    expect(StyleSheet.flatten(shown.result.current).paddingBottom).toBe(TOOLBAR_SPACE);
+    kbFrames(300);
+    const typing = await renderHook(() => useEditorInset(true));
+    expect(StyleSheet.flatten(typing.result.current).paddingBottom).toBe(300 + TOOLBAR_SPACE);
+    const hidden = await renderHook(() => useEditorInset(false));
+    expect(StyleSheet.flatten(hidden.result.current).paddingBottom).toBe(300);
   });
 });
 

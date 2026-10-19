@@ -14,7 +14,7 @@ import { MINI_PLAYER_HEIGHT } from '../src/components/TimerMiniPlayer';
 import { useAppStore } from '../src/store/useAppStore';
 import { spacing, tabBarClearance } from '../src/theme';
 
-const routes = ['Projects', 'Tasks', 'Home', 'Stats', 'Menu'].map((name) => ({ key: name, name }));
+const routes = ['Projects', 'Tasks', 'Chat', 'Stats', 'Menu'].map((name) => ({ key: name, name }));
 const barProps = () => ({
   state: { index: 0, routes },
   descriptors: Object.fromEntries(routes.map((r) => [r.key, { options: { tabBarLabel: r.name } }])),

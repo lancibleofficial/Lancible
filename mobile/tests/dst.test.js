@@ -13,11 +13,8 @@
 // песочнице теста — копия. Настоящий process живёт в главном контексте, туда
 // и пишет vm.runInThisContext (V8 пересчитывает пояс при записи в TZ).
 import vm from 'vm';
-import { StyleSheet } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 import StatsScreen, { monthCells, statsBounds } from '../src/screens/StatsScreen';
-import HomeScreen from '../src/screens/HomeScreen';
-import { HOUR_H } from '../src/components/AgendaGrid';
 import { useAppStore } from '../src/store/useAppStore';
 import { dayKey, keyToDate, mondayOf, addDays } from '../src/lib/calendarMath';
 import { spanFromParts } from '../src/lib/sessions';
@@ -200,39 +197,5 @@ describe('запись через полночь', () => {
     const span = spanFromParts(key, '23:30', '00:30');
     expect(span.ms).toBe(H);
     expect([dayKey(span.end), span.end.getHours(), span.end.getMinutes()]).toEqual([nextKey(key), 0, 30]);
-  });
-});
-
-describe('«Сегодня» в 25-часовой день', () => {
-  // Окно записей дня — до календарной полуночи. С ядром, резавшим сутки по
-  // 24 часа, такое окно зацикливало нарезку на записи позже 23:00; окно же
-  // «начало + 24 часа» теряло последний час дня.
-  test('Киев, 25 октября: запись 23:00–00:00 есть в списке, а на сетке стоит на 23:00', async () => {
-    setZone('Europe/Kyiv');
-    seed(new Date(2026, 9, 25, 23));
-    pin(2026, 9, 25);
-    const q = await render(<HomeScreen navigation={nav()} route={{ params: {} }} />);
-    q.getByText('23:00–00:00');
-
-    await fireEvent.press(q.getByRole('button', { name: t('ru', 'today.grid') }));
-    // Блок на сетке — ближайший предок подписи времени, у которого есть top.
-    let node = q.getByText('23:00–00:00');
-    while (node && StyleSheet.flatten(node.props.style)?.top === undefined) node = node.parent;
-    expect(StyleSheet.flatten(node.props.style).top).toBe(23 * HOUR_H);
-    expect(StyleSheet.flatten(node.props.style).height).toBe(HOUR_H);
-  });
-});
-
-describe('«Сегодня» на экране', () => {
-  test('неделя в Каире: подпись диапазона кончается 1 ноября, у каждого дня недели один столбик', async () => {
-    setZone('Africa/Cairo');
-    seed(new Date(2026, 9, 28, 9));
-    pin(2026, 9, 28);
-    const q = await render(<HomeScreen navigation={nav()} route={{ params: {} }} />);
-    const range = `${fmtDateShort(new Date(2026, 9, 26), 'ru')}–${fmtDateShort(new Date(2026, 10, 1), 'ru')}`;
-    q.getByText(t('ru', 'today.week_label', { range }));
-    for (const key of ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']) {
-      expect([key, q.queryAllByText(t('ru', `weekday.${key}`)).length]).toEqual([key, 1]);
-    }
   });
 });

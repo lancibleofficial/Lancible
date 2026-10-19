@@ -17,12 +17,23 @@
 // отрезок живёт в пределах суток (normalizeSlot). Еженедельное правило с днями
 // считает первым вхождением только подходящий день, поэтому дата при
 // сохранении двигается к ближайшему из них (lib/slotText.js, fitSlotDay).
+//
+// Ни рабочих часов, ни рабочих дней у отрезка нет (18 октября 2026): часы —
+// все 24, день — любой. Пересечься с другой задачей тоже можно, но не молча:
+// если в этом промежутке уже стоит чужой отрезок (Core.slotOverlaps — с
+// повторами), «Сохранить» открывает страницу этого же листа «Время уже
+// занято»: «В этом промежутке уже есть задача «X» (10:00–11:00). Создать в то
+// же время?» с «Создать» и «Отмена»; у правки — «Сохранить в то же время?» и
+// «Сохранить», а правка, не сдвинувшая время, заново не спрашивает. «Отмена»
+// возвращает к форме и ничего не пишет. Слова и правила — те же, что у окна
+// отрезка на вебе (confirmSlotOverlap в app.js).
 import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import PrimaryButton from './PrimaryButton';
 import MiniDatePicker from './MiniDatePicker';
 import TimeColumns from './TimeField';
 import RepeatSheet from './RepeatSheet';
+import ActionSheetContent from './ActionSheetContent';
 import SheetPage, { usePageMotion } from './SheetPage';
 import { RowGroup, SettingRow, ExpandRow } from './Island';
 import { Hint } from './RepeatControls';
@@ -41,6 +52,9 @@ const toMin = (hmText) => {
   return h * 60 + m;
 };
 
+/** Заголовок листа по странице. */
+const PAGE_TITLE = { main: 'slot.label', repeat: 'repeat.dialog_title', overlap: 'slot.overlap_title' };
+
 /** Момент: день ('ГГГГ-ММ-ДД') и время ('ЧЧ:ММ') → ISO. */
 const isoOf = (dateKey, hmText) => {
   const d = keyToDate(dateKey);
@@ -48,6 +62,29 @@ const isoOf = (dateKey, hmText) => {
   d.setHours(h, m, 0, 0);
   return d.toISOString();
 };
+
+/** Текст вопроса о пересечении (как confirmSlotOverlap на вебе): одна задача
+ *  — по имени и часам, несколько — до трёх по имени и «и ещё N»; повторы
+ *  одного вхождения — один раз. edit — правка заведённого отрезка. */
+export function overlapText(hits, lang, edit) {
+  const seen = new Set();
+  const list = hits.filter((h) => {
+    const key = `${h.taskId}|${h.start}|${h.end}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const item = (h) => t(lang, 'slot.overlap_item', {
+    title: h.title || t(lang, 'task.no_name'),
+    time: `${hm(new Date(h.start))}–${hm(new Date(h.end))}`,
+  });
+  const shown = list.slice(0, 3).map(item).join(', ');
+  const rest = list.length - 3;
+  const what = list.length === 1
+    ? t(lang, 'slot.overlap_one', { item: item(list[0]) })
+    : t(lang, 'slot.overlap_many', { list: rest > 0 ? `${shown} ${t(lang, 'slot.overlap_more', { n: rest })}` : shown });
+  return `${what} ${t(lang, edit ? 'slot.overlap_q_save' : 'slot.overlap_q_create')}`;
+}
 
 /** @param taskId — чей отрезок; @param slotId — правим отрезок, null — новый.
  *  @param onBack — лист открыт страницей списка отрезков (SlotListSheet):
@@ -76,19 +113,19 @@ export default function SlotSheet({ taskId, slotId = null, onBack }) {
   // Раскрытая строка: 'date', 'start' или 'end'; открыта одна.
   const [open, setOpen] = useState(null);
   const toggle = (which) => setOpen((o) => (o === which ? null : which));
-  // Страница внутри листа: 'main' — форма, 'repeat' — повторение задачи.
+  // Страница внутри листа: 'main' — форма, 'repeat' — повторение задачи,
+  // 'overlap' — вопрос о пересечении с другой задачей.
   const [page, setPage] = useState('main');
-  const motion = usePageMotion(page === 'repeat' ? 1 : 0);
+  const motion = usePageMotion(page === 'main' ? 0 : 1);
+  // Отрезок, ждущий ответа на вопрос о пересечении: { raw, hits }.
+  const [pending, setPending] = useState(null);
 
   // Правило, по которому отрезки повторяются сейчас (серия не кончилась), —
   // для сводки и подгонки даты; на странице правится само правило задачи.
   const rule = task ? Slots.slotRule(task) : null;
   const valid = toMin(end) > toMin(start);
 
-  useSheetHeader(
-    t(lang, page === 'repeat' ? 'repeat.dialog_title' : 'slot.label'),
-    page === 'repeat' ? () => setPage('main') : onBack || null,
-  );
+  useSheetHeader(t(lang, PAGE_TITLE[page]), page !== 'main' ? () => setPage('main') : onBack || null);
   const finish = () => (onBack ? onBack() : closeSheet());
 
   function save() {
@@ -96,6 +133,19 @@ export default function SlotSheet({ taskId, slotId = null, onBack }) {
     // Своего повтора у отрезка нет: только дата и часы.
     const day = fitSlotDay(date, rule);
     const raw = { start: isoOf(day, start), end: isoOf(day, end) };
+    // Чужие отрезки в этом же промежутке — сначала вопрос; свои у задачи не
+    // в счёт (правится она сама). Правка, не сдвинувшая время, не спрашивает.
+    const moved = !existing || Date.parse(existing.start) !== Date.parse(raw.start) || Date.parse(existing.end) !== Date.parse(raw.end);
+    const hits = moved ? Slots.slotOverlaps(useAppStore.getState().tasks, raw, taskId) : [];
+    if (hits.length) {
+      setPending({ raw, hits });
+      setPage('overlap');
+      return;
+    }
+    commit(raw);
+  }
+
+  function commit(raw) {
     if (existing) updateTaskSlot(taskId, existing.id, raw);
     else addTaskSlot(taskId, raw);
     finish();
@@ -119,6 +169,22 @@ export default function SlotSheet({ taskId, slotId = null, onBack }) {
     setSheetFooter(footer);
     return () => clearSheetFooter(footer);
   }, [page, date, start, end, rule, valid, lang]);
+
+  if (page === 'overlap' && pending) {
+    return (
+      <SheetPage key="overlap" motion={motion}>
+        <ActionSheetContent
+          embedded
+          message={overlapText(pending.hits, lang, !!existing)}
+          onCancel={() => setPage('main')}
+          actions={[
+            { label: t(lang, existing ? 'common.save' : 'agenda.create_btn'), stay: true, onPress: () => commit(pending.raw) },
+            { label: t(lang, 'common.cancel'), cancel: true },
+          ]}
+        />
+      </SheetPage>
+    );
+  }
 
   if (page === 'repeat') {
     return (

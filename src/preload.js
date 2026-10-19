@@ -5,6 +5,17 @@ contextBridge.exposeInMainWorld('api', {
   platform: process.platform,
   load: () => ipcRenderer.invoke('data:load'),
   save: (data) => ipcRenderer.invoke('data:save', data),
+  // Несколько аккаунтов: область данных (uid | null — гость) ставится до
+  // load(); список аккаунтов — accounts.json в userData (core/accounts.js).
+  setDataScope: (uid) => ipcRenderer.invoke('data:scope', uid),
+  dataScopes: () => ipcRenderer.invoke('data:scopes'),
+  dataRemove: (uid) => ipcRenderer.invoke('data:remove', uid),
+  dataPeek: (uid) => ipcRenderer.invoke('data:peek', uid),
+  dataWrite: (uid, data) => ipcRenderer.invoke('data:write', uid, data),
+  accountsLoad: () => ipcRenderer.invoke('accounts:load'),
+  accountsSave: (acc) => ipcRenderer.invoke('accounts:save', acc),
+  // Случайный id установки для журнала правок — device.json в userData.
+  deviceId: () => ipcRenderer.invoke('device:id'),
   exportXlsx: (payload) => ipcRenderer.invoke('export:xlsx', payload),
   copy: (text) => ipcRenderer.invoke('clipboard:write', text),
   setTitlebarOverlay: (theme, colors) => ipcRenderer.invoke('theme:set-overlay', theme, colors),

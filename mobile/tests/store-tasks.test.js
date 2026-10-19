@@ -37,6 +37,14 @@ test('у нового проекта сразу есть колонки стат
   expect(mine.some((s) => s.kind === 'done')).toBe(true);
 });
 
+test('набор статусов нового проекта — из ядра, с постоянными id `${projectId}:st:${key}` (два устройства не задваивают)', () => {
+  const p = project();
+  const mine = useAppStore.getState().statuses.filter((s) => s.projectId === p.id);
+  const Core = require('../src/core/status.js');
+  expect(mine.map((s) => s.id)).toEqual(Core.DEFAULT_STATUSES.map((s) => `${p.id}:st:${s.key}`));
+  expect(mine.every((s) => s.builtin)).toBe(true);
+});
+
 test('галочка переносит задачу в колонку «готово», а не просто помечает', () => {
   const p = project();
   const t = task(p.id);

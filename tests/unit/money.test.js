@@ -218,3 +218,11 @@ test('идущий таймер чужой валюты тоже не входи
   const running = { taskId: 'a', startedAt: new Date(0).toISOString() };
   assert.equal(M.earnedOf({ id: 'a', projectId: 'p1', sessions: [] }, rates, running, HOUR), 0);
 });
+
+test('правка записи времени сохраняет её id — иначе синхронизация увидит «снять и добавить»', () => {
+  const task = { totalMs: 1000, sessions: [{ id: 's1', start: '2026-10-17T09:00:00.000Z', end: '2026-10-17T09:00:01.000Z', ms: 1000, rate: 500 }] };
+  const upd = M.planSessionEdit(task, 0, SPAN, 500, EDITED_AT);
+  assert.equal(upd.sessions[0].id, 's1');
+  const fresh = M.planSessionEdit({ totalMs: 0, sessions: [] }, null, SPAN, 500, EDITED_AT);
+  assert.equal(fresh.sessions[0].id, undefined, 'новой записи id здесь не выдумывается — его ставит ядро синхронизации');
+});

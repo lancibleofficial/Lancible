@@ -53,7 +53,7 @@
     <div class="wrap legal-layout">
       <div>
         <article class="legal-doc" data-lang="ru" lang="ru" data-title="Политика cookie — Lancible" data-heading="Политика cookie">
-          <p class="legal-meta">Редакция от <time datetime="2026-10-10">10 октября 2026 г.</time></p>
+          <p class="legal-meta">Редакция от <time datetime="2026-10-17">17 октября 2026 г.</time></p>
 
           <h2>Что это</h2>
           <p>Cookie — небольшие файлы, которые сайт сохраняет в браузере. Похоже работают и хранилища браузера — localStorage и IndexedDB. Эта Политика описывает и то и другое; для простоты дальше всё вместе называется «cookie».</p>
@@ -66,18 +66,23 @@
               <tr><td><code>lancible:consent</code></td><td>сайт</td><td>помнит ваш выбор в баннере cookie</td><td>пока вы его не смените или не очистите браузер</td></tr>
               <tr><td><code>lancible:lang</code></td><td>сайт</td><td>язык сайта: документов, блога и остальных страниц</td><td>пока вы его не смените или не очистите браузер</td></tr>
               <tr><td><code>lancible:data</code></td><td>веб-версия (/app)</td><td>ваши проекты и задачи: без аккаунта это единственное место, где они хранятся</td><td>пока вы их не удалите</td></tr>
-              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-версия (/app)</td><td>картинки, вставленные в заметки</td><td>пока вы не очистите данные сайта</td></tr>
+              <tr><td><code>lancible:data:&lt;id&gt;</code></td><td>веб-версия, только после входа</td><td>копия данных аккаунта на этом устройстве: у каждого аккаунта своя, данные без аккаунта остаются отдельно</td><td>пока вы не нажмёте «Удалить данные аккаунта с устройства» или не очистите данные сайта; удаление аккаунта эту копию не стирает</td></tr>
+              <tr><td><code>lancible:accounts</code></td><td>веб-версия, только после входа</td><td>список аккаунтов на этом устройстве и сеансы тех, что сейчас не открыты, — чтобы переключаться между ними без пароля</td><td>пока вы не выйдете из аккаунта</td></tr>
+              <tr><td><code>lancible:device</code></td><td>веб-версия (/app)</td><td>случайный идентификатор этой установки для синхронизации: по нему приложение отличает свои правки от правок других устройств; о вас и о браузере в нём ничего нет</td><td>пока вы не очистите данные сайта</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-версия (/app)</td><td>картинки и PDF-файлы, вставленные в заметки, и превью страниц PDF</td><td>пока вы не очистите данные сайта; файлы аккаунта стирает и «Удалить данные аккаунта с устройства»</td></tr>
               <tr><td><code>lancible.theme</code></td><td>веб-версия (/app)</td><td>тема оформления: светлая, тёмная или как в системе</td><td>пока вы её не смените или не очистите браузер</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chats</code></td><td>веб-версия, только после входа</td><td>список чатов с ИИ-агентом: названия, превью последнего ответа, время и число сообщений; лежит только в браузере и в синхронизацию не попадает</td><td>пока вы не удалите чаты, не нажмёте «Удалить данные аккаунта с устройства» или не очистите данные сайта</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chat:&lt;chat&gt;</code></td><td>веб-версия, только после входа</td><td>переписка одного чата с ИИ-агентом (история для модели — до 40 сообщений, лента на экране — до 120 строк), чтобы продолжить разговор после перезагрузки; вложения не сохраняются — только их имя, тип и размер; лежит только в браузере и в синхронизацию не попадает</td><td>пока вы не удалите этот чат («⋯» → «Удалить чат»), не нажмёте «Удалить данные аккаунта с устройства» или не очистите данные сайта</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>веб-версия, только после входа</td><td>держит вас в аккаунте</td><td>до выхода из аккаунта</td></tr>
             </tbody>
           </table>
-          <p>Всё это — необходимые хранилища: без них сайт и веб-версия не работают так, как вы ожидаете, поэтому согласия на них закон не требует. Сами по себе они никуда не отправляются. Если вы вошли в аккаунт и синхронизация включена, веб-версия отправляет в нашу базу содержимое <code>lancible:data</code> и <code>lancible-assets</code> — ваши проекты, задачи, заметки и картинки — и подтверждает вход ключом из <code>sb-…-auth-token</code>; подробнее — в <a href="privacy.html">Политике конфиденциальности</a>.</p>
+          <p>Всё это — необходимые хранилища: без них сайт и веб-версия не работают так, как вы ожидаете, поэтому согласия на них закон не требует. Сами по себе они никуда не отправляются. Если вы вошли в аккаунт и синхронизация включена, веб-версия отправляет в нашу базу содержимое <code>lancible:data:&lt;id&gt;</code> и <code>lancible-assets</code> — проекты, задачи, заметки, картинки и PDF-файлы этого аккаунта, — с каждой правкой передаёт идентификатор установки из <code>lancible:device</code> и подтверждает вход ключом из <code>sb-…-auth-token</code>. Данные без аккаунта из <code>lancible:data</code> никуда не отправляются; подробнее — в <a href="privacy.html">Политике конфиденциальности</a>.</p>
 
           <h2>Аналитика</h2>
           <p>Сейчас аналитики на сайте нет. Если мы её подключим, она будет включаться только после того, как вы нажмёте «Принять все» или отметите «Аналитику» в настройках, — до этого её скрипт не загрузится вовсе. До подключения мы впишем сюда, какой сервис используется и какие cookie он ставит.</p>
 
           <h2>Реклама и сторонние трекеры</h2>
-          <p>Рекламных cookie и трекеров нет. Шрифты сайта лежат на наших серверах, поэтому сторонние сервисы о вашем визите не узнают. Внешние ресурсы открываются, только когда вы сами переходите по ссылке — например, на GitHub за установщиком. Одно исключение — служебная страница журнала работы (/logs): она читает записи из нашей базы у Supabase, нашего поставщика, и тот видит IP-адрес запроса. Cookie эта страница не ставит.</p>
+          <p>Рекламных cookie и трекеров нет. Шрифты сайта лежат на наших серверах, поэтому сторонние сервисы о вашем визите не узнают. Внешние ресурсы открываются, только когда вы сами переходите по ссылке — например, скачиваете установщик (его раздаёт Cloudflare R2, наш поставщик) или открываете GitHub. Одно исключение — служебная страница журнала работы (/logs): она читает записи из нашей базы у Supabase, нашего поставщика, и тот видит IP-адрес запроса. Cookie эта страница не ставит.</p>
 
           <h2>Как поменять выбор</h2>
           <p>Нажмите кнопку ниже — или «Настройки cookie» внизу любой страницы сайта: согласие отзывается так же быстро, как даётся. Ещё можно удалить cookie и данные сайта в настройках браузера — тогда баннер спросит снова. Учтите: так удалится и всё, что веб-версия хранит без аккаунта.</p>
@@ -87,7 +92,7 @@
           <p><span data-biz="name">[не заполнено]</span>. Почта: <span data-biz="email">[не заполнено]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="en" lang="en" hidden data-title="Cookie Policy — Lancible" data-heading="Cookie Policy">
-          <p class="legal-meta">Last updated <time datetime="2026-10-10">10 October 2026</time></p>
+          <p class="legal-meta">Last updated <time datetime="2026-10-17">17 October 2026</time></p>
 
           <h2>What this is</h2>
           <p>Cookies are small files a website saves in your browser. The browser’s built-in storage — localStorage and IndexedDB — works in a similar way. This Policy covers both; for simplicity, we call them all “cookies” below.</p>
@@ -100,18 +105,23 @@
               <tr><td><code>lancible:consent</code></td><td>website</td><td>remembers your choice in the cookie banner</td><td>until you change it or clear your browser</td></tr>
               <tr><td><code>lancible:lang</code></td><td>website</td><td>site language: documents, blog and the other pages</td><td>until you change it or clear your browser</td></tr>
               <tr><td><code>lancible:data</code></td><td>web version (/app)</td><td>your projects and tasks: without an account this is the only place they are stored</td><td>until you delete them</td></tr>
-              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>web version (/app)</td><td>images you insert into notes</td><td>until you clear the site data</td></tr>
+              <tr><td><code>lancible:data:&lt;id&gt;</code></td><td>web version, only after signing in</td><td>a copy of the account’s data on this device: each account has its own, data without an account stays separate</td><td>until you press “Delete account data from this device” or clear the site data; deleting the account does not erase this copy</td></tr>
+              <tr><td><code>lancible:accounts</code></td><td>web version, only after signing in</td><td>the list of accounts on this device and the sessions of the ones not open right now, so you can switch between them without a password</td><td>until you sign out of the account</td></tr>
+              <tr><td><code>lancible:device</code></td><td>web version (/app)</td><td>a random identifier of this installation for sync: it lets the app tell its own changes from those of other devices; it contains nothing about you or your browser</td><td>until you clear the site data</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>web version (/app)</td><td>images and PDF files you insert into notes, and previews of PDF pages</td><td>until you clear the site data; “Delete account data from this device” also erases the account’s files</td></tr>
               <tr><td><code>lancible.theme</code></td><td>web version (/app)</td><td>appearance: light, dark or system theme</td><td>until you change it or clear your browser</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chats</code></td><td>web version, only after signing in</td><td>the list of your chats with the AI agent: titles, a preview of the last reply, time and number of messages; it stays in your browser and is not synced</td><td>until you delete the chats, press “Delete account data from this device” or clear the site data</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chat:&lt;chat&gt;</code></td><td>web version, only after signing in</td><td>one chat with the AI agent (the history for the model — up to 40 messages, the feed on screen — up to 120 entries), so you can continue it after a reload; attachments are not stored — only their name, type and size; it stays in your browser and is not synced</td><td>until you delete this chat (“⋯” → “Delete chat”), press “Delete account data from this device” or clear the site data</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>web version, only after signing in</td><td>keeps you signed in</td><td>until you sign out</td></tr>
             </tbody>
           </table>
-          <p>All of these are strictly necessary: without them the website and the web version would not work as you expect, so the law does not require consent for them. On their own they are not sent anywhere. If you are signed in and sync is on, the web version sends the contents of <code>lancible:data</code> and <code>lancible-assets</code> — your projects, tasks, notes and images — to our database and proves that you are signed in with the token from <code>sb-…-auth-token</code>; see the <a href="privacy.html">Privacy Policy</a> for details.</p>
+          <p>All of these are strictly necessary: without them the website and the web version would not work as you expect, so the law does not require consent for them. On their own they are not sent anywhere. If you are signed in and sync is on, the web version sends the contents of <code>lancible:data:&lt;id&gt;</code> and <code>lancible-assets</code> — that account’s projects, tasks, notes, images and PDF files — to our database, sends the installation identifier from <code>lancible:device</code> with every change and proves that you are signed in with the token from <code>sb-…-auth-token</code>. Data without an account in <code>lancible:data</code> is not sent anywhere; see the <a href="privacy.html">Privacy Policy</a> for details.</p>
 
           <h2>Analytics</h2>
           <p>There is no analytics on the site today. If we add it, it will only switch on after you click “Accept all” or tick “Analytics” in the settings — until then its script will not load at all. Before adding it, we will list here which service is used and which cookies it sets.</p>
 
           <h2>Advertising and third-party trackers</h2>
-          <p>There are no advertising cookies or trackers. The site’s fonts are served from our own servers, so third-party services do not learn about your visit. External resources only open when you follow a link yourself — for example, to GitHub to download an installer. One exception is the service page with our work log (/logs): it reads entries from our database at Supabase, our provider, which sees the IP address of the request. This page sets no cookies.</p>
+          <p>There are no advertising cookies or trackers. The site’s fonts are served from our own servers, so third-party services do not learn about your visit. External resources only open when you follow a link yourself — for example, when you download an installer (it is served by Cloudflare R2, our provider) or open GitHub. One exception is the service page with our work log (/logs): it reads entries from our database at Supabase, our provider, which sees the IP address of the request. This page sets no cookies.</p>
 
           <h2>How to change your choice</h2>
           <p>Use the button below — or the “Настройки cookie” (Cookie settings) link at the bottom of every page: you can withdraw consent as quickly as you gave it. You can also delete cookies and site data in your browser settings — the banner will then ask again. Note that this also deletes everything the web version stores without an account.</p>
@@ -121,7 +131,7 @@
           <p><span data-biz="name">[not provided yet]</span>. Email: <span data-biz="email">[not provided yet]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="uk" lang="uk" hidden data-title="Політика cookie — Lancible" data-heading="Політика cookie">
-          <p class="legal-meta">Редакція від <time datetime="2026-10-10">10 жовтня 2026 р.</time></p>
+          <p class="legal-meta">Редакція від <time datetime="2026-10-17">17 жовтня 2026 р.</time></p>
 
           <h2>Що це</h2>
           <p>Cookie — невеликі файли, які сайт зберігає в браузері. Схоже працюють і сховища браузера — localStorage та IndexedDB. Ця Політика описує і те, і інше; для простоти далі все разом називається «cookie».</p>
@@ -134,18 +144,23 @@
               <tr><td><code>lancible:consent</code></td><td>сайт</td><td>пам’ятає ваш вибір у банері cookie</td><td>доки ви його не зміните або не очистите браузер</td></tr>
               <tr><td><code>lancible:lang</code></td><td>сайт</td><td>мова сайту: документів, блогу та інших сторінок</td><td>доки ви її не зміните або не очистите браузер</td></tr>
               <tr><td><code>lancible:data</code></td><td>веб-версія (/app)</td><td>ваші проєкти й завдання: без акаунта це єдине місце, де вони зберігаються</td><td>доки ви їх не видалите</td></tr>
-              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-версія (/app)</td><td>зображення, вставлені в нотатки</td><td>доки ви не очистите дані сайту</td></tr>
+              <tr><td><code>lancible:data:&lt;id&gt;</code></td><td>веб-версія, лише після входу</td><td>копія даних акаунта на цьому пристрої: у кожного акаунта своя, дані без акаунта лишаються окремо</td><td>доки ви не натиснете «Видалити дані акаунта з пристрою» або не очистите дані сайту; видалення акаунта цю копію не стирає</td></tr>
+              <tr><td><code>lancible:accounts</code></td><td>веб-версія, лише після входу</td><td>список акаунтів на цьому пристрої та сеанси тих, що зараз не відкриті, — щоб перемикатися між ними без пароля</td><td>доки ви не вийдете з акаунта</td></tr>
+              <tr><td><code>lancible:device</code></td><td>веб-версія (/app)</td><td>випадковий ідентифікатор цієї установки для синхронізації: за ним застосунок відрізняє свої зміни від змін інших пристроїв; про вас і браузер у ньому нічого немає</td><td>доки ви не очистите дані сайту</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-версія (/app)</td><td>зображення й PDF-файли, вставлені в нотатки, і прев’ю сторінок PDF</td><td>доки ви не очистите дані сайту; файли акаунта стирає й «Видалити дані акаунта з пристрою»</td></tr>
               <tr><td><code>lancible.theme</code></td><td>веб-версія (/app)</td><td>тема оформлення: світла, темна або як у системі</td><td>доки ви її не зміните або не очистите браузер</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chats</code></td><td>веб-версія, лише після входу</td><td>список чатів із ШІ-агентом: назви, прев’ю останньої відповіді, час і кількість повідомлень; лежить лише в браузері й у синхронізацію не потрапляє</td><td>доки ви не видалите чати, не натиснете «Видалити дані акаунта з пристрою» або не очистите дані сайту</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chat:&lt;chat&gt;</code></td><td>веб-версія, лише після входу</td><td>листування одного чату з ШІ-агентом (історія для моделі — до 40 повідомлень, стрічка на екрані — до 120 рядків), щоб продовжити розмову після перезавантаження; вкладення не зберігаються — лише їхні назва, тип і розмір; лежить лише в браузері й у синхронізацію не потрапляє</td><td>доки ви не видалите цей чат («⋯» → «Видалити чат»), не натиснете «Видалити дані акаунта з пристрою» або не очистите дані сайту</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>веб-версія, лише після входу</td><td>тримає вас в акаунті</td><td>до виходу з акаунта</td></tr>
             </tbody>
           </table>
-          <p>Усе це — необхідні сховища: без них сайт і веб-версія не працюють так, як ви очікуєте, тому згоди на них закон не вимагає. Самі по собі вони нікуди не надсилаються. Якщо ви ввійшли в акаунт і синхронізацію ввімкнено, веб-версія надсилає до нашої бази вміст <code>lancible:data</code> і <code>lancible-assets</code> — ваші проєкти, завдання, нотатки й зображення — і підтверджує вхід ключем із <code>sb-…-auth-token</code>; докладніше — у <a href="privacy.html">Політиці конфіденційності</a>.</p>
+          <p>Усе це — необхідні сховища: без них сайт і веб-версія не працюють так, як ви очікуєте, тому згоди на них закон не вимагає. Самі по собі вони нікуди не надсилаються. Якщо ви ввійшли в акаунт і синхронізацію ввімкнено, веб-версія надсилає до нашої бази вміст <code>lancible:data:&lt;id&gt;</code> і <code>lancible-assets</code> — проєкти, завдання, нотатки, зображення й PDF-файли цього акаунта, — з кожною зміною передає ідентифікатор установки з <code>lancible:device</code> і підтверджує вхід ключем із <code>sb-…-auth-token</code>. Дані без акаунта з <code>lancible:data</code> нікуди не надсилаються; докладніше — у <a href="privacy.html">Політиці конфіденційності</a>.</p>
 
           <h2>Аналітика</h2>
           <p>Зараз аналітики на сайті немає. Якщо ми її підключимо, вона вмикатиметься лише після того, як ви натиснете «Прийняти всі» або позначите «Аналітику» в налаштуваннях, — до того її скрипт не завантажиться взагалі. До підключення ми впишемо сюди, який сервіс використовується і які cookie він ставить.</p>
 
           <h2>Реклама та сторонні трекери</h2>
-          <p>Рекламних cookie й трекерів немає. Шрифти сайту лежать на наших серверах, тож сторонні сервіси про ваш візит не дізнаються. Зовнішні ресурси відкриваються, лише коли ви самі переходите за посиланням — наприклад, на GitHub по інсталятор. Один виняток — службова сторінка журналу роботи (/logs): вона читає записи з нашої бази в Supabase, нашого постачальника, і той бачить IP-адресу запиту. Cookie ця сторінка не ставить.</p>
+          <p>Рекламних cookie й трекерів немає. Шрифти сайту лежать на наших серверах, тож сторонні сервіси про ваш візит не дізнаються. Зовнішні ресурси відкриваються, лише коли ви самі переходите за посиланням — наприклад, завантажуєте інсталятор (його роздає Cloudflare R2, наш постачальник) або відкриваєте GitHub. Один виняток — службова сторінка журналу роботи (/logs): вона читає записи з нашої бази в Supabase, нашого постачальника, і той бачить IP-адресу запиту. Cookie ця сторінка не ставить.</p>
 
           <h2>Як змінити вибір</h2>
           <p>Натисніть кнопку нижче — або «Настройки cookie» внизу будь-якої сторінки сайту: згоду відкликають так само швидко, як дають. Ще можна видалити cookie й дані сайту в налаштуваннях браузера — тоді банер запитає знову. Зважте: так видалиться й усе, що веб-версія зберігає без акаунта.</p>
@@ -155,7 +170,7 @@
           <p><span data-biz="name">[не заповнено]</span>. Пошта: <span data-biz="email">[не заповнено]</span>.</p>
         </article>
         <article class="legal-doc" data-lang="kk" lang="kk" hidden data-title="Cookie саясаты — Lancible" data-heading="Cookie саясаты">
-          <p class="legal-meta">Редакция күні: <time datetime="2026-10-10">2026 жылғы 10 қазан</time></p>
+          <p class="legal-meta">Редакция күні: <time datetime="2026-10-17">2026 жылғы 17 қазан</time></p>
 
           <h2>Бұл не</h2>
           <p>Cookie — сайт браузерде сақтайтын шағын файлдар. Браузер қоймалары — localStorage және IndexedDB — да осыған ұқсас жұмыс істейді. Бұл Саясат екеуін де сипаттайды; қарапайым болу үшін әрі қарай бәрі бірге «cookie» деп аталады.</p>
@@ -168,18 +183,23 @@
               <tr><td><code>lancible:consent</code></td><td>сайт</td><td>cookie баннеріндегі таңдауыңызды есте сақтайды</td><td>өзгерткенше немесе браузерді тазалағанша</td></tr>
               <tr><td><code>lancible:lang</code></td><td>сайт</td><td>сайт тілі: құжаттар, блог және басқа беттер</td><td>өзгерткенше немесе браузерді тазалағанша</td></tr>
               <tr><td><code>lancible:data</code></td><td>веб-нұсқа (/app)</td><td>жобалар мен тапсырмаларыңыз: аккаунтсыз олар тек осында сақталады</td><td>өзіңіз жойғанша</td></tr>
-              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-нұсқа (/app)</td><td>жазбаларға қойылған суреттер</td><td>сайт деректерін тазалағанша</td></tr>
+              <tr><td><code>lancible:data:&lt;id&gt;</code></td><td>веб-нұсқа, тек кіргеннен кейін</td><td>аккаунт деректерінің осы құрылғыдағы көшірмесі: әр аккаунттың өзінікі, аккаунтсыз деректер бөлек қалады</td><td>«Аккаунт деректерін құрылғыдан жою» батырмасын басқанша немесе сайт деректерін тазалағанша; аккаунтты жою бұл көшірмені өшірмейді</td></tr>
+              <tr><td><code>lancible:accounts</code></td><td>веб-нұсқа, тек кіргеннен кейін</td><td>осы құрылғыдағы аккаунттар тізімі және қазір ашық емес аккаунттардың сеанстары — олардың арасында құпия сөзсіз ауысу үшін</td><td>аккаунттан шыққанша</td></tr>
+              <tr><td><code>lancible:device</code></td><td>веб-нұсқа (/app)</td><td>синхрондау үшін осы орнатылымның кездейсоқ идентификаторы: ол арқылы қолданба өз өзгерістерін басқа құрылғылардың өзгерістерінен ажыратады; онда сіз туралы да, браузер туралы да ештеңе жоқ</td><td>сайт деректерін тазалағанша</td></tr>
+              <tr><td><code>lancible-assets</code> (IndexedDB)</td><td>веб-нұсқа (/app)</td><td>жазбаларға қойылған суреттер мен PDF файлдары және PDF беттерінің алдын ала көріністері</td><td>сайт деректерін тазалағанша; аккаунт файлдарын «Аккаунт деректерін құрылғыдан жою» да өшіреді</td></tr>
               <tr><td><code>lancible.theme</code></td><td>веб-нұсқа (/app)</td><td>безендіру тақырыбы: ашық, қараңғы немесе жүйедегідей</td><td>өзгерткенше немесе браузерді тазалағанша</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chats</code></td><td>веб-нұсқа, тек кіргеннен кейін</td><td>ЖИ-агентпен чаттар тізімі: атаулары, соңғы жауаптың үзіндісі, уақыты және хабарлама саны; тек браузерде сақталады және синхрондалмайды</td><td>чаттарды жойғанша, «Аккаунт деректерін құрылғыдан жою» батырмасын басқанша немесе сайт деректерін тазалағанша</td></tr>
+              <tr><td><code>lancible:ai:&lt;id&gt;:chat:&lt;chat&gt;</code></td><td>веб-нұсқа, тек кіргеннен кейін</td><td>ЖИ-агентпен бір чаттың хат алмасуы (модельге арналған тарих — 40 хабарламаға дейін, экрандағы лента — 120 жолға дейін), қайта жүктегеннен кейін әңгімені жалғастыру үшін; тіркемелер сақталмайды — тек атауы, түрі және өлшемі; тек браузерде сақталады және синхрондалмайды</td><td>осы чатты жойғанша («⋯» → «Чатты жою»), «Аккаунт деректерін құрылғыдан жою» батырмасын басқанша немесе сайт деректерін тазалағанша</td></tr>
               <tr><td><code>sb-…-auth-token</code></td><td>веб-нұсқа, тек кіргеннен кейін</td><td>аккаунтта ұстап тұрады</td><td>аккаунттан шыққанша</td></tr>
             </tbody>
           </table>
-          <p>Мұның бәрі — қажетті қоймалар: оларсыз сайт пен веб-нұсқа сіз күткендей жұмыс істемейді, сондықтан заң оларға келісім талап етпейді. Олар өздігінен ешқайда жіберілмейді. Аккаунтқа кіріп, синхрондау қосулы болса, веб-нұсқа <code>lancible:data</code> және <code>lancible-assets</code> мазмұнын — жобаларыңызды, тапсырмаларыңызды, жазбалар мен суреттерді — біздің дерекқорға жібереді және кіруді <code>sb-…-auth-token</code> кілтімен растайды; толығырақ — <a href="privacy.html">Құпиялылық саясатында</a>.</p>
+          <p>Мұның бәрі — қажетті қоймалар: оларсыз сайт пен веб-нұсқа сіз күткендей жұмыс істемейді, сондықтан заң оларға келісім талап етпейді. Олар өздігінен ешқайда жіберілмейді. Аккаунтқа кіріп, синхрондау қосулы болса, веб-нұсқа <code>lancible:data:&lt;id&gt;</code> және <code>lancible-assets</code> мазмұнын — осы аккаунттың жобаларын, тапсырмаларын, жазбаларын, суреттері мен PDF файлдарын — біздің дерекқорға жібереді, әр өзгеріспен бірге <code>lancible:device</code> ішіндегі орнатылым идентификаторын береді және кіруді <code>sb-…-auth-token</code> кілтімен растайды. Аккаунтсыз деректер (<code>lancible:data</code>) ешқайда жіберілмейді; толығырақ — <a href="privacy.html">Құпиялылық саясатында</a>.</p>
 
           <h2>Аналитика</h2>
           <p>Қазір сайтта аналитика жоқ. Оны қоссақ, ол тек сіз «Барлығын қабылдау» батырмасын басқаннан немесе баптауларда «Аналитиканы» белгілегеннен кейін ғана іске қосылады — оған дейін оның скрипті мүлдем жүктелмейді. Қоспас бұрын мұнда қандай қызмет қолданылатынын және ол қандай cookie қоятынын жазамыз.</p>
 
           <h2>Жарнама және бөгде трекерлер</h2>
-          <p>Жарнамалық cookie мен трекерлер жоқ. Сайттың қаріптері біздің серверлерде жатыр, сондықтан бөгде қызметтер сіздің кіргеніңізді білмейді. Сыртқы ресурстар тек сілтемемен өзіңіз өткенде ашылады — мысалы, орнатқыш үшін GitHub-қа. Бір ғана ерекшелік — жұмыс журналының қызметтік беті (/logs): ол жазбаларды Supabase-тегі біздің дерекқордан оқиды, Supabase — біздің жеткізушіміз, ол сұраудың IP мекенжайын көреді. Бұл бет cookie орнатпайды.</p>
+          <p>Жарнамалық cookie мен трекерлер жоқ. Сайттың қаріптері біздің серверлерде жатыр, сондықтан бөгде қызметтер сіздің кіргеніңізді білмейді. Сыртқы ресурстар тек сілтемемен өзіңіз өткенде ашылады — мысалы, орнатқышты жүктегенде (оны біздің жеткізушіміз Cloudflare R2 таратады) немесе GitHub-ты ашқанда. Бір ғана ерекшелік — жұмыс журналының қызметтік беті (/logs): ол жазбаларды Supabase-тегі біздің дерекқордан оқиды, Supabase — біздің жеткізушіміз, ол сұраудың IP мекенжайын көреді. Бұл бет cookie орнатпайды.</p>
 
           <h2>Таңдауды қалай өзгертуге болады</h2>
           <p>Төмендегі батырманы немесе кез келген беттің төменгі жағындағы «Настройки cookie» сілтемесін басыңыз: келісімді берген сияқты жылдам кері қайтаруға болады. Сондай-ақ браузер баптауларында cookie мен сайт деректерін жоюға болады — сонда баннер қайта сұрайды. Ескеріңіз: бұл веб-нұсқа аккаунтсыз сақтайтын барлық деректерді де жояды.</p>

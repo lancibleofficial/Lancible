@@ -29,6 +29,8 @@ export function blockItems(ed) {
     { id: 'hr', icon: 'hr', label: t('block.hr'), keys: 'hr divider line separator разделитель линия', run: C.insertRule },
     { id: 'table', icon: 'table', label: t('block.table'), keys: 'table grid таблица кесте', run: C.insertTable(3, 3, true) },
     { id: 'image', icon: 'image', label: t('block.image'), keys: 'image picture photo картинка изображение фото сурет', run: () => { ed.pickImage(); return true; } },
+    // PDF: веб и десктоп — окно выбора файла, телефон — pdf-pick хозяину (протокол 3).
+    { id: 'pdf', icon: 'pdf', label: t('block.pdf'), keys: 'pdf пдф document документ файл file құжат', run: () => { ed.pickPdf(); return true; } },
     { id: 'chart', icon: 'chart', label: t('block.chart'), keys: 'chart graph plot диаграмма график', run: () => { ed.insertChart(); return true; } },
     { id: 'drawing', icon: 'draw', label: t('block.drawing'), keys: 'draw sketch canvas pen рисунок рисовать холст сурет салу', run: () => { ed.insertDrawing(); return true; } },
   ];
@@ -103,21 +105,58 @@ export class SlashMenu {
     placePopup(this.dom, c.left, c.bottom + 6, { flipY: c.top });
   }
 
+  /** Пункты пересобираются, только когда сменился их набор (запрос после
+   *  «/»); наведение и стрелки лишь переставляют подсветку. До 17 октября
+   *  2026 наведение пересобирало меню целиком, и на телефоне касание пункта
+   *  не срабатывало: касание шлёт mouseenter, потом mousedown и click, а
+   *  кнопка, которой коснулись, к click уже была вынута из документа. */
   paint() {
-    this.dom.replaceChildren(...this.items.map((it, i) => h('button', {
-      type: 'button', class: `ctx-item${i === this.index ? ' led-cur' : ''}`, role: 'option',
-      onmousedown: (e) => e.preventDefault(),
-      onmouseenter: () => { this.index = i; this.paint(); },
-      onclick: () => { this.index = i; this.choose(); },
-    }, h('span', { class: 'ctx-main' }, icon(it.icon, 16), h('span', {}, it.label)), it.kbd ? h('span', { class: 'led-kbd' }, keyLabel(it.kbd)) : null)));
+    // Телефон (17 октября 2026): клавиатуры с Ctrl там нет — сочетания в
+    // меню «/» только занимали место.
+    const touchUi = this.ed.isMobile || this.ed.host;
+    const key = this.items.map((it) => `${it.id}:${it.label}`).join('|');
+    if (key !== this.painted) {
+      this.painted = key;
+      this.dom.replaceChildren(...this.items.map((it, i) => h('button', {
+        type: 'button', class: 'ctx-item', role: 'option',
+        onmousedown: (e) => e.preventDefault(),
+        onmouseenter: () => { this.index = i; this.highlight(false); },
+        // Палец и перо: выбор по отпусканию над тем же пунктом. pointerdown
+        // без действия по умолчанию — фокус и курсор остаются в тексте, и
+        // клавиатура телефона не закрывается. Прокрутка меню пальцем
+        // приходит как pointercancel — тогда ничего не выбирается.
+        onpointerdown: (e) => { if (e.pointerType === 'mouse') return; e.preventDefault(); this.touchAt = i; },
+        onpointercancel: () => { this.touchAt = null; },
+        onpointerup: (e) => {
+          if (e.pointerType === 'mouse' || this.touchAt !== i) return;
+          e.preventDefault();
+          this.touchAt = null;
+          this.tapped = Date.now();
+          this.index = i;
+          this.choose();
+        },
+        // Мышь — и click, который касание шлёт вдогонку: его выбор уже сделан.
+        onclick: () => {
+          if (this.tapped && Date.now() - this.tapped < 800) return;
+          this.index = i;
+          this.choose();
+        },
+      }, h('span', { class: 'ctx-main' }, icon(it.icon, 16), h('span', {}, it.label)), it.kbd && !touchUi ? h('span', { class: 'led-kbd' }, keyLabel(it.kbd)) : null)));
+    }
+    this.highlight(true);
+  }
+
+  /** Подсветить пункт index; scroll — докрутить меню до него (стрелки). */
+  highlight(scroll) {
+    [...this.dom.children].forEach((b, i) => b.classList.toggle('led-cur', i === this.index));
     const cur = this.dom.children[this.index];
-    if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' });
+    if (scroll && cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' });
   }
 
   move(d) {
     if (!this.items.length) return;
     this.index = (this.index + d + this.items.length) % this.items.length;
-    this.paint();
+    this.highlight(true);
   }
 
   choose() {
@@ -198,6 +237,9 @@ export class BubbleMenu {
   }
 
   update(view, focused) {
+    // Телефон с нативной панелью (протокол 4, 18 октября 2026): панели над
+    // выделением нет — Ж, К, ссылка и цвет есть в панели над клавиатурой.
+    if (this.ed.host) { this.dom.hidden = true; return; }
     const { state } = view;
     const sel = state.selection;
     const show = focused && view.editable && !sel.empty && sel instanceof TextSelection
@@ -265,7 +307,10 @@ export class BlockHandle {
     const style = getComputedStyle(dom);
     const lineTop = parseFloat(style.paddingTop) || 0;
     this.dom.hidden = false;
-    this.dom.style.top = `${Math.round(r.top - hr.top + lineTop)}px`;
+    // У таблицы — над её левым верхним углом: слева от строк стоит ручка
+    // строки (tablehandles.js), и у первой строки они легли бы друг на друга.
+    const above = dom.classList.contains('tableWrapper');
+    this.dom.style.top = `${Math.round(above ? r.top - hr.top - this.dom.offsetHeight - 2 : r.top - hr.top + lineTop)}px`;
     this.dom.style.left = `${Math.round(box.left - hr.left - 52)}px`;
   }
 

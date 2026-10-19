@@ -77,8 +77,12 @@ test('числа: сегодня, неделя и месяц — время и �
   await expect(page.locator('#st-done')).toHaveText('· 0 из 4 задач');
 });
 
-test('недавние проекты — три, по последней записи; щелчок открывает проект', async ({ page }) => {
+test('недавние проекты — три, по свежести; щелчок открывает проект', async ({ page }) => {
   await seed(page);
+  // С 19 октября 2026 — общее правило списков проектов (Core.projectsByActivity):
+  // последнее изменение в проекте, его задачах или записях. «Приложение» —
+  // запись до 14:45; «Кофейня» — правка задачи в 12:30; «Сайт» — в 12:00.
+  await page.evaluate(() => { getTask('t3').updatedAt = new Date(Date.now() + 30 * 60000).toISOString(); render(); });
   const cards = page.locator('#home-proj-grid .hp-card');
   await expect(cards).toHaveCount(3);
   await expect(cards.locator('.hp-name')).toHaveText(['Приложение', 'Кофейня', 'Сайт']);

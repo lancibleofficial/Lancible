@@ -49,6 +49,13 @@ const GLYPH = {
   'chevron-down': 'Arrows/Round Alt Arrow Down',
 };
 
+// Знак крупнее рамки GLYPH_SIDE — тот же вырез, но со своей стороной рамки.
+// Скрепка в Solar Bold есть только обводкой (такие генератор не берёт) или
+// вырезом в скруглённом квадрате — берётся вырез (поле агента, 18 октября 2026).
+const GLYPH_WIDE = {
+  paperclip: ['Messages, Conversation/Paperclip Rounded', 14],
+};
+
 // Иконки не из Solar: «имя → файл в репозитории». Файл — те же правила, что у
 // Solar (один контур, без прозрачности и обводки), но заливка currentColor.
 const OWN = {
@@ -253,7 +260,7 @@ function bbox(d) {
 /** Вырез круглой иконки: всё после первого подпути (самого круга). Рамка —
  *  квадрат одной стороны для всех знаков с центром на знаке: так у галочки,
  *  крестика и шеврона одна толщина линии, как задумано в Solar. */
-function glyph(dir, rel) {
+function glyph(dir, rel, side = GLYPH_SIDE) {
   const paths = readSolar(dir, rel);
   if (paths.length !== 1 || !paths[0][1]) throw new Error(`${rel}: ждали один путь с вырезом`);
   const d = paths[0][0];
@@ -261,7 +268,6 @@ function glyph(dir, rel) {
   const mark = d.slice(cut + 1).trim();
   if (!mark.startsWith('M')) throw new Error(`${rel}: не нашёлся вырез после круга`);
   const [x0, y0, x1, y1] = bbox(mark);
-  const side = GLYPH_SIDE;
   if (Math.max(x1 - x0, y1 - y0) > side) throw new Error(`${rel}: знак шире рамки ${side}`);
   const cx = (x0 + x1) / 2; const cy = (y0 + y1) / 2;
   const vb = [cx - side / 2, cy - side / 2, side, side].map(fmt).join(' ');
@@ -272,6 +278,7 @@ function glyph(dir, rel) {
 function build(dir) {
   const icons = {};
   for (const [name, rel] of Object.entries(GLYPH)) icons[name] = Object.assign(glyph(dir, rel), { src: rel });
+  for (const [name, [rel, side]] of Object.entries(GLYPH_WIDE)) icons[name] = Object.assign(glyph(dir, rel, side), { src: rel });
   for (const [name, rel] of Object.entries(FULL)) {
     icons[name] = rel === OWN[name] ? readOwn(rel) : { vb: '0 0 24 24', p: readSolar(dir, rel), src: rel };
   }

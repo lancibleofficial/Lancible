@@ -2,6 +2,7 @@
 # в графе она дала бы тысячи узлов без имён и «мёртвый код» на каждом.
 # Исходники редактора — src/editor/, их граф видит.
 src/renderer/editor.js
+src/renderer/editor-pdf.js
 mobile/src/editor/editorBundle.js
 
 # Сторонние библиотеки лендинга (landing/vendor) — чужой минифицированный код:

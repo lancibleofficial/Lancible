@@ -123,6 +123,32 @@
     margin-left: 0 !important;
     padding: 0 var(--gap) calc(70px + var(--gap)) var(--gap);
   }
+  /* Агент (19 октября 2026): рейла нет, кнопка — в нижней плашке; чат —
+     поверх во всю ширину, между шапкой и плашкой. Из рейла видна только
+     панель, без шторки и тени. */
+  body.ai-open #navrail {
+    display: flex;
+    position: fixed;
+    top: 50px;
+    left: 0;
+    right: 0;
+    bottom: 62px;
+    width: auto;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transition: none;
+    z-index: 90;
+  }
+  body.ai-open #navrail > :not(#ai-panel) {
+    display: none;
+  }
+  .ai-panel {
+    left: 0;
+    right: 0;
+    width: auto;
+    border-left: 0;
+  }
 
   /* --- Нижняя навигация: подсветка активной вкладки пилюлей --- */
   #mobile-tabbar[hidden] {
@@ -161,14 +187,24 @@
     z-index: 1;
     transition: transform 0.15s var(--ease);
   }
-  #mobile-tabbar .nav-item.active {
+  #mobile-tabbar .nav-item.active,
+  #mobile-tabbar .mtab-ai.on {
     color: var(--accent-ink);
     background: none;
   }
-  #mobile-tabbar .nav-item.active .icon {
+  #mobile-tabbar .nav-item.active .icon,
+  #mobile-tabbar .mtab-ai.on .icon {
     transform: translateY(-1px);
   }
-  #mobile-tabbar .nav-item.active::before {
+  /* Открыт агент — горит его вкладка, а не вкладка экрана под ним. */
+  body.ai-open #mobile-tabbar .nav-item.active:not(.mtab-ai) {
+    color: var(--text-dim);
+  }
+  body.ai-open #mobile-tabbar .nav-item.active:not(.mtab-ai)::before {
+    display: none;
+  }
+  #mobile-tabbar .nav-item.active::before,
+  #mobile-tabbar .mtab-ai.on::before {
     content: '';
     position: absolute;
     top: 4px;

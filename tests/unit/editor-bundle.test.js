@@ -10,11 +10,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { hash, OUT_RENDERER, OUT_MOBILE } = require('../../scripts/build-editor.js');
+const { hash, pdfHash, OUT_RENDERER, OUT_MOBILE, OUT_PDF, OUT_PDF_ASSET } = require('../../scripts/build-editor.js');
 
-const stampOf = (file) => {
-  const head = fs.readFileSync(file, 'utf8').slice(0, 200);
-  const m = head.match(/lancible-editor ([0-9a-f]{16})/);
+const stampOf = (file, name = 'lancible-editor') => {
+  const head = fs.readFileSync(file, 'utf8').slice(0, 300);
+  const m = head.match(new RegExp(`${name} ([0-9a-f]{16})`));
   return m ? m[1] : null;
 };
 
@@ -38,6 +38,54 @@ test('сборка кладётся в <script> телефона целиком:
   // DocEditor.js вставляет редактор строкой внутрь <script>…</script>.
   // Подстрока «</script» в коде закрыла бы тег посреди редактора.
   assert.doesNotMatch(fs.readFileSync(OUT_RENDERER, 'utf8'), /<\/script/i);
+});
+
+// --- pdf.js отдельным файлом (17 октября 2026) ------------------------------------
+//
+// pdf.js с воркером весит 1,7 МБ, поэтому он не в editor.js, а рядом —
+// src/renderer/editor-pdf.js (точка входа src/editor/pdfjs.js); редактор
+// грузит его тегом <script> при первом PDF. У файла свой отпечаток: точка
+// входа и версия pdfjs-dist.
+
+test('pdf.js собран из текущей точки входа и версии pdfjs-dist', () => {
+  assert.equal(stampOf(OUT_PDF, 'lancible-editor-pdf'), pdfHash(), 'editor-pdf.js отстал от src/editor/pdfjs.js или pdfjs-dist: npm run build:editor');
+});
+
+// Телефон (протокол 3, 17 октября 2026): тот же модуль ассетом
+// mobile/assets/editor-pdf.txt — хозяин впрыскивает его в WebView по запросу
+// pdf-module. Отстал ассет — на телефоне открывался бы старый модуль.
+test('модуль PDF для телефона — mobile/assets/editor-pdf.txt, тот же файл и отпечаток', () => {
+  assert.equal(stampOf(OUT_PDF_ASSET, 'lancible-editor-pdf'), pdfHash(), 'editor-pdf.txt отстал: npm run build:editor');
+  assert.equal(fs.readFileSync(OUT_PDF_ASSET, 'utf8'), fs.readFileSync(OUT_PDF, 'utf8'), 'ассет телефона и editor-pdf.js разошлись');
+});
+
+test('pdf.js — только в editor-pdf.js: не в editor.js и не в сборке телефона', () => {
+  const pdf = fs.readFileSync(OUT_PDF, 'utf8');
+  assert.match(pdf, /var LancibleEditorPdf\s*=/, 'editor-pdf.js не ставит window.LancibleEditorPdf');
+  assert.match(pdf, /pdfjsWorker/, 'в editor-pdf.js нет воркера pdf.js');
+  for (const file of [OUT_RENDERER, OUT_MOBILE]) {
+    assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /pdfjsWorker|GlobalWorkerOptions/, `${path.basename(file)}: pdf.js попал в сборку редактора`);
+  }
+  assert.match(fs.readFileSync(OUT_RENDERER, 'utf8'), /editor-pdf\.js/, 'editor.js не знает, откуда грузить pdf.js');
+});
+
+test('шапки называют лицензию pdf.js: в коде её нет (legalComments: none)', () => {
+  const head = (file) => fs.readFileSync(file, 'utf8').slice(0, 600);
+  assert.match(head(OUT_PDF), /pdf\.js[^\n]*Apache License 2\.0/);
+  for (const file of [OUT_RENDERER, OUT_MOBILE]) assert.match(head(file), /pdf\.js — Apache-2\.0/, path.basename(file));
+});
+
+test('editor-pdf.js доезжает до веба и десктопа', () => {
+  const ROOT = path.join(__dirname, '..', '..');
+  // Веб: sync-web-assets.js кладёт его рядом с editor.js, а подготовка
+  // браузерных прогонов без него падает (tests/serve-built-web.js).
+  assert.match(fs.readFileSync(path.join(ROOT, 'scripts', 'sync-web-assets.js'), 'utf8'), /'editor-pdf\.js'\), path\.join\(webDir, 'editor-pdf\.js'\)/);
+  assert.ok(require('../serve-built-web.js').REQUIRED.includes('editor-pdf.js'));
+  assert.match(fs.readFileSync(path.join(ROOT, 'web', '.gitignore'), 'utf8'), /^editor-pdf\.js\r?$/m, 'web/editor-pdf.js — сборка, в git ей не место');
+  // Десктоп: установщик берёт src/** целиком, и исключения его не задевают.
+  const { files } = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).build;
+  assert.ok(files.includes('src/**/*'), 'build.files: нет src/**');
+  assert.deepEqual(files.filter((f) => f.startsWith('!') && /editor|renderer\/\*/.test(f)), []);
 });
 
 test('оба index.html грузят собранный редактор и не грузят Quill', () => {

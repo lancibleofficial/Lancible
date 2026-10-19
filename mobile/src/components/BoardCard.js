@@ -11,6 +11,7 @@ import { memo } from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
 import Text from './AppText';
 import Icon from './Icon';
+import ConflictMark from './ConflictMark';
 import { useTicker } from '../hooks/useTicker';
 import { fmtDur, taskElapsedMs } from '../lib/format';
 import { dueState, dueShort } from '../lib/due';
@@ -45,6 +46,8 @@ function BoardCard({ task, color, runningSince, lang, onPress, onLongPress }) {
           ? <RunningTime task={task} startedAt={runningSince} lang={lang} style={styles.time} />
           : <Text style={styles.time}>{fmtDur(taskElapsedMs(task, null), lang)}</Text>}
         <View style={styles.spacer} />
+        {/* «Другая версия»: правки разошлись (журнал правок, 17 октября 2026). */}
+        <ConflictMark id={task.id} size={11} />
         {due ? (
           <Text style={[styles.due, due === 'overdue' && styles.dueOverdue]} numberOfLines={1}>
             {dueShort(task, lang)}

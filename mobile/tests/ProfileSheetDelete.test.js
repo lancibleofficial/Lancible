@@ -1,4 +1,8 @@
-// Удаление аккаунта в листе профиля: что видит человек. Запуск: npm run test:mobile (из корня)
+// Удаление аккаунта: что видит человек. Запуск: npm run test:mobile (из корня)
+//
+// «Удалить аккаунт» — строка раздела «Данные»; она открывает лист аккаунта
+// сразу на подтверждении (ProfileSheet page="delete"; с круга 21 сам лист —
+// только имя, своей строки удаления в нём нет).
 //
 // Что делает само удаление — в deleteAccount.test.js. Здесь — какое сообщение
 // показывает лист на каждый исход: отказ из-за картинок называется своей
@@ -18,15 +22,13 @@ beforeEach(() => {
   useSheetStore.setState({ content: null, footer: null });
 });
 
-/** Лист профиля → «Удалить аккаунт» → подтверждение → тост. */
+/** Подтверждение «Удалить аккаунт» → тост. */
 async function deleteWith(result) {
   const deleteAccount = jest.fn(async () => result);
   useAuthStore.setState({ status: 'signedIn', user: { id: 'u1', email: 'qa@example.com', name: 'QA' }, deleteAccount });
-  const sheet = await render(<ProfileSheet />);
-  await act(async () => { fireEvent.press(sheet.getByText(ru('account.delete'))); });
-  // Подтверждение — страница этого же листа (12 октября 2026; раньше — лист
-  // поверх): текст — в листе, кнопки — в подвале, который страница кладёт
-  // своим эффектом (как в BottomSheet).
+  const sheet = await render(<ProfileSheet page="delete" />);
+  // Текст — в листе, кнопки — в подвале, который лист кладёт своим эффектом
+  // (как в BottomSheet).
   sheet.getByText(ru('account.delete_confirm'));
   expect(useSheetStore.getState().header).toMatchObject({ title: ru('account.delete_title') });
   const footer = await render(useSheetStore.getState().footer);
@@ -45,4 +47,15 @@ test('прочий отказ — общая ошибка', async () => {
 
 test('удалён — сообщение об удалении', async () => {
   expect(await deleteWith({ ok: true })).toBe(ru('account.deleted_toast'));
+});
+
+test('«Отмена» закрывает лист и ничего не удаляет', async () => {
+  const deleteAccount = jest.fn(async () => ({ ok: true }));
+  useAuthStore.setState({ status: 'signedIn', user: { id: 'u1', email: 'qa@example.com', name: 'QA' }, deleteAccount });
+  useSheetStore.setState({ content: 'лист' });
+  await render(<ProfileSheet page="delete" />);
+  const footer = await render(useSheetStore.getState().footer);
+  await act(async () => { fireEvent.press(footer.getByText(ru('common.cancel'))); });
+  expect(deleteAccount).not.toHaveBeenCalled();
+  expect(useSheetStore.getState().content).toBeNull();
 });

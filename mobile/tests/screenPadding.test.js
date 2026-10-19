@@ -106,7 +106,8 @@ describe('исходники: край страницы объявлен ток�
     'components/BottomSheet.js': [['headRow', H], ['content', H], ['footer', H]],
     // Шапки в заглушках нет: там настоящая (TabHeader.js, ключ `wrap`).
     'components/Skeleton.js': [['gutter', H], ['listRow', H], ['deck', L]],
-    'screens/HomeScreen.js': [['content', H]],
+    'screens/ChatListScreen.js': [['content', H], ['center', H]],
+    'screens/ChatThreadScreen.js': [['content', H], ['signin', H]],
     'screens/NotificationsScreen.js': [['content', H]],
     'screens/ProjectsScreen.js': [['strip', L]],
     'screens/ProjectScreen.js': [['content', H], ['boardBody', M]],
@@ -129,9 +130,12 @@ describe('исходники: край страницы объявлен ток�
     expect(b).toMatch(new RegExp(`\\b${prop}\\s*:\\s*-?screenPadding\\b`));
   });
 
-  test('доска и вкладка «Сегодня» (сетка) — тоже на токене: отступ доски и обёртка недели', () => {
+  test('доска — тоже на токене: отступ доски', () => {
     expect(read('components/BoardView.js')).toMatch(/const GUTTER = screenPadding;/);
-    expect(read('screens/HomeScreen.js')).toMatch(/<View style=\{\{ paddingHorizontal: screenPadding \}\}>\{weekIsland\}<\/View>/);
+  });
+
+  test('поле «Чат-бота» — с тем же боковым полем, что лента над ним', () => {
+    expect(read('components/chat/ChatCompose.js')).toMatch(/compose: \{ paddingHorizontal: screenPadding\b/);
   });
 
   test('колода «Проектов»: ширина карточки, «+» слева и плашка с фразой справа — от токена, а не от 16', () => {

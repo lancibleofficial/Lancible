@@ -57,7 +57,8 @@ test('валюта выбирается своим списком, и суммы
   // подвале проекта была её копия — с 6 октября 2026 подвала нет.
   await seed(page);
   await expect(page.locator('#project-earned')).toContainText('4 000 ₽');
-  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
+  // С 17 октября 2026 валюта — в разделе «Работа».
+  await page.evaluate(() => openSettings('work'));
   // С 13 октября 2026 валюта — та же строка-кнопка, что «Язык»: значение
   // справа, щелчок открывает список.
   await expect(page.locator('#settings-currency-value')).toHaveText('RUB ₽');
@@ -85,7 +86,7 @@ test('валюта выбирается своим списком, и суммы
 
 test('валюту можно сменить и со страницы настроек', async ({ page }) => {
   await seed(page);
-  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
+  await page.evaluate(() => openSettings('work'));
 
   await page.locator('#settings-currency-row').click();
   await page.locator('#ctx-menu .ctx-item').filter({ hasText: 'EUR' }).click();
@@ -102,32 +103,35 @@ test('смена языка не сбрасывает выбранную вал�
   // приходилось запоминать и возвращать руками. Теперь возвращать нечего —
   // но проверить стоит: валюта живёт в состоянии, а не в разметке.
   await seed(page);
-  await page.evaluate(() => { state.settings.currency = 'PLN'; setLang('en'); state.ui.view = 'settings'; render(); });
+  await page.evaluate(() => { state.settings.currency = 'PLN'; setLang('en'); openSettings('work'); });
   await expect(page.locator('#settings-currency-value')).toHaveText('PLN zł');
-  await expect(page.locator('#settings-currency-row .settings-row-label')).toHaveText('Currency');
+  await expect(page.locator('#settings-currency-row .srow-label')).toHaveText('Currency');
   expect(await page.evaluate(() => state.settings.currency)).toBe('PLN');
 });
 
 test('строка «Валюта» выглядит как строка «Язык»: та же строка-кнопка, без вида поля', async ({ page }) => {
   // 13 октября 2026: валюта была кнопкой-полем (.dp-btn с подложкой), язык —
-  // строкой со значением справа. Теперь обе — одна деталь.
+  // строкой со значением справа. Теперь обе — одна деталь. С 17 октября 2026
+  // они в разных разделах («Основное» и «Работа») и обе — общая .srow; у
+  // валюты лишний только класс режима: в «личном» её нет.
   await seed(page);
-  await page.evaluate(() => { state.ui.view = 'settings'; render(); });
-  const m = await page.evaluate(() => {
-    const pick = (row) => {
-      const r = document.getElementById(row);
-      const value = r.querySelector('.settings-row-value');
-      const cs = getComputedStyle(r);
-      const vs = getComputedStyle(value);
-      return {
-        cls: r.className, height: Math.round(r.getBoundingClientRect().height),
-        bg: cs.backgroundColor, font: cs.fontSize, valueColor: vs.color, valueFont: vs.fontSize, valueBg: vs.backgroundColor,
-        valueRight: Math.round(r.getBoundingClientRect().right - value.getBoundingClientRect().right),
-      };
+  const pick = (row) => {
+    const r = document.getElementById(row);
+    const value = r.querySelector('.srow-value');
+    const cs = getComputedStyle(r);
+    const vs = getComputedStyle(value);
+    return {
+      cls: r.className, height: Math.round(r.getBoundingClientRect().height),
+      bg: cs.backgroundColor, font: cs.fontSize, valueColor: vs.color, valueFont: vs.fontSize, valueBg: vs.backgroundColor,
+      valueRight: Math.round(r.getBoundingClientRect().right - value.getBoundingClientRect().right),
     };
-    return { lang: pick('settings-lang-row'), cur: pick('settings-currency-row') };
-  });
-  expect(m.cur.cls.replace(' settings-row-last', '')).toBe(m.lang.cls.replace(' settings-row-last', ''));
+  };
+  await page.evaluate(() => openSettings('main'));
+  const lang = await page.evaluate(pick, 'settings-lang-row');
+  await page.evaluate(() => openSettings('work'));
+  const cur = await page.evaluate(pick, 'settings-currency-row');
+  const m = { lang, cur };
+  expect(m.cur.cls.replace(' if-money', '')).toBe(m.lang.cls);
   for (const k of ['height', 'bg', 'font', 'valueColor', 'valueFont', 'valueBg', 'valueRight']) {
     expect(m.cur[k], k).toBe(m.lang[k]);
   }

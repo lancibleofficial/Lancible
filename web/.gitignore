@@ -7,5 +7,6 @@ theme-boot.js
 xlsx.js
 version.js
 editor.js
+editor-pdf.js
 core/
 vendor/

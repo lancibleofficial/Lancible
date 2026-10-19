@@ -4,6 +4,7 @@ import Animated from 'react-native-reanimated';
 import Text from './AppText';
 import { Field } from './AppTextInput';
 import Island, { SettingRow, RowGroup } from './Island';
+import { useModeFlags } from '../hooks/useModeFlags';
 import { useAppStore } from '../store/useAppStore';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { PALETTE, CURRENCIES } from '../lib/migrate';
@@ -17,6 +18,9 @@ import PickerSheet from './PickerSheet';
 import ColorPickerSheet from './ColorPickerSheet';
 import VersionsEditor from './VersionsEditor';
 import TagBadge from './TagBadge';
+import { ConflictBlocks } from './ConflictSheet';
+import { useEntityConflicts } from '../hooks/useConflicts';
+import { fieldsLabel } from '../lib/conflictText';
 import { SheetScrollContext, PAGE_IN_FWD, PAGE_IN_BACK, PAGE_OUT } from './BottomSheet';
 import { t } from '../lib/i18n';
 import PrimaryButton from './PrimaryButton';
@@ -74,6 +78,8 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
   const createProject = useAppStore((s) => s.createProject);
   const updateProject = useAppStore((s) => s.updateProject);
   const allTags = useAppStore((s) => s.tags);
+  // Группа «Деньги» (ставка, валюта) — только с деньгами (Core.modeFlags).
+  const { money } = useModeFlags();
   const scroll = useContext(SheetScrollContext);
   // Поле названия берёт фокус только при открытии листа: форма монтируется
   // заново и после каждой страницы («назад» с «Цвета»), и клавиатура
@@ -96,6 +102,12 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
   const [page, setPage] = useState(() => (editing && SECTION_PAGE[section] ? { kind: SECTION_PAGE[section] } : null));
   const marks = tagsOf(allTags, editing ? live.tagIds || [] : tagIds);
   const ownTags = editing ? allTags.filter((tg) => tg.projectId === project.id) : [];
+  // «Другая версия ›» (журнал правок, 17 октября 2026): правки проекта
+  // разошлись между устройствами — первой строкой настроек, как у веба.
+  const projectConflicts = useEntityConflicts('project', editing ? project.id : null);
+  useEffect(() => {
+    if (page && page.kind === 'conflicts' && !projectConflicts.length) setPage(null);
+  }, [page, projectConflicts.length]);
 
   const fields = () => ({
     name: name.trim(), description: description.trim(), color, tagIds,
@@ -130,6 +142,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
   const PAGE_TITLE = {
     name: 'pdlg.name_desc', desc: 'pdlg.desc_label', color: 'pdlg.color_label', marks: 'pdlg.marks_label', rate: 'pdlg.rate_label',
     currency: 'pdlg.currency_label', versions: 'pdlg.sec_versions', ownTags: 'pdlg.sec_tags',
+    conflicts: 'sync.other_version',
   };
   const headTitle = !page ? (editing ? live.name || t(lang, 'project.menu_settings') : t(lang, 'project.new_title'))
     : page.kind === 'tagEdit' ? t(lang, page.tag ? 'tag.dialog_edit' : 'tag.project_add')
@@ -232,6 +245,8 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
     return (
       <Animated.View key={page.kind} entering={enter} exiting={leave} style={styles.content} testID="sheet-page">
         {page.kind === 'name' ? <>{nameField}{descField}</> : null}
+
+        {page.kind === 'conflicts' ? <ConflictBlocks entity="project" entityId={live.id} /> : null}
 
         {page.kind === 'desc' ? (
           <Field value={description} onChangeText={setDescription} placeholder={t(lang, 'pdlg.desc_ph')} multiline autoFocus accessibilityLabel={t(lang, 'pdlg.desc_label')} testID="project-form-desc" />
@@ -336,6 +351,11 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
     const count = (n) => (n ? String(n) : t(lang, 'common.none_value'));
     return (
       <Animated.View key="list" entering={enter} exiting={leave} style={styles.content} testID="sheet-page">
+        {projectConflicts.length ? (
+          <RowGroup testID="project-conflicts">
+            <SettingRow icon="copy" label={t(lang, 'sync.other_version')} value={fieldsLabel(projectConflicts, lang)} onPress={() => open({ kind: 'conflicts' })} testID="project-conflict-row" />
+          </RowGroup>
+        ) : null}
         <RowGroup label={t(lang, 'pdlg.sec_project')} testID="project-group-project">
           <SettingRow icon="pen" label={t(lang, 'pdlg.name_desc')} value={live.name} onPress={() => open({ kind: 'name' })} testID="project-row-name" />
           <SettingRow
@@ -348,6 +368,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
           <SettingRow icon="tag" label={t(lang, 'pdlg.marks_label')} value={marksValue} onPress={() => open({ kind: 'marks' })} testID="project-row-marks" />
         </RowGroup>
 
+        {money ? (
         <RowGroup label={t(lang, 'pdlg.sec_money')} testID="project-group-money">
           <SettingRow
             icon="wallet"
@@ -366,6 +387,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
             valueTestID="project-row-currency-value"
           />
         </RowGroup>
+        ) : null}
 
         <RowGroup label={t(lang, 'pdlg.sec_setup')} testID="project-group-setup">
           <SettingRow
@@ -430,6 +452,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
         <SettingRow icon="tag" label={t(lang, 'pdlg.marks_label')} value={marksValue} onPress={() => open({ kind: 'marks' })} testID="project-row-marks" />
       </RowGroup>
 
+      {money ? (
       <RowGroup label={t(lang, 'pdlg.sec_money')} testID="project-form-group-money">
         <SettingRow
           icon="wallet"
@@ -448,6 +471,7 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
           valueTestID="project-row-currency-value"
         />
       </RowGroup>
+      ) : null}
     </Animated.View>
   );
 }

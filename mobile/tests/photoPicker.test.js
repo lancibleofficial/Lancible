@@ -139,6 +139,31 @@ test('GIF — как есть (анимация), если не больше 2 �
   expect(big.base64).not.toHaveBeenCalled();
 });
 
+// 19 октября 2026: форма обратной связи брала GIF как есть, бакет feedback
+// принимает только PNG, JPEG и WebP — и сообщение со снимком не уходило вовсе.
+test('still: GIF — неподвижной картинкой: первым кадром в PNG, имя .png; как есть не читается', async () => {
+  image(2400, 1200);
+  const gif = fileOf({ type: 'image/gif', name: 'cat.gif', uri: 'file:///dl/cat.gif', size: 300_000, base64: jest.fn(async () => 'R0lG') });
+  picked(gif);
+  expect(await pickPhoto({ still: true })).toEqual({ dataUrl: 'data:image/png;base64,QUJD', name: 'cat.png' });
+  expect(ImageManipulator.manipulate).toHaveBeenCalledWith('file:///dl/cat.gif');
+  expect(resizes()).toEqual([{ width: 1600, height: undefined }]);
+  expect(saves()).toEqual([{ save: { format: 'png', base64: true }, width: 1600, height: 800 }]);
+  expect(gif.base64).not.toHaveBeenCalled();
+
+  // PNG из кадра не влез в 2 МБ — JPEG, как у PNG.
+  mockLog.length = 0;
+  mockOut = (format) => (format === 'png' ? b64Of(PHOTO_MAX_BYTES + 1) : 'SlBH');
+  picked(fileOf({ type: 'image/gif', name: 'big.gif', size: 300_000 }));
+  expect(await pickPhoto({ still: true })).toEqual({ dataUrl: 'data:image/jpeg;base64,SlBH', name: 'big.jpg' });
+
+  // Большой GIF файлом (больше 2 МБ) неподвижной картинке не помеха: решает размер после сжатия.
+  mockLog.length = 0;
+  mockOut = () => 'QUJD';
+  picked(fileOf({ type: 'image/gif', name: 'huge.gif', size: PHOTO_MAX_BYTES * 3 }));
+  expect(await pickPhoto({ still: true })).toEqual({ dataUrl: 'data:image/png;base64,QUJD', name: 'huge.png' });
+});
+
 test('и после сжатия больше 2 МБ — отказ с кодом PHOTO_TOO_BIG (тост покажет редактор)', async () => {
   image(1600, 1200);
   mockOut = () => b64Of(PHOTO_MAX_BYTES + 10);

@@ -67,6 +67,7 @@ import { HeaderButton } from '../components/TabHeader';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
 import { useAppStore, tasksOf, projectMs, projectMoney, getProject } from '../store/useAppStore';
 import { useRates, currencyOf } from '../hooks/useRates';
+import { useModeFlags } from '../hooks/useModeFlags';
 import { fmtDur, fmtMoney, taskElapsedMs } from '../lib/format';
 import { defaultStatusId, isCancelled } from '../lib/statuses';
 import { tagsOf } from '../lib/tags';
@@ -79,6 +80,7 @@ import { useOrderHold } from '../hooks/useOrderHold';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useColors, spacing, screenPadding, radius, buttonRadius, fontSize, displayFamily, gap, segmentHeight } from '../theme';
 import { t } from '../lib/i18n';
+import { pushTask } from '../navigation/openTask';
 
 const TABS = ['list', 'board', 'versions'];
 const TAB_KEY = { list: 'project.tab_list', board: 'nav.board', versions: 'version.section' };
@@ -114,6 +116,8 @@ export default function ProjectScreen({ route, navigation }) {
   const togglePinProject = useAppStore((s) => s.togglePinProject);
   const togglePinTask = useAppStore((s) => s.togglePinTask);
   const rates = useRates();
+  // Деньги проекта (Core.modeFlags): в «личном» нет ни суммы в цифрах, ни у версий.
+  const flags = useModeFlags();
   // Закрепление свайпом переставляет строку между группами — плавно (moveSoon).
   const hold = useOrderHold(navigation);
 
@@ -300,7 +304,8 @@ export default function ProjectScreen({ route, navigation }) {
     );
   }
 
-  const openTask = (taskId) => navigation.navigate('TaskDetail', { taskId });
+  // Задача — поверх проекта, «назад» сюда же (navigation/openTask.js).
+  const openTask = (taskId) => pushTask(navigation, taskId);
 
   /** Строка быстрого добавления: завести задачу и сразу открыть её. */
   function submitDraft() {
@@ -423,10 +428,12 @@ export default function ProjectScreen({ route, navigation }) {
           <Text style={styles.kpiNum} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmtDur(ms, LANG)}</Text>
           <Text style={styles.kpiLabel} numberOfLines={1}>{t(LANG, 'project.kpi_time')}</Text>
         </View>
-        <View style={[styles.kpiCell, styles.kpiCellNext]}>
+        {flags.money ? (
+        <View style={[styles.kpiCell, styles.kpiCellNext]} testID="project-kpi-money">
           <Text style={styles.kpiNum} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmtMoney(money, LANG, currency)}</Text>
           <Text style={styles.kpiLabel} numberOfLines={1}>{t(LANG, 'project.kpi_money')}</Text>
         </View>
+        ) : null}
       </View>
       {/* Шкала натекает к новому значению жидко (components/ProgressBar.js). */}
       <ProgressBar
@@ -480,7 +487,7 @@ export default function ProjectScreen({ route, navigation }) {
             />
           </View>
         ) : versionRows.map((r, i) => (
-          <VersionRow key={r.id || 'none'} r={r} first={i === 0} styles={styles} lang={LANG} money={fmtMoney(r.money, LANG, currency)}
+          <VersionRow key={r.id || 'none'} r={r} first={i === 0} styles={styles} lang={LANG} money={flags.money ? fmtMoney(r.money, LANG, currency) : ''}
             onPress={r.id ? () => { setBoardVersion(projectId, r.id); setTab('list'); } : undefined} />
         ))}
       </Island>

@@ -20,7 +20,7 @@ import { render, renderHook, fireEvent, within, act } from '@testing-library/rea
 import BottomSheet from '../src/components/BottomSheet';
 import NewProjectSheet from '../src/components/NewProjectSheet';
 import TaskDetailScreen from '../src/screens/TaskDetailScreen';
-import SettingsScreen from '../src/screens/SettingsScreen';
+import SettingsSectionScreen from '../src/screens/SettingsSectionScreen';
 import { useAppStore } from '../src/store/useAppStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSheetStore, openSheet } from '../src/store/useSheetStore';
@@ -378,7 +378,8 @@ describe('одна строка настройки', () => {
 
   test('«Язык» в «Меню», «Дедлайн» в сведениях задачи и «Название и описание» в настройках проекта — одна и та же строка', async () => {
     const { result } = await renderHook(() => useColors());
-    const menu = await render(<SettingsScreen navigation={{ navigate: noop }} />);
+    // «Язык» с 17 октября 2026 — в разделе «Основное» меню.
+    const menu = await render(<SettingsSectionScreen navigation={{ navigate: noop }} route={{ params: { section: 'main' } }} />);
     const langRow = menu.getByText(t('ru', 'nav.language'));
     // Строка — нажимаемый предок подписи.
     const rowOf = (label) => { let n = label.parent; while (n && !n.props.onClick && !n.props.onPress && n.props.accessibilityRole !== 'button') n = n.parent; return n; };

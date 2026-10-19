@@ -19,7 +19,6 @@ import BottomSheet from '../src/components/BottomSheet';
 import PickerSheet from '../src/components/PickerSheet';
 import TaskMoveSheet from '../src/components/TaskMoveSheet';
 import TagPickerSheet from '../src/components/TagPickerSheet';
-import EntrySheet from '../src/components/EntrySheet';
 import ExportPeriodSheet from '../src/components/ExportPeriodSheet';
 import { useAppStore } from '../src/store/useAppStore';
 import { useSheetStore, openSheet } from '../src/store/useSheetStore';
@@ -194,11 +193,6 @@ describe('листы со списками берут ChoiceList', () => {
     expect(within(s.getByTestId('export-project-list')).getAllByRole('checkbox')).toHaveLength(2);
   });
 
-  test('EntrySheet: существующие задачи — общий список', async () => {
-    const s = await show(<EntrySheet initial={{ start: 1_700_000_000_000, end: 1_700_003_600_000 }} />);
-    await fireEvent.changeText(s.getByPlaceholderText(t('ru', 'agenda.task_name_ph')), 'вёрстка');
-    within(s.getByTestId('entry-found')).getByText('Вёрстка шапки');
-  });
 });
 
 test('исходники листов: нет своих «выбранных» заливок строк и плашек пунктов', () => {

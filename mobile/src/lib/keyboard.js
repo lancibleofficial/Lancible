@@ -17,11 +17,16 @@
 //   стиль, как настоящая); тапы при открытой клавиатуре — как задал экран
 //   (keyboardShouldPersistTaps), а на iOS сфокусированное поле над клавиатурой
 //   держит сама система (automaticallyAdjustKeyboardInsets).
+// - KeyboardAvoidingView — системный, React Native (поле чата над
+//   клавиатурой).
+// - события клавиатуры (KeyboardEvents) — заглушка, подписка на которую
+//   ничего не ждёт: без нативной части события берёт у самого React Native
+//   hooks/useKeyboardState.js.
 // Нижний лист (components/BottomSheet.js) по KEYBOARD_NATIVE выбирает путь на
 // Android: кадры клавиатуры или прежний подъём по keyboardDidShow.
-import { forwardRef, useMemo } from 'react';
-import { Animated, Platform } from 'react-native';
-import Reanimated, { useSharedValue } from 'react-native-reanimated';
+import { forwardRef, useCallback, useMemo, useRef, useState } from 'react';
+import { Animated, Platform, StyleSheet, KeyboardAvoidingView as RNKeyboardAvoidingView } from 'react-native';
+import Reanimated, { useSharedValue, useAnimatedRef, measure, runOnUI, runOnJS } from 'react-native-reanimated';
 
 function load() {
   try {
@@ -68,3 +73,69 @@ export const KeyboardProvider = lib ? lib.KeyboardProvider : PassThrough;
 export const useKeyboardAnimation = lib ? lib.useKeyboardAnimation : useZeroKeyboardAnimation;
 export const useReanimatedKeyboardAnimation = lib ? lib.useReanimatedKeyboardAnimation : useZeroReanimatedKeyboardAnimation;
 export const KeyboardAwareScrollView = lib ? lib.KeyboardAwareScrollView : PlainKeyboardAwareScrollView;
+
+// Поле внизу экрана над клавиатурой (вкладка «Чат-бот», 18 октября 2026):
+// библиотека считает перекрытие по кадрам на потоке интерфейса — по рамке
+// самого вида и верху клавиатуры, поэтому ей всё равно, что под видом
+// (панель вкладок на Android, которая уходит, пока клавиатура открыта).
+// Без нативной части — системный KeyboardAvoidingView: на iOS окно под
+// клавиатуру не ужимается, и он поднимает содержимое сам; на Android окно
+// ужимает система.
+//
+/** Верх вида в координатах корня — тех же, в которых библиотека считает
+ *  клавиатуру и рамку вида (на Android measureInWindow отсчитывает от низа
+ *  строки состояния, а приложение рисуется под ней: разница — её высота).
+ *  Замер на потоке интерфейса (measure), ответ — в JS; вида нет — null.
+ *  @param ref useAnimatedRef, привязанный к виду Reanimated */
+export function measurePageTop(ref, cb) {
+  runOnUI(() => {
+    'worklet';
+    const m = measure(ref);
+    runOnJS(cb)(m ? m.pageY : null);
+  })();
+}
+
+// automaticOffset (19 октября 2026: поле чата пряталось под клавиатурой) —
+// свой, а не библиотечный. Оба считают перекрытие как «низ вида − верх
+// клавиатуры», где низ вида — из onLayout, то есть ОТ РОДИТЕЛЯ, а верх
+// клавиатуры — от верха окна. Над экраном чата стоит шапка стека, и без
+// поправки перекрытие выходило меньше на её высоту. Библиотечный
+// automaticOffset берёт место вида в окне нативно (viewPositionInWindow), но
+// в новой архитектуре вид по номеру он не находит (uiManager.resolveView) и
+// молча откатывается к рамке от родителя — замер на эмуляторе: шапка 72 dp,
+// поле ушло под клавиатуру. Поэтому место мерит обёртка — пустым видом-зондом
+// во всю площадь (measurePageTop: в координатах корня, как у библиотеки), —
+// и отдаёт сдвиг как keyboardVerticalOffset: его понимают и библиотека, и
+// системный.
+const AvoidBase = lib ? lib.KeyboardAvoidingView : forwardRef(function PlainKeyboardAvoidingView({ behavior, ...rest }, ref) {
+  return <RNKeyboardAvoidingView ref={ref} behavior={Platform.OS === 'ios' ? behavior : undefined} {...rest} />;
+});
+
+export const KeyboardAvoidingView = forwardRef(function KeyboardAvoidingView(
+  { automaticOffset, keyboardVerticalOffset = 0, onLayout, children, ...rest },
+  ref,
+) {
+  const probe = useAnimatedRef();
+  const ownY = useRef(0);
+  const [shift, setShift] = useState(0);
+  const take = useCallback((top) => { if (Number.isFinite(top)) setShift(Math.max(0, top - ownY.current)); }, []);
+  // Сдвиг — насколько вид ниже своего y от родителя.
+  const remeasure = useCallback(() => { if (automaticOffset) measurePageTop(probe, take); }, [automaticOffset, take]);
+  const layout = useCallback((e) => {
+    if (onLayout) onLayout(e);
+    ownY.current = e && e.nativeEvent && e.nativeEvent.layout ? e.nativeEvent.layout.y || 0 : 0;
+    remeasure();
+  }, [onLayout, remeasure]);
+  return (
+    <AvoidBase ref={ref} keyboardVerticalOffset={keyboardVerticalOffset + (automaticOffset ? shift : 0)} onLayout={layout} {...rest}>
+      {automaticOffset ? <Reanimated.View ref={probe} collapsable={false} pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={remeasure} testID="keyboard-avoid-probe" /> : null}
+      {children}
+    </AvoidBase>
+  );
+});
+// События клавиатуры по библиотеке (keyboardWillShow, keyboardDidShow, …:
+// { height, duration, … }). Они знают то, чего не знает React Native:
+// плавающая клавиатура (Gboard) и строка над физической — открыты с высотой 0
+// (17 октября 2026, hooks/useKeyboardState.js).
+const NO_EVENTS = Object.freeze({ addListener: () => ({ remove() {} }) });
+export const KeyboardEvents = lib && lib.KeyboardEvents ? lib.KeyboardEvents : NO_EVENTS;

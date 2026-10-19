@@ -36,6 +36,24 @@ import { dayKey, keyToDate } from '../lib/calendarMath';
 const FREQS = ['day', 'week', 'month', 'year'];
 const UNIT_KEY = { day: 'repeat.unit_day', week: 'repeat.unit_week', month: 'repeat.unit_month', year: 'repeat.unit_year' };
 
+/** День окончания — ключом дня «ГГГГ-ММ-ДД», как его ждёт ядро (nextDue:
+ *  `${ends.at}T23:59:59`) и как пишет веб. До 17 октября 2026 лист писал сюда
+ *  ISO-момент (полночь по местному, то есть накануне по UTC), и ядро не
+ *  могло его разобрать: «До даты» молча не кончалось. Старые значения
+ *  приводятся при чтении — тем же правилом, что веб при открытии окна. */
+export function endDayKey(at) {
+  if (typeof at !== 'string' || !at) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(at)) return at;
+  return at.includes('T') && Number.isFinite(Date.parse(at)) ? dayKey(new Date(at)) : null;
+}
+
+/** Правило с окончанием-днём: старое ISO — в ключ дня. */
+function withEndDay(rule) {
+  if (!rule || !rule.ends || !rule.ends.at) return rule;
+  const at = endDayKey(rule.ends.at);
+  return at === rule.ends.at ? rule : { ...rule, ends: { ...rule.ends, at } };
+}
+
 /** Какая строка выбрана у правила: пресет, «Настроить…» или «Не повторяется». */
 function choiceOf(rule) {
   if (!rule) return 'none';
@@ -56,7 +74,7 @@ export default function RepeatSheet({ lang, anchorAt, rule: initial, onApply, on
   const styles = useMemo(() => makeStyles(colors), [colors]);
   useSheetHeader(embedded ? null : t(lang, 'repeat.dialog_title'));
   const finish = () => (embedded ? onDone && onDone() : closeSheet());
-  const start = Repeat.normalizeRepeat(initial);
+  const start = withEndDay(Repeat.normalizeRepeat(initial));
   const [choice, setChoice] = useState(() => choiceOf(start));
   // Правило «Настроить…»: начинается с того, что было, — или с недели.
   const [rule, setRule] = useState(() => start || Repeat.normalizeRepeat({ freq: 'week', every: 1 }));
@@ -218,7 +236,7 @@ export default function RepeatSheet({ lang, anchorAt, rule: initial, onApply, on
                   icon="calendar"
                   label={t(lang, 'sdlg.date_label')}
                   value={rule.ends.at
-                    ? new Date(rule.ends.at).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })
+                    ? keyToDate(rule.ends.at).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })
                     : t(lang, 'due.none')}
                   open={pickingEnd}
                   onToggle={() => setPickingEnd((v) => !v)}
@@ -226,10 +244,10 @@ export default function RepeatSheet({ lang, anchorAt, rule: initial, onApply, on
                 >
                   <MiniDatePicker
                     lang={lang}
-                    valueKey={rule.ends.at ? dayKey(new Date(rule.ends.at)) : null}
+                    valueKey={rule.ends.at || null}
                     onPick={(key) => {
-                      // Лист отдаёт ключ дня; правило хранит момент времени.
-                      patch({ ends: { ...rule.ends, at: keyToDate(key).toISOString() } });
+                      // Календарь отдаёт ключ дня — его правило и хранит (см. endDayKey).
+                      patch({ ends: { ...rule.ends, at: key } });
                       setPickingEnd(false);
                     }}
                   />

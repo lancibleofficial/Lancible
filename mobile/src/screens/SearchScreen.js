@@ -1,6 +1,12 @@
 // Поиск по задачам и проектам — свой экран с полем в шапке и клавиатурой
 // сразу. Пустой запрос показывает недавние задачи: подсказка, что искать,
 // и заодно самый частый переход.
+//
+// С круга 21 (19 октября 2026) находит и чаты с агентом — группа «Чаты»
+// после задач: по названию и тексту сообщений. Переписка только на этом
+// устройстве, у каждого аккаунта своя (lib/aiChat.js: aiChatTexts,
+// findChats), поэтому ищутся чаты вошедшего. Касание — чат поверх поиска
+// (он — экран деталей любого стека), «назад» — сюда.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { View, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,9 +17,12 @@ import { GlassBg } from '../components/Glass';
 import EmptyState from '../components/EmptyState';
 import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import { useAppStore, recentTasks, getProject, tasksOf } from '../store/useAppStore';
+import { useAuthStore } from '../store/useAuthStore';
+import { useAiChat, aiAccount, aiChatTexts, findChats } from '../lib/aiChat';
 import { getStatus } from '../lib/statuses';
 import { useColors, spacing, screenPadding, radius, fontSize } from '../theme';
 import { t, pluralForm } from '../lib/i18n';
+import { pushTask } from '../navigation/openTask';
 
 export default function SearchScreen({ navigation }) {
   const colors = useColors();
@@ -29,10 +38,24 @@ export default function SearchScreen({ navigation }) {
   const openProject = useAppStore((s) => s.openProject);
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
+  // Чаты вошедшего: индекс — тот же, что у вкладки «Чат-бот», тексты — с
+  // устройства, один раз на смену списка.
+  const status = useAuthStore((s) => s.status);
+  const user = useAuthStore((s) => s.user);
+  const uid = status === 'signedIn' && user ? user.id : null;
+  const chats = useAiChat((s) => s.chats);
+  const [chatTexts, setChatTexts] = useState({});
+  useEffect(() => { aiAccount(uid); }, [uid, user]);
+  useEffect(() => {
+    let alive = true;
+    aiChatTexts().then((texts) => { if (alive) setChatTexts(texts); });
+    return () => { alive = false; };
+  }, [chats, uid]);
 
   const recent = useMemo(() => recentTasks(tasks, 12, activeTimer), [tasks, activeTimer]);
   const foundProjects = useMemo(() => (q ? projects.filter((p) => p.name.toLowerCase().includes(q)) : []), [projects, q]);
   const foundTasks = useMemo(() => (q ? tasks.filter((task) => (task.title || '').toLowerCase().includes(q)) : []), [tasks, q]);
+  const foundChats = useMemo(() => (q && uid ? findChats(chats, chatTexts, q) : []), [chats, chatTexts, q, uid]);
 
   const rows = [];
   if (!q) {
@@ -43,6 +66,8 @@ export default function SearchScreen({ navigation }) {
     for (const p of foundProjects) rows.push({ key: 'p-' + p.id, project: p });
     if (foundTasks.length) rows.push({ key: 'h-t', head: t(lang, 'search.tasks_group') });
     for (const task of foundTasks) rows.push({ key: 't-' + task.id, task });
+    if (foundChats.length) rows.push({ key: 'h-c', head: t(lang, 'search.chats_group') });
+    for (const found of foundChats) rows.push({ key: 'c-' + found.chat.id, found });
   }
   // Пусто бывает дважды: запрос ничего не нашёл — или запроса ещё нет, а
   // недавних задач тоже нет (новый человек). В обоих — сценка поиска без
@@ -82,7 +107,11 @@ export default function SearchScreen({ navigation }) {
   }, [navigation, lang, colors]);
 
   function onProject(id) { openProject(id); navigation.navigate('Project', { projectId: id }); }
-  function onTask(task) { navigation.navigate('TaskDetail', { taskId: task.id }); }
+  function onTask(task) { pushTask(navigation, task.id); }
+  function onChat(chatId) {
+    if (typeof navigation.push === 'function') navigation.push('ChatThread', { chatId });
+    else navigation.navigate('ChatThread', { chatId });
+  }
 
   return (
     <View style={styles.container}>
@@ -130,6 +159,19 @@ export default function SearchScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             if (item.head) return <Text style={styles.sectionTitle}>{item.head}</Text>;
+            if (item.found) {
+              const { chat, snippet } = item.found;
+              const title = chat.title || t(lang, 'ai.new_chat');
+              return (
+                <Pressable style={styles.row} onPress={() => onChat(chat.id)} accessibilityRole="button" accessibilityLabel={title} testID={`search-chat-${chat.id}`}>
+                  <Icon name="comments" size={16} color={colors.textFaint} />
+                  <View style={styles.body}>
+                    <Text style={styles.title} numberOfLines={1}>{title}</Text>
+                    {snippet ? <Text style={styles.sub} numberOfLines={2}>{snippet}</Text> : null}
+                  </View>
+                </Pressable>
+              );
+            }
             if (item.project) {
               return (
                 <Pressable style={styles.row} onPress={() => onProject(item.project.id)}>

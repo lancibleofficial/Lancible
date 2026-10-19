@@ -57,6 +57,9 @@ async function openSettings(page) {
   await expect(page.locator('#shell')).toBeVisible();
   await page.locator('.nav-item[data-view="settings"]').first().click();
   await expect(page.locator('#settings-view')).toBeVisible();
+  // С 17 октября 2026 версия и проверка обновлений — в разделе «О приложении».
+  await page.locator('#settings-sec-about').click();
+  await expect(page.locator('#settings-page-about')).toBeVisible();
 }
 
 test('веб: в подвале версия из package.json, а кнопки проверки обновлений нет', async ({ page }) => {
@@ -84,7 +87,7 @@ test('десктоп: версия и ссылка стоят в одной ст
     return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
   });
   const [footer, ver, btn, content] = await Promise.all([
-    box('.settings-footer'), box('#settings-version'), box('#settings-update-check'), box('.settings-grid'),
+    box('.settings-footer'), box('#settings-version'), box('#settings-update-check'), box('#settings-page-about .sgroup >> nth=0'),
   ]);
   expect(ver.right, 'ссылка правее версии').toBeLessThanOrEqual(btn.left);
   expect(Math.abs(ver.top - btn.top), 'одна строка').toBeLessThanOrEqual(6);

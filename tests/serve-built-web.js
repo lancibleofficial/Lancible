@@ -27,8 +27,9 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const WEB = path.join(ROOT, 'web');
 
-/** Без этих файлов веб не стартует или стартует не тем кодом. */
-const REQUIRED = ['index.html', 'app.js', 'styles.css', 'editor.js', 'version.js', 'core/i18n.js', 'vendor/supabase.js'];
+/** Без этих файлов веб не стартует или стартует не тем кодом. editor-pdf.js —
+ *  без него веб стартует, но PDF в редакторе не открывается: тоже громко. */
+const REQUIRED = ['index.html', 'app.js', 'styles.css', 'editor.js', 'editor-pdf.js', 'version.js', 'core/i18n.js', 'vendor/supabase.js'];
 
 /** Чего не хватает в собранном web/ (пусто — всё на месте). */
 function missingBuildFiles(webDir) {

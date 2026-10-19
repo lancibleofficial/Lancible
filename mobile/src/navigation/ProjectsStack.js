@@ -13,7 +13,7 @@ const ProjectsPage = withTabPage(ProjectsScreen, 'Projects', ProjectsSkeleton);
 const Stack = createNativeStackNavigator();
 
 /** Вкладка «Проекты»: карточки и недавние задачи, внутри — те же экраны
- *  деталей, что у «Сегодня». */
+ *  деталей, что у остальных вкладок. */
 export default function ProjectsStack() {
   const colors = useColors();
   const lang = useAppStore((s) => s.settings.lang);

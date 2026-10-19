@@ -23,7 +23,9 @@ import { View, StyleSheet } from 'react-native';
 import Tap from './Tap';
 import Text from './AppText';
 import { LiquidButton, LiquidCheck } from './Liquid';
+import { useModeFlags } from '../hooks/useModeFlags';
 import PinMark from './PinMark';
+import ConflictMark from './ConflictMark';
 import RunningClock from './RunningClock';
 import { useAppStore, getProject } from '../store/useAppStore';
 import { dueShort, dueState } from '../lib/due';
@@ -79,6 +81,9 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
   const stopTimer = useAppStore((s) => s.stopTimer);
   const toggleTaskDone = useAppStore((s) => s.toggleTaskDone);
   const reopenTask = useAppStore((s) => s.reopenTask);
+  // Таймер выключен (Core.modeFlags) — квадрата запуска нет; у идущей задачи
+  // остаётся «стоп».
+  const { timer } = useModeFlags();
 
   const running = !!activeTimer && activeTimer.taskId === task.id;
   const project = getProject(projects, task.projectId);
@@ -118,6 +123,8 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
         <View style={styles.titleRow}>
           <Text style={[styles.title, done && styles.titleDone, cancelled && styles.titleCancelled]} numberOfLines={2}>{task.title || t(lang, 'task.no_name')}</Text>
           <PinMark pinnedAt={task.pinnedAt} keep={!hidePinned} style={styles.pin} />
+          {/* «Другая версия»: правки разошлись (журнал правок, 17 октября 2026). */}
+          <ConflictMark id={task.id} style={styles.pin} />
         </View>
         {badge || meta.length ? (
           <View style={styles.meta} testID={`task-meta-${task.id}`}>
@@ -138,6 +145,7 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
           </View>
         ) : null}
       </View>
+      {timer || running ? (
       <LiquidButton
         on={running}
         kickId={task.id}
@@ -147,7 +155,9 @@ export default function TaskRow({ task, onPress, showProject = false, first = fa
         iconSize={12}
         accessibilityRole="button"
         accessibilityLabel={t(lang, running ? 'timer.stop' : 'timer.start')}
+        testID={`task-play-${task.id}`}
       />
+      ) : null}
     </Tap>
   );
 }

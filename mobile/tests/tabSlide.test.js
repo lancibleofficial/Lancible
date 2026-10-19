@@ -26,14 +26,14 @@ jest.mock('@react-navigation/native', () => ({
 beforeEach(() => { resetTabSlide(); mockNavigation.setOptions.mockClear(); });
 
 test('порядок вкладок — как на панели', () => {
-  expect(TAB_ORDER).toEqual(['Projects', 'Tasks', 'Home', 'Stats', 'Menu']);
+  expect(TAB_ORDER).toEqual(['Projects', 'Tasks', 'Chat', 'Stats', 'Menu']);
 });
 
 test('сторона въезда: правее — справа, левее — слева, та же или первая — без сдвига', () => {
   expect(slideSide('Projects', 'Stats')).toBe(1);
   expect(slideSide('Menu', 'Tasks')).toBe(-1);
-  expect(slideSide('Home', 'Home')).toBe(0);
-  expect(slideSide(null, 'Home')).toBe(0);
+  expect(slideSide('Chat', 'Chat')).toBe(0);
+  expect(slideSide(null, 'Chat')).toBe(0);
 });
 
 test('Android: страницы едут во всю ширину экрана', () => {

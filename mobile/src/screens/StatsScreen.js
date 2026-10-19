@@ -26,6 +26,7 @@ import PickerSheet from '../components/PickerSheet';
 import ExportPeriodSheet from '../components/ExportPeriodSheet';
 import { useAppStore, getProject, tasksOf } from '../store/useAppStore';
 import { useRates, useRatesMain, currencyOf } from '../hooks/useRates';
+import { useModeFlags } from '../hooks/useModeFlags';
 import { fmtDur, fmtMoney, fmtShort, monthLabel, fmtDateShort, capFirst } from '../lib/format';
 import { dayKey, keyToDate, mondayOf, addDays, aggregateDays, rangeAgg, sessionsOfDay } from '../lib/calendarMath';
 import { useTicker } from '../hooks/useTicker';
@@ -189,6 +190,9 @@ export default function StatsScreen({ navigation }) {
   const locale = LOCALE_MAP[lang] || 'ru-RU';
   const rates = useRates();
   const ratesMain = useRatesMain();
+  // Суммы за неделю, месяц и по проектам — счётчики заработка (Core.modeFlags):
+  // «личное» и выключенный счётчик их убирают, время остаётся.
+  const { earnings } = useModeFlags();
   useTicker(!!activeTimer);
 
   const [mode, setMode] = useState('month');
@@ -391,14 +395,14 @@ export default function StatsScreen({ navigation }) {
           <IslandHead title={sumTitle} note={sumNote} onPressNote={onNote} />
           <View style={styles.sumRow}>
             <Text style={styles.big}>{fmtDur(total.ms, lang)}</Text>
-            <Text style={[styles.big, { color: colors.textDim }]}>{fmtMoney(total.money, lang, currency)}</Text>
+            {earnings ? <Text style={[styles.big, { color: colors.textDim }]} testID="stats-money">{fmtMoney(total.money, lang, currency)}</Text> : null}
           </View>
         </Island>
 
         <View style={styles.tiles}>
           <View style={styles.tile}><Text style={styles.tileNum}>{doneInRange}<Text style={styles.tileOf}> / {shown.length}</Text></Text><Text style={styles.tileLabel}>{t(lang, 'stats.tasks_done_short')}</Text></View>
           {dayView ? null : <View style={styles.tile}><Text style={styles.tileNum}>{fmtShort(perDay, lang)}</Text><Text style={styles.tileLabel}>{t(lang, 'stats.per_day')}</Text></View>}
-          <View style={styles.tile}><Text style={styles.tileNum}>{fmtMoney(Math.round(perHour), lang, currency)}</Text><Text style={styles.tileLabel}>{t(lang, 'stats.per_hour')}</Text></View>
+          {earnings ? <View style={styles.tile} testID="stats-per-hour"><Text style={styles.tileNum}>{fmtMoney(Math.round(perHour), lang, currency)}</Text><Text style={styles.tileLabel}>{t(lang, 'stats.per_hour')}</Text></View> : null}
         </View>
 
         <Island padded={false} style={{ paddingVertical: 4 }}>
@@ -411,7 +415,7 @@ export default function StatsScreen({ navigation }) {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={styles.prHead}>
                   <Text style={styles.prName} numberOfLines={1}>{x.project.name}</Text>
-                  <Text style={styles.prNum}>{fmtDur(x.ms, lang)} · {fmtMoney(x.money, lang, currencyOf(x.project, settings))}</Text>
+                  <Text style={styles.prNum}>{earnings ? `${fmtDur(x.ms, lang)} · ${fmtMoney(x.money, lang, currencyOf(x.project, settings))}` : fmtDur(x.ms, lang)}</Text>
                 </View>
                 {/* Доля от самого большого проекта, а не «выполнено»: 100 % здесь
                     значит «лидер», поэтому «попа» и брызг у этих шкал нет. */}

@@ -368,6 +368,8 @@ test('строка заголовка не уезжает, когда содер
       const end = new Date(now - (i + 1) * 3_600_000).toISOString();
       state.tasks.push({ id: `tx${i}`, projectId: pid, title: `Задача ${i}`, done: false, totalMs: 3_600_000, sessions: [{ start, end, ms: 3_600_000 }], tagIds: [], createdAt: start, updatedAt: end });
     }
+    // Длинный список общих тегов — в разделе настроек «Работа».
+    for (let i = 0; i < 20; i++) state.tags.push({ id: `tg${i}`, name: `Тег ${i}`, color: '#5ec8f2', projectId: null });
     // Длинный список задач в открытом проекте и в списке документов.
     for (let i = 0; i < 40; i++) {
       state.tasks.push({ id: `ty${i}`, projectId: state.ui.projectId, title: `Ещё задача ${i}`, notes: '', statusId: null, done: false, totalMs: 0, sessions: [], createdAt: new Date().toISOString(), tagIds: [], dueAt: null });
@@ -379,13 +381,14 @@ test('строка заголовка не уезжает, когда содер
 
   const screens = [
     { name: 'Проекты', view: 'projects', head: '#projects-view .page-head', btn: '#create-project-btn' },
-    { name: 'Настройки', view: 'settings', head: '#settings-view .page-head', btn: '#settings-view .page-title' },
+    // С 17 октября 2026 настройки — по разделам; длинный из них — «Работа» с тегами.
+    { name: 'Настройки', view: 'settings', section: 'work', head: '#settings-page-work .page-head', btn: '#settings-page-work .settings-back' },
     { name: 'Документы', view: 'docs', head: '#docs-view .docs-side-head', btn: '#doc-new' },
-    { name: 'Статистика', view: 'time', head: '#time-view .time-head', btn: '#ag-create' },
+    { name: 'Время', view: 'time', head: '#time-view .time-head', btn: '#ag-create' },
     { name: 'Проект', view: 'project', head: '#project-header', btn: '#new-task-btn' },
   ];
   for (const s of screens) {
-    await page.evaluate((v) => { state.ui.view = v; render(); }, s.view);
+    await page.evaluate(({ view, section }) => { state.ui.view = view; state.ui.settingsSection = section || null; render(); }, s);
     // Экран въезжает 0,22 с (viewIn): до конца въезда рамка ещё плывёт.
     await expect(page.locator('#main > .view:not([hidden])')).toHaveClass(/settled/);
     const measure = () => page.evaluate(({ head, btn }) => {

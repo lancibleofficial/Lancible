@@ -1,9 +1,9 @@
 import { Easing, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
-import HomeStack from './HomeStack';
 import ProjectsStack from './ProjectsStack';
 import TasksStack from './TasksStack';
+import ChatStack from './ChatStack';
 import StatsStack from './StatsStack';
 import MenuStack from './MenuStack';
 import AppHeader from '../components/AppHeader';
@@ -16,7 +16,8 @@ import { t } from '../lib/i18n';
 
 const Tab = createBottomTabNavigator();
 
-// Пять вкладок макета B2: Проекты · Задачи · Сегодня · Цифры · Меню.
+// Пять вкладок: Проекты · Задачи · Чат-бот · Цифры · Меню («Чат-бот» —
+// с 18 октября 2026 на месте «Сегодня»).
 // Каждая — свой стек с теми же экранами деталей, поэтому таббар прячется
 // на них одинаково: вложенный стек сам по себе на родительский таббар не
 // влияет, единственный документированный способ — пересчитать tabBarStyle
@@ -48,7 +49,7 @@ export default function MainTabs() {
     >
       <Tab.Screen name="Projects" component={ProjectsStack} options={tab('nav.projects')} />
       <Tab.Screen name="Tasks" component={TasksStack} options={tab('nav.tasks')} />
-      <Tab.Screen name="Home" component={HomeStack} options={tab('nav.home')} />
+      <Tab.Screen name="Chat" component={ChatStack} options={tab('ai.tab')} />
       <Tab.Screen name="Stats" component={StatsStack} options={tab('nav.stats')} />
       <Tab.Screen name="Menu" component={MenuStack} options={tab('nav.menu')} />
     </Tab.Navigator>

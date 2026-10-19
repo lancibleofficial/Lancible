@@ -3,6 +3,21 @@
 // ближайший дедлайн его цветом, теги проекта, часы и деньги, задачи со
 // своей прокруткой, внизу — поле новой задачи и «Перейти в проект».
 //
+// Порядок карточек (круг 21) — по свежести: первым, слева, — проект с
+// последними изменениями, в его задачах или в нём самом (Core.projectsByActivity
+// — то же правило, что у проектов веба); новый проект появляется слева.
+// Закрепление больше не ставит проект первым. Пока экран в фокусе, порядок
+// держится (Core.holdOrder): галочка или новая задача в карточке не
+// перетасовывает колоду под пальцем, новый проект встаёт слева. Ушли с экрана
+// — порядок считается заново, и к возврату колода уже стоит по свежести, а на
+// экране — та же карточка, что была (страница идёт за проектом, а не за
+// номером); после создания проекта — он. Страница встаёт за карточкой в той же
+// отрисовке, что и новый порядок (deckNext), а не эффектом после неё. Колода,
+// которая дочитывает данные в пустую (первая связь, вход, смена аккаунта),
+// идёт за свежими данными и стоит на первой карточке, пока её не тронули и с
+// неё не ушли: иначе она держала бы порядок первого шага и ехала за первой
+// попавшейся карточкой (19 октября: карточки проявлялись по одной).
+//
 // Порядок задач — по последнему изменению, свежая сверху. Запущенная задача
 // при этом не прыгает: запуск таймера задачу не меняет, а первой идущая
 // стоит только на входе на экран (nextPinTop). Остановили — у задачи
@@ -58,7 +73,23 @@
 // иначе её верх уходил бы под шапку, а низ на точки. Крайняя карточка проекта
 // рядом с ними на оттяжке, наоборот, уменьшается до SIDE_SCALE и не растёт
 // (deckPull). С отпусканием всё возвращается вместе с пружиной колоды.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+//
+// Окно карточек (20 октября, жалоба «прогрузка следующей карточки тормозит»):
+// настоящими (ProjectCard) нарисованы карточки ±DECK_KEEP (2) от страницы, на
+// которой колода в последний раз встала (win), и всегда — видимые (страница и
+// края соседок, deckDrawn); остальные — пустые оболочки DeckSlot того же вида.
+// Страница (page) меняется с отпусканием, а окно — только когда пружина
+// доехала (колбэк withSpring → settle): монтаж дальней карточки (список задач,
+// теги, поле ввода) и размонтирование ушедшей не ложатся на ход колоды. Раньше
+// новая соседка монтировалась в миг отпускания, виды на новой архитектуре
+// создаются на UI-потоке, и пружина спотыкалась под конец хода; теперь соседка
+// новой страницы к отпусканию уже готова. Прерванная пружина (новый жест,
+// точка) окна не двигает; перестановка и поворот ставят полосу сразу — и окно
+// вместе с ней. Карточки — под memo со стабильными пропсами (hold — тот же
+// объект, пока не поменялся; onOpen — по id), из стора — только задачи своего
+// проекта и таймер своей задачи (часы тикают только у неё): смена страницы и
+// правка чужой задачи остальных не перерисовывают. Жест — один объект (useMemo).
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { View, Pressable, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import Animated, {
@@ -66,11 +97,13 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { useShallow } from 'zustand/react/shallow';
 import Tap from '../components/Tap';
 import Text from '../components/AppText';
 import TextInput from '../components/AppTextInput';
 import Icon from '../components/Icon';
 import TaskRow from '../components/TaskRow';
+import ConflictMark from '../components/ConflictMark';
 import ProgressBar from '../components/ProgressBar';
 import { TagBadgeRow } from '../components/TagBadge';
 import TabHeader, { HeaderButton, NotificationsButton } from '../components/TabHeader';
@@ -83,6 +116,7 @@ import { useOrderHold } from '../hooks/useOrderHold';
 import { rubberBand } from '../components/SwipeRow';
 import { useAppStore, tasksOf, projectMs, projectMoney } from '../store/useAppStore';
 import { useRates, currencyOf } from '../hooks/useRates';
+import { useModeFlags } from '../hooks/useModeFlags';
 import { fmtDur, fmtMoney } from '../lib/format';
 import { dueShort, dueState } from '../lib/due';
 import { tagsOf } from '../lib/tags';
@@ -91,6 +125,7 @@ import { useTicker } from '../hooks/useTicker';
 import { openSheet, closeSheet } from '../store/useSheetStore';
 import { useColors, spacing, screenPadding, radius, fontSize, displayFamily, tabBarClearance } from '../theme';
 import { t } from '../lib/i18n';
+import { pushTask } from '../navigation/openTask';
 import Views from '../core/views.js';
 
 // Край следующей карточки виден: по нему понятно, что колода продолжается.
@@ -180,6 +215,126 @@ export function cardCancelledTasks(tasks, statuses) {
 
 /** Какая задача стоит в карточках первой как идущая — тоже из ядра. */
 export const nextPinTop = (pinTop, activeTimer) => Views.deckPinTop(pinTop, activeTimer);
+
+// --- порядок колоды и карточка на экране (круг 21, правка 19 октября) ---
+//
+// Одно состояние { ids, page, win, viewed, loading, focused }, следующее считается
+// в той же отрисовке из прошлого (deckNext): страница встаёт за карточкой
+// сразу, вместе с новым порядком. Раньше порядок лежал в ref, менялся прямо в
+// отрисовке, а страницу догонял эффект после неё: отрисовка с новым порядком
+// и старой страницей успевала на экран — посередине чужая карточка, нужная —
+// пустой оболочкой (окно ±1 стояло на старом номере), и карточки
+// пересоздавались и проявлялись по одной, на каждый шаг дочитывания данных.
+//   ids     — порядок карточек (id проектов);
+//   page    — какая на экране, номер;
+//   win     — на какой странице колода в последний раз встала (пружина
+//             доехала, deckSettle): вокруг неё окно настоящих карточек
+//             (deckDrawn). page меняется с отпусканием, win — с остановкой;
+//             перестановка ставит полосу на место сразу, и win = page;
+//   viewed  — её id, если её надо держать при перестановке (выбрал человек,
+//             видели перед уходом с экрана); null — на экране первая;
+//   loading — колода дочитывает данные в пустую (первая связь, вход, смена
+//             аккаунта): порядок идёт за свежими данными, на экране первая,
+//             пока колоду не тронули и с неё не ушли;
+//   focused — экран в фокусе (по смене виден уход).
+
+const sameList = (a, b) => a.length === b.length && a.every((id, i) => id === b[i]);
+const sameSet = (ids, have) => {
+  if (ids.length !== have.length) return false;
+  const set = new Set(ids);
+  return have.every((id) => set.has(id));
+};
+
+/** id проектов по свежести — правило ядра (Core.projectsByActivity). */
+export const deckFreshIds = (projects, tasks) => Views.projectsByActivity(projects, tasks).map((project) => project.id);
+
+/** Колода на входе: порядок свежий, на экране первая. Пустая — дочитывает. */
+export function deckStart(freshIds, focused) {
+  return { ids: freshIds, page: 0, win: 0, viewed: null, loading: freshIds.length === 0, focused };
+}
+
+/** Следующее состояние колоды по данным. have — id проектов в сторе (в любом
+ *  порядке); fresh() — id по свежести (Core.projectsByActivity), зовётся,
+ *  только когда нужен; focused — экран в фокусе. Ничего не поменялось — тот
+ *  же объект.
+ *  - В фокусе порядок держится (Core.holdOrder): меняется, только когда
+ *    проект завели или удалили, а на экране остаётся та же карточка.
+ *  - Ушли с экрана — запоминается карточка на экране; вне фокуса порядок идёт
+ *    за свежими данными, страница — за запомненной карточкой.
+ *  - Дочитывая (loading) — порядок свежий, на экране первая.
+ *  - Карточку на экране удалили — встаёт соседняя, за край колоды не уходит. */
+export function deckNext(prev, { have, fresh, focused }) {
+  let { viewed, loading } = prev;
+  if (prev.focused && !focused && prev.ids.length) {
+    viewed = viewed || prev.ids[prev.page] || null;
+    loading = false;
+  }
+  let ids = prev.ids;
+  if (!focused || loading) ids = fresh();
+  else if (!sameSet(prev.ids, have)) ids = Views.holdOrder(prev.ids, fresh());
+  if (sameList(ids, prev.ids)) ids = prev.ids;
+  let { page, win } = prev;
+  if (ids !== prev.ids) {
+    // Держать карточку на экране: выбранную или запомненную, а в фокусе —
+    // ту, что сейчас видна. Дочитывая — никакую: на экране первая.
+    const anchor = loading ? null : viewed || (focused ? prev.ids[prev.page] || null : null);
+    const at = anchor ? ids.indexOf(anchor) : -1;
+    if (!ids.length) {
+      page = 0;
+      viewed = null;
+      loading = true;
+    } else if (at >= 0) {
+      page = at;
+      viewed = anchor;
+    } else if (anchor) {
+      page = Math.min(prev.page, ids.length - 1);
+      viewed = ids[page];
+    } else {
+      page = 0;
+    }
+    // Новый порядок — полоса встаёт на страницу сразу, без движения
+    // (layout-эффект экрана): окно карточек — вокруг неё же.
+    win = page;
+  }
+  if (ids === prev.ids && page === prev.page && viewed === prev.viewed && loading === prev.loading && focused === prev.focused) return prev;
+  return { ids, page, win, viewed, loading, focused };
+}
+
+/** Человек встал на страницу p — отпустил колоду, нажал точку. Окно карточек
+ *  (win) не трогается: оно сдвинется, когда пружина доедет (deckSettle). */
+export function deckChoose(prev, p) {
+  const viewed = prev.ids[p] || null;
+  if (prev.page === p && prev.viewed === viewed && !prev.loading) return prev;
+  return { ...prev, page: p, viewed, loading: false };
+}
+
+/** Пружина колоды доехала до страницы p — окно карточек сдвигается к ней.
+ *  Устаревшая остановка (страница с тех пор другая) ничего не делает. */
+export function deckSettle(prev, p) {
+  if (prev.page !== p || prev.win === p) return prev;
+  return { ...prev, win: p };
+}
+
+/** Насколько далеко от страницы, на которой колода стоит, карточки нарисованы
+ *  настоящими. Соседка соседки уже готова: перелистнули — новая соседка не
+ *  монтируется на ходу пружины. */
+export const DECK_KEEP = 2;
+
+/** Рисовать ли карточку i настоящей (ProjectCard), а не пустой оболочкой
+ *  (DeckSlot). Окно — ±DECK_KEEP от win, страницы, на которой колода в
+ *  последний раз встала: сдвигается оно только с остановкой пружины, поэтому
+ *  монтаж дальней карточки и размонтирование ушедшей из окна не ложатся на
+ *  ход колоды. И всегда настоящие — видимые: страница page и её соседки (их
+ *  края видны), даже если колоду перелистнули дальше окна, не дав ей встать
+ *  (жесты подряд, точка через несколько страниц). */
+export function deckDrawn(i, page, win) {
+  return Math.abs(i - win) <= DECK_KEEP || Math.abs(i - page) <= 1;
+}
+
+/** Колоду тронули: дочитывание кончилось, дальше порядок держится. */
+export function deckTouched(prev) {
+  return prev.loading && prev.ids.length ? { ...prev, loading: false } : prev;
+}
 
 /** Куда встать колоде после отпускания: по положению с поправкой на
  *  скорость, не дальше соседней с той, с которой начали, и в пределах
@@ -431,22 +586,41 @@ export default function ProjectsScreen({ navigation }) {
   const activeTimer = useAppStore((s) => s.activeTimer);
   const openProject = useAppStore((s) => s.openProject);
   const lang = useAppStore((s) => s.settings.lang);
-  useTicker(!!activeTimer);
+  // Часы идущей задачи тикают в её карточке (ProjectCard), а не всем экраном:
+  // раньше колода целиком перерисовывалась раз в секунду.
   const still = useReduceMotion();
 
-  // Закреплённые первыми, как в рейле веба.
-  const ordered = useMemo(() => {
-    const pinned = projects.filter((p) => p.pinnedAt).sort((a, b) => new Date(a.pinnedAt) - new Date(b.pinnedAt));
-    return [...pinned, ...projects.filter((p) => !p.pinnedAt)];
-  }, [projects]);
-  const count = ordered.length;
-
-  const [page, setPage] = useState(0);
   const [pinTop, setPinTop] = useState(() => (activeTimer ? activeTimer.taskId : null));
   // Порядок задач в карточках: запуск его не трогает, остановка — плавный
   // переезд, уход с экрана — пересчёт без движения. Layout у колоды задан
   // всегда: после галочки соседи подъезжают и без таймера.
   const hold = useOrderHold(navigation, { always: true });
+
+  // Порядок карточек — по свежести, и какая на экране (шапка файла, deckNext):
+  // одно состояние, следующее — в этой же отрисовке, без ref и без эффекта
+  // вдогонку. Задачи экран читает, только пока порядок идёт за свежими
+  // данными (вне фокуса, дочитывая): в фокусе он держится, и галочка в
+  // карточке колоду целиком не перерисовывает — порядок меняют лишь новый и
+  // удалённый проект, места для них считаются по задачам из стора разово.
+  const [deckState, setDeck] = useState(() => deckStart(deckFreshIds(projects, useAppStore.getState().tasks), hold.focused));
+  const follow = !hold.focused || deckState.loading;
+  const tasks = useAppStore((s) => (follow ? s.tasks : null));
+  const freshIds = useMemo(() => (tasks ? deckFreshIds(projects, tasks) : null), [projects, tasks]);
+  const have = useMemo(() => projects.map((project) => project.id), [projects]);
+  const deckNow = deckNext(deckState, {
+    have,
+    fresh: () => freshIds || deckFreshIds(projects, useAppStore.getState().tasks),
+    focused: hold.focused,
+  });
+  // Новое состояние — сразу: React перерисует экран до того, как что-то
+  // попадёт на экран (данные из прошлых отрисовок, а не эффект).
+  if (deckNow !== deckState) setDeck(deckNow);
+  const { page, win } = deckNow;
+  const ordered = useMemo(() => {
+    const byId = new Map(projects.map((project) => [project.id, project]));
+    return deckNow.ids.map((id) => byId.get(id)).filter(Boolean);
+  }, [projects, deckNow.ids]);
+  const count = ordered.length;
   // Вход на экран (и возврат с задачи или другой вкладки) — идущая первой.
   // Пока экран не в фокусе, закрепление следует за идущей, и на возврате
   // порядок уже готов: переставлять на глазах нечего.
@@ -487,18 +661,54 @@ export default function ProjectsScreen({ navigation }) {
   const eggPhrase = useRef(null);
   const showEgg = useCallback((on) => { if (eggPhrase.current) eggPhrase.current(on); }, []);
 
+  // На какой странице стоит полоса (x) — по тому, что двигал JS: жест ставит
+  // её сам (onEnd), точки — goTo, перестановка — эффект ниже.
+  const stripPage = useRef(0);
+  // Пружина доехала до страницы p — окно настоящих карточек сдвигается к ней
+  // (deckDrawn): дальняя монтируется, ушедшая из окна размонтируется, когда
+  // колода уже стоит. Раньше это делала сама смена страницы, в миг отпускания:
+  // новая соседка (список задач, теги, поле ввода) монтировалась, пока
+  // пружина ехала, и колода спотыкалась под конец хода (жалоба 20 октября).
+  // Прерванная пружина (новый жест, точка, перестановка) окна не двигает.
+  const settle = useCallback((p) => setDeck((d) => deckSettle(d, p)), []);
   const goTo = useCallback((p) => {
     pageSV.value = p;
-    setPage(p);
-    x.value = withSpring(-p * step, SNAP);
+    stripPage.current = p;
+    setDeck((d) => deckChoose(d, p));
+    x.value = withSpring(-p * step, SNAP, (finished) => {
+      'worklet';
+      if (finished) runOnJS(settle)(p);
+    });
+  }, [step, settle]);
+  // Страница, на которой отпустили колоду.
+  const showPage = useCallback((p) => {
+    stripPage.current = p;
+    setDeck((d) => deckChoose(d, p));
+  }, []);
+  // Порядок поменялся, а карточка на экране та же (или удалили ту, на которой
+  // стояли) — полоса встаёт на её новый номер сразу, без движения, в той же
+  // фиксации, что и новый порядок (layout-эффект, до кадра). Окно карточек
+  // встало вокруг неё ещё в deckNext (win = page): колода не едет, ждать нечего.
+  useLayoutEffect(() => {
+    if (stripPage.current === page) return;
+    stripPage.current = page;
+    pageSV.value = page;
+    x.value = -page * step;
+  }, [page, step]);
+  // Колоду тронули, пока она дочитывала данные: дальше порядок держится.
+  const touchDeck = useCallback(() => setDeck((d) => deckTouched(d)), []);
+  // Поменялась ширина (поворот) — встать ровно на свою страницу. Колода стоит:
+  // окно карточек — вокруг неё.
+  useEffect(() => {
+    x.value = -pageSV.value * step;
+    setDeck((d) => deckSettle(d, d.page));
   }, [step]);
-  // Проект удалили — колода не должна стоять за последней карточкой.
-  useEffect(() => { if (count && page > count - 1) goTo(count - 1); }, [count]);
-  // Поменялась ширина (поворот) — встать ровно на свою страницу.
-  useEffect(() => { x.value = -pageSV.value * step; }, [step]);
 
-  function openProjectScreen(id) { openProject(id); navigation.navigate('Project', { projectId: id }); }
-  const openTask = useCallback((taskId) => navigation.navigate('TaskDetail', { taskId }), [navigation]);
+  // Стабильные колбэки: карточки под memo, новое замыкание на каждую
+  // отрисовку перерисовывало бы их все со сменой страницы.
+  const openProjectScreen = useCallback((id) => { openProject(id); navigation.navigate('Project', { projectId: id }); }, [openProject, navigation]);
+  // Задача — поверх колоды, «назад» сюда же (navigation/openTask.js).
+  const openTask = useCallback((taskId) => pushTask(navigation, taskId), [navigation]);
 
   // Без защёлки «лист уже открыт»: лист закрывают и мимо onCancel (тап по
   // подложке, свайп вниз), и защёлка оставалась взведённой — после первой
@@ -507,7 +717,18 @@ export default function ProjectsScreen({ navigation }) {
     openSheet(
       <NewProjectSheet
         onCancel={closeSheet}
-        onCreated={(project) => { closeSheet(); openProjectScreen(project.id); }}
+        onCreated={(project) => {
+          // Заведённый из колоды — на экране: он уже в сторе, место ему —
+          // по тому же правилу, что любому новому (слева).
+          setDeck((d) => {
+            const s = useAppStore.getState();
+            return deckNext({ ...d, viewed: project.id, loading: false }, {
+              have: s.projects.map((p) => p.id), fresh: () => deckFreshIds(s.projects, s.tasks), focused: d.focused,
+            });
+          });
+          closeSheet();
+          openProjectScreen(project.id);
+        }}
       />,
     );
   }, []);
@@ -515,7 +736,10 @@ export default function ProjectsScreen({ navigation }) {
   // Пасхалка щёлкает сильнее и по-другому, чем порог: тяжёлый удар.
   const thump = useCallback(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}); }, []);
 
-  const pan = Gesture.Pan()
+  // Жест — один объект, пока не поменялись число карточек и шаг: новый на
+  // каждую отрисовку заново передавал бы обработчики на UI-поток, и как раз в
+  // отрисовке отпускания, пока едет пружина.
+  const pan = useMemo(() => Gesture.Pan()
     .withTestId('deck-pan')
     .activeOffsetX([-12, 12])
     .failOffsetY([-10, 10])
@@ -565,10 +789,17 @@ export default function ProjectsScreen({ navigation }) {
       armedR.value = 0;
       pullingR.value = 0;
       pageSV.value = target;
-      x.value = withSpring(-target * step, { ...SNAP, velocity: e.velocityX });
-      runOnJS(setPage)(target);
+      // Страница — сразу (на экране та карточка, к которой едет колода), а
+      // окно настоящих карточек — только когда пружина доехала (settle):
+      // монтаж не ложится на её ход. Страница — до пружины: подмена пружины
+      // в тестах доезжает сразу, и остановка не должна обогнать выбор.
+      runOnJS(showPage)(target);
+      x.value = withSpring(-target * step, { ...SNAP, velocity: e.velocityX }, (finished) => {
+        'worklet';
+        if (finished) runOnJS(settle)(target);
+      });
       if (create) runOnJS(openNewProject)();
-    });
+    }), [count, step, x, startX, startPage, pageSV, armedL, armedR, firedR, eggR, pullingR, showEgg, nextDeckPhrase, buzz, thump, showPage, settle, openNewProject]);
 
   const stripStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   // Всё, что карточке нужно для вида каруселью, — одним объектом.
@@ -587,10 +818,12 @@ export default function ProjectsScreen({ navigation }) {
         <ProjectsEmpty lang={lang} onCreate={openNewProject} />
       ) : (
         <GestureDetector gesture={pan}>
-          <View style={styles.deck} collapsable={false}>
+          <View style={styles.deck} collapsable={false} onTouchStart={deckNow.loading ? touchDeck : undefined} testID="deck">
             <Animated.View style={[styles.strip, stripStyle]}>
               <PlusCard x={x} armed={armedL} styles={styles} lang={lang} />
-              {ordered.map((project, i) => (Math.abs(i - page) <= 1 ? (
+              {/* Настоящие — окно вокруг страницы, на которой колода встала, и
+                  видимые (deckDrawn); остальные — пустые оболочки того же вида. */}
+              {ordered.map((project, i) => (deckDrawn(i, page, win) ? (
                 <ProjectCard
                   key={project.id}
                   project={project}
@@ -599,7 +832,7 @@ export default function ProjectsScreen({ navigation }) {
                   styles={styles}
                   deck={deck}
                   index={i}
-                  onOpen={() => openProjectScreen(project.id)}
+                  onOpen={openProjectScreen}
                   onOpenTask={openTask}
                 />
               ) : <DeckSlot key={project.id} deck={deck} index={i} styles={styles} />))}
@@ -620,7 +853,7 @@ export default function ProjectsScreen({ navigation }) {
  *  размера центральной карточки и чуть больше (edgeScale), по высоте — не выше
  *  неё (edgeScaleY); край, обращённый к карточкам, стоит на
  *  месте. За порогом карточка заливается акцентом, плюс и подпись темнеют. */
-export function PlusCard({ x, armed, styles, lang }) {
+export const PlusCard = memo(function PlusCard({ x, armed, styles, lang }) {
   const colors = useColors();
   const still = useReduceMotion();
   const fill = useAnimatedStyle(() => ({ opacity: withTiming(armed.value, { duration: 120 }) }));
@@ -662,7 +895,7 @@ export function PlusCard({ x, armed, styles, lang }) {
       </Animated.View>
     </Animated.View>
   );
-}
+});
 
 /** Плашка у правого края колоды. Серая, без значка: тянешь последнюю
  *  карточку влево — она проявляется, и на ней короткая фраза: шутка или
@@ -685,7 +918,7 @@ export function PlusCard({ x, armed, styles, lang }) {
  *  Фраза пасхалки выбирается на JS-потоке по eggRef(true); вернулся под порог
  *  или отпустил — eggRef(false), и плашка уходит обычной серой. «Уменьшение
  *  движения»: смена мгновенная, без перехода. */
-export function PhraseCard({ x, armed, fired, egg, count, step, width, styles, lang, nextRef, eggRef }) {
+export const PhraseCard = memo(function PhraseCard({ x, armed, fired, egg, count, step, width, styles, lang, nextRef, eggRef }) {
   const colors = useColors();
   const still = useReduceMotion();
   const [idx, setIdx] = useState(() => nextPhrase(-1, DECK_PHRASES.length));
@@ -766,7 +999,7 @@ export function PhraseCard({ x, armed, fired, egg, count, step, width, styles, l
       </Animated.View>
     </Animated.View>
   );
-}
+});
 
 /** Точки пагинации. Всё идёт от положения колоды x, а не от остановки на
  *  карточке: пока палец ведёт колоду, пилюля перетекает из точки в точку, а
@@ -778,7 +1011,7 @@ export function PhraseCard({ x, armed, fired, egg, count, step, width, styles, l
  *  проект, что за левым краем колоды. Он такая же позиция ряда, как точка:
  *  слот на шаг левее первой, едет вместе с окном и из окна уходит как
  *  крайняя позиция (plusScale). */
-export function Dots({ x, step, count, armed, onGo, onNew, styles, lang }) {
+export const Dots = memo(function Dots({ x, step, count, armed, onGo, onNew, styles, lang }) {
   const lay = dotsLayout(count);
   const row = useAnimatedStyle(() => ({
     transform: [{ translateX: dotsStripShift(dotsProgress(x.value, step, count), count) }],
@@ -795,7 +1028,7 @@ export function Dots({ x, step, count, armed, onGo, onNew, styles, lang }) {
       </View>
     </View>
   );
-}
+});
 
 /** «+» — первая позиция ряда точек. Размером с точку и цветом точки; в
  *  раскладке занимает ровно слот точки (зона нажатия шире — на reach с
@@ -890,41 +1123,48 @@ function DeckScrim({ dim, styles, index }) {
   return <Animated.View pointerEvents="none" style={[styles.scrim, dim]} testID={`deck-dim-${index}`} />;
 }
 
-/** Пустая оболочка карточки, пока та не нужна (дальше соседней): вид у неё
- *  тот же, что у настоящей, — иначе при подмене карточка дёрнулась бы из
+/** Пустая оболочка карточки, пока та не нужна (вне окна, deckDrawn): вид у
+ *  неё тот же, что у настоящей, — иначе при подмене карточка дёрнулась бы из
  *  полного размера в соседский. */
-export function DeckSlot({ deck, index, styles }) {
+export const DeckSlot = memo(function DeckSlot({ deck, index, styles }) {
   const { look, dim } = useDeckLook(deck, index);
   return (
     <Animated.View style={[styles.slot, look]} testID={`deck-card-${index}`}>
       <DeckScrim dim={dim} styles={styles} index={index} />
     </Animated.View>
   );
-}
+});
 
 /** Карточка проекта: шапка, теги, числа, задачи со своей прокруткой,
  *  поле новой задачи, переход на страницу проекта. deck/index — вид
- *  каруселью (useDeckLook). */
-function ProjectCard({ project, pinTop, hold, styles, deck, index, onOpen, onOpenTask }) {
+ *  каруселью (useDeckLook). Под memo, пропсы стабильные (onOpen — по id
+ *  проекта): смена страницы карточку не перерисовывает. Из стора — только
+ *  задачи своего проекта и таймер, если идёт её задача: правка чужой задачи
+ *  и запуск в другом проекте её тоже не трогают. */
+const ProjectCard = memo(function ProjectCard({ project, pinTop, hold, styles, deck, index, onOpen, onOpenTask }) {
   const colors = useColors();
   const { look, dim } = useDeckLook(deck, index);
-  const tasks = useAppStore((s) => s.tasks);
+  // Задачи как они лежат в сторе — по ним шапка, шкала и срок: отметка
+  // меняет их в тот же миг, а не после налива. useShallow — тот же массив,
+  // пока задачи проекта те же.
+  const own = useAppStore(useShallow((s) => tasksOf(s.tasks, project.id)));
   const statuses = useAppStore((s) => s.statuses);
   const allTags = useAppStore((s) => s.tags);
-  const activeTimer = useAppStore((s) => s.activeTimer);
+  const activeTimer = useAppStore((s) => (s.activeTimer && s.tasks.some((task) => task.id === s.activeTimer.taskId && task.projectId === project.id) ? s.activeTimer : null));
+  // Часы и деньги идущей задачи тикают только в её карточке.
+  useTicker(!!activeTimer);
   const settings = useAppStore((s) => s.settings);
   const createTaskInStatus = useAppStore((s) => s.createTaskInStatus);
   const rates = useRates();
+  // Сумма на карточке — деньги (Core.modeFlags): в «личном» её нет.
+  const { money } = useModeFlags();
   const lang = settings.lang;
   const [draft, setDraft] = useState('');
 
-  // Задачи как они лежат в сторе — по ним шапка, шкала и срок: отметка
-  // меняет их в тот же миг, а не после налива.
-  const own = tasksOf(tasks, project.id);
   const done = own.filter((task) => task.done).length;
   // Список строк — по задачам, какими их показывать: пока налив отмеченной
   // играет, она стоит прежней и на своём месте (hold.view).
-  const shownOwn = tasksOf(hold.view(tasks), project.id);
+  const shownOwn = hold.view(own);
   // Порядок задач — по правилу ядра, но запуск таймера его не двигает:
   // заморозка и переезд после остановки — в hold (hooks/useOrderHold.js).
   // Выполненные — внизу, под активными, и в заморозку не входят: отмеченная
@@ -954,7 +1194,7 @@ function ProjectCard({ project, pinTop, hold, styles, deck, index, onOpen, onOpe
 
   return (
     <Animated.View style={[styles.card, look]} testID={`deck-card-${index}`}>
-      <Tap style={styles.cardHead} onPress={onOpen} accessibilityRole="button">
+      <Tap style={styles.cardHead} onPress={() => onOpen(project.id)} accessibilityRole="button">
         <View style={[styles.dot, { backgroundColor: project.color || colors.accent }]} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.name} numberOfLines={1}>{project.name}</Text>
@@ -964,6 +1204,8 @@ function ProjectCard({ project, pinTop, hold, styles, deck, index, onOpen, onOpe
             {nextDue ? <Text style={[styles.sub, styles.subDue, { color: dueColor }]} numberOfLines={1}>{`· ${dueShort(nextDue, lang)}`}</Text> : null}
           </View>
         </View>
+        {/* «Другая версия» у проекта (журнал правок, 17 октября 2026). */}
+        <ConflictMark entity="project" id={project.id} size={13} />
         <Icon name="chevron-right" size={14} color={colors.textFaint} />
       </Tap>
 
@@ -974,8 +1216,8 @@ function ProjectCard({ project, pinTop, hold, styles, deck, index, onOpen, onOpe
       ) : null}
 
       <View style={styles.kpis}>
-        <Text style={styles.kpiTime}>{fmtDur(projectMs(tasks, project.id, activeTimer), lang)}</Text>
-        <Text style={styles.kpiMoney}>{fmtMoney(projectMoney(tasks, project.id, rates, activeTimer), lang, currencyOf(project, settings))}</Text>
+        <Text style={styles.kpiTime}>{fmtDur(projectMs(own, project.id, activeTimer), lang)}</Text>
+        {money ? <Text style={styles.kpiMoney} testID={`deck-money-${index}`}>{fmtMoney(projectMoney(own, project.id, rates, activeTimer), lang, currencyOf(project, settings))}</Text> : null}
       </View>
       {/* Шкала натекает к новому значению жидко (components/ProgressBar.js). */}
       <ProgressBar
@@ -1033,14 +1275,14 @@ function ProjectCard({ project, pinTop, hold, styles, deck, index, onOpen, onOpe
         windowSize={5}
       />
 
-      <Tap style={styles.more} onPress={onOpen} accessibilityRole="button">
+      <Tap style={styles.more} onPress={() => onOpen(project.id)} accessibilityRole="button">
         <Text style={styles.moreText} numberOfLines={1}>{t(lang, 'deck.open')}</Text>
         <Icon name="chevron-right" size={12} color={colors.textFaint} />
       </Tap>
       <DeckScrim dim={dim} styles={styles} index={index} />
     </Animated.View>
   );
-}
+});
 
 const QA_H = 42;
 const QA_BTN_H = 30;

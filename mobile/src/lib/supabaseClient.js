@@ -27,6 +27,16 @@ export const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+/** Отдельный клиент на один чужой сеанс — отозвать сеанс аккаунта, который
+ *  сейчас не открыт (lib/auth.js: revokeAccountSession, 17 октября 2026, как
+ *  у веба). Ничего не сохраняет и сам не обновляет, у него свой ключ: сеанс
+ *  открытого аккаунта в основном sb он не видит и не трогает. */
+export function isolatedClient(key) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: `lancible-revoke-${key}` },
+  });
+}
+
 AppState.addEventListener('change', (state) => {
   if (state === 'active') sb.auth.startAutoRefresh();
   else sb.auth.stopAutoRefresh();

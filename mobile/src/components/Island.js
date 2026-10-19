@@ -110,6 +110,10 @@ export function SettingRow({
   const st = useMemo(() => makeRowStyles(colors), [colors]);
   const hasValue = value != null && value !== '';
   const expandable = open !== undefined;
+  // Строка без значения и без детали справа («Удалить данные аккаунта с
+  // устройства», «Перенести данные без аккаунта…») — название на всю ширину и
+  // до двух строк: делить место не с кем, а 62 % обрезали длинные действия.
+  const bare = !hasValue && !sub && right == null;
   return (
     <IslandRow
       first={first}
@@ -121,7 +125,7 @@ export function SettingRow({
       accessibilityState={expandable ? { expanded: !!open } : undefined}
     >
       {lead || (icon ? <Icon name={icon} size={17} color={danger ? colors.danger : colors.textDim} /> : null)}
-      <Text style={[st.label, danger && { color: colors.danger }, dim && st.labelDim]} numberOfLines={1}>{label}</Text>
+      <Text style={[st.label, bare && st.labelBare, danger && { color: colors.danger }, dim && st.labelDim]} numberOfLines={bare ? 2 : 1}>{label}</Text>
       <View style={st.spacer} />
       {right != null ? right : (
         <View style={st.right}>
@@ -212,6 +216,7 @@ const styles = StyleSheet.create({
 const makeRowStyles = (colors) => StyleSheet.create({
   row: { paddingHorizontal: spacing.md, minHeight: 46, gap: spacing.md },
   label: { flexShrink: 0, maxWidth: '62%', color: colors.text, fontSize: fontSize.sm, fontWeight: '500' },
+  labelBare: { flexShrink: 1, maxWidth: '100%' },
   labelDim: { color: colors.textFaint },
   spacer: { flex: 1, minWidth: spacing.sm },
   right: { flexShrink: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },

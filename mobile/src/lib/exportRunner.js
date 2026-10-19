@@ -52,3 +52,26 @@ export async function shareTextFile(name, mime, text, langCode, showToast) {
     if (showToast) showToast(t(langCode, 'toast.export_failed'));
   }
 }
+
+/** Двоичный файл из редактора — байтами base64 (без префикса data:), тем же
+ *  листом «Поделиться»: «Сохранить как PDF» (export kind pdf, протокол 3).
+ *  Оттуда — в «Файлы», на диск, в почту. */
+export async function shareBase64File(name, mime, base64, langCode, showToast) {
+  const type = mime || 'application/octet-stream';
+  try {
+    const file = new File(Paths.cache, sanitizeFileName(name));
+    if (file.exists) file.delete();
+    file.create();
+    file.write(String(base64 || ''), { encoding: 'base64' });
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(file.uri, {
+        mimeType: type,
+        dialogTitle: t(langCode, 'editor.share_file_title'),
+        ...(type === 'application/pdf' ? { UTI: 'com.adobe.pdf' } : null),
+      });
+    }
+  } catch (err) {
+    console.error('Не удалось отдать файл:', err);
+    if (showToast) showToast(t(langCode, 'toast.export_failed'));
+  }
+}
