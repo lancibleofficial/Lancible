@@ -27,6 +27,33 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-10-20',
+    tag: 'release',
+    version: '0.5.0 · mobile 1.3.0',
+    title: {
+      ru: 'ИИ-агент, несколько аккаунтов, PDF в заметках и надёжная синхронизация',
+      en: 'AI agent, several accounts, PDFs in notes and dependable sync',
+    },
+    body: {
+      ru: [
+        'В Lancible появился ИИ-агент. Он знает ваши проекты и задачи, находит свободные окна в расписании, считает, сколько времени ушло на работу, и предлагает изменения — новые задачи, сроки, отрезки времени. Ничего не меняется без вашего «Применить», а «Отменить» возвращает только то, что вы с тех пор не трогали. К сообщению можно приложить картинку, PDF или текстовый файл. На телефоне агент живёт на отдельной вкладке «Чат-бот», в браузере и на компьютере — в левой панели; прежние чаты находит поиск.',
+        'На одном устройстве теперь может быть несколько аккаунтов: переключение без выхода, у каждого свои данные. То, что вы вели без аккаунта, можно перенести в аккаунт при входе.',
+        'Синхронизация переписана: правки сливаются по полям, поэтому изменения с разных устройств больше не затирают друг друга. Спросить «какую версию оставить» приложение может только если одно и то же поле поменяли одновременно в двух местах. Удалённое 30 дней лежит в корзине.',
+        'В заметки можно вставить PDF — страницами или текстом. Поверх страницы добавляются текст, картинки, стрелки, выделение и замазка, а «Заменить текст» правит строки самого документа; результат выгружается обратно в PDF. Так же работает на телефоне.',
+        'В настройках появилась «Обратная связь»: расскажите об ошибке или идее и приложите снимок экрана — сообщение сразу придёт команде. Ещё: режимы «Фрилансер» и «Личное» (во втором нет денег), проекты по свежести — первым тот, где вы работали последним, на телефоне колода проектов листается плавнее, а панель редактора парит над клавиатурой.',
+        'Мы обновили Политику конфиденциальности и Условия использования: в них описаны агент и обратная связь. При входе приложение попросит согласиться с новой редакцией.',
+      ],
+      en: [
+        'Lancible now has an AI agent. It knows your projects and tasks, finds free windows in your schedule, tallies how much time went into your work and suggests changes — new tasks, deadlines, work time slots. Nothing changes until you press Apply, and Undo reverts only what you have not touched since. You can attach an image, a PDF or a text file to a message. On the phone the agent has its own Chat tab; in the browser and on the computer it lives in the left panel, and search finds your past chats.',
+        'One device can now hold several accounts: switch without signing out, each with its own data. What you kept without an account can move into an account when you sign in.',
+        'Sync has been rebuilt: edits merge field by field, so changes from different devices no longer overwrite each other. The app asks which version to keep only when the same field was changed in two places at once. Deleted items stay in the trash for 30 days.',
+        'Notes can now hold PDFs — as pages or as text. On top of a page you can add text, images, arrows, highlights and white-out, and Replace text edits the document’s own lines; the result exports back to PDF. The same works on the phone.',
+        'Settings have a new Feedback page: report a bug or an idea with a screenshot and it reaches the team right away. Also new: Freelancer and Personal modes (the second hides money), projects ordered by recency — the one you worked in last comes first, a smoother project deck on the phone and an editor toolbar that floats above the keyboard.',
+        'We updated the Privacy Policy and the Terms of Use to cover the agent and feedback. The app will ask you to accept the new edition when you sign in.',
+      ],
+    },
+  },
+  {
     date: '2026-10-13',
     tag: 'release',
     version: '0.4.4 · mobile 1.2.3',
