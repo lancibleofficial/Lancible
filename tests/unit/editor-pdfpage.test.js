@@ -40,6 +40,12 @@ function load() {
     bundle: true,
     format: 'cjs',
     platform: 'node',
+    // Цель — Node CI (22), а не esnext: шрифты (loader binary) без цели
+    // esbuild пишет голым Uint8Array.fromBase64, которого в Node 22 нет, —
+    // 20 октября 2026 весь test:unit в CI обрывался на этом файле. Сборка
+    // для приложения (scripts/build-editor.js) задаёт цель сама и получает
+    // запасной путь.
+    target: 'node22',
     write: false,
     logLevel: 'error',
     loader: { '.ttf': 'binary' },

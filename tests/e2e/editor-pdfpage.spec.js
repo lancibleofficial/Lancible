@@ -681,6 +681,12 @@ test.describe('телефон: палец', () => {
 
     // Долгое нажатие и вести вниз, под «три» — картинка встаёт в конец.
     await page.touchscreen.tap(...Object.values(await center(fig.locator('.led-img-frame'))));
+    // Картинку — в середину экрана: после «Выше»/«Ниже» она прокручена к
+    // верхнему краю, и ручка оказывалась в зоне автопрокрутки (EDGE_PX) —
+    // долгое нажатие сразу крутило страницу вверх, «три» уезжало под палец,
+    // и бросок вставал перед ним (20 октября 2026, CI на Linux).
+    await fig.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     const three = await page.locator('#phone-ed .led-pm > p', { hasText: 'три' }).boundingBox();
     const g = await center(grip);
     await touchDrag(page, g, 0, three.y + three.height + 12 - g.y, 450);
