@@ -88,7 +88,15 @@ export class ImageView {
       b('up', t('block.move_up'), () => this.moveBlock(-1), { dataset: { move: 'up' } }),
       b('down', t('block.move_down'), () => this.moveBlock(1), { dataset: { move: 'down' } }),
       h('span', { class: 'led-bar-sep' })) : null;
-    this.bar = h('div', { class: 'led-node-bar' },
+    // Нажатие на остров не трогает ни фокус, ни выделение браузера — как у
+    // кнопок панели (toolbar.js) и плюса у ручки блока (20 октября 2026,
+    // падение в CI: «во всю ширину» → «по центру»). Без этого кнопка внутри
+    // выделенной фигуры для браузера — щелчок внутри выделения не по
+    // тексту: на отпускании он снимал выделение целиком (rangeCount 0),
+    // фокус оставался в тексте, а следующее движение мыши или клавиша
+    // ставили курсор в начало заметки — ProseMirror читал его как новое
+    // выделение, картинка его теряла, остров прятался.
+    this.bar = h('div', { class: 'led-node-bar', onmousedown: (e) => e.preventDefault() },
       this.moveGroup,
       this.alignGroup,
       this.rowGroup,

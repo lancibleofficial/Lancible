@@ -143,3 +143,44 @@ test('«во всю ширину» — картинка во всю полосу
   await fig.locator('.led-node-bar [data-align="center"]').click();
   expect((await geo(fig)).img.width).toBeCloseTo(100, 0);
 });
+
+// Откуда взялось (20 октября 2026, CI на Linux, тест выше): после «во всю
+// ширину» щелчок «по центру» попадал в картинку — остров уже спрятан, курсор
+// в начале заметки. Щелчок по кнопке острова для браузера был щелчком внутри
+// выделения не по тексту: на отпускании он снимал выделение целиком, фокус
+// оставался в тексте, и следующее событие ввода — движение мыши (даже над
+// боковой панелью), клавиша — ставило курсор в начало заметки; ProseMirror
+// читал его как новое выделение. Гонка: успевало ли это до нажатия
+// следующего щелчка. Здесь не гонка: после каждой кнопки мышь уходит и
+// нажимается Shift, и только потом проверка. Процессор замедлен, как на
+// загруженной машине CI.
+test('выравнивания подряд под замедлением: выделение и остров на месте, мышь и клавиша их не сбивают', async ({ page }) => {
+  const fig = await withImage(page, 100, 60);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  for (const align of ['full', 'center', 'left', 'right', 'wrap-left', 'wrap-right', 'full', 'center']) {
+    const btn = fig.locator(`.led-node-bar [data-align="${align}"]`);
+    // Кнопку не закрывает картинка: в её середине — она сама.
+    const onTop = await btn.evaluate((b) => {
+      const r = b.getBoundingClientRect();
+      return b.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+    });
+    expect(onTop, `кнопка «${align}» под картинкой`).toBe(true);
+    await btn.click();
+    await expect(fig).toHaveClass(new RegExp(`(^|\\s)align-${align}(\\s|$)`));
+    await page.mouse.move(60, 400);
+    await page.keyboard.press('Shift');
+    // Событие selectionchange — задачей после ввода: даём ему пройти.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50))));
+    const sel = await fig.evaluate((f) => {
+      // eslint-disable-next-line no-undef
+      const s = editor.view.state.selection;
+      const dom = getSelection();
+      return { node: s.node ? s.node.type.name : `${s.toJSON().type} ${s.from}`, around: dom.rangeCount === 1 && dom.containsNode(f) };
+    });
+    expect(sel.node, `после «${align}» выделена не картинка`).toBe('image');
+    expect(sel.around, `после «${align}» выделение браузера ушло с картинки`).toBe(true);
+    await expect(fig).toHaveClass(/\bsel\b/);
+    await expect(fig.locator('.led-node-bar')).toBeVisible();
+  }
+});
