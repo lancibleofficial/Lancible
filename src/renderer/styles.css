@@ -4854,8 +4854,20 @@ body.no-money .if-money, body.no-earnings .if-earnings, body.no-timer .if-timer,
 .ai-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-quota { margin-right: 4px; font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* Состояние без входа — общий пустой экран, по центру панели. */
-.ai-panel .ai-signin { margin: auto; }
+/* Состояние без входа — общий пустой экран, по центру панели. «Закрытый
+   тест» (21 октября 2026: доступа к агенту нет) — тот же экран со сценкой
+   «chat» и «Запросить доступ»; под текстом — мелкая строка о почте, под
+   кнопкой — ошибка с «Повторить» (как .ai-error ленты). */
+.ai-panel .ai-signin, .ai-panel .ai-locked { margin: auto; }
+.ai-locked .ai-locked-note { margin: 0; font-size: 12px; line-height: 1.4; color: var(--text-faint); text-wrap: pretty; }
+.ai-locked .ai-request-error { justify-content: center; margin: 2px 0 0; }
+/* Ответа о доступе ещё нет — скелет главного экрана: сценка, фраза и поле
+   переливающимися плашками (.skel), без поля ввода, которое могло бы
+   мигнуть и пропасть. */
+.ai-wait { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 0 16px; }
+.ai-wait-art { width: 104px; height: 76px; border-radius: var(--radius); }
+.ai-wait-phrase { width: 180px; margin-bottom: 6px; }
+.ai-wait-field { align-self: stretch; height: 40px; border-radius: var(--radius-sm); }
 
 /* Две страницы — главный экран (data-page="home") и чат; поле ввода у них
    одно. Главный: сценка и фраза (Core.aiGreeting) над полем, поле —
@@ -4914,9 +4926,9 @@ body.no-money .if-money, body.no-earnings .if-earnings, body.no-timer .if-timer,
 .ai-msg li + li { margin-top: 2px; }
 .ai-msg.me { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: var(--radius); background: var(--panel-2); white-space: pre-wrap; }
 .ai-step { font-size: 12px; line-height: 1.4; color: var(--text-dim); }
-.ai-error { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12.5px; line-height: 1.45; color: var(--danger); }
-.ai-error .linklike { color: var(--text-dim); }
-.ai-error .linklike:hover { color: var(--text); }
+.ai-error, .ai-request-error { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12.5px; line-height: 1.45; color: var(--danger); }
+.ai-error .linklike, .ai-request-error .linklike { color: var(--text-dim); }
+.ai-error .linklike:hover, .ai-request-error .linklike:hover { color: var(--text); }
 /* Вложения в сообщении человека — плашками «имя · тип · размер», без
    миниатюр: байтов в истории нет. */
 .ai-files { display: flex; flex-direction: column; gap: 4px; white-space: normal; }

@@ -26,6 +26,10 @@
 //                                          или текста вызова больше
 //                                          MAX_TOTAL_TEXT (3 000 000 знаков)
 //   401 { error: 'not signed in' }       — нет входа или токен не пользователя
+//   403 { error: 'no access' }           — агент закрыт этому аккаунту: почты
+//                                          нет в ai_access, она не
+//                                          подтверждена, таблицы нет или
+//                                          запрос к ней не прошёл
 //   405                                  — не POST
 //   413 { error: 'too large' }           — тело больше MAX_BODY (18 МиБ)
 //   429 { error: 'limit', remaining: 0, limit, resetAt } — лимит на сутки UTC
@@ -40,6 +44,17 @@
 //   500 { error: 'journal', detail }     — нет таблицы ai_calls (supabase/ai.sql)
 //   502 { error: 'model', status, detail } — модель ответила не 2xx; ключ и
 //                                          заголовки в ответ не попадают
+//
+// Доступ — по приглашению (21 октября 2026, supabase/ai-access.sql): сразу
+// после проверки входа, до тела, лимита, бюджета, частоты и модели, функция
+// служебным ключом ищет почту пользователя (из auth.getUser, в нижнем
+// регистре) в таблице ai_access. Почты нет или она не подтверждена
+// (email_confirmed_at), строки нет, таблицы нет (42P01 / PGRST205), запрос
+// не прошёл — 403 no access: закрыто по умолчанию, журнал ai_calls не
+// пишется и не читается, модель не зовётся. Выдаёт и забирает доступ
+// владелец в Table Editor — без перевыкладки. Клиенты узнают то же заранее
+// через rpc('ai_has_access') — та же проверка в базе. В лог — только код
+// ошибки запроса, без почты и id.
 //
 // Лимит — сообщения человека за сутки UTC (AI_DAILY_LIMIT, по умолчанию 50).
 // Сообщение — вызов, у которого последнее сообщение от человека и в нём есть
@@ -976,6 +991,33 @@ function meter(head: Uint8Array, onDone: (u: Usage) => void) {
   return new TransformStream<Uint8Array, Uint8Array>(transformer);
 }
 
+// --- доступ по приглашению -----------------------------------------------------
+
+/** Открыт ли агент этому пользователю: подтверждённая почта есть в ai_access
+ *  (supabase/ai-access.sql; то же правило — ai_has_access() в базе). Почта в
+ *  таблице всегда в нижнем регистре (check), у пользователя — как её передал
+ *  вход, поэтому сравнение — по нижнему. Любой сбой — нет доступа: таблицы
+ *  нет (42P01, PGRST205 — SQL не выполнен) или запрос не прошёл. В лог —
+ *  только код, без почты и id. Экспорт — как у прочих: обработчик Deno.serve
+ *  граф кода не разбирает. */
+export async function hasAccess(
+  admin: ReturnType<typeof createClient>,
+  user: { email?: string | null; email_confirmed_at?: string | null } | null | undefined,
+): Promise<boolean> {
+  const email = typeof user?.email === 'string' ? user.email.trim().toLowerCase() : '';
+  if (!email || !user?.email_confirmed_at) return false;
+  // Исключение (сеть) — тоже сбой; его текст может нести адрес запроса с
+  // почтой, поэтому в лог — только имя.
+  const { data, error } = await admin.from('ai_access').select('email').eq('email', email).limit(1)
+    .then((r) => r, (e) => ({ data: null, error: { code: e instanceof Error && e.name ? e.name : 'error' } }));
+  if (error) {
+    const code = String(error.code || 'error').slice(0, 16);
+    console.error(code === '42P01' || code === 'PGRST205' ? 'ai-chat: no ai_access table — supabase/ai-access.sql' : 'ai-chat: access check failed', code);
+    return false;
+  }
+  return Array.isArray(data) && data.length > 0;
+}
+
 // --- вызов ---------------------------------------------------------------------
 
 Deno.serve(async (req) => {
@@ -995,6 +1037,9 @@ Deno.serve(async (req) => {
   const { data: who, error: whoErr } = await admin.auth.getUser(jwt);
   const uid = who?.user?.id;
   if (whoErr || !uid) return reply(401, { error: 'not signed in' });
+  // Агент — по приглашению: до тела, журнала и модели. Без доступа ничего
+  // не читается и не пишется, лимит не тратится.
+  if (!(await hasAccess(admin, who.user))) return reply(403, { error: 'no access' });
 
   const raw = await readBody(req, MAX_BODY);
   if (raw === null) return reply(413, { error: 'too large' });

@@ -7,6 +7,10 @@
 // устройстве, у каждого аккаунта своя (lib/aiChat.js: aiChatTexts,
 // findChats), поэтому ищутся чаты вошедшего. Касание — чат поверх поиска
 // (он — экран деталей любого стека), «назад» — сюда.
+//
+// Агент — по приглашению (21 октября 2026, lib/aiAccess.js): пока аккаунту
+// не открыт доступ (или ответа ещё нет), чатов поиск не находит — и их
+// тексты с устройства не читает.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { View, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +23,7 @@ import { IOS_NATIVE_HEADER } from '../navigation/nativeHeader';
 import { useAppStore, recentTasks, getProject, tasksOf } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAiChat, aiAccount, aiChatTexts, findChats } from '../lib/aiChat';
+import { useAccess, aiCheckAccess } from '../lib/aiAccess';
 import { getStatus } from '../lib/statuses';
 import { useColors, spacing, screenPadding, radius, fontSize } from '../theme';
 import { t, pluralForm } from '../lib/i18n';
@@ -44,18 +49,21 @@ export default function SearchScreen({ navigation }) {
   const user = useAuthStore((s) => s.user);
   const uid = status === 'signedIn' && user ? user.id : null;
   const chats = useAiChat((s) => s.chats);
+  const access = useAccess(uid);
+  const open = access === 'open';
   const [chatTexts, setChatTexts] = useState({});
-  useEffect(() => { aiAccount(uid); }, [uid, user]);
+  useEffect(() => { aiAccount(uid); aiCheckAccess(uid); }, [uid, user]);
   useEffect(() => {
+    if (!open) return undefined;
     let alive = true;
     aiChatTexts().then((texts) => { if (alive) setChatTexts(texts); });
     return () => { alive = false; };
-  }, [chats, uid]);
+  }, [chats, uid, open]);
 
   const recent = useMemo(() => recentTasks(tasks, 12, activeTimer), [tasks, activeTimer]);
   const foundProjects = useMemo(() => (q ? projects.filter((p) => p.name.toLowerCase().includes(q)) : []), [projects, q]);
   const foundTasks = useMemo(() => (q ? tasks.filter((task) => (task.title || '').toLowerCase().includes(q)) : []), [tasks, q]);
-  const foundChats = useMemo(() => (q && uid ? findChats(chats, chatTexts, q) : []), [chats, chatTexts, q, uid]);
+  const foundChats = useMemo(() => (q && uid && open ? findChats(chats, chatTexts, q) : []), [chats, chatTexts, q, uid, open]);
 
   const rows = [];
   if (!q) {

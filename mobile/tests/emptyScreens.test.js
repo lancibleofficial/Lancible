@@ -35,6 +35,12 @@ import { useAppStore } from '../src/store/useAppStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useSheetStore, openSheet } from '../src/store/useSheetStore';
 import { t } from '../src/lib/i18n';
+import { grantAi } from './support/aiAccess';
+
+// Агент открыт аккаунту (RPC ai_has_access подменён — tests/support/aiAccess.js).
+let aiRpc;
+beforeEach(() => { aiRpc = grantAi(); });
+afterEach(() => { aiRpc.mockRestore(); });
 
 // Редактор заметок задачи — WebView с нативной частью; здесь он не нужен.
 jest.mock('../src/components/DocEditor', () => () => null);

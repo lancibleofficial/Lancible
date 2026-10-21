@@ -14,6 +14,11 @@
 //                                  — аккаунт удалён, а снимки экрана из
 //                                    обратной связи стереть не вышло: пути
 //                                    — в логе функции, стереть руками
+//   200 { deleted: true, access: 'remain' }
+//                                  — аккаунт удалён, а строку доступа к
+//                                    агенту (ai_access) стереть не вышло;
+//                                    её подберёт триггер ai_access_forget,
+//                                    иначе — стереть руками
 //   401 { error: 'not signed in' } — нет входа или токен не пользователя
 //   405                            — не POST
 //   409 { error: 'assets remain' } — картинки стереть не вышло; аккаунт цел,
@@ -30,6 +35,14 @@
 // строк и стирает эти файлы. Сбой здесь удаление не держит: человек просил
 // удалить аккаунт, и отказ из-за снимка был бы хуже. Сбой пишется в лог
 // (пути — <uuid>.png, без uid и почты) и в ответ.
+//
+// Доступ к агенту (21 октября 2026, supabase/ai-access.sql): строка
+// ai_access — почта приглашённого и пометка владельца — ссылки на
+// auth.users не имеет и каскадом не уходит. Функция стирает её по почте
+// пользователя (в нижнем регистре) служебным ключом до удаления, так же, как
+// снимки: сбой удаление не держит, в лог — только код, без почты и uid.
+// Таблицы ещё нет — стирать нечего. Тот же SQL ставит триггер
+// ai_access_forget на auth.users — для прочих путей удаления.
 //
 // Секреты заводить не нужно: SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY у Edge
 // Functions есть по умолчанию. Выкладка — supabase/functions/README.md.
@@ -95,6 +108,11 @@ Deno.serve(async (req) => {
     .catch((e) => ({ detail: String((e as Error)?.message || e), paths: [] as string[] }));
   if (shots) console.error('delete-account: feedback screenshots remain', shots.detail, shots.paths);
 
+  // Строка доступа к агенту — тоже до удаления и тоже без права держать его.
+  const access = await forgetAccess(admin, who.user?.email)
+    .catch((e) => (e instanceof Error && e.name ? e.name : 'error').slice(0, 32));
+  if (access) console.error('delete-account: ai_access row remains', access);
+
   // Строки в таблицах уходят каскадом от auth.users. Если картинка успела
   // доехать между стиранием и удалением, страж из storage.sql откажет —
   // это тот же 409: повторить.
@@ -103,8 +121,23 @@ Deno.serve(async (req) => {
     if (/account assets remain/i.test(delErr.message)) return reply(409, { error: 'assets remain' });
     return reply(500, { error: 'delete failed', detail: delErr.message });
   }
-  return reply(200, shots ? { deleted: true, screenshots: 'remain', detail: shots.detail } : { deleted: true });
+  const done: Record<string, unknown> = { deleted: true };
+  if (shots) Object.assign(done, { screenshots: 'remain', detail: shots.detail });
+  if (access) done.access = 'remain';
+  return reply(200, done);
 });
+
+/** Стирает строку ai_access с почтой пользователя. null — стёрто, стирать
+ *  нечего (нет почты) или таблицы ещё нет (ai-access.sql не выполнен);
+ *  иначе — код ошибки, без почты: её в лог не пишем. */
+export async function forgetAccess(admin: ReturnType<typeof createClient>, email: unknown): Promise<string | null> {
+  const e = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  if (!e) return null;
+  const { error } = await admin.from('ai_access').delete().eq('email', e);
+  if (!error) return null;
+  if (error.code === 'PGRST205' || error.code === '42P01') return null;
+  return String(error.code || 'error').slice(0, 16);
+}
 
 /** Стирает снимки экрана из строк feedback пользователя uid. null — всё
  *  стёрто, стирать нечего или таблицы ещё нет (feedback.sql не выполнен);

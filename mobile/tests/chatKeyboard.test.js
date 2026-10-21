@@ -23,6 +23,12 @@ import { useAiChat, aiStop, aiAccount, aiNewChat } from '../src/lib/aiChat';
 import { useAppStore } from '../src/store/useAppStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { spacing } from '../src/theme';
+import { grantAi } from './support/aiAccess';
+
+// Агент открыт аккаунту (RPC ai_has_access подменён — tests/support/aiAccess.js).
+let aiRpc;
+beforeEach(() => { aiRpc = grantAi(); });
+afterEach(() => { aiRpc.mockRestore(); });
 
 jest.mock('react-native-keyboard-controller', () => {
   throw new Error("The package 'react-native-keyboard-controller' doesn't seem to be linked.");

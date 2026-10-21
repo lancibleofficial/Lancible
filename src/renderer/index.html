@@ -198,6 +198,24 @@
           <p class="empty-state-text" data-i18n="ai.signin_text">Войдите в аккаунт — агент поможет разложить задачи по времени и ответит на вопросы о проектах.</p>
           <button type="button" class="btn-accent" id="ai-signin-btn" data-i18n="ai.signin_btn">Войти</button>
         </div>
+        <!-- Закрытый тест (21 октября 2026): агент — по приглашению. Ответа о
+             доступе (ai_has_access) ещё нет — скелет на месте главного
+             экрана; доступа нет — #ai-locked вместо главного экрана, чата и
+             чатов: «Запросить доступ» шлёт строку обратной связи с почтой
+             аккаунта. Собирает app.js («доступ»), вид — «Агент» в styles.css. -->
+        <div class="ai-wait" id="ai-wait" hidden aria-hidden="true">
+          <span class="skel ai-wait-art"></span>
+          <span class="skel skel-bar ai-wait-phrase"></span>
+          <span class="skel ai-wait-field"></span>
+        </div>
+        <div class="ai-locked empty-state empty-state-sm" id="ai-locked" hidden>
+          <svg class="es-art" data-art="chat" viewBox="0 0 120 88" aria-hidden="true" focusable="false"></svg>
+          <p class="empty-state-title" data-i18n="ai.locked_title">ИИ-агент в закрытом тесте</p>
+          <p class="empty-state-text" data-i18n="ai.locked_text">Доступ открываем по приглашению. Оставьте запрос — напишем, когда откроем.</p>
+          <p class="ai-locked-note" data-i18n="ai.locked_note">Вместе с запросом уйдёт почта вашего аккаунта — по ней мы выдадим доступ.</p>
+          <button type="button" class="btn-accent" id="ai-request" data-i18n="ai.request_access">Запросить доступ</button>
+          <p class="ai-request-error" id="ai-request-error" role="alert" hidden><span id="ai-request-error-text" data-i18n="feedback.failed">Не отправилось — проверьте интернет. Текст сохранён.</span> <button type="button" class="linklike" id="ai-request-retry" data-i18n="feedback.retry">Повторить</button></p>
+        </div>
         <section class="ai-body" id="ai-body" data-page="home" hidden>
           <div class="ai-hello" id="ai-hello">
             <svg class="es-art" data-art="chat" viewBox="0 0 120 88" aria-hidden="true" focusable="false"></svg>

@@ -30,6 +30,12 @@ import { useAuthStore } from '../src/store/useAuthStore';
 import { useSheetStore } from '../src/store/useSheetStore';
 import { useColors, buttonHeight } from '../src/theme';
 import { t } from '../src/lib/i18n';
+import { grantAi } from './support/aiAccess';
+
+// Агент открыт аккаунту (RPC ai_has_access подменён — tests/support/aiAccess.js).
+let aiRpc;
+beforeEach(() => { aiRpc = grantAi(); });
+afterEach(() => { aiRpc.mockRestore(); });
 
 jest.mock('expo/fetch', () => ({ fetch: jest.fn() }));
 

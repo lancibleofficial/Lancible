@@ -251,6 +251,10 @@
       'ai.conflict_confirm': 'В это время уже есть задачи: {list}. Поставить в то же время?', 'ai.conflict_ok': 'Поставить',
       'ai.rate_wait': 'Слишком много сообщений подряд. Подождите {n} с.',
       'ai.budget': 'На сегодня лимит агента исчерпан — он снова заработает завтра.',
+      // Закрытый тест (21 октября 2026): агент — по приглашению (ai_has_access).
+      'ai.locked_title': 'ИИ-агент в закрытом тесте', 'ai.locked_text': 'Доступ открываем по приглашению. Оставьте запрос — напишем, когда откроем.',
+      'ai.locked_note': 'Вместе с запросом уйдёт почта вашего аккаунта — по ней мы выдадим доступ.',
+      'ai.request_access': 'Запросить доступ', 'ai.request_sent': 'Запрос отправлен', 'ai.request_failed': 'Запрос не отправился — проверьте интернет и попробуйте ещё раз.',
       // Главный экран чата (19 октября 2026): фраза над полем — core/ai.js, aiGreeting.
       'ai.greet_morning': 'Доброе утро, {name}!', 'ai.greet_morning_anon': 'Доброе утро!',
       'ai.greet_day': 'Добрый день, {name}!', 'ai.greet_day_anon': 'Добрый день!',
@@ -522,6 +526,9 @@
       'ai.conflict_confirm': 'There are already tasks at this time: {list}. Schedule at the same time anyway?', 'ai.conflict_ok': 'Schedule',
       'ai.rate_wait': 'Too many messages in a row. Wait {n} s.',
       'ai.budget': 'The agent has reached today’s limit — it will work again tomorrow.',
+      'ai.locked_title': 'The AI agent is in closed testing', 'ai.locked_text': 'Access is by invitation. Leave a request, and we’ll write to you once it’s open.',
+      'ai.locked_note': 'Your account’s email is sent with the request — we’ll grant access to it.',
+      'ai.request_access': 'Request access', 'ai.request_sent': 'Request sent', 'ai.request_failed': 'The request didn’t go through — check your connection and try again.',
       // Главный экран чата (19 октября 2026): фраза над полем — core/ai.js, aiGreeting.
       'ai.greet_morning': 'Good morning, {name}!', 'ai.greet_morning_anon': 'Good morning!',
       'ai.greet_day': 'Good afternoon, {name}!', 'ai.greet_day_anon': 'Good afternoon!',
@@ -793,6 +800,9 @@
       'ai.conflict_confirm': 'На цей час уже є завдання: {list}. Поставити на той самий час?', 'ai.conflict_ok': 'Поставити',
       'ai.rate_wait': 'Забагато повідомлень поспіль. Зачекайте {n} с.',
       'ai.budget': 'На сьогодні ліміт агента вичерпано — він знову запрацює завтра.',
+      'ai.locked_title': 'ШІ-агент у закритому тесті', 'ai.locked_text': 'Доступ відкриваємо за запрошенням. Залиште запит — напишемо, коли відкриємо.',
+      'ai.locked_note': 'Разом із запитом надійде пошта вашого акаунта — за нею ми надамо доступ.',
+      'ai.request_access': 'Запросити доступ', 'ai.request_sent': 'Запит надіслано', 'ai.request_failed': 'Запит не надіслано — перевірте інтернет і спробуйте ще раз.',
       // Главный экран чата (19 октября 2026): фраза над полем — core/ai.js, aiGreeting.
       'ai.greet_morning': 'Доброго ранку, {name}!', 'ai.greet_morning_anon': 'Доброго ранку!',
       'ai.greet_day': 'Добрий день, {name}!', 'ai.greet_day_anon': 'Добрий день!',
@@ -1064,6 +1074,9 @@
       'ai.conflict_confirm': 'Бұл уақытта тапсырмалар бар: {list}. Сол уақытқа қою керек пе?', 'ai.conflict_ok': 'Қою',
       'ai.rate_wait': 'Қатарынан тым көп хабарлама. {n} с күте тұрыңыз.',
       'ai.budget': 'Агенттің бүгінгі лимиті таусылды — ол ертең қайта жұмыс істейді.',
+      'ai.locked_title': 'ЖИ-агент жабық тестте', 'ai.locked_text': 'Қолжетімділік шақыру бойынша ашылады. Сұрау қалдырыңыз — ашқанда жазамыз.',
+      'ai.locked_note': 'Сұраумен бірге аккаунтыңыздың поштасы жіберіледі — қолжетімділікті сол бойынша береміз.',
+      'ai.request_access': 'Қолжетімділік сұрау', 'ai.request_sent': 'Сұрау жіберілді', 'ai.request_failed': 'Сұрау жіберілмеді — интернетті тексеріп, қайталап көріңіз.',
       // Главный экран чата (19 октября 2026): фраза над полем — core/ai.js, aiGreeting.
       'ai.greet_morning': 'Қайырлы таң, {name}!', 'ai.greet_morning_anon': 'Қайырлы таң!',
       'ai.greet_day': 'Қайырлы күн, {name}!', 'ai.greet_day_anon': 'Қайырлы күн!',

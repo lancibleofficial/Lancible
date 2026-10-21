@@ -1,5 +1,6 @@
-// Общее для тестов чата агента (ai-panel, ai-chats, ai-attach): поток
-// функции ai-chat из записанных кадров, подмена функции, вход, открытие чата.
+// Общее для тестов чата агента (ai-panel, ai-chats, ai-attach, ai-access):
+// поток функции ai-chat из записанных кадров, подмена функции и RPC доступа
+// ai_has_access, вход, открытие чата.
 //
 // Модель и функцию ai-chat из теста не трогаем. Функция подменяется
 // page.route: ответ — text/event-stream из заранее записанных кадров (кадр
@@ -65,7 +66,7 @@ async function fn(page, answers) {
   return calls;
 }
 
-async function open(page, { width = 1280, height = 800, signedIn = false, motion = false, reduce = false } = {}) {
+async function open(page, { width = 1280, height = 800, signedIn = false, motion = false, reduce = false, access: answer = true } = {}) {
   await page.setViewportSize({ width, height });
   if (reduce) await page.emulateMedia({ reducedMotion: 'reduce' });
   await pinClock(page);
@@ -75,16 +76,40 @@ async function open(page, { width = 1280, height = 800, signedIn = false, motion
   await expect(page.locator('#shell')).toBeVisible();
   // Замеры положения — без анимации появления (кроме тестов самого движения).
   if (!motion) await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation: none !important; }' });
-  if (signedIn) await signIn(page);
+  if (signedIn) await signIn(page, { access: answer });
 }
 
-async function signIn(page) {
-  await page.evaluate(() => {
+/** Агент по приглашению (21 октября 2026): доступ отвечает RPC
+ *  ai_has_access — подменяется сетью, как функция. answer: true | false |
+ *  'network' | { status, json } | (n) => одно из них (может ждать — так
+ *  тест держит ответ). Возвращает заголовки вызовов. */
+const ACCESS = '**/rest/v1/rpc/ai_has_access';
+async function access(page, answer = true) {
+  const calls = [];
+  await page.unroute(ACCESS);
+  await page.route(ACCESS, async (route) => {
+    calls.push(route.request().headers());
+    const a = typeof answer === 'function' ? await answer(calls.length) : answer;
+    if (a === 'network') return route.abort('failed');
+    if (a && typeof a === 'object') return route.fulfill({ status: a.status, contentType: 'application/json', body: JSON.stringify(a.json || {}) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(a) });
+  });
+  return calls;
+}
+
+/** Вход: currentUser в странице, токен отдаёт подменённая getSession, доступ к
+ *  агенту — подменённая ai_has_access (по умолчанию есть). wait — дождаться
+ *  ответа о доступе, как будто его уже спрашивали в этот запуск. */
+async function signIn(page, { access: answer = true, wait = true } = {}) {
+  const calls = await access(page, answer);
+  await page.evaluate(async (w) => {
     state.settings.syncEnabled = false;
     sb.auth.getSession = async () => ({ data: { session: { access_token: 'test-token' } }, error: null });
     currentUser = { id: 'u1', email: 'test@example.com', name: null };
     renderAccountBtn();
-  });
+    if (w && typeof aiCheckAccess === 'function') await aiCheckAccess();
+  }, wait);
+  return calls;
 }
 
 const panel = (page) => page.locator('#ai-panel');
@@ -122,4 +147,4 @@ async function send(page, text) {
   await input(page).press('Enter');
 }
 
-module.exports = { FN, sse, stream, fn, open, signIn, panel, input, openChat, openEmptyChat, savedChat, send };
+module.exports = { FN, ACCESS, sse, stream, fn, access, open, signIn, panel, input, openChat, openEmptyChat, savedChat, send };

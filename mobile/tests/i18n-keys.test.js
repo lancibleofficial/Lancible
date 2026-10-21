@@ -147,3 +147,28 @@ test('агент (ai.*) — те же ключи и те же слова, что
   }
   expect(diff).toEqual([]);
 });
+
+test('«закрытый тест» агента (21 октября 2026): ai.locked_*, ai.request_* — во всех четырёх языках, по-русски — слово в слово из договорённости, те же слова, что у веба', () => {
+  // Экран вместо поля и чатов, пока аккаунту не выдали доступ
+  // (components/chat/ChatLocked.js); тот же экран — у веба и десктопа.
+  const KEYS = ['ai.locked_title', 'ai.locked_text', 'ai.locked_note', 'ai.request_access', 'ai.request_sent', 'ai.request_failed'];
+  expect(KEYS.map((key) => T.ru[key])).toEqual([
+    'ИИ-агент в закрытом тесте',
+    'Доступ открываем по приглашению. Оставьте запрос — напишем, когда откроем.',
+    'Вместе с запросом уйдёт почта вашего аккаунта — по ней мы выдадим доступ.',
+    'Запросить доступ',
+    'Запрос отправлен',
+    'Запрос не отправился — проверьте интернет и попробуйте ещё раз.',
+  ]);
+  const web = require('../../src/renderer/core/i18n.js').T;
+  const diff = [];
+  for (const lang of LANGS) {
+    for (const key of KEYS) {
+      const v = T[lang][key];
+      if (typeof v !== 'string' || !v.trim()) diff.push(`${lang}: ${key} — нет`);
+      else if (lang !== 'ru' && v === T.ru[key]) diff.push(`${lang}: ${key} — не переведено`);
+      else if (v !== web[lang][key]) diff.push(`${lang}: ${key} ≠ веб`);
+    }
+  }
+  expect(diff).toEqual([]);
+});

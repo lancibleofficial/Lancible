@@ -10,6 +10,13 @@ import { useAppStore } from '../src/store/useAppStore';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { useAiChat, aiStop, aiChatsKey, aiChatKey } from '../src/lib/aiChat';
 import { t } from '../src/lib/i18n';
+import { grantAi } from './support/aiAccess';
+import { useAiAccess, aiCheckAccess } from '../src/lib/aiAccess';
+
+// Агент открыт аккаунту (RPC ai_has_access подменён — tests/support/aiAccess.js).
+let aiRpc;
+beforeEach(() => { aiRpc = grantAi(); });
+afterEach(() => { aiRpc.mockRestore(); });
 
 const mockFocus = jest.fn();
 jest.mock('../src/components/AppTextInput', () => {
@@ -112,6 +119,30 @@ describe('чаты', () => {
     within(hit).getByText('Отпуск в мае');
     within(hit).getByText('Хорошо.');
     expect(s.queryByTestId('search-chat-c-1')).toBeNull();
+  });
+
+  test('агент закрыт аккаунту (закрытый тест, 21 октября 2026) — чаты не ищутся ни по названию, ни по тексту, тексты с устройства не читаются; дали доступ — находятся', async () => {
+    aiRpc.mockRestore();
+    aiRpc = grantAi(false);
+    // Подмена хранилища (jest.setup.js) сама считает чтения: сообщения чатов —
+    // ключи lancible-ai:<uid>:chat:<id>; индекс читает вход.
+    const chatReads = () => AsyncStorage.multiGet.mock.calls.flatMap(([keys]) => keys).filter((k) => k.includes(':chat:'));
+    const before = chatReads().length;
+    const s = await render(<SearchScreen navigation={nav()} />);
+    await waitFor(() => expect(useAiChat.getState().loaded).toBe(true));
+    await waitFor(() => expect(useAiAccess.getState().by.u1).toBe(false));
+    await fireEvent.changeText(field(s), 'бухгалтер');
+    expect(s.queryByTestId('search-chat-c-1')).toBeNull();
+    await fireEvent.changeText(field(s), 'отпуск');
+    expect(s.queryByTestId('search-chat-c-2')).toBeNull();
+    expect(s.queryByText(t('ru', 'search.chats_group'))).toBeNull();
+    s.getByText(t('ru', 'search.nothing_found'));
+    expect(chatReads().slice(before)).toEqual([]);
+    // Доступ выдали — следующая проверка открывает и поиск по чатам.
+    aiRpc.mockRestore();
+    aiRpc = grantAi(true);
+    await act(async () => { await aiCheckAccess('u1'); });
+    await s.findByTestId('search-chat-c-2');
   });
 
   test('чужой аккаунт — его чаты не ищутся; без входа группы нет', async () => {

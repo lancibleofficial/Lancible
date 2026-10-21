@@ -16,15 +16,21 @@
  *    сверяются с самим ядром на одном наборе. С 19 октября 2026 — кеш
  *    промпта (точки cache_control, побайтно один префикс у кругов одного
  *    сообщения и у соседних сообщений) и бюджет по цене (429 budget,
- *    единицы по формуле, работа без колонок supabase/ai-budget.sql).
+ *    единицы по формуле, работа без колонок supabase/ai-budget.sql). С 21
+ *    октября 2026 — доступ по приглашению (supabase/ai-access.sql): без
+ *    подтверждённой почты в ai_access, без таблицы или при сбое запроса —
+ *    403 no access до тела, журнала и модели; почта и id в лог не попадают.
  * 2. Выложенная функция без входа: GET — 405, ключ anon — 401. Пока функции
  *    нет (404) — todo.
  * 3. Живая часть — только по LANCIBLE_AI_TEST=1: временные пользователи,
  *    сообщения настоящей модели, поток до message_stop; второй вызов того же
  *    чата читает из кеша (снимок и переписку — только новая функция, до её
- *    выкладки эта проверка — todo); после — пользователи удаляются служебным
- *    ключом из .env.local (значение не печатается) или, без него, своим
- *    delete_my_account.
+ *    выкладки эта проверка — todo). Доступ временному пользователю выдаётся
+ *    строкой ai_access служебным ключом из .env.local (значение не
+ *    печатается) и забирается в finally; нет ключа или таблицы — todo с
+ *    причиной. Пользователь без строки получает 403 no access (пока
+ *    выложена прежняя функция — todo). После — пользователи удаляются тем же
+ *    ключом или, без него, своим delete_my_account.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -41,24 +47,34 @@ const realFetch = globalThis.fetch;
 
 // --- 1. без сети: функция на подменах ------------------------------------------
 
-/** Записанный поток Anthropic — тот же, что у юнитов ядра, без кадра функции. */
+/** Записанный поток Anthropic — тот же, что у юнитов ядра, без кадра функции.
+ *  Переводы строк — к LF: в копии на Windows (core.autocrlf) файл приходит с
+ *  CRLF, и кадр lancible фикстуры иначе не срезался бы. */
 const UPSTREAM = fs.readFileSync(path.join(ROOT, 'tests', 'unit', 'fixtures', 'ai-stream.txt'), 'utf8')
+  .replace(/\r\n/g, '\n')
   .replace(/^event: lancible\n[^\n]*\n\n/, '');
 const FAKE_KEY = 'sk-ant-test-0000-NOT-A-REAL-KEY';
 
-/** База на подмене: пользователи по токену и таблица ai_calls в памяти.
- *  noColumns — колонки, которых «нет» (миграция не выполнена): update с
- *  ними отвечает ошибкой PostgREST (PGRST204), select — ошибкой Postgres
- *  42703, как настоящая база. selects — какие колонки читала функция. */
-function fakeDb({ noColumns = [] } = {}) {
-  const db = { users: { 'user-token': 'u1' }, calls: [], n: 0, failed: [], selects: [] };
+/** Пользователь по умолчанию: почта подтверждена и есть в ai_access. */
+const U1 = { id: 'u1', email: 'u1@example.com', email_confirmed_at: '2026-10-01T00:00:00Z' };
+
+/** База на подмене: пользователи по токену, таблицы ai_calls и ai_access в
+ *  памяти. noColumns — колонки, которых «нет» (миграция не выполнена):
+ *  update с ними отвечает ошибкой PostgREST (PGRST204), select — ошибкой
+ *  Postgres 42703, как настоящая база. selects — какие колонки ai_calls
+ *  читала функция. access — почты в ai_access (null — таблицы нет, как до
+ *  supabase/ai-access.sql); accessError — чем ответит запрос к ней (объект
+ *  ошибки или 'throw'); accessQueries — с какой почтой функция её спросила. */
+function fakeDb({ noColumns = [], user = U1, access = ['u1@example.com'], accessError = null } = {}) {
+  const db = { users: { 'user-token': user }, calls: [], n: 0, failed: [], selects: [], access, accessQueries: [] };
   db.client = {
     auth: {
       getUser: async (jwt) => (db.users[jwt]
-        ? { data: { user: { id: db.users[jwt] } }, error: null }
+        ? { data: { user: db.users[jwt] }, error: null }
         : { data: { user: null }, error: { message: 'invalid JWT' } }),
     },
     from(table) {
+      if (table === 'ai_access') return accessQuery(db, accessError);
       assert.equal(table, 'ai_calls');
       const q = { op: null, values: null, filters: [], head: false, order: null, limit: null, cols: null };
       const run = () => {
@@ -105,6 +121,26 @@ function fakeDb({ noColumns = [] } = {}) {
   return db;
 }
 
+/** Запрос к ai_access: только select по email — функция ничего другого с
+ *  таблицей делать не должна. */
+function accessQuery(db, accessError) {
+  const q = { cols: null, filters: [] };
+  const b = {
+    select(cols) { q.cols = cols; return b; },
+    eq(k, v) { assert.equal(k, 'email'); q.filters.push(v); db.accessQueries.push(v); return b; },
+    limit() { return b; },
+    then(ok, bad) {
+      return Promise.resolve().then(() => {
+        if (accessError === 'throw') throw new TypeError('error sending request for url (https://example.supabase.co/rest/v1/ai_access?email=eq.u1%40example.com)');
+        if (accessError) return { data: null, error: accessError };
+        if (db.access === null) return { data: null, error: { code: '42P01', message: 'relation "public.ai_access" does not exist' } };
+        return { data: db.access.filter((e) => q.filters.every((v) => e === v)).map((email) => ({ email })), error: null };
+      }).then(ok, bad);
+    },
+  };
+  return b;
+}
+
 let loaded = null;
 /** index.ts → JS без типов → модуль из data: URL; Deno.serve отдаёт обработчик. */
 async function loadFunction() {
@@ -149,6 +185,10 @@ async function invoke(t, { method = 'POST', token = 'user-token', body, raw, env
     sent.push({ url: String(url), headers: init.headers, body: JSON.parse(init.body) });
     return upstream ? upstream() : sseResponse(UPSTREAM);
   };
+  // Лог функции — в errors: в нём не должно быть ни почты, ни id.
+  const errors = [];
+  const realError = console.error;
+  console.error = (...a) => { errors.push(a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ')); };
   try {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -159,9 +199,10 @@ async function invoke(t, { method = 'POST', token = 'user-token', body, raw, env
     await Promise.all(fn.waits);
     let json = null;
     try { json = JSON.parse(text); } catch { /* поток */ }
-    return { status: res.status, type: res.headers.get('content-type') || '', headers: res.headers, text, json, sent, db: fn.db };
+    return { status: res.status, type: res.headers.get('content-type') || '', headers: res.headers, text, json, sent, db: fn.db, errors };
   } finally {
     globalThis.fetch = realFetch;
+    console.error = realError;
   }
 }
 
@@ -203,6 +244,104 @@ test('ai-chat без сети: OPTIONS, не POST — 405, без входа и 
     assert.deepEqual(r.json, { error: 'not signed in' });
     assert.equal(r.sent.length, 0, 'без входа к модели не ходим');
   }
+});
+
+// --- доступ по приглашению (21 октября 2026, supabase/ai-access.sql) ----------
+//
+// Решение пользователя: агент — только аккаунтам, которым владелец выдал
+// доступ строкой в ai_access. Проверка — сразу после входа, до тела, журнала
+// и модели; закрыто по умолчанию.
+
+/** Журнал, в котором сегодняшний лимит уже выбран: без проверки доступа
+ *  вызов получил бы 429, а не 403. */
+function exhausted(db) {
+  const today = new Date().toISOString();
+  for (let i = 0; i < 60; i += 1) db.calls.push({ id: `x${i}`, user_id: 'u1', counted: true, created_at: today, cost_units: 10_000_000 });
+  return db;
+}
+
+test('ai-chat без сети: почты нет в ai_access — 403 no access до тела, лимита, бюджета, частоты и модели; журнал не читается и не пишется', async (t) => {
+  if (!(await loadFunction())) { t.skip('нет esbuild'); return; }
+  const cases = [
+    ['обычное сообщение', { body: hello() }],
+    ['сообщение при выбранном лимите и бюджете', { body: hello(), env: { AI_DAILY_LIMIT: '1', AI_DAILY_UNITS: '1' } }],
+    ['круг инструментов', { body: ask([
+      { role: 'user', content: 'Когда я свободен?' },
+      { role: 'assistant', content: [{ type: 'tool_use', id: 'tu1', name: 'free_windows', input: { from: '2026-10-17', to: '2026-10-17' } }] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'tu1', content: '{"windows":[]}' }] },
+    ]) }],
+    ['тело не того вида — его не читаем', { raw: '{' }],
+    ['без ключа модели', { body: hello(), env: { ANTHROPIC_API_KEY: '' } }],
+  ];
+  for (const [name, opts] of cases) {
+    const db = exhausted(fakeDb({ access: ['someone-else@example.com'] }));
+    const before = db.calls.length;
+    const r = await invoke(t, { ...opts, db });
+    assert.equal(r.status, 403, `${name}: ${r.text.slice(0, 120)}`);
+    assert.deepEqual(r.json, { error: 'no access' }, name);
+    assert.equal(r.sent.length, 0, `${name}: к модели не ходим`);
+    assert.equal(db.calls.length, before, `${name}: в ai_calls ничего не записано`);
+    assert.deepEqual(db.selects, [], `${name}: журнал не читается — ни лимит, ни бюджет, ни частота`);
+    assert.deepEqual(db.accessQueries, ['u1@example.com'], `${name}: спросили ai_access по почте пользователя`);
+    assert.deepEqual(r.errors, [], `${name}: «нет доступа» — не сбой, в лог не пишется`);
+  }
+});
+
+test('ai-chat без сети: почта не подтверждена, почты нет вовсе — 403; ai_access даже не спрашиваем', async (t) => {
+  if (!(await loadFunction())) { t.skip('нет esbuild'); return; }
+  for (const [name, user] of [
+    ['почта не подтверждена', { ...U1, email_confirmed_at: null }],
+    ['поле подтверждения не пришло', { id: 'u1', email: 'u1@example.com' }],
+    ['без почты (вход по телефону или гость Supabase)', { id: 'u1', email: '', email_confirmed_at: '2026-10-01T00:00:00Z', is_anonymous: true }],
+  ]) {
+    const db = fakeDb({ user });
+    const r = await invoke(t, { body: hello(), db });
+    assert.equal(r.status, 403, name);
+    assert.deepEqual(r.json, { error: 'no access' }, name);
+    assert.equal(r.sent.length, 0, name);
+    assert.equal(db.calls.length, 0, name);
+    assert.deepEqual(db.accessQueries, [], `${name}: до таблицы не дошло`);
+  }
+});
+
+test('ai-chat без сети: таблицы ai_access нет или запрос к ней не прошёл — 403 (закрыто по умолчанию); в логе код, без почты и id', async (t) => {
+  if (!(await loadFunction())) { t.skip('нет esbuild'); return; }
+  const cases = [
+    ['42P01 — SQL не выполнен', { access: null }, /no ai_access table.*42P01/],
+    ['PGRST205 — нет в кеше схемы', { accessError: { code: 'PGRST205', message: "Could not find the table 'public.ai_access' in the schema cache" } }, /no ai_access table.*PGRST205/],
+    ['таймаут запроса', { accessError: { code: '57014', message: 'canceling statement due to statement timeout for u1@example.com' } }, /access check failed.*57014/],
+    ['сеть — исключение с адресом запроса', { accessError: 'throw' }, /access check failed.*TypeError/],
+  ];
+  for (const [name, opts, logged] of cases) {
+    const db = fakeDb(opts);
+    const r = await invoke(t, { body: hello(), db });
+    assert.equal(r.status, 403, `${name}: ${r.text.slice(0, 120)}`);
+    assert.deepEqual(r.json, { error: 'no access' }, name);
+    assert.equal(r.sent.length, 0, `${name}: к модели не ходим`);
+    assert.equal(db.calls.length, 0, `${name}: журнал не пишется`);
+    assert.equal(r.errors.length, 1, `${name}: одна строка в логе`);
+    assert.match(r.errors[0], logged, name);
+    assert.doesNotMatch(r.errors[0], /u1@example\.com|u1%40|\bu1\b/, `${name}: в логе нет почты и id`);
+  }
+});
+
+test('ai-chat без сети: доступ есть — вызов идёт как раньше; регистр и пробелы почты не важны', async (t) => {
+  if (!(await loadFunction())) { t.skip('нет esbuild'); return; }
+  const db = fakeDb({ user: { ...U1, email: '  Owner.Name@Example.COM ' }, access: ['owner.name@example.com'] });
+  const r = await invoke(t, { body: hello(), db });
+  assert.equal(r.status, 200, r.text.slice(0, 200));
+  assert.match(r.type, /^text\/event-stream/);
+  assert.deepEqual(db.accessQueries, ['owner.name@example.com'], 'таблицу спросили почтой в нижнем регистре');
+  assert.equal(r.sent.length, 1, 'модель позвана');
+  assert.equal(db.calls.length, 1, 'журнал — как раньше');
+  assert.deepEqual(r.errors, []);
+  // Правило функции — то же, что ai_has_access() в supabase/ai-access.sql.
+  const { hasAccess } = (await loadFunction()).mod;
+  const admin = fakeDb({ access: ['a@b.co'] }).client;
+  assert.equal(await hasAccess(admin, { email: 'A@B.Co', email_confirmed_at: '2026-10-01T00:00:00Z' }), true);
+  assert.equal(await hasAccess(admin, { email: 'A@B.Co', email_confirmed_at: null }), false);
+  assert.equal(await hasAccess(admin, { email: 'c@b.co', email_confirmed_at: '2026-10-01T00:00:00Z' }), false);
+  assert.equal(await hasAccess(admin, null), false);
 });
 
 test('ai-chat без сети: тело не того вида — 400, больше 18 МиБ — 413, без ключа — 500', async (t) => {
@@ -906,7 +1045,8 @@ test('ai-chat: без колонок из ai-budget.sql вызов проход�
   assert.deepEqual(Object.keys(db.failed[0]).sort(), ['cache_read_tokens', 'cache_write_tokens', 'cost_units']);
   // Другая ошибка базы — по-прежнему 500 journal, а не тихий пропуск.
   const broken = fakeDb();
-  broken.client.from = () => ({ select() { return this; }, eq() { return this; }, gte() { return this; }, order() { return this; }, limit() { return Promise.resolve({ data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }); } });
+  const accessOk = broken.client.from.bind(broken.client);
+  broken.client.from = (table) => (table === 'ai_access' ? accessOk(table) : { select() { return this; }, eq() { return this; }, gte() { return this; }, order() { return this; }, limit() { return Promise.resolve({ data: null, error: { code: '57014', message: 'canceling statement due to statement timeout' } }); } });
   const bad = await invoke(t, { body: hello(), db: broken });
   assert.equal(bad.status, 500);
   assert.equal(bad.json.error, 'journal');
@@ -956,6 +1096,34 @@ function serviceKey() {
   } catch { return null; }
 }
 
+/** Выдаёт доступ к агенту почте временного пользователя — строкой ai_access
+ *  служебным ключом (значение не печатается). Строку можно завести и до
+ *  регистрации: ссылки на auth.users у таблицы нет. { revoke } — забрать
+ *  доступ (в finally); { skip } — почему выдать нельзя: нет ключа или таблицы
+ *  (supabase/ai-access.sql ещё не выполнен). */
+async function grantAccess(email) {
+  const key = serviceKey();
+  if (!key) return { skip: 'нет служебного ключа (SUPABASE_SERVICE_ROLE_KEY в .env.local): с проверкой доступа временному пользователю агент закрыт, а выдать доступ нечем' };
+  const lower = email.toLowerCase();
+  const headers = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+  const r = await realFetch(`${SUPABASE_URL}/rest/v1/ai_access`, {
+    method: 'POST', headers, body: JSON.stringify({ email: lower, note: 'временный пользователь tests/backend/ai-chat-function.test.js' }),
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    let code = null;
+    try { code = JSON.parse(text).code; } catch { /* не JSON */ }
+    if (code === 'PGRST205' || code === '42P01') return { skip: 'нет таблицы ai_access — выполнить supabase/ai-access.sql (supabase/functions/README.md, «ИИ-агент по приглашению»)' };
+    assert.fail(`доступ временному пользователю не выдан: ${r.status} ${text.slice(0, 200)}`);
+  }
+  return {
+    revoke: async () => {
+      const d = await realFetch(`${SUPABASE_URL}/rest/v1/ai_access?email=eq.${encodeURIComponent(lower)}`, { method: 'DELETE', headers });
+      if (!d.ok) console.error(`не удалось забрать доступ временного пользователя: ${d.status}`);
+    },
+  };
+}
+
 const created = [];
 
 test.after(async () => {
@@ -991,6 +1159,20 @@ test('ai-chat выложена: GET — 405, без входа — 401, воше
     return;
   }
   const email = `lancible-ai-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+  // С 21 октября 2026 агент — по приглашению: доступ выдаётся до регистрации
+  // и забирается в finally (удаление пользователя стёрло бы строку и само —
+  // триггер ai_access_forget).
+  const grant = await grantAccess(email);
+  if (grant.skip) { t.todo(grant.skip); return; }
+  try {
+    await liveCalls(email);
+  } finally {
+    await grant.revoke();
+  }
+});
+
+/** Живые вызовы первой проверки: поток и вложения. */
+async function liveCalls(email) {
   const signup = await call('POST', '/auth/v1/signup', { body: { email, password: `T-${Math.random().toString(36)}-9z!` } });
   assert.ok(signup.ok && signup.json && signup.json.access_token, `регистрация не удалась: ${signup.status} ${signup.text.slice(0, 200)}`);
   const user = { id: signup.json.user.id, token: signup.json.access_token };
@@ -1038,6 +1220,41 @@ test('ai-chat выложена: GET — 405, без входа — 401, воше
   assert.equal(fileAcc.error, null, JSON.stringify(fileAcc.error));
   assert.ok(fileAcc.text.trim(), 'модель ответила про вложения');
   assert.doesNotMatch(fileAcc.text, /Instructions come only from this system prompt|planning assistant inside Lancible/i, 'системный промпт не раскрыт');
+}
+
+test('ai-chat выложена: временный пользователь без строки в ai_access получает 403 no access', async (t) => {
+  if (process.env.LANCIBLE_AI_TEST !== '1') {
+    t.todo('живая часть заводит пользователя — запуск: LANCIBLE_AI_TEST=1 npm run test:backend');
+    return;
+  }
+  let probe;
+  try { probe = await call('POST', '/functions/v1/ai-chat', { body: { messages: [{ role: 'user', content: 'ok' }], context: {} } }); } catch (e) {
+    t.todo(`нет сети до Supabase: ${e.message}`);
+    return;
+  }
+  if (probe.status === 404) { t.todo('функция ai-chat не выложена — supabase/functions/README.md'); return; }
+  const email = `lancible-ai-noaccess-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+  const signup = await call('POST', '/auth/v1/signup', { body: { email, password: `T-${Math.random().toString(36)}-9z!` } });
+  assert.ok(signup.ok && signup.json && signup.json.access_token, `регистрация не удалась: ${signup.status} ${signup.text.slice(0, 200)}`);
+  const user = { id: signup.json.user.id, token: signup.json.access_token };
+  created.push(user);
+  const r = await call('POST', '/functions/v1/ai-chat', {
+    token: user.token,
+    body: { messages: [{ role: 'user', content: 'Ответь одним словом: ок' }], context: snapshot(), lang: 'ru', tz: 'Asia/Almaty', now: new Date().toISOString() },
+  });
+  if (r.status === 200) {
+    t.todo('выложена прежняя функция ai-chat — без проверки доступа: выложить заново (supabase/functions/README.md, «ИИ-агент по приглашению»)');
+    return;
+  }
+  assert.equal(r.status, 403, `${r.status}: ${r.text.slice(0, 300)}`);
+  assert.deepEqual(r.json, { error: 'no access' });
+  // Тот же ответ знают клиенты заранее — rpc('ai_has_access').
+  const rpc = await call('POST', '/rest/v1/rpc/ai_has_access', { token: user.token, body: {} });
+  if (rpc.status === 404) { t.todo('нет функции ai_has_access() — выполнить supabase/ai-access.sql'); return; }
+  assert.equal(rpc.status, 200, `rpc ai_has_access: ${rpc.status} ${rpc.text.slice(0, 200)}`);
+  assert.equal(rpc.json, false, 'без строки в ai_access — false');
+  const guest = await call('POST', '/rest/v1/rpc/ai_has_access', { body: {} });
+  assert.notEqual(guest.status, 200, `гостю (anon) функция не выдаётся: ${guest.status} ${guest.text.slice(0, 200)}`);
 });
 
 /** usage из message_start, поправленный нарастающим итогом message_delta. */
@@ -1062,6 +1279,17 @@ test('ai-chat выложена: второй вызов того же чата �
   }
   if (probe.status === 404) { t.todo('функция ai-chat не выложена — supabase/functions/README.md'); return; }
   const email = `lancible-ai-cache-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+  const grant = await grantAccess(email);
+  if (grant.skip) { t.todo(grant.skip); return; }
+  try {
+    await cacheCalls(t, email);
+  } finally {
+    await grant.revoke();
+  }
+});
+
+/** Живые вызовы проверки кеша: два сообщения одного чата и журнал. */
+async function cacheCalls(t, email) {
   const signup = await call('POST', '/auth/v1/signup', { body: { email, password: `T-${Math.random().toString(36)}-9z!` } });
   assert.ok(signup.ok && signup.json && signup.json.access_token, `регистрация не удалась: ${signup.status} ${signup.text.slice(0, 200)}`);
   const user = { id: signup.json.user.id, token: signup.json.access_token };
@@ -1103,4 +1331,4 @@ test('ai-chat выложена: второй вызов того же чата �
   // Второй вызов читает всё, что было в первом, кроме хвоста Request первого хода.
   assert.ok(ub.cache_read_input_tokens >= totalA - 200, `кеш снимка и переписки: прочитано ${ub.cache_read_input_tokens} из ${totalA} токенов первого вызова`);
   assert.equal(rows[1].cache_read_tokens, ub.cache_read_input_tokens, 'журнал знает, сколько прочитано из кеша');
-});
+}

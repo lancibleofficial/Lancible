@@ -16,6 +16,11 @@
 // и тогда кнопку-дубль в шапке экран прячет; иначе тихая. Высота и скругление
 // — общие токены PrimaryButton, своих нет. Сценка стоит: острова на телефоне
 // не проявляются при открытии страницы, и пустой экран тоже (DESIGN.md).
+//
+// note — мелкая строка под пояснением (что уйдёт вместе с действием);
+// children — между словами и кнопкой (строка ошибки действия). Кнопка, у
+// которой есть состояние, — actionDisabled / actionLoading, её testID —
+// actionTestID («закрытый тест» агента, 21 октября 2026).
 import { View, StyleSheet } from 'react-native';
 import Text from './AppText';
 import ArtScene from './ArtScene';
@@ -25,7 +30,8 @@ import { useColors, spacing, typography, fontSize, displayFamily } from '../them
 const ART = { lg: { width: 120, height: 88 }, md: { width: 90, height: 66 }, sm: { width: 56, height: 40 }, row: { width: 56, height: 40 } };
 
 export default function EmptyState({
-  art, title, text, actionLabel, onAction, primary = false, actionIcon, size = 'lg', style, testID = 'empty-state',
+  art, title, text, note, actionLabel, onAction, primary = false, actionIcon, actionDisabled, actionLoading, actionTestID,
+  size = 'lg', style, children, testID = 'empty-state',
 }) {
   const colors = useColors();
   const s = makeStyles(colors);
@@ -51,7 +57,10 @@ export default function EmptyState({
       icon={actionIcon}
       variant={primary ? 'primary' : 'ghost'}
       onPress={onAction}
+      disabled={actionDisabled}
+      loading={actionLoading}
       style={primary && lg ? s.btnWide : s.btnFit}
+      {...(actionTestID ? { testID: actionTestID } : null)}
     />
   ) : null;
 
@@ -61,7 +70,9 @@ export default function EmptyState({
       <View style={lg ? s.lgBody : md ? s.mdBody : s.smBody}>
         {title ? <Text style={lg ? s.lgTitle : md ? s.mdTitle : s.smTitle} accessibilityRole={lg || md ? 'header' : undefined}>{title}</Text> : null}
         {text ? <Text style={lg ? s.lgText : md ? s.mdText : s.smText}>{text}</Text> : null}
+        {note ? <Text style={s.note} testID={`${testID}-note`}>{note}</Text> : null}
       </View>
+      {children}
       {button}
     </View>
   );
@@ -83,6 +94,8 @@ const makeStyles = (colors) => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   rowBody: { flex: 1, minWidth: 0, gap: 2 },
   left: { textAlign: 'left' },
+  // Мелкая строка под пояснением — тише его, на ступень мельче.
+  note: { ...typography.caption, fontSize: fontSize.xs, lineHeight: 17, color: colors.textFaint, textAlign: 'center', marginTop: 4 },
   // Акцентная на большом пустом экране — во всю ширину блока, как главная
   // кнопка листа; тихая — по своей подписи.
   btnWide: { marginTop: 6 },

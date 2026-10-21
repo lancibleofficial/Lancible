@@ -379,6 +379,50 @@ test('Политика §11 «Что уходит» покрывает все п
   }
 });
 
+test('Политика §11: агент по приглашению — список приглашённых (колонки ai_access), срок, стирание с аккаунтом и запрос доступа обратной связью, в каждом переводе', () => {
+  // 21 октября 2026 (supabase/ai-access.sql): агент открыт только аккаунтам,
+  // чья почта есть в ai_access. Колонки сверяем с кодом: новая колонка —
+  // новые данные о человеке, тест упадёт, пока их нет в §11 и здесь.
+  const sql = fs.readFileSync(path.join(ROOT, 'supabase', 'ai-access.sql'), 'utf8').replace(/\r\n/g, '\n');
+  const table = sql.match(/create table if not exists public\.ai_access \(([\s\S]*?)\n\);/i);
+  assert.ok(table, 'supabase/ai-access.sql: нет таблицы ai_access — поправить разбор в тесте');
+  const cols = table[1].split('\n').map((l) => l.trim()).filter(Boolean).map((l) => l.split(/\s+/)[0]);
+  assert.deepEqual(cols, ['email', 'note', 'granted_at'], 'в ai_access новая колонка — допишите её в §11 «Доступ по приглашению» и сюда');
+  // «Стирается вместе с аккаунтом» держат функция удаления и триггер.
+  const del = fs.readFileSync(path.join(ROOT, 'supabase', 'functions', 'delete-account', 'index.ts'), 'utf8');
+  assert.match(del, /\.from\('ai_access'\)\.delete\(\)/, 'delete-account не стирает строку ai_access — §11 обещает обратное');
+  assert.match(sql, /create trigger ai_access_forget\s+after delete on auth\.users/i, 'нет триггера ai_access_forget — старый путь удаления оставил бы почту');
+  const words = {
+    ru: { item: 'Доступ по приглашению.', email: /почту аккаунта/, note: /пометку/, keep: /пока доступ выдан/, gone: /стирается вместе с аккаунтом/, request: /сообщение обратной связи[^<]*почту вашего аккаунта/, fb: '<h3>Обратная связь</h3>' },
+    en: { item: 'Access by invitation.', email: /account’s email/, note: /our note/, keep: /as long as access is granted/, gone: /erased together with the account/, request: /feedback message[^<]*your account’s email/, fb: '<h3>Feedback</h3>' },
+    uk: { item: 'Доступ за запрошенням.', email: /пошту акаунта/, note: /позначку/, keep: /доки доступ надано/, gone: /стирається разом з акаунтом/, request: /повідомлення зворотного зв’язку[^<]*пошту вашого акаунта/, fb: '<h3>Зворотний зв’язок</h3>' },
+    kk: { item: 'Шақыру бойынша қолжетімділік.', email: /аккаунттың поштасын/, note: /белгімізді/, keep: /қолжетімділік берілгенше сақталады/, gone: /аккаунтпен бірге өшіріледі/, request: /кері байланыс хабарламасы[^<]*аккаунтыңыздың поштасын/, fb: '<h3>Кері байланыс</h3>' },
+  };
+  const privacy = articles('privacy.html');
+  assert.deepEqual(privacy.map((a) => a.lang), LEGAL_LANGS);
+  for (const a of privacy) {
+    const w = words[a.lang];
+    const sec = sectionOf(a.body, AI_HEADING[a.lang]);
+    assert.ok(sec, `privacy.html ${a.lang}: нет раздела про ИИ-агента`);
+    const li = (sec.match(/<li><strong>[^<]+<\/strong>[^<]*<\/li>/g) || []).find((x) => x.startsWith(`<li><strong>${w.item}</strong>`));
+    assert.ok(li, `privacy.html ${a.lang}: в §11 нет пункта «${w.item}»`);
+    for (const k of ['email', 'note', 'keep', 'gone', 'request']) assert.match(li, w[k], `privacy.html ${a.lang}: пункт «${w.item}» без «${w[k].source}»`);
+    // Ссылка на разделы обратной связи — на настоящие номера.
+    assert.match(li, /\(\D*3\D+6\D*\)/, `privacy.html ${a.lang}: пункт «${w.item}» не отсылает к разделам 3 и 6`);
+    assert.ok(section(a.body, 3).includes(w.fb), `privacy.html ${a.lang}: обратная связь — не в §3, а пункт про доступ отсылает туда`);
+  }
+  // «Удаление аккаунта» (для Google Play) называет строку списка среди стираемого.
+  const erased = {
+    ru: /записью в списке приглашённых к агенту \(почта и наша пометка\)/,
+    en: /the entry in the list of users invited to the agent \(email and our note\)/,
+    uk: /записом у списку запрошених до агента \(пошта й наша позначка\)/,
+    kk: /агентке шақырылғандар тізіміндегі жазба \(пошта және біздің белгіміз\)/,
+  };
+  for (const a of articles('delete-account.html')) {
+    assert.match(a.body, erased[a.lang], `delete-account.html ${a.lang}: список приглашённых к агенту не назван среди стираемого`);
+  }
+});
+
 test('идентификатор установки: Политика §3 называет приставки систем, как их пишет код', () => {
   // src/data-store.js (win-/mac-/linux-), web/api-shim.js (web-),
   // mobile/src/lib/device.js (android-/ios-). Приставка называет систему —

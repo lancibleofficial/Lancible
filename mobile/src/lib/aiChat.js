@@ -27,6 +27,11 @@
 // Вложения (lib/aiAttach.js) в хранилище не попадают никогда: после ответа их
 // блоки в истории заменяет текст (Core.aiCompactHistory), а запись на
 // устройство сжимает и ход, на который ответа ещё нет.
+//
+// С 21 октября 2026 агент — по приглашению (lib/aiAccess.js): вход и смена
+// аккаунта спрашивают базу, открыт ли он, а ответ функции 403 no access
+// закрывает его сразу. Без доступа сообщение не уходит, чаты на устройстве
+// остаются.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { fetch as expoFetch } from 'expo/fetch';
@@ -41,6 +46,7 @@ import { navigationRef } from '../navigation/navRef';
 import { pickAttachment, prepareAttachment, checkAll, attachmentBlocks, fileCard, dropFile } from './aiAttach';
 import { aiKey, aiChatsKey, aiChatKey } from './aiKeys';
 import { onScopeRemoved } from './accounts';
+import { aiCheckAccess, aiLockAccess, accessOf } from './aiAccess';
 
 export const AI_URL = `${SUPABASE_URL}/functions/v1/ai-chat`;
 /** Кругов инструментов подряд после одного сообщения человека. */
@@ -245,11 +251,16 @@ async function readChats(uid) {
 
 /** Вход, выход, другой аккаунт. Другой аккаунт — свои чаты; выход их не
  *  стирает, экран просто встаёт в состояние входа. Тот же аккаунт — только
- *  снимается «нужен вход» (после 401 человек вошёл заново). */
+ *  снимается «нужен вход» (после 401 человек вошёл заново). Вход и другой
+ *  аккаунт заодно спрашивают, открыт ли ему агент (lib/aiAccess.js): промис
+ *  кончается, когда прочитаны чаты и пришёл ответ. */
 export async function aiAccount(id) {
   const uidNow = id || null;
   if (uidNow === S().uid) {
-    if (S().needAuth) put({ needAuth: false });
+    if (S().needAuth) {
+      put({ needAuth: false });
+      await aiCheckAccess(uidNow);
+    }
     return;
   }
   aiStop();
@@ -261,10 +272,11 @@ export async function aiAccount(id) {
     needAuth: false, remaining: null, limit: null, limitUntil: 0,
   });
   if (!uidNow) return;
+  const access = aiCheckAccess(uidNow);
   let chats = [];
   try { chats = await readChats(uidNow); } catch (err) { console.warn('Чаты агента не прочитались:', err); }
-  if (seq !== loadSeq) return;
-  put({ chats, loaded: true });
+  if (seq === loadSeq) put({ chats, loaded: true });
+  await access;
 }
 
 /** «Удалить данные аккаунта с устройства» (lib/accounts.js: removeScope):
@@ -743,6 +755,18 @@ async function call(myRun, frame) {
   if (myRun !== run) return null;
   if (!res.ok) {
     if (res.status === 401) { put({ needAuth: true }); return null; }
+    if (res.status === 403) {
+      const j = await res.json().catch(() => ({}));
+      if (myRun !== run) return null;
+      // Агент не открыт этому аккаунту (21 октября 2026): экран встаёт в
+      // «закрытый тест». Вопрос остаётся в чате — откроют доступ, и строка
+      // «Ответ прервался» даст его повторить.
+      if (j && j.error === 'no access') {
+        aiLockAccess(S().uid);
+        aiError('ai.interrupted', true);
+        return null;
+      }
+    }
     if (res.status === 404) { aiError('ai.unavailable'); return null; }
     if (res.status === 429) {
       const j = await res.json().catch(() => ({}));
@@ -892,7 +916,7 @@ export async function aiRun() {
 export function aiSend(raw) {
   const text = String(raw || '').trim();
   const s = S();
-  if (!text || s.busy || s.attaching || !s.opened || !aiSignedIn()) return false;
+  if (!text || s.busy || s.attaching || !s.opened || !aiSignedIn() || accessOf(s.uid) === 'locked') return false;
   const { pending } = s;
   let blocks = [];
   if (pending.length) {

@@ -21,6 +21,12 @@ import { useAiChat, aiStop, aiAccount, aiChatsKey } from '../src/lib/aiChat';
 import { DETAIL_ROUTES } from '../src/navigation/detailScreens';
 import { sb } from '../src/lib/supabaseClient';
 import { t } from '../src/lib/i18n';
+import { grantAi } from './support/aiAccess';
+
+// Агент открыт аккаунту (RPC ai_has_access подменён — tests/support/aiAccess.js).
+let aiRpc;
+beforeEach(() => { aiRpc = grantAi(); });
+afterEach(() => { aiRpc.mockRestore(); });
 
 // Редактор заметок — WebView без нативной части в Node; к стеку отношения не имеет.
 jest.mock('../src/components/DocEditor', () => () => null);

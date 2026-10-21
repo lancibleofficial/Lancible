@@ -32,6 +32,12 @@ import { useBottomClearance } from '../src/components/TimerMiniPlayer';
 import { spacing, typography } from '../src/theme';
 import { fmtShort } from '../src/lib/format';
 import { t } from '../src/lib/i18n';
+import { grantAi } from './support/aiAccess';
+
+// Агент открыт аккаунту (RPC ai_has_access подменён — tests/support/aiAccess.js).
+let aiRpc;
+beforeEach(() => { aiRpc = grantAi(); });
+afterEach(() => { aiRpc.mockRestore(); });
 
 jest.mock('expo/fetch', () => ({ fetch: jest.fn() }));
 let mockReduced = false;

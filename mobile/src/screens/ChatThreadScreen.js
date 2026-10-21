@@ -27,6 +27,13 @@
 // сама, только если человек и так внизу (или только что отправил своё): кто
 // листает историю, того поток не уводит. Пустая лента — что умеет агент и
 // три примера; касание подставляет пример в поле.
+//
+// Агент — по приглашению (21 октября 2026, lib/aiAccess.js): чат, открытый
+// без доступа (уведомление, поиск, восстановление места), — тот же экран
+// «закрытый тест», что на главном (chat/ChatLocked.js), без ленты, поля и
+// названия чата; переписка на устройстве остаётся. Ответа ещё нет — прежнее
+// известное этого аккаунта или скелет поля. Ответ функции 403 no access
+// посреди разговора закрывает экран так же.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, ScrollView, StyleSheet, Platform } from 'react-native';
 import Animated, { useAnimatedRef, useAnimatedStyle, useSharedValue, withTiming, measure } from 'react-native-reanimated';
@@ -41,19 +48,22 @@ import { confirmDeleteChat } from './ChatListScreen';
 import ChatRow, { markShown } from '../components/chat/ChatRow';
 import ChatTyping from '../components/chat/ChatTyping';
 import ChatCompose, { openAttachSheet } from '../components/chat/ChatCompose';
+import ChatLocked from '../components/chat/ChatLocked';
+import { Skeleton } from '../components/Skeleton';
 import { HANDOFF_FADE_MS, FIELD_MOVE, fieldShift } from '../components/chat/chatMotion';
 import { KeyboardAvoidingView } from '../lib/keyboard';
 import {
   useAiChat, aiAccount, aiOpenChat, aiSend, aiRetry, aiApplyCard, aiDeclineCard, aiUndoCard, aiDetach, aiDropPending,
   lastApplied, AI_EXAMPLES,
 } from '../lib/aiChat';
+import { useAccess, aiCheckAccess } from '../lib/aiAccess';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { openSheet } from '../store/useSheetStore';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 import { pushTask } from '../navigation/openTask';
 import { IOS_NATIVE_HEADER, leftElementItems, headerIcon } from '../navigation/nativeHeader';
-import { useColors, spacing, screenPadding, radius, fontSize, typography } from '../theme';
+import { useColors, spacing, screenPadding, radius, fontSize, typography, buttonHeight } from '../theme';
 import { t } from '../lib/i18n';
 
 /** Опции экрана чата в стеке. С поля главного экрана (params.quiet) — без
@@ -103,6 +113,7 @@ export default function ChatThreadScreen({ navigation, route }) {
   const status = useAuthStore((st) => st.status);
   const user = useAuthStore((st) => st.user);
   const uid = status === 'signedIn' && user ? user.id : null;
+  const access = useAccess(uid);
   const chatId = (route && route.params && route.params.chatId) || null;
   const {
     items, busy, waiting, loaded, opened, needAuth, remaining, limit, chats, pending, attaching, attachError,
@@ -128,8 +139,8 @@ export default function ChatThreadScreen({ navigation, route }) {
 
   // Чья история: вход, выход и другой аккаунт — как у списка под этим
   // экраном (тот же аккаунт — no-op; после 401 вход заново снимает «нужен
-  // вход»: user — новый объект).
-  useEffect(() => { aiAccount(uid); }, [uid, user]);
+  // вход»: user — новый объект). Заодно — открыт ли агент этому аккаунту.
+  useEffect(() => { aiAccount(uid); aiCheckAccess(uid); }, [uid, user]);
   // Свой чат — в ленту (тот же, уже открытый, — как есть).
   useEffect(() => { if (signed && loaded && chatId) aiOpenChat(chatId); }, [signed, loaded, chatId, uid]);
   // Экран вернулся в фокус — снова свой чат. Лента одна на все экраны чата, а
@@ -147,14 +158,15 @@ export default function ChatThreadScreen({ navigation, route }) {
   useEffect(() => () => aiDropPending(chatId), [chatId]);
   // Первое сообщение с поля главного экрана — отсюда, когда экран встал:
   // оно появляется в ленте, как любое своё. Не ушло (нет входа, идёт ответ)
-  // — остаётся в поле. Параметр снимается, чтобы не уйти второй раз.
+  // — остаётся в поле. Параметр снимается, чтобы не уйти второй раз. Пока не
+  // известно, открыт ли агент, — ждёт; закрыт — не уходит.
   useEffect(() => {
-    if (sent.current || !handoff.send || !signed || !loaded) return;
+    if (sent.current || !handoff.send || !signed || !loaded || access !== 'open') return;
     sent.current = true;
     atEnd.current = true;
     if (!aiSend(handoff.send)) setDraft(handoff.send);
     if (typeof navigation.setParams === 'function') navigation.setParams({ send: undefined });
-  }, [signed, loaded]);
+  }, [signed, loaded, access]);
   // Переход кончился — «назад» обычным ходом стека.
   useEffect(() => {
     if (typeof navigation.addListener !== 'function') return undefined;
@@ -167,9 +179,10 @@ export default function ChatThreadScreen({ navigation, route }) {
   // Строки, что уже стояли, когда лента открылась, — без появления.
   useState(() => markShown(useAiChat.getState().items));
 
-  const chat = chats.find((c) => c.id === chatId);
-  const title = (chat && chat.title) || t(lang, 'ai.new_chat');
-  const quota = signed && remaining !== null && limit !== null ? t(lang, 'ai.quota', { remaining, limit }) : null;
+  const locked = signed && access === 'locked';
+  const chat = locked ? null : chats.find((c) => c.id === chatId);
+  const title = locked ? '' : (chat && chat.title) || t(lang, 'ai.new_chat');
+  const quota = signed && !locked && remaining !== null && limit !== null ? t(lang, 'ai.quota', { remaining, limit }) : null;
 
   // Меню чата — «Удалить чат», как «⋯» строки на вебе. У чата, которого ещё
   // нет в списке (ни одного сообщения), удалять нечего — меню нет.
@@ -211,7 +224,7 @@ export default function ChatThreadScreen({ navigation, route }) {
           ) : undefined,
         }),
     });
-  }, [navigation, title, quota, colors, signed, !!chat, lang]);
+  }, [navigation, title, quota, colors, signed, !!chat, lang, locked]);
 
   const stick = useCallback(() => {
     if (atEnd.current && scroll.current) scroll.current.scrollToEnd({ animated: false });
@@ -280,6 +293,26 @@ export default function ChatThreadScreen({ navigation, route }) {
     );
   }
 
+  if (locked) {
+    return (
+      <View style={s.container}>
+        <ChatLocked lang={lang} uid={uid} email={user && user.email ? user.email : ''} clearance={clearance} />
+      </View>
+    );
+  }
+
+  if (access !== 'open') {
+    // Ответа ещё нет: лента пуста, на месте поля — его скелет.
+    return (
+      <View style={s.container} testID="chat-access-wait">
+        <View style={s.body} />
+        <View style={s.wait}>
+          <Skeleton width="100%" height={buttonHeight} radius={radius.lg} />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={s.container}>
       <KeyboardAvoidingView behavior="padding" automaticOffset style={s.body} testID="chat-avoid">
@@ -343,6 +376,7 @@ const makeStyles = (colors, clearance) => StyleSheet.create({
   log: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: screenPadding, paddingTop: spacing.sm, paddingBottom: spacing.md, gap: spacing.md },
   signin: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: screenPadding, paddingBottom: clearance },
+  wait: { paddingHorizontal: screenPadding, paddingTop: spacing.sm, paddingBottom: clearance },
   empty: { flexGrow: 1, justifyContent: 'center', gap: spacing.lg, paddingVertical: spacing.lg },
   examples: { gap: spacing.sm },
   example: { backgroundColor: colors.panel, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.md },

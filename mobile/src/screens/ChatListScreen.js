@@ -21,6 +21,13 @@
 // рядом с названием — «47 из 50 сегодня» (лимит на человека, а не на чат).
 // Без входа — «Войти» (общий AuthSheet), поля нет.
 //
+// Агент — по приглашению (21 октября 2026, lib/aiAccess.js): каждый вход на
+// вкладку и смена аккаунта спрашивают базу, открыт ли он. Нет доступа — на
+// месте поля, фразы и чатов «ИИ-агент в закрытом тесте» с «Запросить доступ»
+// (chat/ChatLocked.js); чаты на устройстве остаются. Ответа ещё нет — прежнее
+// известное этого аккаунта, а если его нет — скелет страницы (поле не
+// мигает). Шапка та же: поиск и колокольчик на месте.
+//
 // Строки — острова (Island) без появления: страница въезжает уже собранной,
 // как все списки приложения.
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -36,9 +43,12 @@ import TabHeader, { HeaderButton, NotificationsButton } from '../components/TabH
 import { useBottomClearance } from '../components/TimerMiniPlayer';
 import ChatGreeting from '../components/chat/ChatGreeting';
 import ChatCompose, { openAttachSheet } from '../components/chat/ChatCompose';
+import ChatLocked from '../components/chat/ChatLocked';
+import { ChatSkeleton } from '../components/Skeleton';
 import Ai from '../core/ai.js';
 import { KeyboardAwareScrollView, measurePageTop } from '../lib/keyboard';
 import { useAiChat, aiAccount, aiNewChat, aiDeleteChat, aiDetach, AI_EXAMPLES } from '../lib/aiChat';
+import { useAccess, aiCheckAccess } from '../lib/aiAccess';
 import { confirmSheet } from '../lib/dialogs';
 import { fmtTimeShort } from '../lib/format';
 import { useAppStore } from '../store/useAppStore';
@@ -134,6 +144,9 @@ export default function ChatListScreen({ navigation }) {
   const status = useAuthStore((st) => st.status);
   const user = useAuthStore((st) => st.user);
   const uid = status === 'signedIn' && user ? user.id : null;
+  const access = useAccess(uid);
+  const uidRef = useRef(uid);
+  uidRef.current = uid;
   const chats = useAiChat((st) => st.chats);
   const loaded = useAiChat((st) => st.loaded);
   const needAuth = useAiChat((st) => st.needAuth);
@@ -160,17 +173,20 @@ export default function ChatListScreen({ navigation }) {
 
   // Чьи чаты: вход, выход и другой аккаунт. После 401 тот же аккаунт,
   // вошедший заново, снимает «нужен вход» (user — новый объект).
-  useEffect(() => { aiAccount(uid); }, [uid, user]);
+  // Заодно — открыт ли ему агент: и тот же аккаунт, открывший вкладку снова.
+  useEffect(() => { aiAccount(uid); aiCheckAccess(uid); }, [uid, user]);
 
   // Каждый вход на экран — новая фраза. Вход — фокус после ухода (blur):
   // первый вход и так со своей фразой, а фокус при построении экрана
   // приходит не всегда (вкладка строится после заглушки, уже в фокусе) —
   // по нему фраза мигнула бы или следующий вход прошёл бы без новой.
+  // Доступ к агенту спрашивается на каждом входе — и на первом тоже.
   useEffect(() => {
     if (!navigation || typeof navigation.addListener !== 'function') return undefined;
     let away = false;
     const offBlur = navigation.addListener('blur', () => { away = true; });
     const offFocus = navigation.addListener('focus', () => {
+      aiCheckAccess(uidRef.current);
       if (!away) return;
       away = false;
       setEntry({ seed: nextGreetingSeed(), at: Date.now() });
@@ -182,7 +198,7 @@ export default function ChatListScreen({ navigation }) {
   }, [navigation]);
 
   const signed = !!uid && !needAuth;
-  const quota = signed && remaining !== null && limit !== null ? t(lang, 'ai.quota', { remaining, limit }) : null;
+  const quota = signed && access === 'open' && remaining !== null && limit !== null ? t(lang, 'ai.quota', { remaining, limit }) : null;
   const name = user && typeof user.name === 'string' ? user.name : '';
   const phrase = useMemo(() => greetingText(lang, { now: entry.at, name, seed: entry.seed }), [lang, name, entry]);
 
@@ -231,6 +247,10 @@ export default function ChatListScreen({ navigation }) {
         />
       </ScrollView>
     );
+  } else if (access === 'locked') {
+    body = <ChatLocked lang={lang} uid={uid} email={user && user.email ? user.email : ''} clearance={clearance} />;
+  } else if (access !== 'open') {
+    body = <ChatSkeleton header={false} testID="chat-access-wait" />;
   } else if (loaded) {
     // Поле — серединой посередине видимой части (над нижним запасом):
     // сценка и фраза над ним, чаты под ним.

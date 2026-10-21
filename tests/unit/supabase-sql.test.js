@@ -194,3 +194,72 @@ test('feedback-bot.sql: уборка — одно задание pg_cron с swee
   const unschedule = sql.search(/if exists \(select 1 from cron\.job where jobname = 'feedback-sweep'\) then\s+perform cron\.unschedule\('feedback-sweep'\);/i);
   assert.ok(unschedule > 0 && unschedule < schedules[0].index, 'перед cron.schedule прежнее задание снимается по имени');
 });
+
+// --- ai-access.sql: ИИ-агент по приглашению (21 октября 2026) ------------------
+//
+// Решение пользователя: агент — только аккаунтам, которым владелец выдал доступ
+// строкой с почтой. Файл лежит в открытом репозитории и выполняется руками,
+// поэтому сверяется: таблица, нижний регистр, закрытость для клиентов, RPC
+// только для вошедших, и что функции ищут ровно эту таблицу.
+
+test('ai-access.sql: таблица ai_access — почта в нижнем регистре (check), RLS, права anon и authenticated сняты', () => {
+  const sql = read('ai-access.sql');
+  const table = sql.match(/create table if not exists public\.ai_access \(([\s\S]*?)\n\);/i);
+  assert.ok(table, 'нет create table if not exists public.ai_access');
+  const cols = table[1].split('\n').map((l) => l.trim()).filter(Boolean).map((l) => l.split(/\s+/)[0]);
+  assert.deepEqual(cols, ['email', 'note', 'granted_at'], 'колонки — по контракту; новая колонка — новые данные: Политика §11 и COMPLIANCE.md');
+  assert.match(table[1], /email text primary key/i);
+  assert.match(table[1], /granted_at timestamptz not null default now\(\)/i);
+  assert.doesNotMatch(table[1], /references/i, 'ссылки на auth.users нет — доступ выдаётся и до регистрации');
+  // Нижний регистр — check, пересоздаётся под тем же именем (повторный запуск чинит).
+  const drop = sql.search(/alter table public\.ai_access drop constraint if exists ai_access_email_lower;/i);
+  const add = sql.search(/alter table public\.ai_access add constraint ai_access_email_lower\s+check \(email = lower\(btrim\(email\)\)/i);
+  assert.ok(drop > 0 && add > drop, 'check нижнего регистра: drop if exists, потом add');
+  // Триггер приводит почту к нижнему регистру до check.
+  assert.match(sql, /new\.email := lower\(btrim\(new\.email\)\);/);
+  assert.match(sql, /drop trigger if exists ai_access_normalize on public\.ai_access;\s*create trigger ai_access_normalize\s+before insert or update of email on public\.ai_access/i);
+  // Клиентам — ни чтения, ни записи: RLS без политик и явный revoke.
+  assert.match(sql, /alter table public\.ai_access enable row level security;/i);
+  assert.doesNotMatch(sql, /create policy/i, 'политик нет: клиенты таблицу не читают и не пишут');
+  assert.match(sql, /revoke all on table public\.ai_access from anon, authenticated;/i);
+  assert.doesNotMatch(sql, /grant [^;]* on (table )?public\.ai_access to/i, 'прав на таблицу никому не выдаём');
+  assert.doesNotMatch(sql, /service_role/i, 'служебный ключ обходит RLS сам — в SQL его не называем');
+});
+
+test('ai-access.sql: ai_has_access() — security definer с пустым search_path, подтверждённая почта, только authenticated', () => {
+  const sql = read('ai-access.sql');
+  const m = sql.match(/create or replace function public\.ai_has_access\(\)\s+returns boolean([\s\S]*?)\n\$\$;/i);
+  assert.ok(m, 'нет public.ai_has_access() returns boolean');
+  const fn = m[1];
+  assert.match(fn, /security definer/i, 'auth.users и ai_access вызывающему не читать — security definer');
+  assert.match(fn, /set search_path = ''/i);
+  assert.match(fn, /from auth\.users u/i);
+  assert.match(fn, /join public\.ai_access a on a\.email = lower\(u\.email\)/i, 'сравнение — по нижнему регистру');
+  assert.match(fn, /u\.id = auth\.uid\(\)/i, 'только про самого вызывающего');
+  assert.match(fn, /u\.email_confirmed_at is not null/i, 'неподтверждённой почте доступа нет');
+  assert.match(sql, /revoke all on function public\.ai_has_access\(\) from public;/i);
+  assert.match(sql, /revoke all on function public\.ai_has_access\(\) from anon;/i);
+  const grants = [...sql.matchAll(/grant execute on function public\.ai_has_access\(\) to ([^;]+);/gi)].map((g) => g[1].trim());
+  assert.deepEqual(grants, ['authenticated'], 'execute — только authenticated, гостю нет');
+  // Повторный запуск — or replace и drop if exists.
+  assert.doesNotMatch(sql, /^\s*create function/im, 'функции — create or replace');
+  for (const [, name, on] of sql.matchAll(/^\s*create trigger (\w+)[\s\S]*? on ([\w.]+)\s/gim)) {
+    assert.ok(sql.includes(`drop trigger if exists ${name} on ${on};`), `триггер ${name} пересоздаётся: drop trigger if exists`);
+  }
+});
+
+test('ai-access.sql: строка уходит с аккаунтом — триггер на auth.users и функция delete-account; ai-chat спрашивает ту же таблицу', () => {
+  const sql = read('ai-access.sql');
+  const m = sql.match(/create or replace function public\.ai_access_forget\(\)\s+returns trigger([\s\S]*?)\n\$\$;/i);
+  assert.ok(m, 'нет триггерной public.ai_access_forget()');
+  assert.match(m[1], /security definer\s+set search_path = ''/i);
+  assert.match(m[1], /delete from public\.ai_access where email = lower\(btrim\(old\.email\)\);/i);
+  assert.match(m[1], /exception when others then/i, 'сбой стирания не держит удаление аккаунта');
+  assert.match(sql, /create trigger ai_access_forget\s+after delete on auth\.users/i);
+  assert.match(sql, /revoke all on function public\.ai_access_forget\(\) from anon, authenticated;/i);
+  const del = fs.readFileSync(path.join(SQL, 'functions', 'delete-account', 'index.ts'), 'utf8');
+  assert.match(del, /\.from\('ai_access'\)\.delete\(\)\.eq\('email', e\)/);
+  const chat = fs.readFileSync(path.join(SQL, 'functions', 'ai-chat', 'index.ts'), 'utf8');
+  assert.match(chat, /\.from\('ai_access'\)\.select\('email'\)\.eq\('email', email\)/);
+  assert.match(chat, /reply\(403, \{ error: 'no access' \}\)/);
+});

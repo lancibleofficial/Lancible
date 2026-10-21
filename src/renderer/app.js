@@ -384,6 +384,8 @@ const el = {
   aiList: $('ai-list'), aiListLabel: $('ai-list-label'), aiChats: $('ai-chats'), aiLog: $('ai-log'), navrail: $('navrail'),
   aiCompose: $('ai-compose'), aiInput: $('ai-input'), aiSend: $('ai-send'), aiAttach: $('ai-attach'), aiFile: $('ai-file'),
   aiAttachList: $('ai-attach-list'), aiAttachError: $('ai-attach-error'),
+  aiWait: $('ai-wait'), aiLocked: $('ai-locked'), aiRequest: $('ai-request'), aiRequestError: $('ai-request-error'),
+  aiRequestErrorText: $('ai-request-error-text'), aiRequestRetry: $('ai-request-retry'),
   settingsNotifToggle: $('settings-notif-toggle'), settingsNotifSystem: $('settings-notif-system'),
   settingsAboutUs: $('settings-about-us'), settingsAboutBlog: $('settings-about-blog'),
   settingsLegalPrivacy: $('settings-legal-privacy'), settingsLegalTerms: $('settings-legal-terms'),
@@ -1003,15 +1005,17 @@ function renderFeedback() {
   el.fbSend.disabled = fb.sending || !el.fbText.value.trim();
 }
 
-/** Строка таблицы feedback: всё, что форма знает сама. */
-async function feedbackRow(text, screenshotPath) {
+/** Строка таблицы feedback: всё, что форма знает сама. opts — строка не из
+ *  формы (запрос доступа к агенту, 21 октября 2026): свои id и вид, аккаунт
+ *  на момент нажатия (userId). */
+async function feedbackRow(text, screenshotPath, opts = {}) {
   let version = appVersion;
   if (!version) {
     try { version = await window.api.getVersion(); } catch { version = null; }
   }
   const row = {
-    id: fb.id,
-    kind: fb.kind,
+    id: opts.id || fb.id,
+    kind: opts.kind || fb.kind,
     text: text.slice(0, FB_MAX),
     platform: IS_WEB ? 'web' : 'desktop',
     app_version: version ? String(version).slice(0, 40) : null,
@@ -1019,8 +1023,17 @@ async function feedbackRow(text, screenshotPath) {
     device: String(navigator.userAgent || '').slice(0, 200) || null,
     screenshot_path: screenshotPath,
   };
-  if (currentUser && currentUser.id) row.user_id = currentUser.id;
+  const userId = 'userId' in opts ? opts.userId : currentUser && currentUser.id;
+  if (userId) row.user_id = userId;
   return row;
+}
+
+/** Строка — в таблицу; строку назад не просим — гостю её не прочитать.
+ *  23505 — строка с этим id уже есть: прошлая попытка дошла, а ответ нет.
+ *  Прочие отказы бросает (частота — fbRateLimited). */
+async function fbInsert(row) {
+  const { error } = await sb.from('feedback').insert(row);
+  if (error && error.code !== '23505') throw error;
 }
 
 /** Отказ базы «слишком много подряд» (триггер feedback_rate в feedback.sql). */
@@ -1048,12 +1061,9 @@ async function sendFeedback() {
     // остаётся в поле.
     if (await foreignSession()) return;
     // Сначала строка: бакет примет только снимок, который она назвала.
-    // Строку назад не просим — гостю её не прочитать.
     if (!fb.sent) {
       fb.shot = fb.file ? `${fb.id}.${FB_TYPES[fb.file.type]}` : null;
-      const { error } = await sb.from('feedback').insert(await feedbackRow(text, fb.shot));
-      // 23505 — строка с этим id уже есть: прошлая попытка дошла, а ответ нет.
-      if (error && error.code !== '23505') throw error;
+      await fbInsert(await feedbackRow(text, fb.shot));
       fb.sent = true;
     }
     stage = 'shot';
@@ -9732,6 +9742,8 @@ document.addEventListener('keydown', (e) => {
 // не попадают. Вложения не хранятся нигде: байты уходят только в тех вызовах
 // хода, к которому приложены, после хода история сжимается
 // (Core.aiCompactHistory), а в ленте остаётся плашка «имя · тип · размер».
+// С 21 октября 2026 агент — по приглашению: без доступа вместо главного
+// экрана, чата и чатов — «закрытый тест» (см. «доступ» ниже).
 // Вид — «Агент» в styles.css.
 
 const AI_URL = `${SUPABASE_URL}/functions/v1/ai-chat`;
@@ -9774,6 +9786,10 @@ const ai = {
   attachGen: 0,     // поле очистили — недочитанное в него уже не ляжет
   asking: new WeakSet(), // карточки, по которым открыт вопрос о пересечениях
   dragDepth: 0,     // перетаскивание файлов над панелью
+  access: new Map(), // uid → true | false | null: ответ ai_has_access в этот запуск (null — сеть не ответила)
+  accessAsk: null,  // { uid, p } — идущий вопрос
+  accessFocus: false, // панель открылась раньше ответа: поле получит фокус, когда он придёт
+  req: { uid: null, id: null, sending: false, err: null }, // «Запросить доступ»: id — один на попытку и её повторы
 };
 /** Дольше самого долгого появления в ленте (карточка — 0,3 с). */
 const AI_IN_MS = 320;
@@ -9805,13 +9821,13 @@ function aiForget(key) {
 }
 
 /** «Удалить данные аккаунта с устройства»: все чаты аккаунта id — список,
- *  сообщения каждого чата (и тех, что выпали из списка, но остались) и
- *  одиночная история до 18 октября. Чаты этого аккаунта открыты в панели —
- *  она пустеет. */
+ *  сообщения каждого чата (и тех, что выпали из списка, но остались),
+ *  одиночная история до 18 октября и отметка «запрос доступа ушёл». Чаты
+ *  этого аккаунта открыты в панели — она пустеет. */
 function aiForgetAccount(id) {
   if (!id) return;
   const prefix = aiChatKey(id, '');
-  const keys = [aiIndexKey(id), aiLegacyKey(id)];
+  const keys = [aiIndexKey(id), aiLegacyKey(id), aiRequestedKey(id)];
   try {
     for (let i = 0; i < localStorage.length; i += 1) {
       const k = localStorage.key(i);
@@ -9917,9 +9933,14 @@ function aiMigrate(id, legacy, list) {
 const aiSearchCache = new Map();
 
 /** Чаты текущего аккаунта, где встретился запрос, — по названию и тексту
- *  сообщений (Core.aiChatSearch). Чаты лежат только на этом устройстве. */
+ *  сообщений (Core.aiChatSearch). Чаты лежат только на этом устройстве.
+ *  Агент закрыт (или ответа о доступе ещё нет — тогда вопрос уходит, и поиск
+ *  перерисуется с ответом) — чаты не находятся. */
 function aiSearchChats(q) {
   if (!ai.uid || !ai.chats.length) return [];
+  const access = aiAccess();
+  if (access === 'wait') aiCheckAccess();
+  if (access !== 'open') return [];
   const list = ai.chats.map((c) => {
     let hit = aiSearchCache.get(c.id);
     if (!hit || hit.at !== c.updatedAt) {
@@ -9974,11 +9995,13 @@ function aiSave(chat) {
   const items = c.items.filter((it) => it.kind !== 'error');
   aiWrite(aiChatKey(ai.uid, c.id), { title: c.title, createdAt: c.createdAt, updatedAt: at, messages: aiStorable(c.messages), items });
   aiSetChats([aiIndexEntry(c, at), ...ai.chats.filter((x) => x.id !== c.id)]);
-  if (!el.aiPanel.hidden && ai.page === 'home' && aiSignedIn()) aiRenderList();
+  if (!el.aiPanel.hidden && ai.page === 'home' && aiReady()) aiRenderList();
 }
 
 /** Вход, выход, смена языка (зовёт renderAccountBtn). Другой аккаунт — свои
- *  чаты; выход их не стирает, панель просто встаёт в состояние входа. */
+ *  чаты; выход их не стирает, панель просто встаёт в состояние входа.
+ *  Доступ нового аккаунта спрашивается сразу, если панель открыта или у него
+ *  есть чаты на устройстве (поиск); иначе — при открытии панели. */
 function aiAccountChanged() {
   const id = currentUser ? currentUser.id : null;
   if (id !== ai.uid) {
@@ -9989,6 +10012,7 @@ function aiAccountChanged() {
     ai.remaining = null;
     ai.limit = null;
     ai.limitUntil = 0;
+    if (id && (aiOpen() || ai.chats.length)) aiCheckAccess();
   }
   ai.needAuth = false;
   aiRender();
@@ -10013,6 +10037,129 @@ function aiStop() {
   ai.waiting = false;
   ai.busy = false;
   ai.busyChat = null;
+}
+
+// --- доступ: закрытый тест (21 октября 2026) ----------------------------------------
+//
+// Доступ выдаёт владелец строкой с почтой в public.ai_access
+// (supabase/ai-access.sql). Клиент узнаёт его RPC ai_has_access(): при
+// открытии панели, после входа и смены аккаунта — если панель открыта или у
+// аккаунта есть чаты на устройстве (их ищет поиск в шапке). Ответ помнится по
+// аккаунту в памяти (ai.access): следующее открытие сразу рисует прежнее, а
+// вопрос уходит снова тихо; ответа ещё не было — скелет #ai-wait, не поле.
+// Функция ai-chat проверяет то же сама: 403 no access посреди чата — тоже
+// «закрытый тест». Без доступа вместо главного экрана, чата и чатов — #ai-locked
+// с «Запросить доступ»: строка feedback (kind other, почта аккаунта) тем же
+// путём, что форма обратной связи (feedbackRow, fbInsert, проверки вкладки и
+// сеанса); ушедший запрос помнится по аккаунту на устройстве. Чаты на
+// устройстве не стираются — вернутся вместе с доступом. Гостю агент, как и
+// раньше, предлагает войти.
+
+const aiRequestedKey = (id) => `lancible:ai:${id}:access-requested`;
+
+/** Доступ текущего аккаунта: 'open' | 'locked' | 'wait' (ответа ещё не было).
+ *  Сеть не ответила — агент как раньше: решит сама функция (403 → 'locked'). */
+function aiAccess() {
+  const id = currentUser && currentUser.id;
+  if (!id || !ai.access.has(id)) return 'wait';
+  return ai.access.get(id) === false ? 'locked' : 'open';
+}
+/** Вошёл и агент ему открыт: главный экран, чат, поле и вложения. */
+const aiReady = () => aiSignedIn() && aiAccess() === 'open';
+
+/** Спросить базу (ai_has_access) про текущий аккаунт; один вопрос на аккаунт
+ *  за раз. База ответила отказом (4xx: функции ещё нет — закрыто для всех,
+ *  как у ai-chat) — доступа нет; не ответила (нет сети, 5xx) — прежний ответ
+ *  остаётся, а без него агент открыт (решит функция); 401 — вход. Вкладка
+ *  отстала или сеанс в хранилище чужой — не спрашиваем: ответ был бы про
+ *  другой аккаунт (а агент такой вкладке и так откажет — aiCall). */
+function aiCheckAccess() {
+  const id = currentUser && currentUser.id;
+  if (!id) return Promise.resolve();
+  if (ai.accessAsk && ai.accessAsk.uid === id) return ai.accessAsk.p;
+  const ask = { uid: id, p: null };
+  ask.p = (async () => {
+    let ok = null;
+    let signin = false;
+    try {
+      const sid = scopeStale ? null : await sessionUid();
+      if (scopeStale || (sid && sid !== id)) throw new Error('сеанс другого аккаунта');
+      const { data, error, status } = await sb.rpc('ai_has_access');
+      if (!error) ok = data === true;
+      else if (status === 401) signin = true;
+      else if (status >= 400 && status < 500) ok = false;
+      else console.warn('Доступ к агенту не узнать:', error);
+    } catch (err) { console.warn('Доступ к агенту не узнать:', err); }
+    if (ai.accessAsk === ask) ai.accessAsk = null;
+    const mine = !!currentUser && currentUser.id === id;
+    if (signin) { if (mine) { ai.needAuth = true; aiRender(); } return; }
+    if (ok === null && ai.access.has(id)) return;
+    aiSetAccess(id, ok);
+  })();
+  ai.accessAsk = ask;
+  return ask.p;
+}
+
+/** Ответ про доступ аккаунта id. Сменился у того, кто на экране, — панель и
+ *  поиск перерисовываются; закрылся посреди ответа — ответ обрывается. */
+function aiSetAccess(id, ok) {
+  const mine = () => !!currentUser && currentUser.id === id;
+  const was = mine() ? aiAccess() : null;
+  ai.access.set(id, ok);
+  if (!mine()) return;
+  const now = aiAccess();
+  if (now === was) return;
+  if (now === 'locked') aiStop();
+  aiRender(true);
+  if (now === 'open' && !el.aiPanel.hidden) {
+    aiHelloIn();
+    // Панель открылась раньше ответа: фокус — в поле, если человек не ушёл.
+    const a = document.activeElement;
+    if (ai.accessFocus && (!a || a === document.body || aiButtons().includes(a) || el.aiPanel.contains(a))) el.aiInput.focus({ preventScroll: true });
+  }
+  ai.accessFocus = false;
+  if (!el.searchPanel.hidden) renderSearch(el.searchInput.value);
+}
+
+/** Запрос этого аккаунта уже ушёл (с этого устройства). */
+const aiRequested = () => !!currentUser && !!aiRead(aiRequestedKey(currentUser.id));
+
+/** «Закрытый тест»: запрос ушёл — «Запрос отправлен», кнопка неактивна;
+ *  ошибка — строкой с «Повторить» (feedback.rate или ai.request_failed: на этом
+ *  экране нет поля, и «Текст сохранён» из feedback.failed был бы неправдой). */
+function aiRenderLocked() {
+  const sent = aiRequested();
+  const err = !sent && currentUser && ai.req.uid === currentUser.id ? ai.req.err : null;
+  setI18nText(el.aiRequest, sent ? 'ai.request_sent' : 'ai.request_access');
+  el.aiRequest.disabled = sent || ai.req.sending;
+  el.aiRequestError.hidden = !err;
+  if (err) setI18nText(el.aiRequestErrorText, err);
+  el.aiRequestRetry.disabled = ai.req.sending;
+}
+
+/** «Запросить доступ»: строка feedback «Запрос доступа к ИИ-агенту: <почта>»
+ *  от вошедшего — тем же путём, что форма обратной связи: отставшая вкладка
+ *  и чужой сеанс не шлют, повтор — та же запись (23505), частоту держит база. */
+async function aiRequestAccess() {
+  const who = currentUser;
+  if (!who || ai.req.sending || aiRequested() || staleGuard()) return;
+  if (ai.req.uid !== who.id) Object.assign(ai.req, { uid: who.id, id: null, err: null });
+  if (!ai.req.id) ai.req.id = fbUuid();
+  ai.req.sending = true;
+  ai.req.err = null;
+  aiRenderLocked();
+  try {
+    if (await foreignSession()) return;
+    await fbInsert(await feedbackRow(`Запрос доступа к ИИ-агенту: ${who.email || ''}`, null, { id: ai.req.id, kind: 'other', userId: who.id }));
+    aiWrite(aiRequestedKey(who.id), new Date().toISOString());
+    if (ai.req.uid === who.id) ai.req.id = null;
+  } catch (err) {
+    console.error('Запрос доступа к агенту не ушёл:', err);
+    if (ai.req.uid === who.id) ai.req.err = fbRateLimited(err) ? 'feedback.rate' : 'ai.request_failed';
+  } finally {
+    ai.req.sending = false;
+    if (!el.aiPanel.hidden && !el.aiLocked.hidden) aiRenderLocked();
+  }
 }
 
 // --- главный экран, чат и переходы ------------------------------------------------
@@ -10075,6 +10222,8 @@ function aiDropDraft(owner) {
 /** Чат из списка или из поиска — въезд справа. Набранное на главном ждёт
  *  там; у чата — своё, если в нём уже что-то набирали. */
 function aiOpenChat(id) {
+  // Без доступа чат не открывается: на его месте — «закрытый тест».
+  if (!aiReady()) { aiRender(); return; }
   const chat = aiChatById(id);
   if (!chat) return;
   if (ai.page === 'chat' && ai.chat === chat) return;
@@ -10224,7 +10373,11 @@ function openAiPanel() {
   aiNextGreeting();
   aiRender(true);
   aiHelloIn();
-  if (aiSignedIn()) el.aiInput.focus({ preventScroll: true });
+  // Доступ — при каждом открытии: прежний ответ уже нарисован, новый
+  // перерисует, только если он другой (aiSetAccess).
+  ai.accessFocus = aiSignedIn() && aiAccess() === 'wait';
+  if (aiReady()) el.aiInput.focus({ preventScroll: true });
+  if (currentUser) aiCheckAccess();
 }
 
 /** Закрыть: рейл сворачивается тем же ходом, панель прячется, когда он
@@ -10256,15 +10409,20 @@ function aiShowChat(id) {
   aiOpenChat(id);
 }
 
-/** Панель целиком: вход, главный экран или чат. Закрытая — не рисуется. */
+/** Панель целиком: вход, скелет (ждём ответа о доступе), «закрытый тест»,
+ *  главный экран или чат. Закрытая — не рисуется. */
 function aiRender(stick) {
   if (el.aiPanel.hidden) return;
   const signed = aiSignedIn();
+  const access = signed ? aiAccess() : null;
+  const ready = access === 'open';
   if (ai.page === 'chat' && !ai.chat) ai.page = 'home';
-  const chat = signed && ai.page === 'chat' ? ai.chat : null;
-  const home = signed && !chat;
+  const chat = ready && ai.page === 'chat' ? ai.chat : null;
+  const home = ready && !chat;
   el.aiSignin.hidden = signed;
-  el.aiBody.hidden = !signed;
+  el.aiWait.hidden = access !== 'wait';
+  el.aiLocked.hidden = access !== 'locked';
+  el.aiBody.hidden = !ready;
   el.aiBody.dataset.page = chat ? 'chat' : 'home';
   el.aiHello.hidden = !home;
   el.aiList.hidden = !home;
@@ -10276,7 +10434,8 @@ function aiRender(stick) {
   aiRenderQuota();
   if (chat) aiRenderLog(stick);
   else if (home) { aiRenderHello(); aiRenderList(); }
-  if (signed) { aiRenderAttach(); aiSyncCompose(); }
+  if (ready) { aiRenderAttach(); aiSyncCompose(); }
+  if (access === 'locked') aiRenderLocked();
   aiPageIn();
 }
 
@@ -10301,7 +10460,7 @@ function aiPageIn() {
 
 /** «47 из 50 сегодня» — после первого ответа функции; в шапке и списка, и чата. */
 function aiRenderQuota() {
-  const show = aiSignedIn() && ai.remaining !== null && ai.limit !== null;
+  const show = aiReady() && ai.remaining !== null && ai.limit !== null;
   el.aiQuota.hidden = !show;
   if (show) el.aiQuota.textContent = t('ai.quota', { remaining: ai.remaining, limit: ai.limit });
 }
@@ -10324,7 +10483,7 @@ function aiSetBusy(on) {
   aiSyncCompose();
   aiRenderLog();
   // Поле было недоступно и фокус потеряло — вернуть, если человек не ушёл.
-  if (!on && !el.aiPanel.hidden && !el.aiBody.hidden && aiSignedIn()
+  if (!on && !el.aiPanel.hidden && !el.aiBody.hidden && aiReady()
     && (document.activeElement === document.body || el.aiPanel.contains(document.activeElement))) {
     el.aiInput.focus({ preventScroll: true });
   }
@@ -10646,7 +10805,7 @@ async function aiPrepareFile(file) {
  *  AI_ATTACH.maxCount — отказ строкой у поля. */
 async function aiAddFiles(files) {
   const list = [...(files || [])].filter(Boolean);
-  if (!list.length || !aiSignedIn() || ai.busy) return;
+  if (!list.length || !aiReady() || ai.busy) return;
   const gen = ai.attachGen;
   ai.attachErr = null;
   const max = (aiLimits() || {}).maxCount || 0;
@@ -11252,6 +11411,16 @@ async function aiCall(run, frame, chat) {
   if (!res.ok) {
     if (res.status === 401) { ai.needAuth = true; aiRender(); return null; }
     if (res.status === 404) { aiError('ai.unavailable', false, chat); return null; }
+    if (res.status === 403) {
+      const j = await res.json().catch(() => ({}));
+      if (run !== ai.run) return null;
+      // Доступ забрали (или его не было, а ответа ai_has_access не дождались):
+      // «закрытый тест»; сообщение остаётся в истории чата.
+      if (j && j.error === 'no access') {
+        if (currentUser) aiSetAccess(currentUser.id, false);
+        return null;
+      }
+    }
     if (res.status === 429) {
       const j = await res.json().catch(() => ({}));
       if (run !== ai.run) return null;
@@ -11360,7 +11529,7 @@ function aiEndTurn(chat) {
  *  пишется в свой чат, даже если человек ушёл в список или в другой. */
 async function aiRun(chat) {
   const c = chat || ai.chat;
-  if (ai.busy || !c) return;
+  if (ai.busy || !c || !aiReady()) return;
   const run = ai.run;
   ai.busyChat = c;
   aiSetBusy(true);
@@ -11410,6 +11579,8 @@ function aiSend(raw) {
   if (!aiSignedIn()) { aiRender(); return; }
   // Отставшая вкладка агента не зовёт: набранное остаётся в поле.
   if (staleGuard()) return;
+  // Агент закрыт (или ответа о доступе ещё нет) — ai-chat не зовётся.
+  if (!aiReady()) { aiRender(); return; }
   let blocks = [];
   if (files.length) {
     const check = Core.aiCheckAttachments(files.map(aiCheckInput));
@@ -11470,6 +11641,8 @@ el.aiMore.addEventListener('click', () => {
   if (id) openMenu(el.aiMore, [{ label: t('ai.delete_chat'), danger: true, onClick: () => aiDeleteChat(id) }], { toggle: true });
 });
 el.aiSigninBtn.addEventListener('click', () => openAuthModal('signin'));
+el.aiRequest.addEventListener('click', aiRequestAccess);
+el.aiRequestRetry.addEventListener('click', aiRequestAccess);
 /** Enter — отправить, Shift+Enter — перенос строки. */
 function aiOnKey(e) {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); aiSend(el.aiInput.value); }
@@ -11500,7 +11673,7 @@ function aiOnPaste(e) {
 // Файлы, перетащенные на панель: пока они над ней — подсказка поверх
 // (.ai-drop); отпустили — во вложения поля открытой страницы.
 function aiDragsFiles(e) {
-  return aiSignedIn() && !!e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  return aiReady() && !!e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
 }
 function aiOnDrag(e) {
   if (!aiDragsFiles(e)) return;

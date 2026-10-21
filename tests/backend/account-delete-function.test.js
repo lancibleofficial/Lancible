@@ -10,7 +10,11 @@
  * Без сети (19 октября 2026): сама функция (index.ts, типы снимает esbuild) на
  * подменах базы и хранилища — снимки экрана из обратной связи стираются до
  * удаления пользователя, только свои и только по имени <uuid>.<тип>, а сбой
- * их стирания удаление не держит, но виден в ответе и в логе.
+ * их стирания удаление не держит, но виден в ответе и в логе. С 21 октября
+ * 2026 — так же строка ai_access (доступ к агенту по приглашению,
+ * supabase/ai-access.sql): стирается по почте в нижнем регистре до удаления,
+ * сбой не держит, в логе — код без почты и uid; живая часть с ключом из
+ * .env.local проверяет, что строка уходит вместе с аккаунтом.
  *
  * Пока функция не выложена (404), тест — todo. Живая часть заводит двух
  * настоящих пользователей — только по LANCIBLE_ACCOUNT_TEST=1 (в GitHub —
@@ -57,15 +61,18 @@ function serviceKey() {
 const SRC = path.join(__dirname, '..', '..', 'supabase', 'functions', 'delete-account', 'index.ts');
 
 /** База и хранилище на подмене. objects — пути по корзинам; feedback — строки
- *  таблицы; fail — какие шаги ответят ошибкой. calls — что и в каком порядке
+ *  таблицы; access — почты в ai_access (null — таблицы нет); email — почта
+ *  пользователя u1, как её отдаёт вход; fail — какие шаги ответят ошибкой
+ *  (fail.access — объект ошибки или 'throw'). calls — что и в каком порядке
  *  позвала функция. */
-function fakeAdmin({ objects = {}, feedback = [], fail = {} } = {}) {
+function fakeAdmin({ objects = {}, feedback = [], access = ['u1@example.com', 'u2@example.com'], email = 'U1@Example.com', fail = {} } = {}) {
   const store = Object.fromEntries(Object.entries(objects).map(([b, list]) => [b, new Set(list)]));
   const calls = [];
+  const accessRows = access && new Set(access);
   const client = {
     auth: {
       getUser: async (jwt) => (jwt === 'user-token'
-        ? { data: { user: { id: 'u1' } }, error: null }
+        ? { data: { user: { id: 'u1', email, email_confirmed_at: '2026-10-01T00:00:00Z' } }, error: null }
         : { data: { user: null }, error: { message: 'invalid JWT' } }),
       admin: {
         deleteUser: async (id) => { calls.push(['deleteUser', id]); return { error: null }; },
@@ -91,6 +98,25 @@ function fakeAdmin({ objects = {}, feedback = [], fail = {} } = {}) {
       },
     },
     from(table) {
+      if (table === 'ai_access') {
+        // Только delete по email — ничего другого функции с таблицей не нужно.
+        let email = null;
+        const d = {
+          delete() { return d; },
+          eq(k, v) { assert.equal(k, 'email'); email = v; return d; },
+          then(ok, bad) {
+            return Promise.resolve().then(() => {
+              calls.push(['delete ai_access', email]);
+              if (fail.access === 'throw') throw new TypeError('error sending request for url (https://example.supabase.co/rest/v1/ai_access?email=eq.u1%40example.com)');
+              if (fail.access) return { data: null, error: fail.access };
+              if (!accessRows) return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.ai_access' in the schema cache" } };
+              accessRows.delete(email);
+              return { data: null, error: null };
+            }).then(ok, bad);
+          },
+        };
+        return d;
+      }
       assert.equal(table, 'feedback');
       const q = { filters: [], range: null, cols: null };
       const b = {
@@ -110,7 +136,7 @@ function fakeAdmin({ objects = {}, feedback = [], fail = {} } = {}) {
       return b;
     },
   };
-  return { client, store, calls };
+  return { client, store, calls, access: accessRows };
 }
 
 let loaded = null;
@@ -242,6 +268,57 @@ test('delete-account без сети: таблицы feedback ещё нет — 
   assert.equal(anon.status, 401);
 });
 
+// 21 октября 2026: агент — по приглашению (supabase/ai-access.sql). Строка
+// ai_access — почта и пометка — ссылки на auth.users не имеет и каскадом не
+// уходит; её стирает функция.
+test('delete-account без сети: строка ai_access с почтой удаляемого стирается до удаления — по нижнему регистру, чужие на месте', async (t) => {
+  const db = fakeAdmin(people());
+  const r = await invokeOffline(t, db);
+  if (!r) return;
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json, { deleted: true });
+  assert.deepEqual(db.calls.filter((c) => c[0] === 'delete ai_access'), [['delete ai_access', 'u1@example.com']], 'почта входа «U1@Example.com» — в нижнем регистре, как в таблице');
+  assert.deepEqual([...db.access], ['u2@example.com'], 'своя строка стёрта, чужая на месте');
+  const order = db.calls.map((c) => c[0]);
+  assert.ok(order.indexOf('delete ai_access') < order.indexOf('deleteUser'), 'строка стирается до удаления пользователя');
+  assert.deepEqual(r.errors, []);
+
+  // Доступа не было — стирать нечего, это не сбой.
+  const none = fakeAdmin({ ...people(), access: ['u2@example.com'] });
+  const r2 = await invokeOffline(t, none);
+  assert.deepEqual(r2.json, { deleted: true });
+  assert.deepEqual(r2.errors, []);
+});
+
+test('delete-account без сети: таблицы ai_access нет — удаление как раньше; сбой стирания удаление не держит, в логе — код без почты и uid', async (t) => {
+  const db = fakeAdmin({ ...people(), access: null });
+  const r = await invokeOffline(t, db);
+  if (!r) return;
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.json, { deleted: true }, 'ai-access.sql не выполнен — стирать нечего');
+  assert.deepEqual(r.errors, []);
+  assert.deepEqual(db.calls.filter((c) => c[0] === 'deleteUser'), [['deleteUser', 'u1']]);
+
+  for (const [name, fail, code] of [
+    ['таймаут', { code: '57014', message: 'canceling statement due to statement timeout for u1@example.com' }, '57014'],
+    ['сеть — исключение с адресом запроса', 'throw', 'TypeError'],
+  ]) {
+    const bad = fakeAdmin({ ...people(), fail: { access: fail } });
+    const rb = await invokeOffline(t, bad);
+    assert.equal(rb.status, 200, name);
+    assert.deepEqual(rb.json, { deleted: true, access: 'remain' }, `${name}: аккаунт удалён, сбой — в ответе`);
+    assert.deepEqual(bad.calls.filter((c) => c[0] === 'deleteUser'), [['deleteUser', 'u1']], `${name}: удаление не задержано`);
+    assert.equal(rb.errors.length, 1, name);
+    assert.match(rb.errors[0], new RegExp(`ai_access row remains.*${code}`), name);
+    assert.doesNotMatch(rb.errors[0], /u1@example\.com|u1%40|\bu1\b/i, `${name}: в логе нет почты и uid`);
+  }
+
+  // Снимки и доступ не стёрлись оба — оба в ответе.
+  const both = fakeAdmin({ ...people(), fail: { remove: 'feedback', access: { code: '57014', message: 'timeout' } } });
+  const rboth = await invokeOffline(t, both);
+  assert.deepEqual(rboth.json, { deleted: true, screenshots: 'remain', detail: 'remove from feedback failed', access: 'remain' });
+});
+
 // --- выложенная функция ------------------------------------------------------
 
 const created = [];
@@ -274,7 +351,7 @@ test('delete-account удаляет вызывающего вместе с ка�
     const email = `lancible-test-${Date.now()}-${tag}-${Math.random().toString(36).slice(2, 8)}@example.com`;
     const r = await call('POST', '/auth/v1/signup', { body: { email, password: `T-${Math.random().toString(36)}-9z!` } });
     assert.ok(r.ok && r.json && r.json.access_token, `регистрация не удалась: ${r.status} ${r.text.slice(0, 200)}`);
-    const u = { token: r.json.access_token, id: r.json.user.id, alive: true };
+    const u = { token: r.json.access_token, id: r.json.user.id, email, alive: true };
     created.push(u);
     return u;
   };
@@ -292,15 +369,34 @@ test('delete-account удаляет вызывающего вместе с ка�
     assert.equal(await listOwn(u), 2);
   }
 
-  const done = await deleteAccount(a.token);
-  assert.equal(done.status, 200, `удаление не прошло: ${done.status} ${done.text.slice(0, 200)}`);
-  assert.deepEqual(done.json, { deleted: true });
-  a.alive = false;
-
-  assert.equal((await deleteAccount(a.token)).status, 401, 'токен удалённого пользователя всё ещё годится');
-  assert.equal(await listOwn(b), 2, 'удаление A задело картинки B');
-
+  // Доступ к агенту обоим (ai_access, служебным ключом): строка A уходит с
+  // аккаунтом — функцией или триггером ai_access_forget, — строка B остаётся.
+  // Нет ключа или таблицы (ai-access.sql не выполнен) — эта часть молчит.
   const key = serviceKey();
+  const admin = key && { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
+  const accessRows = async () => {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/ai_access?select=email&email=in.(${[a, b].map((u) => `"${u.email}"`).join(',')})`, { headers: admin });
+    return r.ok ? (await r.json()).map((x) => x.email).sort() : null;
+  };
+  let granted = false;
+  if (admin) {
+    const g = await fetch(`${SUPABASE_URL}/rest/v1/ai_access`, { method: 'POST', headers: { ...admin, Prefer: 'return=minimal' }, body: JSON.stringify([a, b].map((u) => ({ email: u.email, note: 'временный пользователь account-delete-function.test.js' }))) });
+    granted = g.ok;
+  }
+
+  try {
+    const done = await deleteAccount(a.token);
+    assert.equal(done.status, 200, `удаление не прошло: ${done.status} ${done.text.slice(0, 200)}`);
+    assert.deepEqual(done.json, { deleted: true });
+    a.alive = false;
+
+    assert.equal((await deleteAccount(a.token)).status, 401, 'токен удалённого пользователя всё ещё годится');
+    assert.equal(await listOwn(b), 2, 'удаление A задело картинки B');
+    if (granted) assert.deepEqual(await accessRows(), [b.email], 'строка доступа A не ушла вместе с аккаунтом, или задета строка B');
+  } finally {
+    if (granted) await fetch(`${SUPABASE_URL}/rest/v1/ai_access?email=in.(${[a, b].map((u) => `"${u.email}"`).join(',')})`, { method: 'DELETE', headers: admin });
+  }
+
   if (key) {
     const r = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`, {
       method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },

@@ -158,13 +158,15 @@ export function TasksSkeleton() {
 
 /** «Чат-бот» — список чатов (с 18 октября 2026, круг 20): острова строк —
  *  название и время, две строки превью, число сообщений. */
-export function ChatSkeleton() {
+export function ChatSkeleton({ header = true, testID }) {
   const s = useStyles();
   // Как главный экран (круг 21): сценка, фраза и поле — серединой посередине,
-  // под ними прежние чаты.
+  // под ними прежние чаты. Без шапки (header={false}) — страница под уже
+  // готовой шапкой: так главный экран ждёт ответа, открыт ли агент
+  // (lib/aiAccess.js, 21 октября 2026).
   return (
-    <View style={s.page}>
-      <SkHeader tab="Chat" />
+    <View style={s.page} testID={testID}>
+      {header ? <SkHeader tab="Chat" /> : null}
       <View style={[s.gutter, s.chatHero]}>
         <Skeleton width={120} height={88} radius={radius.xl} />
         <Skeleton width="58%" height={20} />
