@@ -383,7 +383,13 @@ export class ChartView {
     this.ctx = ctx;
     this.dom = h('div', { class: 'led-chart', contenteditable: 'false' });
     this.body = h('div', { class: 'led-chart-body' });
-    this.bar = h('div', { class: 'led-node-bar' },
+    // Нажатие на остров не трогает ни фокус, ни выделение браузера — как у
+    // острова картинки (image.js) и кнопок панели (util.js: btn). Без этого
+    // браузер сразу после click снимал выделение целиком, а окно правки
+    // забирает фокус только следующей задачей: движение мыши или клавиша в
+    // этот промежуток ставили курсор в начало заметки, и после «Отмены»
+    // график был уже не выделен (20 октября 2026).
+    this.bar = h('div', { class: 'led-node-bar', onmousedown: (e) => e.preventDefault() },
       h('button', { type: 'button', class: 'led-btn', title: ctx.t('chart.edit'), onclick: () => this.edit() }, icon('edit', 16)),
       h('button', { type: 'button', class: 'led-btn', title: ctx.t('block.delete'), onclick: () => this.remove() }, icon('trash', 16)));
     // С нативной панелью (телефон, протокол 4) острова нет: «править» и

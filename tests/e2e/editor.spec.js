@@ -161,6 +161,70 @@ test('график из таблицы: числа переезжают в гр�
   expect(chart.attrs.chart.series[0].values).toEqual([10, 14.5]);
 });
 
+// Откуда взялось (20 октября 2026): у острова графика было то же, что у
+// картинки до 7337a40 (tests/e2e/editor-image.spec.js, «выравнивания подряд
+// под замедлением»). Щелчок по кнопке острова внутри выделенного графика для
+// браузера — щелчок внутри выделения не по тексту: сразу после click он
+// снимал выделение целиком (rangeCount 0), а фокус оставался в тексте.
+// «Изменить график» открывает окно и забирает фокус только следующей
+// задачей (setTimeout в modal) — и если в этот промежуток успевало движение
+// мыши или клавиша, курсор вставал в начало заметки, ProseMirror читал его
+// как новое выделение, а после «Отмены» график был уже не выделен и остров
+// пропадал. Промежуток меряется здесь прямо: задача, поставленная из click
+// раньше фокуса окна, видит выделение браузера. Дальше — как у картинки:
+// мышь уходит, Shift, и только потом проверка. Процессор замедлен, как на
+// загруженной машине CI.
+test('остров графика под замедлением: «изменить» и «отмена» подряд — выделение и остров на месте, мышь и клавиша их не сбивают', async ({ page }) => {
+  await openTask(page);
+  await page.evaluate(() => {
+    const p = (text) => ({ type: 'paragraph', content: [{ type: 'text', text }] });
+    const chart = { type: 'bar', title: '', labels: ['Янв', 'Фев'], series: [{ name: 'Часы', values: [10, 14] }], legend: true, values: false, stacked: false };
+    editor.setContent({ v: 1, doc: { type: 'doc', content: [p('до'), { type: 'chart', attrs: { chart } }, p('после')] }, comments: [], ink: [] });
+  });
+  const chart = pm(page).locator('.led-chart');
+  await chart.evaluate((c) => {
+    // Захват на документе срабатывает раньше обработчика кнопки, и его
+    // задача встаёт в очередь раньше фокуса окна.
+    document.addEventListener('click', () => setTimeout(() => {
+      const dom = getSelection();
+      window.__afterClick = { around: dom.rangeCount === 1 && dom.containsNode(c), range: dom.rangeCount };
+    }, 0), true);
+  });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  const modal = page.locator('#ledmodal-backdrop');
+  for (let i = 1; i <= 4; i++) {
+    // После «Отмены» фокус у страницы, а не у редактора, и график выделяется
+    // заново. Сначала — щелчок в текст: щелчок по уже выделенному графику
+    // выделение не меняет, ProseMirror его не пересылает (updateSelection),
+    // и выделение браузера вокруг графика не встаёт.
+    await pm(page).locator('p', { hasText: 'после' }).click();
+    await chart.locator('.led-chart-body').click();
+    await expect(chart).toHaveClass(/\bsel\b/);
+    const before = await chart.evaluate((c) => { const d = getSelection(); return d.rangeCount === 1 && d.containsNode(c); });
+    expect(before, `круг ${i}: до щелчка по острову выделение браузера не вокруг графика`).toBe(true);
+    await chart.locator('.led-node-bar button[title="Изменить график"]').click();
+    await page.mouse.move(60, 400);
+    await page.keyboard.press('Shift');
+    await expect(modal).toBeVisible();
+    const after = await page.evaluate(() => window.__afterClick);
+    expect(after.around, `круг ${i}: сразу после щелчка выделение браузера ушло с графика (rangeCount ${after.range})`).toBe(true);
+    await modal.locator('.modal-buttons button', { hasText: 'Отмена' }).click();
+    await expect(modal).toHaveCount(0);
+    await page.mouse.move(60, 400);
+    await page.keyboard.press('Shift');
+    // Событие selectionchange — задачей после ввода: даём ему пройти.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50))));
+    const node = await page.evaluate(() => {
+      const s = editor.view.state.selection;
+      return s.node ? s.node.type.name : `${s.toJSON().type} ${s.from}`;
+    });
+    expect(node, `круг ${i}: после «Отмены» выделен не график`).toBe('chart');
+    await expect(chart).toHaveClass(/\bsel\b/);
+    await expect(chart.locator('.led-node-bar')).toBeVisible();
+  }
+});
+
 test('комментарий: к выделенному тексту, с автором, решается и сохраняется', async ({ page }) => {
   const id = await openTask(page);
   await pm(page).click();
