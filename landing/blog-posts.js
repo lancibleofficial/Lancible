@@ -27,6 +27,27 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-10-21',
+    tag: 'improvement',
+    version: '0.5.1 · mobile 1.3.1',
+    title: {
+      ru: 'ИИ-агент — в закрытом тесте, новая редакция документов',
+      en: 'The AI agent goes into closed testing; new edition of the documents',
+    },
+    body: {
+      ru: [
+        'ИИ-агент переходит в закрытый тест: пока он открыт по приглашению. Если доступа нет, на месте чата появится экран с кнопкой «Запросить доступ» — запрос придёт нам вместе с почтой аккаунта, и мы напишем, когда откроем. Чаты, которые уже есть на устройстве, никуда не деваются и вернутся вместе с доступом.',
+        'Мы обновили Политику конфиденциальности, Условия использования и страницу об удалении аккаунта: в них описано, как устроен доступ по приглашению и что уходит с запросом. При входе приложение попросит согласиться с редакцией от 21 октября.',
+        'И мелочь, которую было неприятно ловить: после нажатия на кнопку панели у картинки или графика в заметке выделение больше не теряется.',
+      ],
+      en: [
+        'The AI agent is moving into closed testing: for now it is available by invitation. Without access, the chat is replaced by a screen with a Request access button — the request reaches us with your account email, and we will let you know when we open it up. Chats already on your device stay where they are and come back with access.',
+        'We updated the Privacy Policy, the Terms of Use and the account deletion page to describe invitation-only access and what a request sends. The app will ask you to accept the edition of 21 October when you sign in.',
+        'And a small annoyance fixed: pressing a button on the toolbar of an image or a chart in a note no longer drops the selection.',
+      ],
+    },
+  },
+  {
     date: '2026-10-20',
     tag: 'release',
     version: '0.5.0 · mobile 1.3.0',
