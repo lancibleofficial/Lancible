@@ -39,6 +39,25 @@
  */
 window.LANCIBLE_POSTS = [
   {
+    date: '2026-10-23',
+    tag: 'improvement',
+    version: '0.5.2 · mobile 1.3.2',
+    title: {
+      ru: 'Статистика экранов и новая редакция документов',
+      en: 'Screen statistics and a new edition of the documents',
+    },
+    body: {
+      ru: [
+        'Чтобы понимать, какими частями Lancible пользуются, а какие пора переделать, приложение теперь считает, сколько раз за день открывался каждый экран. Уходят только название экрана и платформа — ни задач, ни заметок, ни времени. Считается только у тех, кто вошёл в аккаунт; числа хранятся 12 месяцев.',
+        'Выключить это можно в «Настройках → Данные» (на телефоне — «Меню → Данные»): «Статистика экранов». Об этом — новая редакция Политики конфиденциальности от 23 октября 2026; приложение попросит принять её заново.',
+      ],
+      en: [
+        'To see which parts of Lancible people use and which need rework, the app now counts how many times a day each screen was opened. Only the screen name and the platform are sent — no tasks, notes or time. It counts only for people signed in to an account; the numbers are kept for 12 months.',
+        'You can turn it off in Settings → Data (on the phone, Menu → Data): “Screen statistics”. The new edition of the Privacy Policy, dated 23 October 2026, covers this; the app will ask you to accept it again.',
+      ],
+    },
+  },
+  {
     date: '2026-10-21',
     tag: 'improvement',
     version: '0.5.1 · mobile 1.3.1',
