@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%225.12%204.24%2053.76%2053.76%22><path d=%22M54.0483 16C55.6036 16 56.532 17.6837 55.6706 18.9421L33.6224 51.1552C32.8514 52.2816 31.1487 52.2816 30.3777 51.1552L14.1917 27.5074C13.7218 26.8209 14.2282 25.9026 15.0766 25.9026H21.5355C22.1877 25.9026 22.7966 26.2197 23.1578 26.7474L31.2626 38.5887C31.6131 39.1008 32.3871 39.1008 32.7375 38.5887L47.6198 16.8449C47.981 16.3171 48.5899 16 49.2422 16H54.0483Z%22 fill=%22%2369D345%22/><path d=%22M42.6868 16C43.3937 16 43.8157 16.7653 43.4242 17.3373L32.2951 33.5978C32.1549 33.8026 31.8453 33.8026 31.7051 33.5978L24.876 23.6203C24.5148 23.0925 23.9058 22.7754 23.2536 22.7754H11.997C11.3448 22.7754 10.7358 22.4583 10.3746 21.9305L8.32933 18.9421C7.46804 17.6836 8.39647 16 9.95173 16H42.6868Z%22 fill=%22%2369D345%22/></svg>">
+<title>Админка · Lancible</title>
+<!-- Админка Lancible: статический сайт без сборки (DESIGN.md, «Админ-панель»).
+     Вход — supabase-js (почта, пароль, TOTP), данные — функция admin.
+     Скрипты только свои файлы: встроенных нет, политика сайта их запрещает. -->
+<script src="theme-boot.js"></script>
+<link rel="stylesheet" href="admin.css">
+<script src="vendor/supabase.js" defer></script>
+<script src="vendor/illustrations.js" defer></script>
+<script src="screens.js" defer></script>
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+<div id="boot" class="boot" aria-busy="true">Загружаю…</div>
+
+<main id="auth" class="auth" hidden>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <svg class="brand-mark" aria-hidden="true" viewBox="8 16 48 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M54.0483 16C55.6036 16 56.532 17.6837 55.6706 18.9421L33.6224 51.1552C32.8514 52.2816 31.1487 52.2816 30.3777 51.1552L14.1917 27.5074C13.7218 26.8209 14.2282 25.9026 15.0766 25.9026H21.5355C22.1877 25.9026 22.7966 26.2197 23.1578 26.7474L31.2626 38.5887C31.6131 39.1008 32.3871 39.1008 32.7375 38.5887L47.6198 16.8449C47.981 16.3171 48.5899 16 49.2422 16H54.0483Z" fill="currentColor"/>
+        <path d="M42.6868 16C43.3937 16 43.8157 16.7653 43.4242 17.3373L32.2951 33.5978C32.1549 33.8026 31.8453 33.8026 31.7051 33.5978L24.876 23.6203C24.5148 23.0925 23.9058 22.7754 23.2536 22.7754H11.997C11.3448 22.7754 10.7358 22.4583 10.3746 21.9305L8.32933 18.9421C7.46804 17.6836 8.39647 16 9.95173 16H42.6868Z" fill="currentColor"/>
+      </svg>
+      <span class="brand-name">Lancible</span>
+      <span class="brand-tag">админка</span>
+    </div>
+    <div id="auth-body"></div>
+  </div>
+</main>
+
+<div id="app" class="app" hidden>
+  <nav id="rail" class="rail" aria-label="Разделы">
+    <div class="rail-brand">
+      <svg class="brand-mark" aria-hidden="true" viewBox="8 16 48 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M54.0483 16C55.6036 16 56.532 17.6837 55.6706 18.9421L33.6224 51.1552C32.8514 52.2816 31.1487 52.2816 30.3777 51.1552L14.1917 27.5074C13.7218 26.8209 14.2282 25.9026 15.0766 25.9026H21.5355C22.1877 25.9026 22.7966 26.2197 23.1578 26.7474L31.2626 38.5887C31.6131 39.1008 32.3871 39.1008 32.7375 38.5887L47.6198 16.8449C47.981 16.3171 48.5899 16 49.2422 16H54.0483Z" fill="currentColor"/>
+        <path d="M42.6868 16C43.3937 16 43.8157 16.7653 43.4242 17.3373L32.2951 33.5978C32.1549 33.8026 31.8453 33.8026 31.7051 33.5978L24.876 23.6203C24.5148 23.0925 23.9058 22.7754 23.2536 22.7754H11.997C11.3448 22.7754 10.7358 22.4583 10.3746 21.9305L8.32933 18.9421C7.46804 17.6836 8.39647 16 9.95173 16H42.6868Z" fill="currentColor"/>
+      </svg>
+      <span class="brand-name">Lancible</span>
+      <span class="brand-tag">админка</span>
+    </div>
+    <div class="rail-list">
+      <a class="rail-item" href="#/overview" data-section="overview">Обзор</a>
+      <a class="rail-item" href="#/screens" data-section="screens">Экраны</a>
+      <a class="rail-item" href="#/users" data-section="users">Пользователи</a>
+      <a class="rail-item" href="#/feedback" data-section="feedback">Обратная связь</a>
+      <a class="rail-item" href="#/agent" data-section="agent">Агент и API</a>
+      <a class="rail-item" href="#/blog" data-section="blog">Блог</a>
+      <a class="rail-item" href="#/releases" data-section="releases">Выпуски</a>
+      <a class="rail-item" href="#/logs" data-section="logs">Журнал</a>
+      <a class="rail-item" href="#/architecture" data-section="architecture">Устройство</a>
+      <a class="rail-item" href="#/graph" data-section="graph">Граф кода</a>
+    </div>
+    <div class="rail-foot">
+      <div class="rail-user" id="rail-user"></div>
+      <button type="button" class="rail-btn" id="theme-btn">Тема: как в системе</button>
+      <button type="button" class="rail-btn" id="signout-btn">Выйти</button>
+    </div>
+  </nav>
+  <main id="view" class="view" tabindex="-1"></main>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+</body>
+</html>

@@ -16,7 +16,7 @@ const { LEGAL_DOCS, LEGAL_LANGS } = require('../../src/renderer/core/legal.js');
 const BUSINESS = require('../../landing/business.js');
 
 const DOCS = LEGAL_DOCS.map((d) => `${d}.html`);
-const SITE = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html', ...DOCS];
+const SITE = ['index.html', 'blog.html', ...DOCS];
 
 function articles(page) {
   const html = read(page);
@@ -423,6 +423,165 @@ test('Политика §11: агент по приглашению — спис
   }
 });
 
+// --- админ-панель, редакция 23 октября 2026 ------------------------------------
+//
+// Вошедший клиент шлёт track_screen (тип экрана, платформа, число открытий по
+// дням — таблица usage_daily); ответ на сообщение обратной связи уходит письмом
+// через Resend и хранится в feedback_replies; данные пользователей видит
+// только владелец — в панели со вторым фактором (aal2). Устройство —
+// tmp/design-admin.md, supabase/admin.sql; правовая сторона — COMPLIANCE.md,
+// «Админ-панель и статистика экранов».
+const USAGE_TITLE = { ru: 'Статистика экранов', en: 'Screen statistics', uk: 'Статистика екранів', kk: 'Экрандар статистикасы' };
+/** Срок статистики экранов: Политика §6 и уборка usage-sweep в supabase/admin.sql. */
+const USAGE_MONTHS = 12;
+const quoted = (lang, s) => (lang === 'en' ? `“${s}”` : `«${s}»`);
+
+test('Политика: статистика экранов, ответ на обратную связь письмом через Resend и доступ владельца через панель со вторым фактором — в каждом переводе', () => {
+  const words = {
+    ru: { guest: /Без входа приложение ничего не отправляет/, linked: /привязаны к вашему аккаунту/, none: /названий, содержимого и идентификаторов/, basis: /Основание — законный интерес/, byDefault: /включена по умолчанию/, keep: /Статистика экранов — 12 месяцев: записи старше этого срока удаляются автоматически, а при удалении аккаунта — сразу/, reply: /ответить на него письмом на почту аккаунта/, replyKeep: /Наши ответы на сообщения хранятся и удаляются вместе с ними/, owner: /только у владельца сервиса/, mfa: /вторым фактором/, notContent: /но не содержимое проектов, задач, заметок и переписки/, old: /Аналитики сейчас нет/ },
+    en: { guest: /Without signing in, the app sends nothing/, linked: /linked to your account/, none: /no names, contents or identifiers/, basis: /Legal basis: legitimate interest/, byDefault: /on by default/, keep: /Screen statistics — 12 months: records older than that are deleted automatically, and when you delete the account they are erased at once/, reply: /reply to it by email at the account’s address/, replyKeep: /Our replies to messages are kept and deleted together with them/, owner: /only by the owner of the service/, mfa: /second factor/, notContent: /but not the contents of projects, tasks, notes or conversations/, old: /There is no analytics today/ },
+    uk: { guest: /Без входу застосунок нічого не надсилає/, linked: /прив’язані до вашого акаунта/, none: /назв, вмісту й ідентифікаторів/, basis: /Підстава — законний інтерес/, byDefault: /ввімкнено за замовчуванням/, keep: /Статистика екранів — 12 місяців: записи, старші за цей строк, видаляються автоматично, а під час видалення акаунта — одразу/, reply: /відповісти на нього листом на пошту акаунта/, replyKeep: /Наші відповіді на повідомлення зберігаються й видаляються разом із ними/, owner: /має лише власник сервісу/, mfa: /другим фактором/, notContent: /але не вміст проєктів, завдань, нотаток і листування/, old: /Аналітики зараз немає/ },
+    kk: { guest: /Кірмесеңіз, қосымша ештеңе жібермейді/, linked: /аккаунтыңызға байланған/, none: /атаулары, мазмұны және идентификаторлары жоқ/, basis: /Негіз — қызметті дамытуға деген заңды мүдде/, byDefault: /әдепкі бойынша қосулы/, keep: /Экрандар статистикасы — 12 ай: осы мерзімнен ескі жазбалар автоматты түрде жойылады, ал аккаунтты жойғанда — бірден/, reply: /аккаунт поштасына хатпен жауап/, replyKeep: /Хабарларға берген жауаптарымыз солармен бірге сақталады және жойылады/, owner: /тек қызмет иесінде бар/, mfa: /екінші фактормен/, notContent: /мазмұнын көрсетпейді/, old: /Қазір аналитика жоқ/ },
+  };
+  const fbHeading = { ru: '<h3>Обратная связь</h3>', en: '<h3>Feedback</h3>', uk: '<h3>Зворотний зв’язок</h3>', kk: '<h3>Кері байланыс</h3>' };
+  const privacy = byLang('privacy.html');
+  for (const lang of LEGAL_LANGS) {
+    const w = words[lang];
+    const title = USAGE_TITLE[lang];
+    // Название выключателя — дословно как на экране. Ключ словаря заводят
+    // исполнители веба и телефона; пока его нет, сверяем с design-admin.md.
+    for (const [where, dict] of [['десктоп', DESKTOP_T], ['телефон', MOBILE_T]]) {
+      const t = dict[lang] && dict[lang]['settings.usage_title'];
+      if (t !== undefined) assert.equal(t, title, `${where} settings.usage_title (${lang}): «${t}», а Политика называет «${title}»`);
+    }
+    const body = privacy[lang];
+    assert.doesNotMatch(body, w.old, `privacy.html ${lang}: §2 всё ещё говорит «аналитики нет» — а статистика экранов есть`);
+    const s3 = section(body, 3);
+    const h3 = `<h3>${title}</h3>`;
+    assert.ok(s3 && s3.includes(h3), `privacy.html ${lang}: в §3 нет подраздела «${title}»`);
+    const stats = s3.slice(s3.indexOf(h3), s3.indexOf('<h3>', s3.indexOf(h3) + 4));
+    for (const k of ['guest', 'linked', 'none', 'basis', 'byDefault']) assert.match(stats, w[k], `privacy.html ${lang}: §3 «${title}» без «${w[k].source}»`);
+    for (const need of ['Android', 'iOS', quoted(lang, title), '6']) assert.ok(stats.includes(need), `privacy.html ${lang}: §3 «${title}» не называет «${need}»`);
+    // Выключатель живёт в разделе «Данные» (веб, десктоп и телефон): путь — как
+    // на экране, название раздела — из словаря.
+    const path3 = `→ ${DESKTOP_T[lang]['settings.section_data']} → ${quoted(lang, title)}`;
+    assert.ok(stats.includes(path3), `privacy.html ${lang}: §3 не называет путь «${path3}»`);
+    assert.equal(MOBILE_T[lang]['settings.section_data'], DESKTOP_T[lang]['settings.section_data'], `settings.section_data (${lang}) разный на десктопе и телефоне`);
+    const fb = s3.slice(s3.indexOf(fbHeading[lang]), s3.indexOf('<h3>', s3.indexOf(fbHeading[lang]) + 4));
+    assert.match(fb, w.reply, `privacy.html ${lang}: §3 не говорит, что ответ приходит письмом на почту аккаунта`);
+    assert.ok(fb.includes('Resend'), `privacy.html ${lang}: §3 не называет почтовый сервис Resend`);
+    const s5 = section(body, 5);
+    assert.match(s5, /<li><strong>Resend<\/strong> \(Plus Five Five, Inc\.;[^<]*<\/li>/, `privacy.html ${lang}: в §5 нет Resend (Plus Five Five, Inc.) среди получателей`);
+    assert.match(s5.slice(s5.indexOf('</ul>')), /Resend/, `privacy.html ${lang}: абзац о передаче за границу не называет Resend`);
+    const s6 = section(body, 6);
+    assert.match(s6, w.keep, `privacy.html ${lang}: в §6 нет срока статистики экранов (${USAGE_MONTHS} месяцев) и стирания с аккаунтом`);
+    assert.match(s6, w.replyKeep, `privacy.html ${lang}: в §6 не сказано, что ответы хранятся и удаляются вместе с сообщением`);
+    const s9 = section(body, 9);
+    for (const k of ['owner', 'mfa', 'notContent']) assert.match(s9, w[k], `privacy.html ${lang}: §9 без «${w[k].source}» — доступ владельца через панель`);
+  }
+
+  // «Удаление аккаунта»: статистика и ответы стираются с аккаунтом, письмо — у человека.
+  const erased = {
+    ru: [/статистикой экранов/, /нашими ответами на них/, /Письма с нашими ответами остаются в вашем почтовом ящике/],
+    en: [/screen statistics/, /our replies to them/, /Emails with our replies stay in your mailbox/],
+    uk: [/статистикою екранів/, /нашими відповідями на них/, /Листи з нашими відповідями залишаються у вашій поштовій скриньці/],
+    kk: [/экрандар статистикасы/, /оларға берген жауаптарымызбен бірге/, /жауаптарымыз бар хаттар пошта жәшігіңізде қалады/],
+  };
+  for (const a of articles('delete-account.html')) {
+    for (const re of erased[a.lang]) assert.match(a.body, re, `delete-account.html ${a.lang}: нет «${re.source}»`);
+  }
+
+  // Политика cookie: «аналитики нет» — про сайт; статистика экранов названа отдельно.
+  const analytics = { ru: 'Аналитика', en: 'Analytics', uk: 'Аналітика', kk: 'Аналитика' };
+  const cookies = byLang('cookies.html');
+  for (const lang of LEGAL_LANGS) {
+    const sec = sectionOf(cookies[lang], new RegExp(`<h2>${analytics[lang]}</h2>`));
+    assert.ok(sec, `cookies.html ${lang}: нет раздела «${analytics[lang]}»`);
+    assert.ok(sec.includes(`→ ${DESKTOP_T[lang]['settings.section_data']} → ${quoted(lang, USAGE_TITLE[lang])}`) && sec.includes('href="privacy.html"'), `cookies.html ${lang}: раздел «${analytics[lang]}» не называет статистику экранов (путь к выключателю) со ссылкой на Политику`);
+  }
+
+  const c = fs.readFileSync(path.join(ROOT, 'COMPLIANCE.md'), 'utf8');
+  const services = c.slice(c.indexOf('## Сторонние сервисы'), c.indexOf('## Где лежат данные'));
+  assert.match(services, /\| Resend \|[^\n]*Plus Five Five, Inc\./, 'COMPLIANCE.md: в «Сторонних сервисах» нет строки Resend');
+  for (const t of ['usage_daily', 'feedback_replies', 'admin_users', 'blog_posts']) assert.ok(c.includes(`\`${t}\``), `COMPLIANCE.md: не описана таблица ${t}`);
+});
+
+test('блог из базы: главная и блог читают blog_posts у Supabase — Политика §3 и Политика cookie называют это, лента не заводит ни cookie, ни ключей хранилища', () => {
+  // С 23 октября 2026 landing/blog-feed.js при каждом визите читает
+  // опубликованные посты ключом anon прямо из PostgREST: Supabase видит IP и
+  // заголовки любого посетителя, и без аккаунта. Сверяем с кодом: пропал
+  // запрос — тексты можно сузить; появилось хранилище — нужна строка в
+  // таблице Политики cookie. Служебные /logs, /architecture и /graph с того
+  // же дня — разделы админ-панели (журнал — только служебным ключом), так что
+  // на сайте базу читают только главная и блог, и тексты их одних и называют.
+  const feed = fs.readFileSync(path.join(LANDING, 'blog-feed.js'), 'utf8');
+  if (!/\/rest\/v1\/blog_posts/.test(feed)) assert.fail('blog-feed.js больше не читает blog_posts из Supabase — поправьте Политику §3, Политику cookie и этот тест');
+  assert.doesNotMatch(feed, /localStorage|sessionStorage|indexedDB|document\.cookie|credentials:\s*'include'/, 'blog-feed.js пишет в хранилище браузера или шлёт cookie — нужна строка в Политике cookie');
+  for (const page of ['index.html', 'blog.html']) assert.ok(read(page).includes('<script src="blog-feed.js"></script>'), `${page}: не подключает blog-feed.js — тогда и тексты про чтение блога из базы неправда`);
+  const blog = { ru: /Главная страница и блог/, en: /The home page and the blog/, uk: /Головна сторінка й блог/, kk: /Басты бет пен блог/ };
+  const blogCookies = { ru: /главная страница и блог/, en: /the home page and the blog/, uk: /головна сторінка й блог/, kk: /басты бет пен блог/ };
+  const noAccount = { ru: /даже без аккаунта/, en: /even without an account/, uk: /навіть без акаунта/, kk: /аккаунтсыз да/ };
+  const privacy = byLang('privacy.html');
+  const cookies = byLang('cookies.html');
+  const paraWith = (body, re) => (body.match(/<p>[^\n]*<\/p>/g) || []).find((p) => re.test(p) && p.includes('Supabase'));
+  for (const lang of LEGAL_LANGS) {
+    const p = paraWith(section(privacy[lang], 3), blog[lang]);
+    assert.ok(p, `privacy.html ${lang}: в §3 нет абзаца о том, что главная и блог читают базу у Supabase`);
+    assert.match(p, noAccount[lang], `privacy.html ${lang}: §3 «Технические данные» не говорит, что посетителя видно и без аккаунта`);
+    const c = paraWith(cookies[lang], blogCookies[lang]);
+    assert.ok(c, `cookies.html ${lang}: исключение не называет главную и блог, которые читают базу у Supabase`);
+    assert.match(c, /cookie/, `cookies.html ${lang}: исключение не говорит, что cookie запросы не ставят`);
+  }
+});
+
+test('служебные /logs, /architecture и /graph — в админ-панели: правовые тексты их не называют, /legal — без vis-network', () => {
+  // 23 октября 2026 страницы ушли с лендинга (tests/unit/landing.test.js,
+  // REMOVED), журнал читается только служебным ключом. Документ, который
+  // называет их, обещал бы посетителю то, чего на сайте нет. vis-network
+  // осталась только в админке (admin/vendor, лицензии рядом —
+  // landing-third-party.test.js); админку пользователям не раздают, поэтому
+  // на /legal её нет.
+  for (const f of ['logs.html', 'architecture.html', 'graph.html']) {
+    if (fs.existsSync(path.join(LANDING, f))) assert.fail(`landing/${f} вернулась — тогда верните её и в Политику §3 и Политику cookie`);
+  }
+  for (const page of DOCS) {
+    for (const a of articles(page)) {
+      const text = a.body.replace(/<[^>]+>/g, '');
+      assert.doesNotMatch(text, /(^|[\s(«“])\/(logs|architecture|graph)\b/, `${page} ${a.lang}: называет служебную страницу, которой на сайте больше нет`);
+    }
+  }
+  for (const a of articles('legal.html')) assert.ok(!a.body.includes('vis-network'), `legal.html ${a.lang}: vis-network живёт только в админке — на /legal её не называем`);
+});
+
+// Обещания §6 и «Удаления аккаунта» держит база: срок статистики — уборка по
+// расписанию, «вместе с аккаунтом» — каскад. Таблицы заводит supabase/admin.sql
+// (исполнитель B); пока файла нет, тест виден как todo.
+const ADMIN_SQL = path.join(ROOT, 'supabase', 'admin.sql');
+test('база держит обещания Политики: usage_daily и feedback_replies стираются каскадом, статистика старше 12 месяцев — по расписанию', { todo: !fs.existsSync(ADMIN_SQL) && 'ждёт supabase/admin.sql (исполнитель B)' }, () => {
+  assert.ok(fs.existsSync(ADMIN_SQL), 'нет supabase/admin.sql');
+  const sql = fs.readFileSync(ADMIN_SQL, 'utf8').replace(/\r\n/g, '\n');
+  const table = (name) => {
+    const m = sql.match(new RegExp(`create table (?:if not exists )?(?:public\\.)?${name}\\s*\\(([\\s\\S]*?)\\n\\);`, 'i'));
+    assert.ok(m, `supabase/admin.sql: нет таблицы ${name} — поправить разбор в тесте`);
+    return m[1];
+  };
+  const usage = table('usage_daily');
+  const cols = usage.split('\n').map((l) => l.trim().match(/^([a-z_]+)\s+(?:uuid|date|text|int|integer|bigint|smallint|timestamptz)\b/i)).filter(Boolean).map((m) => m[1]);
+  assert.deepEqual(cols.sort(), ['day', 'platform', 'screen', 'user_id', 'views'], 'в usage_daily новая колонка — новые данные о человеке: допишите их в Политику §3 «Статистика экранов» и сюда');
+  assert.match(usage, /user_id\s+uuid[^,\n]*references auth\.users[^,\n]*on delete cascade/i, 'usage_daily.user_id без on delete cascade — «стирается вместе с аккаунтом» неправда');
+  assert.match(table('feedback_replies'), /feedback_id\s+uuid[^,\n]*references (?:public\.)?feedback[^,\n]*on delete cascade/i, 'feedback_replies.feedback_id без on delete cascade — ответы пережили бы сообщение');
+  assert.match(sql, /cron\.schedule\(\s*'usage-sweep'/, 'нет задания pg_cron usage-sweep — срок в Политике §6 никто не держит');
+  const sweep = sql.match(/delete from (?:public\.)?usage_daily\s+where\s+day\s*<[^;]*interval '(\d+) months'/i);
+  assert.ok(sweep, 'usage-sweep стирает не по сроку в месяцах — поправить разбор в тесте');
+  assert.equal(Number(sweep[1]), USAGE_MONTHS, `usage-sweep стирает статистику старше ${sweep[1]} мес., а Политика §6 обещает ${USAGE_MONTHS} — поправьте одно из двух (и USAGE_MONTHS)`);
+  // Почтовый сервис ответа — тот, что назван в §5.
+  const fnDir = path.join(ROOT, 'supabase', 'functions', 'admin');
+  if (fs.existsSync(fnDir)) {
+    const src = fs.readdirSync(fnDir, { recursive: true }).filter((f) => /\.ts$/.test(f)).map((f) => fs.readFileSync(path.join(fnDir, f), 'utf8')).join('\n');
+    assert.match(src, /api\.resend\.com/, 'функция admin шлёт ответ не через Resend — поправьте Политику §3, §5 и COMPLIANCE.md');
+  }
+});
+
 test('идентификатор установки: Политика §3 называет приставки систем, как их пишет код', () => {
   // src/data-store.js (win-/mac-/linux-), web/api-shim.js (web-),
   // mobile/src/lib/device.js (android-/ios-). Приставка называет систему —
@@ -559,10 +718,9 @@ test('баннер согласия и правовые ссылки — на к
 //
 // Каждый сторонний адрес в <head> — это IP посетителя, отданный третьей
 // стороне до всякого согласия. Шрифты лежат у нас (landing/fonts/) с
-// 7 октября 2026; исключение — служебный граф, который видит только автор.
-const THIRD_PARTY_OK = {
-  'graph-view.html': ['unpkg.com'],
-};
+// 7 октября 2026. Исключений нет: служебный граф, бравший библиотеку с unpkg,
+// с 23 октября 2026 живёт в админке со своей копией (admin/vendor).
+const THIRD_PARTY_OK = {};
 
 test('страницы ничего не грузят со сторонних адресов', () => {
   const pages = fs.readdirSync(LANDING).filter((f) => f.endsWith('.html'));

@@ -25,8 +25,8 @@ const ZONES = {
     check: 'e2e и тесты лендинга; web/index.html — вслед за src/renderer/index.html; после правки редактора — npm run build:editor',
     paths: [
       'src/main.js', 'src/preload.js', 'src/xlsx.js', 'src/data-store.js', 'src/renderer/**', 'src/editor/**',
-      'mobile/src/editor/editorBundle.js', 'web/**', 'landing/**',
-      'scripts/build-editor.js', 'scripts/build-landing-app.js', 'scripts/serve-web.js',
+      'mobile/src/editor/editorBundle.js', 'web/**', 'landing/**', 'admin/**',
+      'scripts/build-editor.js', 'scripts/build-landing-app.js', 'scripts/serve-web.js', 'scripts/serve-admin.js',
       'scripts/sync-web-assets.js', 'scripts/shot.js', 'scripts/xlsx-check.js',
     ],
   },
@@ -76,12 +76,15 @@ const ZONES = {
   },
   release: {
     area: 'Выкат и пересобираемое',
-    check: 'граф, /graph и числа /architecture не править руками — npm run graph:baseline и site:refresh; блог и кнопки загрузок — при выкате',
+    check: 'граф и числа «Устройства» (admin/graph, admin/content) не править руками — npm run graph:baseline и site:refresh; блог и кнопки загрузок — при выкате',
     sensitive: true,
     paths: [
-      'landing/blog-posts.js', 'landing/graph*.html',
+      // Граф и «Устройство» с 23 октября 2026 живут в админке (admin/graph,
+      // admin/content), на лендинге их больше нет.
+      'landing/blog-posts.js', 'admin/graph/**', 'admin/content/**',
       '.github/workflows/release.yml', '.github/workflows/mirror-release.yml', '.github/workflows/mobile-release.yml',
-      'scripts/publish-site.js', 'scripts/publish-release.js', 'README.md',
+      '.github/workflows/publish.yml', 'scripts/release-landing.js', 'scripts/release-steps.js',
+      'scripts/publish-site.js', 'scripts/publish-release.js', 'scripts/blog-to-sql.js', 'README.md',
     ],
   },
   process: {

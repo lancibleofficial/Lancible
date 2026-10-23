@@ -476,6 +476,10 @@ export default function NewProjectSheet({ onCreated, onCancel, initial, project,
   );
 }
 
+// Счётчик экранов (lib/screenStats.js): новый проект и настройки проекта —
+// заметные листы, считаются экранами (имена — как у окон веба).
+NewProjectSheet.screenId = ({ project } = {}) => (project ? 'project.settings' : 'project.new');
+
 const makeStyles = (colors) => StyleSheet.create({
   content: { gap: spacing.md },
   // Поля — общие (Field из AppTextInput): своего вида у формы нет.

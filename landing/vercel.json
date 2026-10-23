@@ -12,18 +12,6 @@
   ],
   "rewrites": [
     {
-      "source": "/architecture",
-      "destination": "/architecture.html"
-    },
-    {
-      "source": "/graph",
-      "destination": "/graph.html"
-    },
-    {
-      "source": "/logs",
-      "destination": "/logs.html"
-    },
-    {
       "source": "/privacy",
       "destination": "/privacy.html"
     },
@@ -46,71 +34,6 @@
     {
       "source": "/delete-account",
       "destination": "/delete-account.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/logs",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/logs.html",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/architecture",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/architecture.html",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/graph",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/graph.html",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
-    },
-    {
-      "source": "/graph-view.html",
-      "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        }
-      ]
     }
   ]
 }

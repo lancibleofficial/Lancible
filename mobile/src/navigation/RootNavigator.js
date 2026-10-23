@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
 import { navigationRef } from './navRef';
 import { useNotificationOpen } from './useNotificationOpen';
+import { startScreenStats } from '../lib/screenStats';
 
 // Вход опционален — офлайн-первое приложение всегда показывает основной UI
 // (см. план: "Необязательно — приложение и так работает офлайн"). Экраны
@@ -60,6 +61,10 @@ export default function RootNavigator() {
   const returnTo = useRef(null);
 
   useEffect(() => { initAuth(); }, [initAuth]);
+
+  // Счётчик экранов (23 октября 2026) — одно место на все экраны: смена
+  // состояния контейнера навигации (lib/screenStats.js).
+  useEffect(() => startScreenStats(navigationRef), []);
 
   // Откуда переключали — запоминается в тот же миг, когда встаёт
   // «Переключаю…», пока вкладки ещё на экране.

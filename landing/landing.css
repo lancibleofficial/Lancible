@@ -39,9 +39,7 @@
   --text:#f2f4ef;
   --text-dim:#9a9fac;
   --text-faint:#6a707d;
-  /* Два цвета сверх основной палитры: журналу и схеме архитектуры нужно
-   * отличать поломку от предупреждения. */
-  --danger:#ff8674;
+  /* Цвет сверх основной палитры: незаполненные реквизиты (.biz-blank). */
   --warn:#ffc95c;
   --radius-lg:20px;
   --radius-md:14px;
@@ -159,19 +157,20 @@ footer{padding-block:44px; border-top:1px solid var(--border-soft); flex:none;}
 .btn:active{transform:scale(.97);}
 .btn-ghost{background:transparent; color:var(--text); border-color:var(--border);}
 .btn-ghost:hover{border-color:var(--accent); color:var(--accent); transform:translateY(-2px);}
-/* Счётчик в кнопке фильтра — у блога и журнала. */
+/* Счётчик в кнопке фильтра — у блога. */
 .filter-count{font-size:.74rem; opacity:.7; font-variant-numeric:tabular-nums;}
 
-/* ---------- шапка страницы: блог, журнал, устройство, граф ----------
+/* ---------- шапка страницы: блог и правовые документы ----------
  * Раньше у блога она называлась .blog-hero, у журнала — .log-hero, и при
  * одинаковых значениях сжималась на разной ширине: у блога на 560, у журнала
- * на 640. Теперь блок один и порог один — 640, как у шапки сайта. */
+ * на 640. Теперь блок один и порог один — 640, как у шапки сайта. (Журнал,
+ * устройство и граф кода с 23 октября 2026 — разделы админки.) */
 .page-hero{padding-block:64px 40px; border-bottom:1px solid var(--border-soft); background:var(--bg-deep);}
 h1.page-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-height:1.1; overflow-wrap:anywhere; hyphens:auto;}
 .page-lede{margin-top:18px; font-size:1.02rem; line-height:1.65; color:var(--text-dim); max-width:58ch;}
-/* Заголовок слева, кнопки справа — у блога и журнала. */
+/* Заголовок слева, кнопки справа. */
 .page-hero-row{display:flex; align-items:flex-end; justify-content:space-between; gap:24px; flex-wrap:wrap;}
-/* Фильтр по типу: у блога — тип записи, у журнала — вид события. */
+/* Фильтр по типу: у блога — тип записи. */
 .page-filter{display:flex; gap:8px; flex-wrap:wrap; margin-top:30px;}
 .page-filter button{
   font-family:'Sora', system-ui, sans-serif; font-size:.82rem; font-weight:600;
@@ -182,27 +181,12 @@ h1.page-headline{font-size:clamp(2rem, 3.6vw, 2.9rem); font-weight:800; line-hei
 }
 .page-filter button:hover{color:var(--text); border-color:var(--accent);}
 .page-filter button[aria-pressed="true"]{background:var(--accent); color:var(--accent-text); border-color:var(--accent);}
-.log-back{display:flex; justify-content:center; margin-top:48px;}
 @media (max-width: 860px){
   .page-hero-row{align-items:flex-start; flex-direction:column; gap:22px;}
 }
 @media (max-width: 640px){
   .page-hero{padding-block:44px 32px;}
 }
-
-/* ---------- плитки с числами: устройство и граф ---------- */
-.arch-stats{
-  display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
-  gap:1px; margin-top:34px; background:var(--border-soft);
-  border:1px solid var(--border-soft); border-radius:var(--radius-md); overflow:hidden;
-}
-.arch-stat{background:var(--panel); padding:18px 20px; min-width:0;}
-.arch-stat b{
-  display:block; font-family:'JetBrains Mono', ui-monospace, monospace;
-  font-size:1.55rem; font-weight:700; line-height:1.1; letter-spacing:-.02em;
-  font-variant-numeric:tabular-nums; color:var(--text);
-}
-.arch-stat span{display:block; font-size:.8rem; color:var(--text-dim); margin-top:6px;}
 
 /* ---------- лента блога: главная и /blog ----------
  * Общее у обеих — линия времени и ярлыки. Плотность записи у главной своя

@@ -20,11 +20,14 @@ const { cssRules, ruleText } = require('../css');
 
 const LANDING = path.join(__dirname, '..', '..', 'landing');
 const LEGAL = ['privacy.html', 'terms.html', 'cookies.html', 'refund.html', 'legal.html', 'delete-account.html'];
-const PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html', ...LEGAL];
+const PAGES = ['index.html', 'blog.html', ...LEGAL];
 
-// Страницы, которых не должно быть в поиске. Они открыты по прямому адресу —
-// закрывает их не пароль, а отсутствие ссылок и запрет индексации.
-const PRIVATE = ['logs', 'architecture', 'graph'];
+// Бывшие служебные страницы. До 23 октября 2026 журнал работы, устройство и
+// граф кода были открыты на лендинге по прямому адресу (закрывали их только
+// отсутствие ссылок и запрет индексации), а в журнале описаны уязвимости и
+// как их закрывали. Теперь это разделы админки; на лендинге этих адресов нет
+// вовсе — 404, и никакого перенаправления: адрес админки не рекламируется.
+const REMOVED = ['logs', 'architecture', 'graph', 'graph-view'];
 
 const read = (name) => fs.readFileSync(path.join(LANDING, name), 'utf8');
 
@@ -192,7 +195,7 @@ const vercel = () => JSON.parse(read('vercel.json'));
 // --- один адрес -----------------------------------------------------------------
 //
 // С 6 октября 2026 у продукта один адрес — lancible.vercel.app, и всё
-// открывается от него: лендинг, веб (/app), блог, журнал, устройство, граф.
+// открывается от него: лендинг, веб (/app) и блог.
 // До этого веб жил отдельным проектом Vercel со своим адресом, а лендинг
 // проксировал на него /app. Исключения по решению — будущая админ-панель и
 // служебные функции без страниц.
@@ -204,11 +207,15 @@ test('перенаправления лендинга никуда наружу 
   }
 });
 
-test('в коде и настройках из адресов Vercel — только lancible.vercel.app', () => {
+test('в коде и настройках из адресов Vercel — только lancible.vercel.app (и адрес админки)', () => {
   // Документация и журнал рассказывают историю переезда и называют старый
   // адрес — их не смотрим; код, разметку и настройки — смотрим все.
+  // Исключение из правила «один адрес» (CLAUDE.md) — админ-панель, отдельный
+  // проект Vercel (23 октября 2026): её адрес знают только сама админка,
+  // функция admin (CORS) и их тесты.
+  const ALLOWED = new Set(['lancible.vercel.app', 'lancible-admin.vercel.app']);
   const ROOT = path.join(LANDING, '..');
-  const SKIP = /(^|[\\/])(node_modules|\.git|graphify-out|test-results[\w-]*|dist|logs|vendor|\.vercel)([\\/]|$)|^landing[\\/](app[\\/]|graph-view\.html$)|^web[\\/](app\.js|styles\.css|xlsx\.js|core[\\/])/;
+  const SKIP = /(^|[\\/])(node_modules|\.git|graphify-out|test-results[\w-]*|dist|logs|vendor|\.vercel)([\\/]|$)|^landing[\\/]app[\\/]|^web[\\/](app\.js|styles\.css|xlsx\.js|core[\\/])/;
   const EXT = /\.(js|json|html|css|yml)$/;
   const found = [];
   const walk = (dir) => {
@@ -218,10 +225,14 @@ test('в коде и настройках из адресов Vercel — тол�
       if (e.isDirectory()) { walk(rel); continue; }
       if (!EXT.test(e.name) || /package-lock\.json$/.test(e.name)) continue;
       const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-      for (const m of text.matchAll(/[a-z0-9-]+\.vercel\.app/g)) if (m[0] !== 'lancible.vercel.app') found.push(`${rel}: ${m[0]}`);
+      for (const m of text.matchAll(/[a-z0-9-]+\.vercel\.app/g)) {
+        if (!ALLOWED.has(m[0])) found.push(`${rel}: ${m[0]}`);
+        // Адрес админки — только в самой админке, её функции и тестах.
+        else if (m[0] === 'lancible-admin.vercel.app' && !/^(admin|supabase[\\/]functions[\\/]admin|tests)[\\/]/.test(rel)) found.push(`${rel}: ${m[0]} — адрес админки вне админки`);
+      }
     }
   };
-  for (const dir of ['src', 'web', 'mobile', 'landing', 'scripts', 'tests', '.github']) walk(dir);
+  for (const dir of ['src', 'web', 'mobile', 'landing', 'scripts', 'tests', '.github', 'admin', 'supabase']) walk(dir);
   assert.deepEqual(found, [], 'чужие адреса Vercel');
 });
 
@@ -249,35 +260,31 @@ test('каждый rewrite ведёт в существующий файл ил�
   }
 });
 
-test('служебные страницы закрыты от поисковиков по обоим адресам', () => {
-  // Адреса два: красивый (/logs) и настоящий (/logs.html). Заголовок нужен на
-  // обоих — иначе страницу найдут по второму.
+test('служебных страниц на лендинге нет: ни файлов, ни маршрутов, ни строк в robots.txt', () => {
+  // Старые адреса должны отвечать 404: файла нет, rewrite в него не ведёт, а
+  // redirect не уводит на админку — её адрес на сайте не звучит нигде.
   const cfg = vercel();
-  const noindex = new Set();
-  for (const h of cfg.headers || []) {
-    const tag = (h.headers || []).find((x) => x.key === 'X-Robots-Tag');
-    if (tag && /noindex/.test(tag.value)) noindex.add(h.source);
-  }
+  const routes = [...(cfg.rewrites || []), ...(cfg.redirects || []), ...(cfg.headers || [])];
   const robots = read('robots.txt');
-  for (const name of PRIVATE) {
-    assert.ok(noindex.has(`/${name}`), `нет X-Robots-Tag для /${name}`);
-    assert.ok(noindex.has(`/${name}.html`), `нет X-Robots-Tag для /${name}.html`);
-    assert.ok(new RegExp(`^Disallow: /${name}$`, 'm').test(robots),
-      `нет строки Disallow: /${name} в robots.txt`);
+  for (const name of REMOVED) {
+    assert.ok(!fs.existsSync(path.join(LANDING, `${name}.html`)), `landing/${name}.html снова на месте — служебные страницы живут в админке`);
+    const re = new RegExp(`^/${name}(\\.html)?$`);
+    const hit = routes.filter((r) => re.test(r.source || '') || re.test(r.destination || ''));
+    assert.deepEqual(hit.map((r) => r.source), [], `vercel.json: маршрут или заголовок для /${name}`);
+    assert.ok(!new RegExp(`/${name}\\b`).test(robots), `robots.txt называет /${name} — адрес, которого нет, называть незачем`);
   }
-  // Сам граф лежит отдельным файлом и открывается из /graph во фрейме — и
-  // напрямую, кнопкой «во весь экран». Его адрес тоже должен быть закрыт.
-  assert.ok(noindex.has('/graph-view.html'), 'нет X-Robots-Tag для /graph-view.html');
+  for (const r of routes) {
+    assert.ok(!/admin/i.test(`${r.source} ${r.destination || ''}`), `vercel.json: ${r.source} ведёт в админку`);
+  }
 });
 
-test('на служебные страницы нет ссылок с сайта', () => {
-  // Весь смысл «откроет тот, кто знает адрес» держится на этом.
+test('на бывшие служебные страницы нет ссылок с сайта', () => {
   for (const page of PAGES) {
     const html = read(page);
     for (const m of html.matchAll(/<a\b[^>]*href="([^"]+)"/gi)) {
       const href = m[1].replace(/^\//, '').replace(/\.html$/, '');
-      if (PRIVATE.includes(href)) {
-        assert.fail(`${page}: ссылка на служебную страницу ${m[1]}`);
+      if (REMOVED.includes(href)) {
+        assert.fail(`${page}: ссылка на бывшую служебную страницу ${m[1]}`);
       }
     }
   }

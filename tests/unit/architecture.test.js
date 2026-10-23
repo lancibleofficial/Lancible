@@ -1,5 +1,9 @@
-// Страница архитектуры и граф кода: то, что сайт говорит о коде, правда.
+// «Устройство» и граф кода в админке: то, что они говорят о коде, правда.
 // Запуск: npm run test:unit
+//
+// До 23 октября 2026 это были служебные страницы лендинга /architecture и
+// /graph; теперь — разделы админки: текст — admin/content/architecture.html,
+// данные графа — admin/graph/graph.json (их кладёт npm run site:refresh).
 //
 // Откуда взялось. Схема на /architecture устарела незаметно: на ней было
 // «одиннадцать» файлов ядра и «9 из 11 побайтно», хотя их давно стало
@@ -13,18 +17,21 @@
 //     npm run site:refresh перед выкатом. Проверять их тестом нельзя: он
 //     краснел бы на каждой правке app.js. Здесь проверяется только, что места
 //     под них размечены и заполнены.
+//
+// Браузерная половина — схема рисуется без наездов подписей, граф рисуется и
+// грузится только в своём разделе — в tests/admin/code-sections.spec.js.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { scanForSecrets, plural } = require('../../scripts/publish-site.js');
+const { scanForSecrets, plural, GRAPH_DATA, ARCHITECTURE } = require('../../scripts/publish-site.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8').replace(/\r\n/g, '\n');
 
-const PAGE = read('landing/architecture.html');
+const PAGE = read(`admin/${ARCHITECTURE}`);
 const DOC = read('ARCHITECTURE.md');
-const GRAPH_PAGE = read('landing/graph.html');
+const GRAPH_FILE = `admin/${GRAPH_DATA}`;
 
 // --- сколько файлов в ядре на самом деле ---------------------------------------
 
@@ -60,21 +67,21 @@ test('копии ядра у телефона — ровно те файлы, ч
   assert.equal(mobile, SYNCED, 'в mobile/src/core лежит не столько файлов, сколько в sync-mobile-core.js');
 });
 
-test('схема на странице называет правильное число файлов ядра', () => {
+test('схема в «Устройстве» называет правильное число файлов ядра', () => {
   const expected = [
     // узел «core/» на схеме
     `<text class="dg-s" x="24" y="196">${word(NOM, TOTAL)}</text>`,
     // подпись под ним
     `${SYNCED} из ${TOTAL} побайтно`,
     // плашка в шапке страницы
-    `<b>${SYNCED} / ${TOTAL}</b>`,
+    `>${SYNCED} / ${TOTAL}</b>`,
     // подпись к рисунку: «двадцать один файл», «двадцать два файла»
     `${word(NOM, SYNCED)} ${filesNom(SYNCED)} ядра из ${word(GEN, TOTAL)}`,
     // подзаголовок таблицы шва
     `Из ${word(GEN, TOTAL)} ${filesGen(TOTAL)} ядра на телефон копируются побайтно ${word(NOM, SYNCED)}`,
   ];
   for (const phrase of expected) {
-    assert.ok(PAGE.includes(phrase), `на /architecture нет «${phrase}» — ядро: ${TOTAL} файлов, у телефона ${SYNCED}`);
+    assert.ok(PAGE.includes(phrase), `в «Устройстве» (${ARCHITECTURE}) нет «${phrase}» — ядро: ${TOTAL} файлов, у телефона ${SYNCED}`);
   }
 });
 
@@ -96,13 +103,13 @@ test('документ архитектуры называет правильн�
   }
 });
 
-test('в таблице шва на странице есть строка на каждый общий файл ядра', () => {
+test('в таблице шва в «Устройстве» есть строка на каждый общий файл ядра', () => {
   // Таблица перечисляет области; каждая копируемая на телефон область
   // должна в ней быть, иначе файл ядра есть, а на странице его не видно.
   const files = read('scripts/sync-mobile-core.js').match(/const FILES = \[([^\]]*)\]/)[1]
     .split(',').map((s) => s.trim().replace(/['"]/g, '')).filter(Boolean);
   for (const f of files) {
-    assert.ok(PAGE.includes(`core/${f}`), `в таблице шва на /architecture нет core/${f}`);
+    assert.ok(PAGE.includes(`core/${f}`), `в таблице шва в «Устройстве» нет core/${f}`);
   }
 });
 
@@ -120,7 +127,7 @@ const INS = { 3: 'тремя', 4: 'четырьмя', 5: 'пятью', 6: 'ше�
 test('документы называют правильное число работ в test.yml', () => {
   const phrase = `${word(INS, JOBS)} параллельными работами`;
   const flat = (text) => text.replace(/\s+/g, ' ');
-  for (const [where, text] of [['CLAUDE.md', read('CLAUDE.md')], ['ARCHITECTURE.md', DOC], ['/architecture', PAGE]]) {
+  for (const [where, text] of [['CLAUDE.md', read('CLAUDE.md')], ['ARCHITECTURE.md', DOC], ['«Устройство»', PAGE]]) {
     assert.ok(flat(text).includes(phrase), `в ${where} нет «${phrase}» — работ в test.yml: ${JOBS}`);
   }
 });
@@ -130,36 +137,45 @@ test('документы называют правильное число раб
 const marks = (html) => [...html.matchAll(/<!--m:([\w.]+)-->([\s\S]*?)<!--\/m-->/g)]
   .map((m) => ({ name: m[1], value: m[2] }));
 
-test('частые числа на /architecture размечены под пересчёт', () => {
+test('частые числа в «Устройстве» размечены под пересчёт', () => {
   const names = marks(PAGE).map((m) => m.name).sort();
   assert.deepEqual(names, ['app.functions', 'app.lines', 'app.linesPhrase', 'app.noDom']);
   for (const m of marks(PAGE)) assert.match(m.value, /^\d+( строк[аи]?)?$/, `метка ${m.name}: «${m.value}» — не число`);
 });
 
-test('на /graph числа графа заполнены, а не оставлены заглушками', () => {
-  const got = Object.fromEntries(marks(GRAPH_PAGE).map((m) => [m.name, m.value]));
-  for (const k of ['graph.nodes', 'graph.edges', 'graph.communities']) {
-    assert.match(got[k] || '', /^\d+$/, `${k}: «${got[k]}»`);
-    assert.ok(Number(got[k]) > 0, `${k} не заполнен — запусти npm run site:refresh`);
+// --- граф в админке -----------------------------------------------------------
+
+const graphData = () => {
+  const p = path.join(ROOT, GRAPH_FILE);
+  assert.ok(fs.existsSync(p), `${GRAPH_FILE} нет — запусти npm run site:refresh`);
+  return JSON.parse(fs.readFileSync(p, 'utf8'));
+};
+
+test('числа графа заполнены, а не оставлены заглушками', () => {
+  const { meta } = graphData();
+  for (const k of ['nodes', 'edges', 'communities']) {
+    assert.ok(Number.isInteger(meta[k]) && meta[k] > 0, `meta.${k} не заполнен — запусти npm run site:refresh`);
   }
-  assert.match(got['graph.date'] || '', /^\d\d\.\d\d\.\d{4}$/, 'дата построения не заполнена');
+  assert.match(meta.date || '', /^\d\d\.\d\d\.\d{4}$/, 'дата построения не заполнена');
+  assert.ok(meta.shown && meta.shown.nodes > 0 && meta.shown.edges >= 0, 'не сказано, сколько точек и связей на рисунке');
 });
 
-// --- граф на сайте -----------------------------------------------------------
-
-test('граф на сайте выложен и закрыт от поисковиков сам по себе', () => {
-  const p = path.join(ROOT, 'landing', 'graph-view.html');
-  assert.ok(fs.existsSync(p), 'landing/graph-view.html нет — запусти npm run site:refresh');
-  const html = fs.readFileSync(p, 'utf8');
-  assert.ok(html.includes('<meta name="robots" content="noindex, nofollow">'), 'у страницы графа нет noindex');
-  assert.ok(html.includes('<title>Граф кода Lancible</title>'), 'заголовок graphify раскрывает путь на машине разработчика');
+test('данные графа — того вида, что рисует раздел: узлы, связи, легенда', () => {
+  const g = graphData();
+  for (const k of ['nodes', 'edges', 'legend', 'hyperedges']) assert.ok(Array.isArray(g[k]), `в графе нет ${k}`);
+  assert.equal(g.nodes.length, g.meta.shown.nodes);
+  assert.equal(g.edges.length, g.meta.shown.edges);
+  const ids = new Set(g.nodes.map((n) => String(n.id)));
+  for (const n of g.nodes) assert.ok(n.id != null && typeof n.label === 'string', 'узел без id или подписи');
+  for (const e of g.edges) assert.ok(ids.has(String(e.from)) && ids.has(String(e.to)), `связь ${e.from} → ${e.to} ведёт мимо узлов`);
 });
 
 test('в выложенном графе нет секретов', () => {
   // Та же проверка, что останавливает публикацию, — на случай, если файл
-  // положили на лендинг в обход npm run site:refresh.
-  const html = fs.readFileSync(path.join(ROOT, 'landing', 'graph-view.html'), 'utf8');
-  assert.deepEqual(scanForSecrets(html), []);
+  // положили в админку в обход npm run site:refresh. Статика админки открыта
+  // по адресу без входа, поэтому граф проверяется так же строго, как раньше
+  // на лендинге.
+  assert.deepEqual(scanForSecrets(fs.readFileSync(path.join(ROOT, GRAPH_FILE), 'utf8')), []);
 });
 
 test('проверка на секреты ловит то, что должна', () => {

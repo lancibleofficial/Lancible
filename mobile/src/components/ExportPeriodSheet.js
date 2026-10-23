@@ -244,6 +244,10 @@ export default function ExportPeriodSheet({ lang, projectId }) {
   );
 }
 
+// Счётчик экранов (lib/screenStats.js): выгрузка в Excel — заметный лист,
+// считается экраном (имя — как у окна веба).
+ExportPeriodSheet.screenId = 'export';
+
 const styles = StyleSheet.create({
   page: { gap: spacing.md },
 });

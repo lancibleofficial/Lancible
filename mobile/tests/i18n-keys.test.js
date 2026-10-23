@@ -172,3 +172,20 @@ test('«закрытый тест» агента (21 октября 2026): ai.lo
   }
   expect(diff).toEqual([]);
 });
+
+test('выключатель «Статистика экранов» (23 октября 2026): settings.usage_* — во всех четырёх языках слово в слово из договорённости и те же, что у веба', () => {
+  // Строка в «Данных» (screens/SettingsSectionScreen.js, lib/screenStats.js);
+  // у веба — та же строка и те же слова (src/renderer/core/i18n.js).
+  const WANT = {
+    ru: ['Статистика экранов', 'Отправлять, какие экраны вы открываете, — без содержимого заметок и задач. Так мы видим, чем пользуются.'],
+    en: ['Screen statistics', 'Send which screens you open — without the contents of notes or tasks. It shows us what people use.'],
+    uk: ['Статистика екранів', 'Надсилати, які екрани ви відкриваєте, — без вмісту нотаток і завдань. Так ми бачимо, чим користуються.'],
+    kk: ['Экрандар статистикасы', 'Қай экрандарды ашатыныңызды жіберу — жазбалар мен тапсырмалардың мазмұнынсыз. Осылайша немен пайдаланатынын көреміз.'],
+  };
+  const KEYS = ['settings.usage_title', 'settings.usage_hint'];
+  for (const lang of LANGS) expect(KEYS.map((key) => T[lang][key])).toEqual(WANT[lang]);
+  const web = require('../../src/renderer/core/i18n.js').T;
+  const diff = [];
+  for (const lang of LANGS) for (const key of KEYS) if (T[lang][key] !== web[lang][key]) diff.push(`${lang}: ${key} ≠ веб`);
+  expect(diff).toEqual([]);
+});

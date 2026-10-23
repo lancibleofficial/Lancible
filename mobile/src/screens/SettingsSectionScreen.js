@@ -4,6 +4,9 @@
 // Раздел приходит параметром маршрута: { section: 'main' | 'work' |
 // 'account' | 'data' | 'about' }; «назад» — на «Меню».
 //
+// В «Данных» у области аккаунта — выключатель «Статистика экранов»
+// (settings.usageStats, lib/screenStats.js).
+//
 // Строки — общие SettingRow в RowGroup (остров panel на земле, подпись
 // группы — Block), объяснение — подсказкой под островом. Режим — сегментами:
 // это экран, а не лист. Что показывать при режиме — только Core.modeFlags
@@ -94,6 +97,8 @@ export default function SettingsSectionScreen({ route, navigation }) {
   const deviceScopes = useDeviceScopes();
   // Открыт аккаунт, а у гостя есть данные — их можно перенести сюда.
   const canMoveGuest = useAuthStore((s) => !!s.current && s.guestHasData);
+  // Открыта область аккаунта (с сеансом или без) — её настройки.
+  const accountOpen = useAuthStore((s) => !!s.current);
   const moveGuestData = useAuthStore((s) => s.moveGuestData);
   const showToast = useAppStore((s) => s.showToast);
   const settings = useAppStore((s) => s.settings);
@@ -121,6 +126,20 @@ export default function SettingsSectionScreen({ route, navigation }) {
         <RowGroup tone="panel">
           <SettingRow icon="download" label={t(lang, 'menu.export_excel')} value={t(lang, 'export.all_projects')} onPress={() => openSheet(<ExportPeriodSheet lang={lang} />)} testID="settings-export" />
         </RowGroup>
+        {/* Статистика экранов (23 октября 2026): какие экраны открывают, без
+            содержимого (lib/screenStats.js). Только у области аккаунта (и
+            открытой без сеанса — настройка её) — гость и так ничего не шлёт;
+            нет значения — включено. Место и значок — как у веба: под
+            экспортом, над конфликтами и корзиной. */}
+        {signedIn || accountOpen ? (
+          <RowGroup tone="panel" note={t(lang, 'settings.usage_hint')} testID="settings-usage-group">
+            <SettingRow
+              icon="chart"
+              label={t(lang, 'settings.usage_title')}
+              right={toggle(settings.usageStats !== false, (v) => setSettings({ usageStats: v }), t(lang, 'settings.usage_title'), 'settings-usage')}
+            />
+          </RowGroup>
+        ) : null}
         {/* Журнал правок (17 октября 2026): «Конфликты · N ›» и «Корзина · N ›»
             — как в «Данных» веба, и, как там, только у области, связанной с
             журналом (у гостя ни конфликтов, ни корзины не бывает). */}

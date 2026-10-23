@@ -65,6 +65,10 @@ export default function ConflictSheet({ entity = null, entityId = null }) {
   );
 }
 
+// Счётчик экранов (lib/screenStats.js): конфликты — заметный лист, считается
+// экраном (и список «Данных», и «Другая версия ›» задачи).
+ConflictSheet.screenId = 'conflicts';
+
 /** Список всех конфликтов: строка на сущность — название, вид и поля. */
 function ConflictList({ conflicts, lang, onSelect }) {
   const state = useAppStore((s) => s);

@@ -6,12 +6,24 @@
 // фокус, хранилище вкладки, перерисовка списков. Подделка всё это имитирует,
 // и тест остаётся зелёным там, где продукт сломан.
 //
-// Три набора, три папки, три сервера-источника:
+// Четыре набора, четыре папки, три сервера-источника:
 //   tests/e2e/     — веб-версия приложения (web/), поведение и данные
 //   tests/landing/ — лендинг (landing/), отрисованная шапка/подвал и размеры
 //   tests/visual/  — снимки обоих с эталоном, см. tests/visual/shot.js
+//   tests/admin/   — админка (admin/), сеть подменена: npx playwright test --project=admin
+const fs = require('node:fs');
+const path = require('node:path');
 const { defineConfig, devices } = require('@playwright/test');
 const { PORT_WEB, PORT_LANDING } = require('./tests/ports');
+const { PORT_ADMIN } = require('./tests/admin/port');
+
+// Админку раздаёт scripts/serve-admin.js — со своей функцией admin в Node.
+// В тестах она выключена (ADMIN_LOCAL_API=0): только статика, а функцию и
+// вход Supabase подменяет page.route (tests/admin/mock.js). Пока сервера
+// админки нет в копии — та же статика обычным сервером.
+const ADMIN_SERVER = fs.existsSync(path.join(__dirname, 'scripts', 'serve-admin.js'))
+  ? `node scripts/serve-admin.js ${PORT_ADMIN}`
+  : `node scripts/serve-web.js ${PORT_ADMIN} --root admin`;
 
 module.exports = defineConfig({
   // Гонять параллельно нельзя: у вкладок общее хранилище на один адрес, и
@@ -44,6 +56,12 @@ module.exports = defineConfig({
       // Русский — основной язык сайта, на нём и эталоны.
       use: { ...devices['Desktop Chrome'], locale: 'ru-RU', baseURL: `http://localhost:${PORT_LANDING}` },
     },
+    {
+      name: 'admin',
+      testDir: './tests/admin',
+      // Админка только на русском; даты и числа — ru-RU.
+      use: { ...devices['Desktop Chrome'], locale: 'ru-RU', baseURL: `http://localhost:${PORT_ADMIN}` },
+    },
   ],
   // Серверы поднимаются сами — тест не должен зависеть от того, что кто-то
   // заранее запустил npm run serve:web.
@@ -68,6 +86,13 @@ module.exports = defineConfig({
       url: `http://localhost:${PORT_LANDING}/index.html`,
       reuseExistingServer: false,
       timeout: 30_000,
+    },
+    {
+      command: ADMIN_SERVER,
+      url: `http://localhost:${PORT_ADMIN}/index.html`,
+      reuseExistingServer: false,
+      timeout: 30_000,
+      env: { ...process.env, ADMIN_LOCAL_API: '0', ADMIN_PORT: String(PORT_ADMIN) },
     },
   ],
 });

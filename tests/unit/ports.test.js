@@ -96,15 +96,34 @@ test('LANCIBLE_TEST_PORT_BASE задаёт начало вручную', () => {
 
 test('Playwright поднимает свои серверы на портах копии и чужой не переиспользует', () => {
   const config = require('../../playwright.config.js');
+  const { PORT_ADMIN } = require('../admin/port');
   const servers = config.webServer;
-  assert.equal(servers.length, 2);
+  assert.equal(servers.length, 3);
   for (const s of servers) {
     assert.equal(s.reuseExistingServer, false, `${s.command}: переиспользует уже поднятый сервер — может оказаться чужим`);
   }
   assert.match(servers[0].url, new RegExp(`:${ports.PORT_WEB}/`));
   assert.match(servers[1].url, new RegExp(`:${ports.PORT_LANDING}/`));
+  assert.match(servers[2].url, new RegExp(`:${PORT_ADMIN}/`));
+  const PORT_OF = { web: ports.PORT_WEB, admin: PORT_ADMIN };
   for (const p of config.projects) {
-    const port = p.name === 'web' ? ports.PORT_WEB : ports.PORT_LANDING;
+    const port = PORT_OF[p.name] || ports.PORT_LANDING;
     assert.equal(p.use.baseURL, `http://localhost:${port}`, `${p.name}: baseURL не на портах этой копии`);
   }
+});
+
+test('порт админки — в своём ряду, у известных копий не совпадает', () => {
+  // Ряд админки (tests/admin/port.js) — 36000–43999: не пересекается ни с
+  // рядом копий (20000–35999), ни с портами Windows (50000–50059).
+  const { adminPortsFor } = require('../admin/port');
+  const seen = new Map();
+  for (const root of COPIES) {
+    const { run, watch } = adminPortsFor(root);
+    for (const port of [run, watch]) {
+      assert.ok(port >= 36000 && port < 44000, `${root}: ${port} вне ряда админки`);
+      assert.ok(!seen.has(port), `${root} и ${seen.get(port)}: один порт админки ${port}`);
+      seen.set(port, root);
+    }
+  }
+  assert.deepEqual(adminPortsFor('E:/x', { base: 30000 }), { run: 30004, watch: 30005 });
 });

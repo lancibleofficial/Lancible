@@ -108,21 +108,23 @@
 <script src="strings.js"></script>
 <script src="i18n.js"></script>
 <script src="blog-posts.js"></script>
+<script src="blog-feed.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     // Подписи ленты и фильтров — в landing/strings.js, язык общий для
-    // сайта (landing/i18n.js) и переключается в шапке.
-    const TAGS = ['release', 'feature', 'improvement'];
+    // сайта (landing/i18n.js) и переключается в шапке. Записи — из базы, а
+    // пока она не ответила (или если не ответит) — из blog-posts.js
+    // (landing/blog-feed.js).
+    const { TAGS, tagOf } = window.LancibleBlog;
     const t = (key) => window.LancibleLang.t(key);
 
-    const posts = Array.isArray(window.LANCIBLE_POSTS) ? window.LANCIBLE_POSTS : [];
+    let posts = [];
     const list = document.getElementById('blogList');
     const filterRow = document.getElementById('blogFilter');
 
     let filter = 'all';
     let lang = window.LancibleLang.current;
 
-    const tagOf = (post) => (TAGS.includes(post.tag) ? post.tag : 'improvement');
     // Запись может не иметь перевода — тогда показываем любой доступный язык.
     const pick = (field) => (field && (field[lang] || field.en || field.ru)) || '';
     const paragraphs = (field) => {
@@ -133,18 +135,9 @@
     // Якорь записи — её дата: она читается в ссылке и не зависит от порядка.
     // Даты в ленте повторяются (в один день выходит и релиз, и заметная
     // возможность), поэтому второй и следующим записям того же дня
-    // добавляется номер — иначе в документе оказались бы одинаковые id и
-    // ссылка вела бы всегда на первую из них.
-    const anchors = new Map();
-    (() => {
-      const used = new Map();
-      posts.forEach((post) => {
-        const base = `p-${post.date || 'post'}`;
-        const seen = (used.get(base) || 0) + 1;
-        used.set(base, seen);
-        anchors.set(post, seen === 1 ? base : `${base}-${seen}`);
-      });
-    })();
+    // добавляется номер (LancibleBlog.anchors). Пересчитывается с каждой
+    // лентой: из файла и из базы.
+    let anchors = new Map();
     const anchorOf = (post) => anchors.get(post) || 'p-post';
 
     const buildEntry = (post, isLatest) => {
@@ -233,16 +226,39 @@
       shown.forEach((post) => list.append(buildEntry(post, post === posts[0])));
     };
 
-    // Язык переключают в шапке — перерисовываемся вслед за ним.
-    window.LancibleLang.subscribe((next) => { lang = next; render(); });
-
     // Ссылка вида blog.html#p-2026-09-18 ведёт на конкретную запись: список
     // строится скриптом, поэтому браузер к этому моменту уже не прокрутит
-    // страницу сам.
-    if (location.hash) {
+    // страницу сам. Лента из базы приходит позже файла и может сдвинуть
+    // запись (выше встала новая) или впервые её показать (записи в файле
+    // нет) — тогда прокрутка повторяется, если человек сам ещё не листал.
+    // «Сам листал» — по намерению (колесо, касание, клавиша, мышь), а не по
+    // scrollY: перестроенный список браузер и сам сдвигает (привязка
+    // прокрутки), и сравнение позиций приняло бы это за человека.
+    let userMoved = false;
+    for (const type of ['wheel', 'touchstart', 'keydown', 'mousedown']) {
+      window.addEventListener(type, () => { userMoved = true; }, { once: true, passive: true });
+    }
+    const toAnchor = () => {
+      if (!location.hash) return;
       const target = document.getElementById(location.hash.slice(1));
       if (target) target.scrollIntoView({ block: 'start' });
-    }
+    };
+
+    window.LancibleBlog.load((next, source) => {
+      posts = next;
+      anchors = window.LancibleBlog.anchors(posts);
+      if (source === 'file') {
+        // Язык переключают в шапке — перерисовываемся вслед за ним. Подписка
+        // зовёт обработчик сразу: это и есть первая отрисовка.
+        window.LancibleLang.subscribe((l) => { lang = l; render(); });
+        toAnchor();
+        return;
+      }
+      // Выбранной категории в ленте из базы может не оказаться — тогда «Все».
+      if (filter !== 'all' && !posts.some((p) => tagOf(p) === filter)) filter = 'all';
+      render();
+      if (!userMoved) toAnchor();
+    });
   });
 </script>
 <script src="consent.js"></script>

@@ -2,10 +2,130 @@
   "_": "Узлы без входящих рёбер на момент снимка. Пересоздать: npm run graph:baseline",
   "nodes": [
     {
+      "id": "admin_js_api_apierror_constructor",
+      "label": ".constructor()",
+      "file": "admin/js/api.js",
+      "at": "L17"
+    },
+    {
+      "id": "admin_js_app_applytheme",
+      "label": "applyTheme()",
+      "file": "admin/js/app.js",
+      "at": "L88"
+    },
+    {
+      "id": "admin_js_app_leave",
+      "label": "leave()",
+      "file": "admin/js/app.js",
+      "at": "L57"
+    },
+    {
+      "id": "admin_js_app_readtheme",
+      "label": "readTheme()",
+      "file": "admin/js/app.js",
+      "at": "L84"
+    },
+    {
+      "id": "admin_js_sections_agent_accessisland_remove",
+      "label": "remove()",
+      "file": "admin/js/sections/agent.js",
+      "at": "L122"
+    },
+    {
+      "id": "admin_js_sections_agent_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/agent.js",
+      "at": "L169"
+    },
+    {
+      "id": "admin_js_sections_agent_settingsisland_dirty",
+      "label": "dirty()",
+      "file": "admin/js/sections/agent.js",
+      "at": "L53"
+    },
+    {
+      "id": "admin_js_sections_architecture_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/architecture.js",
+      "at": "L28"
+    },
+    {
+      "id": "admin_js_sections_blog_editor_persist",
+      "label": "persist()",
+      "file": "admin/js/sections/blog.js",
+      "at": "L125"
+    },
+    {
+      "id": "admin_js_sections_blog_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/blog.js",
+      "at": "L194"
+    },
+    {
+      "id": "admin_js_sections_feedback_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/feedback.js",
+      "at": "L126"
+    },
+    {
+      "id": "admin_js_sections_graph_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/graph.js",
+      "at": "L74"
+    },
+    {
+      "id": "admin_js_sections_logs_day",
+      "label": "DAY",
+      "file": "admin/js/sections/logs.js",
+      "at": "L23"
+    },
+    {
+      "id": "admin_js_sections_logs_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/logs.js",
+      "at": "L81"
+    },
+    {
+      "id": "admin_js_sections_overview_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/overview.js",
+      "at": "L61"
+    },
+    {
+      "id": "admin_js_sections_releases_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/releases.js",
+      "at": "L207"
+    },
+    {
+      "id": "admin_js_sections_usage_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/usage.js",
+      "at": "L62"
+    },
+    {
+      "id": "admin_js_sections_users_mount",
+      "label": "mount()",
+      "file": "admin/js/sections/users.js",
+      "at": "L126"
+    },
+    {
+      "id": "landing_blog_feed_fetchposts",
+      "label": "fetchPosts()",
+      "file": "landing/blog-feed.js",
+      "at": "L72"
+    },
+    {
       "id": "landing_consent_onchange",
       "label": "onChange()",
       "file": "landing/consent.js",
       "at": "L224"
+    },
+    {
+      "id": "landing_i18n_current",
+      "label": "current()",
+      "file": "landing/i18n.js",
+      "at": "L135"
     },
     {
       "id": "landing_i18n_resolve",
@@ -113,7 +233,7 @@
       "id": "mobile_src_components_conflictsheet_conflictblocks_keep",
       "label": "keep()",
       "file": "mobile/src/components/ConflictSheet.js",
-      "at": "L114"
+      "at": "L118"
     },
     {
       "id": "mobile_src_components_doceditor_alloweditorload",
@@ -575,49 +695,49 @@
       "id": "mobile_src_screens_searchscreen_searchscreen_onchat",
       "label": "onChat()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L111"
+      "at": "L119"
     },
     {
       "id": "mobile_src_screens_searchscreen_searchscreen_onproject",
       "label": "onProject()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L109"
+      "at": "L117"
     },
     {
       "id": "mobile_src_screens_searchscreen_searchscreen_ontask",
       "label": "onTask()",
       "file": "mobile/src/screens/SearchScreen.js",
-      "at": "L110"
+      "at": "L118"
     },
     {
       "id": "mobile_src_screens_settingssectionscreen_mainsection_onopenlanguage",
       "label": "onOpenLanguage()",
       "file": "mobile/src/screens/SettingsSectionScreen.js",
-      "at": "L279"
+      "at": "L298"
     },
     {
       "id": "mobile_src_screens_settingssectionscreen_mainsection_onopensystemnotifications",
       "label": "onOpenSystemNotifications()",
       "file": "mobile/src/screens/SettingsSectionScreen.js",
-      "at": "L275"
+      "at": "L294"
     },
     {
       "id": "mobile_src_screens_settingssectionscreen_worksection_onopencurrency",
       "label": "onOpenCurrency()",
       "file": "mobile/src/screens/SettingsSectionScreen.js",
-      "at": "L326"
+      "at": "L345"
     },
     {
       "id": "mobile_src_screens_settingssectionscreen_worksection_onopenhours",
       "label": "onOpenHours()",
       "file": "mobile/src/screens/SettingsSectionScreen.js",
-      "at": "L320"
+      "at": "L339"
     },
     {
       "id": "mobile_src_screens_settingssectionscreen_worksection_onopenrate",
       "label": "onOpenRate()",
       "file": "mobile/src/screens/SettingsSectionScreen.js",
-      "at": "L323"
+      "at": "L342"
     },
     {
       "id": "mobile_src_screens_statsscreen_statsscreen_onexcel",
@@ -779,25 +899,25 @@
       "id": "mobile_tests_chatattach_test_file_base64",
       "label": ".base64()",
       "file": "mobile/tests/chatAttach.test.js",
-      "at": "L44"
+      "at": "L50"
     },
     {
       "id": "mobile_tests_chatattach_test_file_constructor",
       "label": ".constructor()",
       "file": "mobile/tests/chatAttach.test.js",
-      "at": "L41"
+      "at": "L47"
     },
     {
       "id": "mobile_tests_chatattach_test_file_exists",
       "label": ".exists()",
       "file": "mobile/tests/chatAttach.test.js",
-      "at": "L42"
+      "at": "L48"
     },
     {
       "id": "mobile_tests_chatattach_test_file_size",
       "label": ".size()",
       "file": "mobile/tests/chatAttach.test.js",
-      "at": "L43"
+      "at": "L49"
     },
     {
       "id": "mobile_tests_editorcontext_test_ids",
@@ -935,19 +1055,31 @@
       "id": "scripts_publish_site_publishgraph",
       "label": "publishGraph()",
       "file": "scripts/publish-site.js",
-      "at": "L98"
+      "at": "L137"
     },
     {
       "id": "scripts_publish_site_rebuildgraph",
       "label": "rebuildGraph()",
       "file": "scripts/publish-site.js",
-      "at": "L33"
+      "at": "L42"
     },
     {
       "id": "scripts_publish_site_refreshnumbers",
       "label": "refreshNumbers()",
       "file": "scripts/publish-site.js",
-      "at": "L181"
+      "at": "L217"
+    },
+    {
+      "id": "scripts_release_steps_main",
+      "label": "main()",
+      "file": "scripts/release-steps.js",
+      "at": "L274"
+    },
+    {
+      "id": "scripts_serve_admin_main",
+      "label": "main()",
+      "file": "scripts/serve-admin.js",
+      "at": "L137"
     },
     {
       "id": "scripts_setup_worktree_main",
@@ -983,13 +1115,13 @@
       "id": "scripts_watch_main",
       "label": "main()",
       "file": "scripts/watch.js",
-      "at": "L215"
+      "at": "L223"
     },
     {
       "id": "scripts_worklog_main",
       "label": "main()",
       "file": "scripts/worklog.js",
-      "at": "L223"
+      "at": "L224"
     },
     {
       "id": "scripts_xlsx_check_assert",
@@ -1073,37 +1205,37 @@
       "id": "src_editor_chart_chartview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/chart.js",
-      "at": "L446"
+      "at": "L452"
     },
     {
       "id": "src_editor_chart_chartview_destroy",
       "label": ".destroy()",
       "file": "src/editor/chart.js",
-      "at": "L452"
+      "at": "L458"
     },
     {
       "id": "src_editor_chart_chartview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/chart.js",
-      "at": "L450"
+      "at": "L456"
     },
     {
       "id": "src_editor_chart_chartview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/chart.js",
-      "at": "L444"
+      "at": "L450"
     },
     {
       "id": "src_editor_chart_chartview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/chart.js",
-      "at": "L448"
+      "at": "L454"
     },
     {
       "id": "src_editor_chart_chartview_update",
       "label": ".update()",
       "file": "src/editor/chart.js",
-      "at": "L437"
+      "at": "L443"
     },
     {
       "id": "src_editor_chart_editchart_onpastegrid",
@@ -1421,49 +1553,49 @@
       "id": "src_editor_image_imageview_deselectnode",
       "label": ".deselectNode()",
       "file": "src/editor/image.js",
-      "at": "L363"
+      "at": "L371"
     },
     {
       "id": "src_editor_image_imageview_destroy",
       "label": ".destroy()",
       "file": "src/editor/image.js",
-      "at": "L296"
+      "at": "L304"
     },
     {
       "id": "src_editor_image_imageview_editcaption",
       "label": ".editCaption()",
       "file": "src/editor/image.js",
-      "at": "L323"
+      "at": "L331"
     },
     {
       "id": "src_editor_image_imageview_ignoremutation",
       "label": ".ignoreMutation()",
       "file": "src/editor/image.js",
-      "at": "L370"
+      "at": "L378"
     },
     {
       "id": "src_editor_image_imageview_selectnode",
       "label": ".selectNode()",
       "file": "src/editor/image.js",
-      "at": "L361"
+      "at": "L369"
     },
     {
       "id": "src_editor_image_imageview_stopevent",
       "label": ".stopEvent()",
       "file": "src/editor/image.js",
-      "at": "L365"
+      "at": "L373"
     },
     {
       "id": "src_editor_image_imageview_update",
       "label": ".update()",
       "file": "src/editor/image.js",
-      "at": "L353"
+      "at": "L361"
     },
     {
       "id": "src_editor_image_imageview_widthpct",
       "label": ".widthPct()",
       "file": "src/editor/image.js",
-      "at": "L226"
+      "at": "L234"
     },
     {
       "id": "src_editor_index_decorationsetfor",
@@ -1958,6 +2090,12 @@
       "at": "L819"
     },
     {
+      "id": "src_editor_pdfpage_pdfpageview_page",
+      "label": ".page()",
+      "file": "src/editor/pdfpage.js",
+      "at": "L110"
+    },
+    {
       "id": "src_editor_pdfpage_pdfpageview_release",
       "label": ".release()",
       "file": "src/editor/pdfpage.js",
@@ -2159,289 +2297,289 @@
       "id": "src_renderer_app_agendago",
       "label": "agendaGo()",
       "file": "src/renderer/app.js",
-      "at": "L12767"
+      "at": "L13059"
     },
     {
       "id": "src_renderer_app_agendapaintdrag",
       "label": "agendaPaintDrag()",
       "file": "src/renderer/app.js",
-      "at": "L12370"
+      "at": "L12661"
     },
     {
       "id": "src_renderer_app_agendapointat",
       "label": "agendaPointAt()",
       "file": "src/renderer/app.js",
-      "at": "L12360"
+      "at": "L12651"
     },
     {
       "id": "src_renderer_app_agendasetmode",
       "label": "agendaSetMode()",
       "file": "src/renderer/app.js",
-      "at": "L12773"
+      "at": "L13065"
     },
     {
       "id": "src_renderer_app_allsessionpairs",
       "label": "allSessionPairs()",
       "file": "src/renderer/app.js",
-      "at": "L595"
+      "at": "L598"
     },
     {
       "id": "src_renderer_app_anydialogopen",
       "label": "anyDialogOpen()",
       "file": "src/renderer/app.js",
-      "at": "L651"
+      "at": "L654"
     },
     {
       "id": "src_renderer_app_authdismissible",
       "label": "authDismissible()",
       "file": "src/renderer/app.js",
-      "at": "L2904"
+      "at": "L2935"
     },
     {
       "id": "src_renderer_app_boardlane",
       "label": "boardLane()",
       "file": "src/renderer/app.js",
-      "at": "L5804"
+      "at": "L5925"
     },
     {
       "id": "src_renderer_app_calshift",
       "label": "calShift()",
       "file": "src/renderer/app.js",
-      "at": "L5171"
+      "at": "L5292"
     },
     {
       "id": "src_renderer_app_changepassword",
       "label": "changePassword()",
       "file": "src/renderer/app.js",
-      "at": "L2623"
+      "at": "L2654"
     },
     {
       "id": "src_renderer_app_closeexpdlg",
       "label": "closeExpdlg()",
       "file": "src/renderer/app.js",
-      "at": "L7873"
+      "at": "L7997"
     },
     {
       "id": "src_renderer_app_closerepeatdialog",
       "label": "closeRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L12960"
+      "at": "L13252"
     },
     {
       "id": "src_renderer_app_committmdlgentry",
       "label": "commitTmdlgEntry()",
       "file": "src/renderer/app.js",
-      "at": "L12683"
+      "at": "L12975"
     },
     {
       "id": "src_renderer_app_deletereminder",
       "label": "deleteReminder()",
       "file": "src/renderer/app.js",
-      "at": "L13456"
+      "at": "L13748"
     },
     {
       "id": "src_renderer_app_deleteslot",
       "label": "deleteSlot()",
       "file": "src/renderer/app.js",
-      "at": "L13248"
+      "at": "L13540"
     },
     {
       "id": "src_renderer_app_deletestatus",
       "label": "deleteStatus()",
       "file": "src/renderer/app.js",
-      "at": "L6311"
+      "at": "L6432"
     },
     {
       "id": "src_renderer_app_deleteversion",
       "label": "deleteVersion()",
       "file": "src/renderer/app.js",
-      "at": "L11805"
+      "at": "L12096"
     },
     {
       "id": "src_renderer_app_fbshotchanged",
       "label": "fbShotChanged()",
       "file": "src/renderer/app.js",
-      "at": "L1092"
+      "at": "L1110"
     },
     {
       "id": "src_renderer_app_gettag",
       "label": "getTag()",
       "file": "src/renderer/app.js",
-      "at": "L5949"
+      "at": "L6070"
     },
     {
       "id": "src_renderer_app_handleauthsubmit",
       "label": "handleAuthSubmit()",
       "file": "src/renderer/app.js",
-      "at": "L2505"
+      "at": "L2536"
     },
     {
       "id": "src_renderer_app_init",
       "label": "init()",
       "file": "src/renderer/app.js",
-      "at": "L11583"
+      "at": "L11874"
     },
     {
       "id": "src_renderer_app_isclosedstatus",
       "label": "isClosedStatus()",
       "file": "src/renderer/app.js",
-      "at": "L476"
+      "at": "L479"
     },
     {
       "id": "src_renderer_app_newtask",
       "label": "newTask()",
       "file": "src/renderer/app.js",
-      "at": "L7181"
+      "at": "L7303"
     },
     {
       "id": "src_renderer_app_openaccountmenu",
       "label": "openAccountMenu()",
       "file": "src/renderer/app.js",
-      "at": "L1943"
+      "at": "L1964"
     },
     {
       "id": "src_renderer_app_opencurrencymenu",
       "label": "openCurrencyMenu()",
       "file": "src/renderer/app.js",
-      "at": "L11542"
+      "at": "L11833"
     },
     {
       "id": "src_renderer_app_openforgetmenu",
       "label": "openForgetMenu()",
       "file": "src/renderer/app.js",
-      "at": "L1926"
+      "at": "L1947"
     },
     {
       "id": "src_renderer_app_openlangmenu",
       "label": "openLangMenu()",
       "file": "src/renderer/app.js",
-      "at": "L818"
+      "at": "L821"
     },
     {
       "id": "src_renderer_app_openlegal",
       "label": "openLegal()",
       "file": "src/renderer/app.js",
-      "at": "L858"
+      "at": "L861"
     },
     {
       "id": "src_renderer_app_openreleasemenu",
       "label": "openReleaseMenu()",
       "file": "src/renderer/app.js",
-      "at": "L11758"
+      "at": "L12049"
     },
     {
       "id": "src_renderer_app_openrepeatdialog",
       "label": "openRepeatDialog()",
       "file": "src/renderer/app.js",
-      "at": "L12941"
+      "at": "L13233"
     },
     {
       "id": "src_renderer_app_opensearch",
       "label": "openSearch()",
       "file": "src/renderer/app.js",
-      "at": "L5036"
+      "at": "L5155"
     },
     {
       "id": "src_renderer_app_openslotslist",
       "label": "openSlotsList()",
       "file": "src/renderer/app.js",
-      "at": "L13194"
+      "at": "L13486"
     },
     {
       "id": "src_renderer_app_pickrangeday",
       "label": "pickRangeDay()",
       "file": "src/renderer/app.js",
-      "at": "L5227"
+      "at": "L5348"
     },
     {
       "id": "src_renderer_app_promptdialog",
       "label": "promptDialog()",
       "file": "src/renderer/app.js",
-      "at": "L671"
+      "at": "L674"
     },
     {
       "id": "src_renderer_app_saveonboarding",
       "label": "saveOnboarding()",
       "file": "src/renderer/app.js",
-      "at": "L2583"
+      "at": "L2614"
     },
     {
       "id": "src_renderer_app_saveprojectdialog",
       "label": "saveProjectDialog()",
       "file": "src/renderer/app.js",
-      "at": "L7580"
+      "at": "L7703"
     },
     {
       "id": "src_renderer_app_savereminderdialog",
       "label": "saveReminderDialog()",
       "file": "src/renderer/app.js",
-      "at": "L13629"
+      "at": "L13921"
     },
     {
       "id": "src_renderer_app_savetagdialog",
       "label": "saveTagDialog()",
       "file": "src/renderer/app.js",
-      "at": "L6092"
+      "at": "L6213"
     },
     {
       "id": "src_renderer_app_sendfeedback",
       "label": "sendFeedback()",
       "file": "src/renderer/app.js",
-      "at": "L1037"
+      "at": "L1058"
     },
     {
       "id": "src_renderer_app_settaskrepeat",
       "label": "setTaskRepeat()",
       "file": "src/renderer/app.js",
-      "at": "L12899"
+      "at": "L13191"
     },
     {
       "id": "src_renderer_app_setworkhours",
       "label": "setWorkHours()",
       "file": "src/renderer/app.js",
-      "at": "L2158"
+      "at": "L2179"
     },
     {
       "id": "src_renderer_app_slotdayat",
       "label": "slotDayAt()",
       "file": "src/renderer/app.js",
-      "at": "L13346"
+      "at": "L13638"
     },
     {
       "id": "src_renderer_app_statusesofkind",
       "label": "statusesOfKind()",
       "file": "src/renderer/app.js",
-      "at": "L460"
+      "at": "L463"
     },
     {
       "id": "src_renderer_app_syncstillfor",
       "label": "syncStillFor()",
       "file": "src/renderer/app.js",
-      "at": "L3195"
+      "at": "L3226"
     },
     {
       "id": "src_renderer_app_syncupdatestatus",
       "label": "syncUpdateStatus()",
       "file": "src/renderer/app.js",
-      "at": "L1182"
+      "at": "L1200"
     },
     {
       "id": "src_renderer_app_tickprojects",
       "label": "tickProjects()",
       "file": "src/renderer/app.js",
-      "at": "L4986"
+      "at": "L5105"
     },
     {
       "id": "src_renderer_app_togglenotifpanel",
       "label": "toggleNotifPanel()",
       "file": "src/renderer/app.js",
-      "at": "L6905"
+      "at": "L7026"
     },
     {
       "id": "src_renderer_app_updateprofilename",
       "label": "updateProfileName()",
       "file": "src/renderer/app.js",
-      "at": "L2609"
+      "at": "L2640"
     },
     {
       "id": "src_renderer_core_accounts_upsertaccount",
@@ -2474,100 +2612,172 @@
       "at": "L49"
     },
     {
+      "id": "supabase_functions_admin_index_admin",
+      "label": "Admin",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L98"
+    },
+    {
+      "id": "supabase_functions_admin_index_ai",
+      "label": "Ai",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L536"
+    },
+    {
+      "id": "supabase_functions_admin_index_allrows",
+      "label": "allRows()",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L747"
+    },
+    {
+      "id": "supabase_functions_admin_index_ctx",
+      "label": "Ctx",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L99"
+    },
+    {
+      "id": "supabase_functions_admin_index_dberr",
+      "label": "DbErr",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L743"
+    },
+    {
+      "id": "supabase_functions_admin_index_feedbackrow",
+      "label": "FeedbackRow",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L376"
+    },
+    {
+      "id": "supabase_functions_admin_index_json",
+      "label": "Json",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L97"
+    },
+    {
+      "id": "supabase_functions_admin_index_logevent",
+      "label": "LogEvent",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L742"
+    },
+    {
+      "id": "supabase_functions_admin_index_logtask",
+      "label": "LogTask",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L741"
+    },
+    {
+      "id": "supabase_functions_admin_index_out",
+      "label": "Out",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L100"
+    },
+    {
+      "id": "supabase_functions_admin_index_replyrow",
+      "label": "ReplyRow",
+      "file": "supabase/functions/admin/index.ts",
+      "at": "L377"
+    },
+    {
+      "id": "supabase_functions_ai_chat_index_aisettings",
+      "label": "aiSettings",
+      "file": "supabase/functions/ai-chat/index.ts",
+      "at": "L1073"
+    },
+    {
       "id": "supabase_functions_ai_chat_index_ascii",
       "label": "ascii()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L524"
+      "at": "L559"
     },
     {
       "id": "supabase_functions_ai_chat_index_bad",
       "label": "Bad",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L596"
+      "at": "L631"
     },
     {
       "id": "supabase_functions_ai_chat_index_clean",
       "label": "Clean",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L597"
+      "at": "L632"
     },
     {
       "id": "supabase_functions_ai_chat_index_cleanmessages",
       "label": "cleanMessages()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L612"
+      "at": "L647"
     },
     {
       "id": "supabase_functions_ai_chat_index_countsasmessage",
       "label": "countsAsMessage()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L767"
+      "at": "L802"
     },
     {
       "id": "supabase_functions_ai_chat_index_id_or_ref",
       "label": "ID_OR_REF()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L212"
+      "at": "L247"
     },
     {
       "id": "supabase_functions_ai_chat_index_json",
       "label": "Json",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L451"
+      "at": "L486"
     },
     {
       "id": "supabase_functions_ai_chat_index_later",
       "label": "later()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L875"
+      "at": "L910"
     },
     {
       "id": "supabase_functions_ai_chat_index_meter",
       "label": "meter()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L919"
+      "at": "L954"
     },
     {
       "id": "supabase_functions_ai_chat_index_msg",
       "label": "Msg",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L452"
+      "at": "L487"
     },
     {
       "id": "supabase_functions_ai_chat_index_readbody",
       "label": "readBody()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L854"
+      "at": "L889"
     },
     {
       "id": "supabase_functions_ai_chat_index_reply",
       "label": "reply()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L199"
+      "at": "L234"
     },
     {
       "id": "supabase_functions_ai_chat_index_usage",
       "label": "Usage",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L910"
+      "at": "L945"
     },
     {
       "id": "supabase_functions_ai_chat_index_waituntil",
       "label": "waitUntil()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L100"
+      "at": "L127"
     },
     {
       "id": "supabase_functions_ai_chat_index_when",
       "label": "when()",
       "file": "supabase/functions/ai-chat/index.ts",
-      "at": "L208"
+      "at": "L243"
     },
     {
       "id": "supabase_functions_delete_account_index_reply",
       "label": "reply()",
       "file": "supabase/functions/delete-account/index.ts",
-      "at": "L56"
+      "at": "L69"
     },
     {
       "id": "supabase_functions_feedback_notify_index_admin",
@@ -2606,6 +2816,18 @@
       "at": "L72"
     },
     {
+      "id": "tests_admin_mock_backend_callsof",
+      "label": ".callsOf()",
+      "file": "tests/admin/mock.js",
+      "at": "L80"
+    },
+    {
+      "id": "tests_admin_mock_backend_constructor",
+      "label": ".constructor()",
+      "file": "tests/admin/mock.js",
+      "at": "L60"
+    },
+    {
       "id": "tests_e2e_today_spec_element_getelementsbyclassname",
       "label": ".getElementsByClassName()",
       "file": "tests/e2e/today.spec.js",
@@ -2616,6 +2838,12 @@
       "label": "agendaTaskKeys()",
       "file": "tests/unit/ai.test.js",
       "at": "L68"
+    },
+    {
+      "id": "tests_unit_oplog_test_device_copy",
+      "label": ".copy()",
+      "file": "tests/unit/oplog.test.js",
+      "at": "L101"
     },
     {
       "id": "tests_unit_oplog_test_device_reload",

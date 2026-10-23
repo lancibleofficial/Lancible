@@ -66,21 +66,44 @@ test('аноним не может создать чужой профиль', as
   assert.equal(r.code, '42501', `ожидали отказ политики, получили ${r.status} ${r.code}: ${r.body.slice(0, 200)}`);
 });
 
-test('журнал работы читается анонимом — на этом держится страница /logs', async () => {
-  const r = await get('work_log_tasks?select=id,title,status&limit=5');
-  assert.equal(r.status, 200, `ожидали 200, получили ${r.status}: ${r.body.slice(0, 200)}`);
-  assert.ok(Array.isArray(r.json), 'ожидали список задач журнала');
+// Журнал работы с 23 октября 2026 закрыт (supabase/logs.sql): до этого его
+// читала публичная страница /logs ключом anon, а в журнале описаны и
+// уязвимости, и как их закрывали. Теперь читает только служебный ключ —
+// функция admin (раздел «Журнал» админки) и scripts/worklog.js. Пока новый
+// logs.sql не выполнен в базе, эти проверки — todo: снять пометку после Run.
+const LOGS_TODO = { todo: 'ждёт supabase/logs.sql от 23.10.2026 в SQL Editor — после Run пометку снять' };
+
+/** Отказ анониму: прав на таблицу нет (42501) или строк не видно ([]). */
+function closedToAnon(r) {
+  if (r.status === 200) assert.deepEqual(r.json, [], `аноним видит журнал: ${r.body.slice(0, 200)}`);
+  else assert.equal(r.json && r.json.code, '42501', `ожидали отказ, получили ${r.status}: ${r.body.slice(0, 200)}`);
+}
+
+test('журнал работы анониму не виден — задачи', LOGS_TODO, async () => {
+  closedToAnon(await get('work_log_tasks?select=id,title,status&limit=5'));
 });
 
-test('события журнала читаются вместе с задачами', async () => {
-  const r = await get('work_log_tasks?select=id,work_log_events(kind,title)&limit=1');
-  assert.equal(r.status, 200, `связь между таблицами не настроена: ${r.body.slice(0, 200)}`);
+test('журнал работы анониму не виден — события', LOGS_TODO, async () => {
+  closedToAnon(await get('work_log_events?select=kind,title,detail,at&limit=5'));
+});
+
+test('дайджест журнала без верного токена не отдаёт ничего — отказ 42501', LOGS_TODO, async () => {
+  // Узкий путь для Make (work_log_digest): с чужим токеном — отказ, а не
+  // пустой список. Токен здесь заведомо не тот: 64 знака, но случайные.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/work_log_digest`, {
+    method: 'POST', headers: HEADERS, body: JSON.stringify({ p_token: 'f'.repeat(32) + require('node:crypto').randomBytes(16).toString('hex'), p_days: 7 }),
+  });
+  const body = await res.text();
+  let code = null;
+  try { code = JSON.parse(body).code; } catch { /* не JSON */ }
+  assert.notEqual(code, 'PGRST202', 'функции work_log_digest нет — выполните supabase/logs.sql');
+  assert.equal(code, '42501', `ожидали отказ, получили ${res.status} ${code}: ${body.slice(0, 200)}`);
 });
 
 test('аноним не может писать в журнал работы', async () => {
   // У журнала политик на запись нет вовсе — писать может только служебный
-  // ключ, который в браузер не попадает. Иначе любой, кто откроет исходник
-  // страницы /logs, смог бы дописать туда что угодно.
+  // ключ, который в браузер не попадает. Иначе любой, у кого ключ anon (он
+  // открыт в каждом клиенте), смог бы дописать туда что угодно.
   const r = await insert('work_log_tasks', { id: 'zz-rls-probe', title: 'Проверка защиты' });
   assert.equal(
     r.code, '42501',

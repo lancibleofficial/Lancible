@@ -46,6 +46,9 @@ const LAYERS = [
   { id: 'mobile-build', title: 'сборка телефона', args: ['scripts/check-mobile-build.js'], fast: true },
   { id: 'web', title: 'браузер: веб', args: [PLAYWRIGHT, 'test', '--project=web', PW_OUT], fast: false, build: true },
   { id: 'landing', title: 'браузер: лендинг', args: [PLAYWRIGHT, 'test', '--project=landing', PW_OUT], fast: false },
+  // Админка — статика без сборки, сеть в тестах подменена (tests/admin/mock.js):
+  // ни web/, ни ключей не нужно, как лендингу.
+  { id: 'admin', title: 'браузер: админка', args: [PLAYWRIGHT, 'test', '--project=admin', PW_OUT], fast: false },
   { id: 'visual', title: 'снимки', args: [PLAYWRIGHT, 'test', '--project=visual', PW_OUT], fast: false },
 ];
 
@@ -70,15 +73,20 @@ const ROUTES = [
   [/^mobile[\\/](?!tests[\\/])/, ['mobile-build']],
   [/^scripts[\\/]check-mobile-build\.js$/, ['mobile-build']],
   [/^landing[\\/]/, ['unit', 'landing', 'visual']],
+  // Админка: юниты стерегут её цвета (visual-rules), браузер — вёрстку и
+  // поведение. Снимков с эталоном у неё нет.
+  [/^admin[\\/]/, ['unit', 'admin']],
+  [/^scripts[\\/]serve-admin\.js$/, ['admin']],
   [/^tests[\\/]unit[\\/]/, ['unit']],
   [/^tests[\\/]e2e[\\/]/, ['web']],
   [/^tests[\\/]landing[\\/]/, ['landing']],
+  [/^tests[\\/]admin[\\/]/, ['admin']],
   [/^tests[\\/]visual[\\/]/, ['visual']],
-  [/^tests[\\/](css|ports)\.js$/, ['unit', 'web', 'landing', 'visual']],
+  [/^tests[\\/](css|ports)\.js$/, ['unit', 'web', 'landing', 'admin', 'visual']],
   [/^scripts[\\/]xlsx-check\.js$/, ['xlsx']],
   // Скрипты сборки и синхронизации ядра: их ломает тот же юнит-набор.
   [/^scripts[\\/]/, ['unit']],
-  [/^playwright\.config\.js$/, ['web', 'landing', 'visual']],
+  [/^playwright\.config\.js$/, ['web', 'landing', 'admin', 'visual']],
   // Документ архитектуры называет число файлов ядра, карта визуала — число
   // отступлений от правил; и то и другое сверяют юниты.
   [/^(ARCHITECTURE|DESIGN)\.md$/, ['unit']],
@@ -99,7 +107,7 @@ const IGNORE = [
   /~$/,
 ];
 
-const WATCH_DIRS = ['src', 'web', 'mobile/src', 'mobile/tests', 'landing', 'tests', 'scripts'];
+const WATCH_DIRS = ['src', 'web', 'mobile/src', 'mobile/tests', 'landing', 'admin', 'tests', 'scripts'];
 
 // Файлы в корне, которые проверяет набор. За корнем целиком не следим — там
 // node_modules и выход сборки, — поэтому только они, поимённо.

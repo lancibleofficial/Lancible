@@ -8,13 +8,14 @@
 | `delete-account` | Стирает `doc-assets/<uid>/`, снимки экрана своих обращений из бакета `feedback` и свою строку доступа к агенту (`ai_access`), потом удаляет аккаунт вызывающего — одним запросом | `tests/backend/account-delete-function.test.js` |
 | `ai-chat` | ИИ-агент: пускает только приглашённых (`ai_access`), держит ключ модели, собирает системный промпт и инструменты, проверяет переписку и вложения белыми списками, считает дневной лимит и частоту, проксирует поток Anthropic | `tests/backend/ai-chat-function.test.js` |
 | `feedback-notify` | Пересылает новый отзыв из таблицы `feedback` со снимком в рабочий чат Telegram (зовёт триггер базы через `pg_net`, строка захватывается один раз) и раз в сутки стирает отзывы и снимки старше 12 месяцев (`pg_cron`) | `tests/backend/feedback-notify-function.test.js` |
+| `admin` | Все действия админ-панели: счётчики, пользователи, отзывы и ответы на них письмом, настройки и доступ к агенту, посты лендинга, выпуск кнопкой. Пускает только админа (`admin_users`) со вторым фактором (`aal2`); CORS — только адрес админки и локальный сервер | `tests/backend/admin-function.test.js` |
 
 ## Выкладка
 
 Выкладывает пользователь — одним из способов:
 
 1. **Панель** (по умолчанию): Supabase Dashboard → Edge Functions → Deploy a
-   new function → имя функции (`delete-account`, `ai-chat`, `feedback-notify`) → вставить её
+   new function → имя функции (`delete-account`, `ai-chat`, `feedback-notify`, `admin`) → вставить её
    `index.ts` целиком → Deploy. «Verify JWT» оставить включённым.
 2. **Командой**: `npx supabase login`, затем
    `npx supabase functions deploy <имя> --project-ref yiglgfkjjvwijukdzutw`.
@@ -54,6 +55,11 @@
 | `AI_DAILY_UNITS` | нет | Бюджет на человека в сутки UTC по цене, в единицах (токен свежего входа; запись в кеш × 1,25, чтение × 0,05, выход × 5), по умолчанию 4 000 000 (≈ $8 по ценам Sonnet 5.5). Целое ≥ 1; можно `4_000_000` или `4e6`, остальное — по умолчанию (разбор — `dailyUnits` в `index.ts`). Считается, только когда выполнен `supabase/ai-budget.sql` |
 | `AI_EFFORT` | нет | Усилие модели: `low`, `medium` (по умолчанию) или `high` |
 | `ANTHROPIC_WORKSPACE_ID` | только для ключа уровня организации | Идентификатор рабочего пространства Anthropic (`wrkspc_…`): Console → Settings → Workspaces. Ключ, созданный внутри пространства, работает без него; ключ организации без него получает 400 «This API key is not scoped to a workspace». Уходит заголовком `anthropic-workspace-id` |
+
+С 23 октября 2026 модель, усилие, лимит и бюджет можно задать и в админке
+(таблица `app_settings`, `supabase/admin.sql`): заданное там главнее
+`AI_MODEL`, `AI_EFFORT`, `AI_DAILY_LIMIT` и `AI_DAILY_UNITS`, функция
+перечитывает его раз в минуту — раздел «Админ-панель».
 
 Ключ живёт только в секретах функции: клиент его не видит, в ответ он не
 попадает ни при успехе, ни при ошибке модели — это проверяет
@@ -450,6 +456,128 @@ Telegram функцией `feedback-notify`. Установленные преж
 60 с; группа, превращённая в супергруппу, меняет id чата — поменять
 секрет `TELEGRAM_CHAT_ID`.
 
+## Админ-панель (23 октября 2026)
+
+Решение пользователя: только веб, один админ — аккаунт владельца, отдельный
+адрес (`lancible-admin.vercel.app`, отдельный проект Vercel с корнем
+`admin/`). Сайт админки статический и ключей не держит: всё, что требует
+служебного ключа, делает функция `admin`. Таблицы, счётчики и права —
+`supabase/admin.sql`; устройство и безопасность — ARCHITECTURE.md,
+«Админ-панель».
+
+**Как устроено.**
+
+- Один адрес `POST …/functions/v1/admin`, тело `{ action, ...параметры }`,
+  ответ `{ ok: true, … }` или `{ error }`. Полный список действий и ответов —
+  в шапке `index.ts`.
+- **Кто пускается:** токен входа валиден (`auth.getUser`), аккаунт есть в
+  `admin_users`, токен выдан после второго фактора — `aal = 'aal2'` в JWT.
+  Не админ — 403 `forbidden` (даже без второго фактора: чужому не говорят,
+  что аккаунт админский), админ без TOTP — 403 `mfa`, нет таблицы
+  `admin_users` — тоже `forbidden` (закрыто по умолчанию).
+- **CORS** — только `https://lancible-admin.vercel.app` и
+  `http://localhost:5175`; другой `Origin` — 403 `origin`. Свой адрес
+  админки поменялся — поправить `ORIGINS` в `index.ts` и выложить заново.
+- **Логи** — только действие и коды ошибок: ни ключей и токенов, ни почт, ни
+  текста отзывов и ответов.
+- **Ответ на отзыв** — письмом через Resend (HTTP API) на почту аккаунта,
+  оставившего отзыв, на языке отзыва (`feedback.lang`: ru, en, uk, kk, иначе
+  en): обращение, текст ответа, исходный отзыв цитатой, подпись «Команда
+  Lancible». Ответ сохраняется в `feedback_replies` всегда, до отправки;
+  ушло — отзыв становится `answered`. Нет секретов — `not_configured`, у
+  гостя почты нет — 400 `no email`.
+- **Снимки отзывов** — подписанной ссылкой на 10 минут.
+- **Настройки агента** (`settings.get` / `settings.set`) — модель, усилие,
+  лимит сообщений и бюджет в `app_settings`; `ai-chat` читает их раз в
+  минуту и ставит выше секретов `AI_*`. Белый список у обеих функций один:
+  модели `claude-sonnet-5-5`, `claude-opus-5-5`, `claude-haiku-5-5`; усилие
+  `low`/`medium`/`high`; лимит 1–1000; бюджет 10 000–100 000 000. Секреты
+  админка видит только как «задан / не задан».
+- **Выпуск кнопкой** (`releases.start`) — `workflow_dispatch`
+  `.github/workflows/publish.yml` в `main` с входами `desktop_version` и
+  `mobile_version`; тесты, сборки и публикацию делает сам workflow.
+  `releases.status` читает публичные данные — версии в `main`, релизы
+  GitHub, манифесты в бакете `releases`, `latest.json` в
+  `lancible-updates`, кнопки лендинга — и у трёх свежих запусков
+  `publish.yml` работы и шаги (`GET /actions/runs/{id}/jobs`: сводку
+  запуска REST API не отдаёт), с шагом, на котором упало.
+- **Журнал работы** (`logs.list`, с 23 октября 2026) — `work_log_tasks` и
+  `work_log_events` (`supabase/logs.sql`) служебным ключом: задачи свежими
+  первыми, события по времени; фильтры `status` и `kind`, страницы `page`,
+  `per` (по умолчанию 20, не больше 100), счётчики статусов и видов. Таблицы
+  читаются страницами по 1000 строк (предел PostgREST). Клиентам журнал
+  закрыт: публичной страницы `/logs` больше нет, политик чтения нет; нет
+  таблиц — 500 `setup`, раздел подскажет `supabase/logs.sql`. Недельный
+  дайджест в Make — не через функцию, а RPC `work_log_digest` по токену
+  (шапка `logs.sql`).
+
+**Секреты** (Dashboard → Edge Functions → Secrets, или
+`npx supabase secrets set ИМЯ=значение --project-ref yiglgfkjjvwijukdzutw`):
+
+| Секрет | Нужен | Что это |
+|---|---|---|
+| `RESEND_API_KEY` | для писем-ответов | Ключ Resend (resend.com → API Keys, права Sending access). Без него ответ сохраняется со статусом `not_configured` |
+| `FEEDBACK_FROM` | для писем-ответов | Отправитель, например `Lancible <hello@ваш-домен>`: домен подтверждён в Resend → Domains. Без него — тоже `not_configured` |
+| `GITHUB_RELEASE_TOKEN` | для выпуска кнопкой | Fine-grained токен GitHub, ниже. Без него `releases.start` — 400 `no github token`, `releases.status` читает GitHub без токена (60 запросов в час на адрес) |
+
+**`GITHUB_RELEASE_TOKEN`:**
+
+1. GitHub → Settings → Developer settings → Fine-grained tokens → Generate
+   new token. Resource owner — `lancibleofficial`, Repository access — Only
+   select repositories → `Lancible`. Repository permissions: **Actions: Read
+   and write** (Metadata: Read GitHub добавит сам); больше ничего — код
+   публичный и читается без прав, а пушит в `main` сам workflow своим
+   `GITHUB_TOKEN`.
+2. `npx supabase secrets set GITHUB_RELEASE_TOKEN=<токен> --project-ref yiglgfkjjvwijukdzutw`
+   (или Dashboard → Edge Functions → Secrets). Значение никуда не печатается.
+3. Секреты самого выпуска живут в репозитории, не здесь: `R2_*`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `EXPO_TOKEN` и новый `LANCIBLE_UPDATES_TOKEN`
+   (fine-grained, только `lancible-updates`, Contents: Read and write) —
+   ARCHITECTURE.md, «Сборка и выкат».
+
+Срок у fine-grained токена конечный: истёк — `releases.start` отвечает 502
+`{ error: 'github', status: 401 }`; выпустить заново токен и секрет.
+
+**Посмотреть локально — без выкладки.** `npm run serve:admin` поднимает
+`http://localhost:5175`: `admin/` статикой и ту же функцию в Node
+(`scripts/serve-admin.js`) со служебным ключом из `.env.local` — с настоящей
+базой. Сервер слушает только этот компьютер. Секреты функции локально —
+только из окружения и `.env.local`, поэтому «не заданы»; письмо и выпуск
+локально работают, только если задать их там. Нужно до первого входа:
+
+1. SQL Editor → `supabase/admin.sql` целиком → Run (последний `select` —
+   пять строк `true`).
+2. Себя — админом:
+   `insert into public.admin_users (user_id) select id from auth.users where lower(email) = lower('<ваша почта>') on conflict (user_id) do nothing;`
+3. SQL Editor → `supabase/blog-posts-seed.sql` → Run (посты лендинга в базу;
+   повторный запуск копий не плодит).
+4. TOTP своему аккаунту — при первом входе в админку (в Supabase TOTP
+   включён по умолчанию: Authentication → Sign In / Providers →
+   Multi-Factor).
+5. Журнал: SQL Editor → `supabase/logs.sql` целиком → Run (после
+   `admin.sql`) — снимает публичное чтение журнала и заводит
+   `work_log_digest`; затем токен дайджеста и сценарий Make — по шапке
+   `logs.sql`. До этого шага журнал в разделе «Журнал» уже виден (служебный
+   ключ), но клиентам он ещё открыт.
+
+**Выкат** — по слову «деплой», порядок:
+
+1. Шаги 1–3 и 5 выше, если ещё не сделаны (SQL можно и раньше: клиенты без
+   счётчика экранов его просто не зовут; `feedback.status` им не мешает).
+   `logs.sql` — не позже выката лендинга без `/logs`: иначе журнал остаётся
+   открытым ключом `anon`, хоть страницы и нет.
+2. Секреты `RESEND_API_KEY`, `FEEDBACK_FROM`, `GITHUB_RELEASE_TOKEN`.
+3. Выложить `admin` (Dashboard → Deploy a new function → `admin` →
+   `index.ts` целиком, «Verify JWT» включён; или
+   `npx supabase functions deploy admin --project-ref yiglgfkjjvwijukdzutw`)
+   и **`ai-chat` заново** — иначе настройки агента из админки не действуют.
+4. Проект Vercel `lancible-admin`, корень `admin/`; адрес должен совпасть с
+   `ORIGINS` в `index.ts`.
+5. Проверить: `npm run test:backend` (подмены); руками — вход в админку с
+   TOTP, обзор, пробный ответ на свой отзыв (письмо пришло, отзыв
+   `answered`), смена модели в настройках и сообщение агенту (в
+   `ai_calls.model` — новая модель).
+
 ## Откат
 
 - `delete-account`: Dashboard → Edge Functions → `delete-account` → Delete.
@@ -472,3 +600,15 @@ Telegram функцией `feedback-notify`. Установленные преж
   `notified_at` ничего не держит. Остановить одну пересылку, не трогая
   уборку, — убрать секрет `TELEGRAM_BOT_TOKEN`: функция ответит 500, строки
   останутся неотправленными и дошлются потом.
+- `admin`: Dashboard → Edge Functions → `admin` → Delete — админка
+  перестаёт работать, приложения этого не замечают. Закрыть быстрее —
+  `delete from public.admin_users;` (403 всем). Настройки агента из админки
+  снимаются `delete from public.app_settings where key like 'ai.%';` —
+  `ai-chat` через минуту вернётся к секретам. Таблицы `admin.sql` могут
+  остаться: счётчик экранов клиенты зовут молча, лента лендинга без постов
+  в базе рисуется из `landing/blog-posts.js`.
+- Журнал (`logs.sql` от 23 октября 2026): дайджест Make остановить —
+  `delete from public.app_settings where key = 'digest.token';` (функция
+  ответит отказом) или `drop function public.work_log_digest(text, integer);`.
+  Публичное чтение журнала назад не открывается: страницы `/logs` больше
+  нет, читать его некому, кроме админки.

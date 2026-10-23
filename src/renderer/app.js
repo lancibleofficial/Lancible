@@ -283,6 +283,7 @@ const el = {
   settingsAccounts: $('settings-accounts'), settingsAccountsLabel: $('settings-accounts-label'), settingsCurrentLabel: $('settings-current-label'),
   settingsRelogin: $('settings-relogin'), settingsDevice: $('settings-device'), settingsDeviceLabel: $('settings-device-label'), settingsForgetRow: $('settings-forget-row'), settingsMoveGuestRow: $('settings-move-guest-row'),
   settingsExportRow: $('settings-export-row'), settingsLegalCookies: $('settings-legal-cookies'),
+  settingsUsage: $('settings-usage'), settingsUsageToggle: $('settings-usage-toggle'), settingsUsageHint: $('settings-usage-hint'),
   settingsSyncData: $('settings-sync-data'), settingsSyncDataLabel: $('settings-sync-data-label'),
   settingsConflictsRow: $('settings-conflicts-row'), settingsConflictsValue: $('settings-conflicts-value'),
   settingsTrashRow: $('settings-trash-row'), settingsTrashValue: $('settings-trash-value'),
@@ -898,6 +899,13 @@ el.settingsDeleteRow.addEventListener('click', deleteAccount);
 el.settingsCurrencyRow.addEventListener('click', () => openCurrencyMenu(el.settingsCurrencyRow));
 el.settingsLegalCookies.addEventListener('click', () => openLegal('cookies'));
 el.settingsExportRow.addEventListener('click', openExportPeriodDialog);
+// «Статистика экранов» — настройка области аккаунта, как остальные; счётчик
+// читает её при каждом открытии экрана (usageAllowed).
+el.settingsUsageToggle.addEventListener('click', () => {
+  state.settings.usageStats = state.settings.usageStats === false;
+  render();
+  scheduleSave();
+});
 for (const row of el.settingsSections.querySelectorAll('.srow[data-section]')) {
   row.addEventListener('click', () => openSettings(row.dataset.section));
 }
@@ -1242,6 +1250,9 @@ if (window.api.getVersion) {
 // ---------------------------------------------------------------------------
 
 let currentUser = null; // { id, email, name } | null
+/** Чьё согласие с нынешней редакцией документов проверено при этом входе
+ *  (afterSignedIn): uid или null. Без него счётчик экранов молчит. */
+let consentOkFor = null;
 const USE_CASES = ['personal', 'freelance', 'team', 'other'];
 let selectedUseCase = null;
 
@@ -2329,6 +2340,12 @@ function renderSettings() {
   el.settingsDevice.hidden = !(onDevice || canMove);
   el.settingsDangerLabel.hidden = !currentUser;
   el.settingsDanger.hidden = !currentUser;
+  // Статистика экранов — у области аккаунта (и открытой без сеанса: её можно
+  // снять до входа заново); гость ничего не шлёт, ему выключатель не нужен.
+  const usageRow = !!currentUser || !!scopeUid;
+  el.settingsUsage.hidden = !usageRow;
+  el.settingsUsageHint.hidden = !usageRow;
+  el.settingsUsageToggle.setAttribute('aria-pressed', String(state.settings.usageStats !== false));
   renderSyncSettings();
 
   renderFeedback();
@@ -2487,10 +2504,14 @@ async function afterSignedIn(opts) {
     openOnboarding('consent');
     return;
   }
+  consentOkFor = user.id;
   currentUser = { id: user.id, email: user.email, name: profile.name };
   noteAccountProfile();
   renderAccountBtn();
   if (state.ui.view === 'settings') renderSettings();
+  // Экран, на котором человек вошёл (или открыл приложение), — первый
+  // просмотр этого входа.
+  usageNoteView();
   // Окно входа закрывается сразу, ДО синхронизации. Раньше закрытие стояло
   // после неё, а синхронизация умеет спрашивать про конфликт данных и умеет
   // падать на сетевой ошибке — в обоих случаях окно оставалось висеть на
@@ -3880,6 +3901,7 @@ function openConflictDialog(kind, id, from) {
   syncdlg.id = id;
   syncdlg.from = from || null;
   renderSyncDialog();
+  if (el.syncdlgBackdrop.hidden) usageSend('conflicts');
   el.syncdlgBackdrop.hidden = false;
 }
 
@@ -3887,6 +3909,7 @@ function openConflictList() {
   syncdlg.mode = 'all';
   syncdlg.from = null;
   renderSyncDialog();
+  if (el.syncdlgBackdrop.hidden) usageSend('conflicts');
   el.syncdlgBackdrop.hidden = false;
 }
 
@@ -3894,6 +3917,7 @@ function openTrash() {
   syncdlg.mode = 'trash';
   syncdlg.from = null;
   renderSyncDialog();
+  if (el.syncdlgBackdrop.hidden) usageSend('trash');
   el.syncdlgBackdrop.hidden = false;
 }
 
@@ -4355,6 +4379,7 @@ function syncRoute() {
     state.ui.route = hash;
     scheduleSave();
   }
+  usageNoteView();
 }
 
 /** Привести приложение к маршруту. Нет такой сущности (чужой id, удалена,
@@ -4479,6 +4504,90 @@ function routeUrl(route) {
 async function copyRouteLink(route) {
   try { await window.api.copy(routeUrl(route)); toast(t('toast.link_copied')); }
   catch { toast(t('toast.copy_failed')); }
+}
+
+// ---------------------------------------------------------------------------
+// Счётчик экранов (23 октября 2026)
+//
+// Какие экраны открывают — для админ-панели: чем пользуются, а что не
+// открывают вовсе. Уходят только имя экрана и платформа (rpc track_screen,
+// supabase/admin.sql: просмотры за день на пользователя) — ни названий, ни
+// id, ни содержимого. Шлёт только вошедший, принявший нынешнюю редакцию
+// документов, с включённым выключателем «Статистика экранов»
+// (state.settings.usageStats, по умолчанию включён); гость не шлёт ничего.
+// Отставшая вкладка и чужой сеанс в хранилище — тоже нет: просмотр ушёл бы
+// на другой аккаунт. Ошибки глотаются молча — счётчик ничему не мешает.
+//
+// Имя экрана — имя в адресе (core/route.js), а вкладка проекта, режим
+// статистики и раздел настроек — через точку; панели и окна поверх экрана —
+// свои имена. Полный список — USAGE_SCREENS (он же в DESIGN.md, «Счётчик
+// экранов», и в admin/screens.js). Экран считается, когда его открыли:
+// перерисовка на месте (таймер, синхронизация) — не открытие, закрытая
+// панель не открывает заново экран под ней, а один и тот же экран уходит
+// не чаще раза в USAGE_EVERY_MS.
+// ---------------------------------------------------------------------------
+
+const USAGE_SCREENS = [
+  'today', 'projects', 'project', 'project.board', 'project.versions', 'project.docs', 'project.settings', 'project.new',
+  'task', 'task.modal', 'docs', 'doc',
+  'stats.day', 'stats.week', 'stats.month', 'stats.agenda',
+  'settings', 'settings.main', 'settings.work', 'settings.account', 'settings.data', 'settings.about', 'settings.feedback',
+  'agent', 'agent.chat', 'search', 'notifications', 'export', 'conflicts', 'trash',
+];
+const USAGE_EVERY_MS = 2000;
+/** base — экран под панелями, который уже учтён (аккаунт и адрес); sent —
+ *  когда какой экран ушёл последний раз. */
+const usage = { base: '', sent: new Map() };
+
+/** Можно ли сейчас считать: вошедший с принятой редакцией, выключатель не
+ *  снят, вкладка не отстала, область не меняется. */
+function usageAllowed() {
+  return !!currentUser && consentOkFor === currentUser.id && state.settings.usageStats !== false
+    && !scopeStale && !scopeSwitching;
+}
+
+/** Экран открыт — в базу, если можно и если этот экран не уходил только что. */
+function usageSend(screen) {
+  if (!USAGE_SCREENS.includes(screen) || !usageAllowed()) return;
+  const now = Date.now();
+  const last = usage.sent.get(screen);
+  // Часы могли переставить назад — тогда разница отрицательная, и без abs
+  // экран молчал бы до тех пор, пока время не догонит.
+  if (last !== undefined && Math.abs(now - last) < USAGE_EVERY_MS) return;
+  usage.sent.set(screen, now);
+  const uid = currentUser.id;
+  (async () => {
+    try {
+      // Сеанс в хранилище supabase-js на вебе общий у вкладок: просмотр идёт
+      // только сеансом того, кто на экране (как foreignSession, но без тоста).
+      const { data } = await sb.auth.getSession();
+      const sid = data && data.session && data.session.user && data.session.user.id;
+      if (sid !== uid || scopeStale || !currentUser || currentUser.id !== uid) return;
+      await sb.rpc('track_screen', { p_screen: screen, p_platform: IS_WEB ? 'web' : 'desktop' });
+    } catch { /* счётчик молчит: сеть, база, нет функции — не дело человека */ }
+  })();
+}
+
+/** Имя экрана под панелями — по его маршруту (currentRoute). */
+function usageScreenOf(route) {
+  if (route.view === 'project') return route.tab && route.tab !== 'list' ? `project.${route.tab}` : 'project';
+  if (route.view === 'docs') return route.id ? 'doc' : 'docs';
+  if (route.view === 'time') return `stats.${route.mode || timeMode()}`;
+  if (route.view === 'settings') return route.section ? `settings.${route.section}` : 'settings';
+  return { home: 'today', projects: 'projects', task: 'task' }[route.view] || 'today';
+}
+
+/** Экран под панелями сменился — учесть. Зовёт syncRoute (адрес уже
+ *  согласован с экраном) и вход в аккаунт. Пока считать нельзя, учтённый
+ *  экран не сдвигается: включили выключатель или вошли — уйдёт тот, что на
+ *  экране. Другой проект, задача или документ — новое открытие. */
+function usageNoteView() {
+  if (!routeReady || !usageAllowed()) return;
+  const route = currentRoute();
+  const key = `${currentUser.id}|${Core.buildRoute(route)}`;
+  if (key === usage.base) return;
+  usage.base = key;
+  usageSend(usageScreenOf(route));
 }
 
 // ---------------------------------------------------------------------------
@@ -5047,6 +5156,8 @@ function openSearch() {
   const r = el.tbSearch.getBoundingClientRect();
   el.searchPanel.style.left = `${Math.round(r.left)}px`;
   el.searchPanel.style.width = `${Math.max(320, Math.round(r.width))}px`;
+  // Фокус в уже открытом поиске зовёт сюда же — это не новое открытие.
+  if (el.searchPanel.hidden) usageSend('search');
   el.searchPanel.hidden = false;
   renderSearch(el.searchInput.value);
   setTimeout(() => document.addEventListener('pointerdown', searchOutside, true), 0);
@@ -6914,6 +7025,7 @@ function closeNotifPanel() {
 }
 function toggleNotifPanel() {
   if (!el.notifPanel.hidden) { closeNotifPanel(); return; }
+  usageSend('notifications');
   renderNotifPanel();
   el.notifPanel.hidden = false;
   el.notifBtn.classList.add('on');
@@ -7521,6 +7633,7 @@ function openProjectDialog(project, sec) {
   if (project) renderConflictRow(el.pdlgConflicts, 'project', project.id);
   else el.pdlgConflicts.hidden = true;
   renderPdlgSections();
+  if (el.pdlgBackdrop.hidden) usageSend(project ? 'project.settings' : 'project.new');
   el.pdlgBackdrop.hidden = false;
   el.pdlgBody.scrollTop = 0;
   if (!sec || sec === 'main') { el.pdlgName.focus(); el.pdlgName.select(); return; }
@@ -7877,6 +7990,7 @@ function openExportPeriodDialog() {
   expdlg.versionId = fromFilter ? statsFilter.versionId || 'all' : 'all';
   renderExpdlg();
   expdlgOpener = document.activeElement === document.body ? null : document.activeElement;
+  if (el.expdlgBackdrop.hidden) usageSend('export');
   el.expdlgBackdrop.hidden = false;
   el.expPeriod.focus();
 }
@@ -10233,6 +10347,7 @@ function aiOpenChat(id) {
   aiUnstash(chat);
   aiHush(chat);
   aiGo('chat');
+  usageSend('agent.chat');
   if (!ai.busy) el.aiInput.focus({ preventScroll: true });
 }
 
@@ -10252,6 +10367,7 @@ function aiGoHome() {
   aiNextGreeting();
   aiGo('home');
   aiHelloIn();
+  usageSend('agent');
 }
 
 /** Страница панели и её въезд: в чат — справа, на главный — слева. */
@@ -10378,6 +10494,7 @@ function openAiPanel() {
   ai.accessFocus = aiSignedIn() && aiAccess() === 'wait';
   if (aiReady()) el.aiInput.focus({ preventScroll: true });
   if (currentUser) aiCheckAccess();
+  usageSend('agent');
 }
 
 /** Закрыть: рейл сворачивается тем же ходом, панель прячется, когда он
@@ -11615,6 +11732,7 @@ function aiSend(raw) {
     ai.pageIn = null;
     aiRender(true);
     aiFlowIn(top0);
+    usageSend('agent.chat');
   } else aiRender(true);
   aiRun(chat);
 }
@@ -12749,6 +12867,7 @@ function openTaskModal(task, index, opts) {
     tmdlg.end = `${pad2(end.getHours())}:${pad2(end.getMinutes())}`;
   }
   renderTaskModal();
+  if (el.tmdlgBackdrop.hidden) usageSend('task.modal');
   el.tmdlgBackdrop.hidden = false;
   if (tmdlg.fresh) el.tmdlgTitle.focus();
 }

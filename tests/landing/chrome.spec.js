@@ -13,7 +13,7 @@
 // ширине 561 правый блок шапки вылезал за поле страницы на 22 px.
 const { test, expect } = require('@playwright/test');
 
-const PAGES = ['/index.html', '/blog.html', '/logs.html', '/architecture.html', '/graph.html', '/privacy.html', '/terms.html', '/cookies.html', '/refund.html', '/legal.html', '/delete-account.html'];
+const PAGES = ['/index.html', '/blog.html', '/privacy.html', '/terms.html', '/cookies.html', '/refund.html', '/legal.html', '/delete-account.html'];
 
 // Порог сужения шапки. Замер: в полном составе ей нужно 583 px (герб 125 +
 // правый блок 394 + поля 48 + зазор 16), поэтому 640 с запасом, а 560 — уже
@@ -124,13 +124,22 @@ test(`шапка сужается ровно на ${NARROW_AT}, и ни пикс
   }
 });
 
-test('служебные страницы отдаются по короткому адресу', async ({ page, baseURL }) => {
-  // Локальный сервер повторяет rewrite Vercel: /logs открывается так же, как
-  // /logs.html. Если это разъедется, ссылка в адресной строке перестанет
-  // работать на сайте, а узнаем мы об этом от пользователя.
-  for (const name of ['logs', 'architecture', 'graph']) {
+test('правовые документы отдаются по короткому адресу', async ({ page, baseURL }) => {
+  // Локальный сервер повторяет rewrite Vercel: /privacy открывается так же,
+  // как /privacy.html. Если это разъедется, ссылка в адресной строке
+  // перестанет работать на сайте, а узнаем мы об этом от пользователя.
+  for (const name of ['privacy', 'terms', 'cookies', 'refund', 'legal', 'delete-account']) {
     const res = await page.request.get(`${baseURL}/${name}`);
     expect(res.status(), `/${name}: код ответа`).toBe(200);
     expect(await res.text(), `/${name}: отдалась не та страница`).toContain('<footer>');
+  }
+});
+
+test('бывших служебных страниц нет: журнал, устройство и граф — 404', async ({ page, baseURL }) => {
+  // До 23 октября 2026 они были открыты здесь по прямому адресу; теперь это
+  // разделы админки. Ни страницы, ни перенаправления — просто «нет такого».
+  for (const p of ['/logs', '/logs.html', '/architecture', '/architecture.html', '/graph', '/graph.html', '/graph-view.html']) {
+    const res = await page.request.get(`${baseURL}${p}`, { maxRedirects: 0 });
+    expect(res.status(), `${p}: код ответа`).toBe(404);
   }
 });

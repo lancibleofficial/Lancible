@@ -1,21 +1,27 @@
-// Освежить то, что сайт показывает о коде. Запуск: npm run site:refresh
+// Освежить то, что админка показывает о коде. Запуск: npm run site:refresh
 //
-// Зовётся перед выкатом (пушем в main), и вот почему не чаще. Граф весит
-// почти два мегабайта, а числа о коде меняются с каждой правкой: если
-// обновлять их на каждый коммит, каждый коммит тащил бы за собой мегабайты и
-// правку страницы, к которой он отношения не имеет. А сайт всё равно
-// обновляется только выкатом — значит, и показывать он должен код на момент
-// выката.
+// С 23 октября 2026 граф кода и описание устройства — разделы админки
+// («Граф кода», «Устройство»), а не служебные страницы лендинга /graph и
+// /architecture: их больше нет. Скрипт кладёт свежее в admin/.
+//
+// Зовётся перед выкатом (пушем в main), и вот почему не чаще. Данные графа
+// весят сотни килобайт, а числа о коде меняются с каждой правкой: если
+// обновлять их на каждый коммит, каждый коммит тащил бы за собой правку
+// файлов, к которым он отношения не имеет. А сайт всё равно обновляется
+// только выкатом — значит, и показывать он должен код на момент выката.
 //
 // Что делается:
 //   1. граф пересобирается по исходникам;
-//   2. проверяется на секреты — и при находке НЕ публикуется;
-//   3. ложится на лендинг как graph-view.html;
-//   4. числа на /graph и /architecture пересчитываются.
+//   2. из выгрузки graphify (graphify-out/graph.html) вынимаются данные —
+//      узлы, связи, легенда — и проверяются на секреты; при находке НЕ
+//      публикуются;
+//   3. ложатся в admin/graph/graph.json вместе с числами графа (сколько
+//      узлов, связей, сообществ и когда построен);
+//   4. числа app.js в admin/content/architecture.html пересчитываются.
 //
 // Числа, которые меняются редко (сколько файлов в ядре и сколько из них
 // копируется на телефон), здесь не трогаются: их сторожит
-// tests/unit/architecture.test.js, и разойтись со страницей им не даст крюк
+// tests/unit/architecture.test.js, и разойтись с разделом им не даст крюк
 // перед коммитом.
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -24,7 +30,10 @@ const path = require('node:path');
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'graphify-out', 'graph.html');
 const GRAPH_JSON = path.join(ROOT, 'graphify-out', 'graph.json');
-const LANDING = path.join(ROOT, 'landing');
+const ADMIN = path.join(ROOT, 'admin');
+/** Куда ложатся данные графа и текст «Устройства» — пути внутри admin/. */
+const GRAPH_DATA = 'graph/graph.json';
+const ARCHITECTURE = 'content/architecture.html';
 
 const say = (s) => console.log(`[site] ${s}`);
 
@@ -33,8 +42,8 @@ const say = (s) => console.log(`[site] ${s}`);
 function rebuildGraph() {
   say('пересобираю граф…');
   try {
-    // --force: граф на сайте должен совпадать с кодом. Без флага graphify
-    // отказывается уменьшать граф, и после удаления кода на сайт уехал бы
+    // --force: граф в админке должен совпадать с кодом. Без флага graphify
+    // отказывается уменьшать граф, и после удаления кода туда уехал бы
     // прежний, с уже несуществующими функциями.
     // Без shell: graphify ставится через uv как обычный исполняемый файл
     // (на Windows — graphify.exe), и оболочка ему не нужна. С ней Node ещё и
@@ -47,10 +56,10 @@ function rebuildGraph() {
 
 // --- 2. проверка на секреты --------------------------------------------------------
 //
-// Граф строится по всему репозиторию, а репозиторий закрытый. Сейчас в графе
-// только имена функций, файлов и заголовки документов, но стоит однажды
-// закоммитить файл с ключом — и он уедет на открытый адрес. Поэтому каждая
-// публикация проверяется, и при любой находке остановится.
+// Граф строится по всему репозиторию. Сейчас в графе только имена функций,
+// файлов и заголовки документов, но стоит однажды закоммитить файл с ключом —
+// и он уедет на сайт админки, а её статика открыта по адресу без входа.
+// Поэтому каждая публикация проверяется и при любой находке останавливается.
 
 const SECRETS = [
   ['JWT-токен (ключи Supabase выглядят так)', /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}/],
@@ -72,57 +81,84 @@ function scanForSecrets(text) {
   return found;
 }
 
-// --- 3. граф на лендинг --------------------------------------------------------------
+// --- 3. данные графа в админку --------------------------------------------------------
 //
-// Библиотеку рисования шаблон graphify берёт с unpkg, а Политика cookie
-// обещает, что сторонние сервисы о визите не узнают. Поэтому ссылка
-// подменяется копией с нашего адреса (landing/vendor), а любая другая
-// внешняя загрузка останавливает публикацию: graphify, сменивший версию
-// библиотеки, не должен молча увезти на сайт чужой адрес. Атрибут integrity
-// своей копии не нужен — она приходит с того же адреса, что и страница.
+// Выгрузка graphify — страница со встроенными скриптами и стилями строкой, а
+// политика сайта админки (admin/vercel.json) такого не пускает. Поэтому
+// страницу мы не выкладываем, а вынимаем из неё данные: строки
+// «const RAW_NODES = […];», «const RAW_EDGES = […];», «const LEGEND = […];» и
+// «const hyperedges = […];». Рисует их раздел админки (admin/js/sections/
+// graph.js) своей копией vis-network (admin/vendor). Шаблон graphify сменил
+// вид или версию библиотеки — публикация останавливается, а не кладёт в
+// админку то, что раздел не прочтёт.
 
 const VIS = 'vis-network-9.1.6.min.js';
-const VIS_CDN = /<script\s+src="https:\/\/unpkg\.com\/vis-network@9\.1\.6\/standalone\/umd\/vis-network\.min\.js"[^>]*><\/script>/;
-const EXTERNAL = /<(script|link|img|iframe)\b[^>]*\s(src|href)\s*=\s*["']?(https?:)?\/\//i;
+const VIS_VERSION = /vis-network@9\.1\.6\//;
 
-function localizeVendor(html) {
-  const out = html.replace(VIS_CDN, `<script src="vendor/${VIS}"></script>`);
-  const ext = out.match(EXTERNAL);
-  if (ext) {
-    throw new Error(`в графе осталась внешняя загрузка «${ext[0].slice(0, 80)}…» — graphify сменил библиотеку? `
-      + 'Положите её копию в landing/vendor и поправьте VIS в scripts/publish-site.js');
+/** Данные графа из выгрузки graphify: { nodes, edges, legend, hyperedges }. */
+function extractGraph(html) {
+  if (!VIS_VERSION.test(html)) {
+    throw new Error('шаблон graphify больше не на vis-network 9.1.6 — сверьте вид данных, положите новую копию '
+      + `в admin/vendor и поправьте VIS в scripts/publish-site.js`);
   }
-  return out;
+  const grab = (name) => {
+    const m = html.match(new RegExp(`^const ${name} = (\\[.*\\]);\\s*$`, 'm'));
+    if (!m) throw new Error(`в выгрузке graphify нет строки «const ${name} = […];» — шаблон сменился, поправьте extractGraph`);
+    try { return JSON.parse(m[1]); } catch { throw new Error(`«const ${name}» в выгрузке graphify — не JSON`); }
+  };
+  const data = { nodes: grab('RAW_NODES'), edges: grab('RAW_EDGES'), legend: grab('LEGEND'), hyperedges: grab('hyperedges') };
+  if (!data.nodes.length) throw new Error('в выгрузке graphify ни одного узла');
+  for (const n of data.nodes) {
+    if (n == null || n.id == null || typeof n.label !== 'string') throw new Error('узел графа без id или подписи — шаблон graphify сменился');
+  }
+  return data;
+}
+
+/** Числа графа целиком (по graph.json, а не по рисунку: на большом графе
+ *  graphify рисует сообщества, а не узлы). */
+function graphNumbers(g, now = new Date()) {
+  const communities = new Set(g.nodes.map((n) => n.community).filter((c) => c !== undefined)).size;
+  const date = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+  return { nodes: g.nodes.length, edges: g.links.length, communities, date };
+}
+
+/** Текст admin/graph/graph.json: числа и данные рисунка. */
+function buildGraphData(data, numbers) {
+  const out = {
+    meta: { ...numbers, shown: { nodes: data.nodes.length, edges: data.edges.length } },
+    nodes: data.nodes,
+    edges: data.edges,
+    legend: data.legend,
+    hyperedges: data.hyperedges,
+  };
+  return `${JSON.stringify(out)}\n`;
 }
 
 function publishGraph() {
-  if (!fs.existsSync(path.join(LANDING, 'vendor', VIS))) {
-    throw new Error(`нет landing/vendor/${VIS} — без неё граф на /graph не нарисуется`);
+  if (!fs.existsSync(path.join(ADMIN, 'vendor', VIS))) {
+    throw new Error(`нет admin/vendor/${VIS} — без неё граф в админке не нарисуется`);
   }
-  let html = fs.readFileSync(OUT, 'utf8');
-  const leaks = scanForSecrets(html);
+  const html = fs.readFileSync(OUT, 'utf8');
+  const data = extractGraph(html);
+  const numbers = graphNumbers(JSON.parse(fs.readFileSync(GRAPH_JSON, 'utf8')));
+  const text = buildGraphData(data, numbers);
+  const leaks = scanForSecrets(text);
   if (leaks.length) {
     throw new Error(`в графе нашлось то, что нельзя выкладывать — публикация остановлена:\n  ${leaks.join('\n  ')}`);
   }
-  // Заголовок graphify раскрывает путь к файлу на машине разработчика, а
-  // запрета индексации у него нет — заголовок от Vercel его закрывает, но
-  // страница должна быть закрыта и сама по себе, как остальные служебные.
-  html = html
-    .replace(/<title>[^<]*<\/title>/, '<title>Граф кода Lancible</title>')
-    .replace('<head>', '<head>\n<meta name="robots" content="noindex, nofollow">');
-  if (!html.includes('noindex')) throw new Error('не вышло поставить noindex в страницу графа');
-  html = localizeVendor(html);
-  fs.writeFileSync(path.join(LANDING, 'graph-view.html'), html);
-  say(`граф выложен: landing/graph-view.html (${(html.length / 1048576).toFixed(1)} МБ), секретов не найдено`);
+  fs.mkdirSync(path.dirname(path.join(ADMIN, GRAPH_DATA)), { recursive: true });
+  fs.writeFileSync(path.join(ADMIN, GRAPH_DATA), text);
+  say(`граф выложен: admin/${GRAPH_DATA} (${(text.length / 1048576).toFixed(2)} МБ), секретов не найдено`);
+  say(`граф: узлов ${numbers.nodes}, связей ${numbers.edges}, сообществ ${numbers.communities}, построен ${numbers.date}`);
 }
 
-// --- 4. числа на страницах ----------------------------------------------------------
+// --- 4. числа в «Устройстве» ----------------------------------------------------------
 //
 // Места для чисел помечены в разметке так: <!--m:имя-->значение<!--/m-->.
 // Значение между метками заменяется, разметка вокруг не трогается.
 
 function setMarks(file, values) {
-  const p = path.join(LANDING, file);
+  const p = path.join(ADMIN, file);
   let s = fs.readFileSync(p, 'utf8');
   for (const [name, value] of Object.entries(values)) {
     const safe = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -179,42 +215,30 @@ function measureApp() {
 }
 
 function refreshNumbers() {
-  const g = JSON.parse(fs.readFileSync(GRAPH_JSON, 'utf8'));
-  const communities = new Set(g.nodes.map((n) => n.community).filter((c) => c !== undefined)).size;
-  const d = new Date();
-  const date = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
-  setMarks('graph.html', {
-    'graph.nodes': g.nodes.length,
-    'graph.edges': g.links.length,
-    'graph.communities': communities,
-    'graph.date': date,
-  });
-  say(`/graph: узлов ${g.nodes.length}, связей ${g.links.length}, сообществ ${communities}, построен ${date}`);
-
   const app = measureApp();
-  setMarks('architecture.html', {
+  setMarks(ARCHITECTURE, {
     'app.lines': app.total,
     'app.linesPhrase': `${app.total} ${plural(app.total, 'строка', 'строки', 'строк')}`,
     'app.functions': app.functions,
     'app.noDom': app.noDom,
   });
-  say(`/architecture: app.js ${app.total} строк, функций ${app.functions}, без DOM ${app.noDom}`);
+  say(`«Устройство»: app.js ${app.total} строк, функций ${app.functions}, без DOM ${app.noDom}`);
 }
 
 // --- запуск ----------------------------------------------------------------------------
 
-// Тесты подключают этот файл ради scanForSecrets, plural и localizeVendor — и
-// не должны при этом пересобирать граф и переписывать страницы.
+// Тесты подключают этот файл ради scanForSecrets, plural, extractGraph и
+// buildGraphData — и не должны при этом пересобирать граф и переписывать файлы.
 if (require.main === module) {
   try {
     rebuildGraph();
     publishGraph();
     refreshNumbers();
-    say('готово — закоммитьте landing/ и выкатывайте');
+    say('готово — закоммитьте admin/graph и admin/content и выкатывайте');
   } catch (e) {
     console.error(`[site] ${e.message}`);
     process.exit(1);
   }
 }
 
-module.exports = { scanForSecrets, plural, localizeVendor, VIS };
+module.exports = { scanForSecrets, plural, extractGraph, graphNumbers, buildGraphData, VIS, GRAPH_DATA, ARCHITECTURE };

@@ -263,3 +263,252 @@ test('ai-access.sql: строка уходит с аккаунтом — три�
   assert.match(chat, /\.from\('ai_access'\)\.select\('email'\)\.eq\('email', email\)/);
   assert.match(chat, /reply\(403, \{ error: 'no access' \}\)/);
 });
+
+// --- admin.sql: админ-панель (23 октября 2026) -----------------------------------
+//
+// Решение пользователя: админка — только веб, один админ (аккаунт владельца,
+// с TOTP), всё через функцию admin служебным ключом. Файл лежит в открытом
+// репозитории и выполняется руками повторно — поэтому сверяется: закрытость
+// новых таблиц для клиентов, счётчик экранов только у вошедших, с пределом и
+// без идентификаторов в имени экрана, функции admin_* только для
+// service_role, почты владельца в файле нет, и функции зовут ровно то, что
+// файл заводит.
+
+const ADMIN_TABLES = ['admin_users', 'usage_daily', 'feedback_replies', 'app_settings', 'blog_posts'];
+/** Аргументы, заголовок (до $$) и тело функции public.<name>(…) из файла. */
+const fnBody = (sql, name) => {
+  const m = sql.match(new RegExp(`create or replace function public\\.${name}\\(([\\s\\S]*?)\\)\\s+returns[\\s\\S]*?\\$\\$([\\s\\S]*?)\\$\\$;`, 'i'));
+  assert.ok(m, `нет функции public.${name}`);
+  return { args: m[1], head: sql.slice(m.index, sql.indexOf('$$', m.index)), body: m[2] };
+};
+
+test('admin.sql: новые таблицы — RLS и права anon/authenticated сняты; политика одна — чтение опубликованных постов', () => {
+  const sql = read('admin.sql');
+  for (const t of ADMIN_TABLES) {
+    assert.match(sql, new RegExp(`create table if not exists public\\.${t} \\(`), `${t}: create table if not exists`);
+    assert.match(sql, new RegExp(`alter table public\\.${t} enable row level security;`), `${t}: RLS`);
+    assert.match(sql, new RegExp(`revoke all on table public\\.${t} from anon, authenticated;`), `${t}: права клиентов сняты`);
+    assert.match(sql, new RegExp(`revoke all on table public\\.${t} from public;`), `${t}: и у public`);
+  }
+  const policies = [...sql.matchAll(/create policy "([^"]+)" on ([\w.]+)\s+for (\w+) to ([^\n]+)\n\s+using \(([^)]*)\);/gi)];
+  assert.deepEqual(policies.map((p) => [p[1], p[2], p[3], p[4].trim(), p[5]]), [['blog posts: read published', 'public.blog_posts', 'select', 'anon, authenticated', 'published']]);
+  assert.equal([...sql.matchAll(/create policy/gi)].length, 1, 'других политик нет');
+  assert.ok(sql.includes('drop policy if exists "blog posts: read published" on public.blog_posts;'), 'политика пересоздаётся');
+  const grants = [...sql.matchAll(/^grant ([^;]+) on table ([\w.]+) to ([^;]+);/gim)].map((g) => `${g[1]} ${g[2]} ${g[3]}`);
+  assert.deepEqual(grants, ['select public.blog_posts anon, authenticated'], 'клиентам — только чтение постов (остальное отрезает политика)');
+  // Удаление аккаунта уносит всё, что про него: каскад от auth.users и от feedback.
+  for (const t of ['admin_users', 'usage_daily']) {
+    const table = sql.match(new RegExp(`create table if not exists public\\.${t} \\(([\\s\\S]*?)\\n\\);`))[1];
+    assert.match(table, /user_id uuid (primary key |not null )?references auth\.users\(id\) on delete cascade/, `${t}: каскад с аккаунтом`);
+  }
+  assert.match(sql, /feedback_id uuid not null references public\.feedback\(id\) on delete cascade/);
+});
+
+test('admin.sql: track_screen — только вошедший, за себя, предел 2000 в сутки; в имени экрана нет цифр (id сущности не пролезет)', () => {
+  const sql = read('admin.sql');
+  const fn = fnBody(sql, 'track_screen');
+  assert.equal(fn.args, 'p_screen text, p_platform text');
+  assert.match(fn.head, /security definer\s+set search_path = ''/i);
+  assert.match(fn.body, /v_uid uuid := auth\.uid\(\);/);
+  assert.match(fn.body, /if v_uid is null then\s+return;/, 'без входа — ничего');
+  assert.match(fn.body, /where u\.user_id = v_uid and u\.day = v_day/);
+  assert.match(fn.body, /if v_total >= 2000 then\s+return;/, 'предел — 2000 в сутки, сверх — молча');
+  assert.match(fn.body, /values \(v_day, v_uid, p_screen, p_platform, 1\)/, 'пишет только за вызывающего');
+  assert.match(fn.body, /on conflict \(day, user_id, screen, platform\) do update set views = u\.views \+ 1;/);
+  assert.match(sql, /revoke all on function public\.track_screen\(text, text\) from public;/);
+  assert.match(sql, /revoke all on function public\.track_screen\(text, text\) from anon;/);
+  const grants = [...sql.matchAll(/grant execute on function public\.track_screen\(text, text\) to ([^;]+);/gi)].map((g) => g[1].trim());
+  assert.deepEqual(grants, ['authenticated'], 'execute — только authenticated, гостю нет');
+  // Имя экрана: правило в check таблицы и в функции — одно и то же, без цифр
+  // (Политика: в статистике экранов нет идентификаторов).
+  const check = sql.match(/usage_daily_screen_check\s+check \(screen ~ '([^']+)'\);/)[1];
+  const inFn = fn.body.match(/p_screen !~ '([^']+)'/)[1];
+  assert.equal(check, inFn, 'check таблицы и track_screen проверяют одним правилом');
+  assert.doesNotMatch(check, /0-9|\\d/, 'цифр в имени экрана нет');
+  const re = new RegExp(check);
+  for (const ok of ['projects', 'project', 'task', 'settings.sync', 'agent.chat', 'settings.usage-stats', 'a', 'x'.repeat(40)]) assert.ok(re.test(ok), ok);
+  for (const bad of ['project.3f9a', 'task-123', 'doc.7', 'Projects', '', '.x', 'x'.repeat(41), 'projects/1', 'задачи', 'p q']) assert.ok(!re.test(bad), `${bad} не должен проходить`);
+  assert.match(sql, /usage_daily_platform_check\s+check \(platform in \('web', 'desktop', 'android', 'ios'\)\);/);
+  assert.match(fn.body, /p_platform not in \('web', 'desktop', 'android', 'ios'\)/);
+  // Хранится 12 месяцев: задание пересоздаётся по имени.
+  const unschedule = sql.search(/if exists \(select 1 from cron\.job where jobname = 'usage-sweep'\) then\s+perform cron\.unschedule\('usage-sweep'\);/);
+  const schedule = sql.search(/perform cron\.schedule\(\s*'usage-sweep'/);
+  assert.ok(unschedule > 0 && schedule > unschedule, 'usage-sweep: снять прежнее, потом завести');
+  assert.match(sql, /delete from public\.usage_daily where day < \(\(now\(\) at time zone 'utc'\)::date - interval '12 months'\)::date/);
+});
+
+test('admin.sql: функции admin_* — пустой search_path, выполнять может только service_role', () => {
+  const sql = read('admin.sql');
+  const defs = [...sql.matchAll(/create or replace function public\.(admin_\w+)\(/gi)].map((m) => m[1]);
+  assert.deepEqual(defs.slice().sort(), ['admin_access_list', 'admin_created_entities', 'admin_logins', 'admin_overview', 'admin_screens', 'admin_session_days', 'admin_ts', 'admin_user_emails', 'admin_users_list']);
+  const exposed = ['admin_overview', 'admin_screens', 'admin_users_list', 'admin_user_emails', 'admin_access_list'];
+  for (const name of defs) {
+    const { head } = fnBody(sql, name);
+    assert.match(head, /set search_path = ''/i, `${name}: пустой search_path`);
+    if (exposed.includes(name)) assert.match(head, /security definer/i, `${name}: security definer — читает auth.users`);
+    const sig = sql.match(new RegExp(`revoke all on function public\\.${name}\\(([^)]*)\\) from public;`));
+    assert.ok(sig, `${name}: revoke from public`);
+    assert.ok(sql.includes(`revoke all on function public.${name}(${sig[1]}) from anon, authenticated;`), `${name}: revoke from anon, authenticated`);
+    const grants = [...sql.matchAll(new RegExp(`grant execute on function public\\.${name}\\([^)]*\\) to ([^;]+);`, 'g'))].map((g) => g[1].trim());
+    assert.deepEqual(grants, exposed.includes(name) ? ['service_role'] : [], `${name}: execute — ${exposed.includes(name) ? 'только service_role' : 'никому (помощник)'}`);
+  }
+  // Входы — из журнала аудита и сессий Auth; сбой чтения не роняет обзор.
+  const logins = fnBody(sql, 'admin_logins').body;
+  assert.match(logins, /from auth\.audit_log_entries e/);
+  assert.match(logins, /e\.payload ->> 'action' = 'login'/);
+  assert.match(logins, /from auth\.sessions s/);
+  assert.equal([...logins.matchAll(/exception when others then/g)].length, 2, 'обе части — со своей подстраховкой');
+  // Заведённые проекты и задачи — правка-создание '*' журнала changes.
+  const made = fnBody(sql, 'admin_created_entities').body;
+  assert.match(made, /from public\.changes c\s+where c\.field = '\*' and c\.entity in \('project', 'task'\)/);
+  assert.match(made, /group by c\.entity, c\.user_id, c\.entity_id/, 'одна сущность — одно создание, возврат из корзины не в счёт');
+});
+
+test('admin.sql: почты владельца в файле нет; повторный запуск безопасен; feedback.status — new/answered/closed, новая строка всегда new', () => {
+  const sql = read('admin.sql');
+  assert.deepEqual([...sql.matchAll(/[\w.+-]+@[\w-]+\.[\w.-]+/g)].map((m) => m[0]), [], 'ни одной почты: репозиторий открытый');
+  assert.match(sql, /where lower\(email\) = lower\('<ваша почта>'\)/, 'в шапке — заготовка с местом под почту');
+  assert.doesNotMatch(sql, /eyJ[A-Za-z0-9_-]{10,}/, 'ключей в файле нет');
+  assert.doesNotMatch(sql, /^\s*create function/im, 'функции — create or replace');
+  assert.doesNotMatch(sql, /^\s*create table (?!if not exists)/im, 'таблицы — if not exists');
+  assert.doesNotMatch(sql, /^\s*create (unique )?index (?!if not exists)/im, 'индексы — if not exists');
+  for (const [, name, on] of sql.matchAll(/^\s*create trigger (\w+)\s+\w+ \w+(?: or \w+)* on ([\w.]+)/gim)) {
+    assert.ok(sql.includes(`drop trigger if exists ${name} on ${on};`), `триггер ${name} пересоздаётся`);
+  }
+  for (const [, table, name] of sql.matchAll(/alter table ([\w.]+) add constraint (\w+)/g)) {
+    const drop = sql.indexOf(`alter table ${table} drop constraint if exists ${name};`);
+    const add = sql.indexOf(`alter table ${table} add constraint ${name}`);
+    assert.ok(drop >= 0 && drop < add, `${name}: drop if exists перед add`);
+  }
+  assert.match(sql, /alter table public\.feedback add column if not exists status text not null default 'new';/);
+  assert.match(sql, /add constraint feedback_status_check\s+check \(status in \('new', 'answered', 'closed'\)\);/);
+  assert.match(fnBody(sql, 'feedback_status_new').body, /new\.status := 'new';/);
+  assert.match(sql, /create trigger feedback_status_new\s+before insert on public\.feedback/);
+  assert.match(sql, /add constraint feedback_replies_email_status_check\s+check \(email_status is null or email_status in \('sent', 'failed', 'not_configured'\)\);/);
+  assert.match(sql, /add constraint feedback_replies_body_check\s+check \(char_length\(body\) between 1 and 4000\);/);
+  assert.match(sql, /add constraint blog_posts_tag_check\s+check \(tag in \('release', 'feature', 'improvement'\)\);/);
+});
+
+test('admin.sql и функции: зовут ровно то, что файл заводит — RPC, параметры, таблицы, ключи настроек', () => {
+  const sql = read('admin.sql');
+  const admin = fs.readFileSync(path.join(SQL, 'functions', 'admin', 'index.ts'), 'utf8');
+  const calls = [...admin.matchAll(/\.rpc\('(\w+)'(?:, \{([^}]*)\})?/g)].map((m) => [m[1], (m[2] || '').split(',').map((x) => x.split(':')[0].trim()).filter(Boolean)]);
+  assert.ok(calls.length >= 5, 'функция admin зовёт счётчики');
+  for (const [name, params] of calls) {
+    const declared = fnBody(sql, name).args.split(',').map((a) => a.trim().split(/\s+/)[0]).filter(Boolean);
+    for (const p of params) assert.ok(declared.includes(p), `${name}: параметра ${p} нет в admin.sql (${declared.join(', ')})`);
+  }
+  for (const t of ['admin_users', 'feedback_replies', 'app_settings', 'blog_posts', 'usage_daily']) {
+    assert.ok(admin.includes(`.from('${t}')`), `функция admin ходит в ${t}`);
+  }
+  const chat = fs.readFileSync(path.join(SQL, 'functions', 'ai-chat', 'index.ts'), 'utf8');
+  assert.match(chat, /\.from\('app_settings'\)\.select\('key, value'\)/, 'ai-chat только читает app_settings');
+  assert.doesNotMatch(chat, /\.from\('app_settings'\)\.(insert|update|upsert|delete)/);
+  for (const key of ['ai.model', 'ai.effort', 'ai.daily_limit', 'ai.daily_units']) {
+    assert.ok(chat.includes(`'${key}'`) && admin.includes(`'${key}'`), `ключ ${key} — у обеих функций`);
+    assert.ok(sql.includes(key), `ключ ${key} описан в admin.sql`);
+  }
+});
+
+test('blog-posts-seed.sql: свежий (scripts/blog-to-sql.js из landing/blog-posts.js), все посты опубликованы, повтор копий не плодит', () => {
+  const { readPosts, buildSeed, postId } = require('../../scripts/blog-to-sql.js');
+  const posts = readPosts();
+  const seed = read('blog-posts-seed.sql');
+  assert.equal(seed, buildSeed(posts), 'supabase/blog-posts-seed.sql отстал — node scripts/blog-to-sql.js');
+  assert.match(seed, /^insert into public\.blog_posts \(id, date, tag, version, title, body, published, created_at\)$/m);
+  assert.match(seed, /^on conflict \(id\) do update set$/m, 'upsert по id');
+  const ids = [...seed.matchAll(/^ {2}\('([0-9a-f-]{36})', '(\d{4}-\d{2}-\d{2})'/gm)].map((m) => m[1]);
+  assert.equal(ids.length, posts.length, 'каждый пост — одной строкой');
+  assert.equal(new Set(ids).size, ids.length, 'id не повторяются');
+  assert.deepEqual(ids, posts.map(postId), 'id — от даты и заголовка ru');
+  assert.equal([...seed.matchAll(/^ {3}true, '/gm)].length, posts.length, 'все опубликованы');
+  // Ключ стабилен: тот же пост — тот же id; другой заголовок — другой.
+  const p = { date: '2026-10-23', title: { ru: 'А' } };
+  assert.equal(postId(p), postId({ ...p }));
+  assert.notEqual(postId(p), postId({ date: '2026-10-23', title: { ru: 'Б' } }));
+  assert.match(postId(p), /^[0-9a-f]{8}-[0-9a-f]{4}-3[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/, 'UUID версии 3');
+  // Посты одного дня — в порядке файла: created_at убывает.
+  const sameDay = [...seed.matchAll(/^ {2}\('[0-9a-f-]{36}', '2026-10-10'[\s\S]*?true, '([^']+)'\)/gm)].map((m) => m[1]);
+  assert.equal(sameDay.length, posts.filter((x) => x.date === '2026-10-10').length);
+  assert.deepEqual(sameDay, [...sameDay].sort().reverse());
+});
+
+// --- logs.sql: журнал работы закрыт (23 октября 2026) ------------------------------
+//
+// До 23 октября журнал читала публичная страница /logs ключом anon (политики
+// «select using (true)»), а в журнале — ход работы, в том числе найденные
+// уязвимости. Теперь читает только служебный ключ (функция admin, logs.list),
+// а недельный дайджест в Make — узкой функцией work_log_digest по токену.
+
+test('logs.sql: публичного чтения журнала нет — прежние политики снимаются, права клиентов сняты, RLS включён', () => {
+  const sql = read('logs.sql');
+  const code = sql.replace(/--[^\n]*/g, '');
+  assert.doesNotMatch(code, /create policy/i, 'политик на журнал нет: читает только служебный ключ');
+  assert.doesNotMatch(code, /using \(true\)/i);
+  for (const [name, table] of [['read work log tasks', 'work_log_tasks'], ['read work log events', 'work_log_events']]) {
+    assert.ok(sql.includes(`drop policy if exists "${name}" on ${table};`), `прежняя публичная политика «${name}» снимается`);
+  }
+  for (const t of ['work_log_tasks', 'work_log_events']) {
+    assert.match(sql, new RegExp(`alter table ${t} enable row level security;`), `${t}: RLS`);
+    assert.match(sql, new RegExp(`revoke all on table public\\.${t} from public;`), `${t}: права public сняты`);
+    assert.match(sql, new RegExp(`revoke all on table public\\.${t} from anon, authenticated;`), `${t}: права клиентов сняты`);
+  }
+  assert.doesNotMatch(sql, /^\s*grant [^;]* on table/im, 'клиентам на таблицы журнала ничего не выдаётся');
+  // Повторный запуск безопасен, данных файл не трогает.
+  assert.doesNotMatch(sql, /^\s*create table (?!if not exists)/im);
+  assert.doesNotMatch(sql, /^\s*create (unique )?index (?!if not exists)/im);
+  assert.doesNotMatch(sql, /^\s*create function/im, 'функции — create or replace');
+  assert.doesNotMatch(sql, /^\s*(delete|truncate|drop table|update)\b/im, 'данные журнала файл не трогает');
+  assert.doesNotMatch(sql, /eyJ[A-Za-z0-9_-]{10,}/, 'ключей в файле нет');
+});
+
+test('logs.sql: work_log_digest — только по токену из app_settings (сравнение хэшей), 1–31 день, только kind/title/detail/at, execute — anon', () => {
+  const sql = read('logs.sql');
+  const fn = fnBody(sql, 'work_log_digest');
+  assert.equal(fn.args, 'p_token text, p_days integer default 7');
+  assert.match(fn.head, /returns table \(kind text, title text, detail text, at timestamptz\)/, 'наружу — только четыре поля события');
+  assert.match(fn.head, /security definer\s+set search_path = ''/i);
+  // Дни: вне 1…31 — отказ, а не тихая подрезка.
+  assert.match(fn.body, /if p_days is null or p_days < 1 or p_days > 31 then\s+raise exception '[^']*' using errcode = '22023';/);
+  // Токен: из app_settings, не короче 32 знаков с обеих сторон, сравнение — SHA-256.
+  assert.match(fn.body, /from public\.app_settings s\s+where s\.key = 'digest\.token';/);
+  assert.match(fn.body, /exception when undefined_table then/, 'без admin.sql — отказ, а не падение');
+  assert.match(fn.body, /v_secret is null or char_length\(v_secret\) < 32/);
+  assert.match(fn.body, /p_token is null or char_length\(p_token\) < 32 or char_length\(p_token\) > 256/);
+  assert.match(fn.body, /pg_catalog\.sha256\(pg_catalog\.convert_to\(p_token, 'UTF8'\)\)\s+<> pg_catalog\.sha256\(pg_catalog\.convert_to\(v_secret, 'UTF8'\)\)/, 'сравнивать хэши, а не строки');
+  assert.doesNotMatch(fn.body, /p_token\s*(<>|=|!=)\s*v_secret|v_secret\s*(<>|=|!=)\s*p_token/, 'строки токена напрямую не сравниваются');
+  assert.match(fn.body, /raise exception '[^']*forbidden' using errcode = '42501';/);
+  const check = fn.body.indexOf('42501');
+  const select = fn.body.indexOf('return query');
+  assert.ok(check > 0 && select > check, 'сначала токен, потом данные');
+  // Данные: только события, только окно дней, предел строк; задач и сводок нет.
+  // Окно, порядок и предел — как у прежнего запроса сценария Make
+  // (at=gte.<дата>, order=at.desc, limit=500), чтобы остальное в нём не менять.
+  assert.match(fn.body, /select e\.kind, e\.title, e\.detail, e\.at\s+from public\.work_log_events e\s+where e\.at >= pg_catalog\.timezone\('utc', \(pg_catalog\.timezone\('utc', pg_catalog\.now\(\)\)::date - p_days\)::timestamp\)\s+order by e\.at desc\s+limit 500;/);
+  assert.doesNotMatch(fn.body, /work_log_tasks/, 'задачи дайджесту не нужны');
+  // Права: снято у всех, выдано только anon (запрос Make — ключом anon).
+  assert.match(sql, /revoke all on function public\.work_log_digest\(text, integer\) from public;/);
+  assert.match(sql, /revoke all on function public\.work_log_digest\(text, integer\) from anon, authenticated;/);
+  const grants = [...sql.matchAll(/^grant execute on function public\.work_log_digest\(text, integer\) to ([^;]+);/gim)].map((g) => g[1].trim());
+  assert.deepEqual(grants, ['anon']);
+  // Токена в файле нет; ключ digest.token проходит check таблицы app_settings.
+  assert.doesNotMatch(sql, /values \('digest\.token', '[0-9a-f]{20,}/i, 'токен не пишется в открытый репозиторий');
+  const keyCheck = read('admin.sql').match(/app_settings_key_check\s+check \(key ~ '([^']+)'/)[1];
+  assert.ok(new RegExp(keyCheck).test('digest.token'), 'ключ digest.token проходит check app_settings');
+});
+
+test('logs.sql и функция admin: logs.list читает те же таблицы и колонки, что заводит файл', () => {
+  const sql = read('logs.sql');
+  const admin = fs.readFileSync(path.join(SQL, 'functions', 'admin', 'index.ts'), 'utf8');
+  const cols = (table) => {
+    const body = sql.match(new RegExp(`create table if not exists ${table} \\(([\\s\\S]*?)\\n\\);`))[1];
+    return new Set([...body.matchAll(/^\s+(\w+) /gm)].map((m) => m[1]));
+  };
+  const reads = [...admin.matchAll(/\.from\('(work_log_\w+)'\)\s*\.select\('([^']+)'\)/g)];
+  assert.ok(reads.length >= 3, 'функция admin читает журнал');
+  for (const [, table, list] of reads) {
+    const have = cols(table);
+    for (const c of list.split(',').map((x) => x.trim())) assert.ok(have.has(c), `${table}.${c} нет в logs.sql`);
+  }
+  assert.doesNotMatch(admin, /\.from\('work_log_\w+'\)\.(insert|update|upsert|delete)/, 'админка журнал только читает');
+});

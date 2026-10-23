@@ -107,6 +107,18 @@
 // Секреты: ANTHROPIC_API_KEY — обязателен; AI_MODEL (по умолчанию
 // claude-sonnet-5-5), AI_DAILY_LIMIT (50), AI_DAILY_UNITS (4 000 000),
 // AI_EFFORT (medium) — нет.
+//
+// Настройки из админки (23 октября 2026, supabase/admin.sql): модель,
+// усилие, лимит сообщений и бюджет можно задать строками таблицы
+// app_settings — ai.model, ai.effort, ai.daily_limit, ai.daily_units. Они
+// главнее секретов выше; читаются служебным ключом не чаще раза в минуту
+// (SETTINGS_TTL_MS, кэш на экземпляр функции), после проверки доступа.
+// Значение проверяется белым списком (aiSettingsFrom): модель — из MODELS,
+// усилие — low/medium/high, числа — целые в пределах SETTING_LIMITS; чужое —
+// как будто строки нет. Нет таблицы или запрос не прошёл — прежние секреты и
+// умолчания, вызов идёт как раньше (в лог — только код, и не про
+// отсутствующую таблицу). Те же списки держит функция admin, которая пишет
+// таблицу; совпадение сверяет tests/backend/admin-function.test.js.
 // SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY у функций есть по умолчанию.
 // Выкладка и откат — supabase/functions/README.md.
 
@@ -120,6 +132,14 @@ const DEFAULT_MODEL = 'claude-sonnet-5-5';
 const DEFAULT_LIMIT = 50;
 const DEFAULT_EFFORT = 'medium';
 const EFFORTS = new Set(['low', 'medium', 'high']);
+/** Модели, которые можно выбрать в админке: с адаптивным рассуждением и
+ *  output_config.effort (supabase/functions/README.md, AI_MODEL). Тот же
+ *  список — AI_MODELS функции admin. */
+export const MODELS = ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-5-5'];
+/** Пределы чисел из админки — те же, что AI_RANGES функции admin. */
+export const SETTING_LIMITS = { dailyLimit: [1, 1000], dailyUnits: [10_000, 100_000_000] };
+/** Настройки из app_settings живут в памяти экземпляра минуту. */
+export const SETTINGS_TTL_MS = 60_000;
 /** Цена вызова в единицах — токенах свежего входа. Множители — для модели
  *  по умолчанию (claude-sonnet-5-5), по официальной документации Anthropic,
  *  сверено 19 октября 2026:
@@ -1018,6 +1038,55 @@ export async function hasAccess(
   return Array.isArray(data) && data.length > 0;
 }
 
+// --- настройки из админки ------------------------------------------------------
+
+type AiSettings = { model?: string; effort?: string; dailyLimit?: number; dailyUnits?: number };
+const SETTING_KEYS: Record<string, keyof AiSettings> = {
+  'ai.model': 'model', 'ai.effort': 'effort', 'ai.daily_limit': 'dailyLimit', 'ai.daily_units': 'dailyUnits',
+};
+
+/** Кэш настроек: { at — когда прочитаны, value }. Экспорт — для теста. */
+export const SETTINGS_CACHE: { at: number; value: AiSettings | null } = { at: 0, value: null };
+
+/** Строки app_settings → настройки агента; чужие ключи и значения не из
+ *  белого списка пропускаются. */
+export function aiSettingsFrom(rows: unknown): AiSettings {
+  const out: AiSettings = {};
+  for (const r of Array.isArray(rows) ? rows : []) {
+    if (!isObj(r) || typeof r.key !== 'string') continue;
+    const field = SETTING_KEYS[r.key];
+    const v = r.value;
+    if (field === 'model' && typeof v === 'string' && MODELS.includes(v)) out.model = v;
+    else if (field === 'effort' && typeof v === 'string' && EFFORTS.has(v)) out.effort = v;
+    else if (field === 'dailyLimit' || field === 'dailyUnits') {
+      const [min, max] = SETTING_LIMITS[field];
+      if (typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max) out[field] = v;
+    }
+  }
+  return out;
+}
+
+/** Настройки агента из app_settings — не чаще раза в SETTINGS_TTL_MS. Нет
+ *  таблицы (supabase/admin.sql не выполнен) или запрос не прошёл — пусто:
+ *  работают секреты и умолчания. Сбой тоже кэшируется: база не дёргается на
+ *  каждом вызове. */
+export async function aiSettings(admin: ReturnType<typeof createClient>, now = Date.now()): Promise<AiSettings> {
+  if (SETTINGS_CACHE.value && now - SETTINGS_CACHE.at < SETTINGS_TTL_MS) return SETTINGS_CACHE.value;
+  let value: AiSettings = {};
+  try {
+    const { data, error } = await admin.from('app_settings').select('key, value');
+    if (error) {
+      const code = String(error.code || 'error').slice(0, 16);
+      if (code !== '42P01' && code !== 'PGRST205') console.error('ai-chat: settings', code);
+    } else value = aiSettingsFrom(data);
+  } catch (e) {
+    console.error('ai-chat: settings', e instanceof Error && e.name ? e.name : 'error');
+  }
+  SETTINGS_CACHE.at = now;
+  SETTINGS_CACHE.value = value;
+  return value;
+}
+
 // --- вызов ---------------------------------------------------------------------
 
 Deno.serve(async (req) => {
@@ -1069,9 +1138,11 @@ Deno.serve(async (req) => {
 
   const key = Deno.env.get('ANTHROPIC_API_KEY');
   if (!key) return reply(500, { error: 'no key' });
-  const model = (Deno.env.get('AI_MODEL') || '').trim() || DEFAULT_MODEL;
-  const limit = Math.max(1, Number.parseInt(Deno.env.get('AI_DAILY_LIMIT') || '', 10) || DEFAULT_LIMIT);
-  const unitsCap = dailyUnits(Deno.env.get('AI_DAILY_UNITS'));
+  // Админка (app_settings) главнее секретов; секреты — главнее умолчаний.
+  const set = await aiSettings(admin);
+  const model = set.model || (Deno.env.get('AI_MODEL') || '').trim() || DEFAULT_MODEL;
+  const limit = set.dailyLimit ?? Math.max(1, Number.parseInt(Deno.env.get('AI_DAILY_LIMIT') || '', 10) || DEFAULT_LIMIT);
+  const unitsCap = set.dailyUnits ?? dailyUnits(Deno.env.get('AI_DAILY_UNITS'));
   // Ключ уровня организации (не привязанный к одному рабочему пространству)
   // Anthropic принимает только с заголовком anthropic-workspace-id: без него —
   // 400 «This API key is not scoped to a workspace». Секрет необязателен:
@@ -1079,7 +1150,7 @@ Deno.serve(async (req) => {
   const workspaceRaw = (Deno.env.get('ANTHROPIC_WORKSPACE_ID') || '').trim();
   const workspace = /^wrkspc_[A-Za-z0-9]{1,64}$/.test(workspaceRaw) ? workspaceRaw : '';
   const effortRaw = (Deno.env.get('AI_EFFORT') || '').trim();
-  const effort = EFFORTS.has(effortRaw) ? effortRaw : DEFAULT_EFFORT;
+  const effort = set.effort || (EFFORTS.has(effortRaw) ? effortRaw : DEFAULT_EFFORT);
 
   // Лимит, бюджет и частота — по журналу: одним запросом строки за сутки UTC
   // (и за последнюю минуту, если она начинается вчера), свежие первыми. Два

@@ -17,6 +17,13 @@ name: Build desktop installers
 # R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET,
 # R2_PUBLIC_URL (публичный адрес бакета, https://pub-….r2.dev, без «/» на конце).
 # Пока их нет, выкат работает по-старому: ссылки в фиде ведут на GitHub.
+#
+# Третий способ запуска — из .github/workflows/publish.yml (выпуск кнопкой из
+# админки), как workflow_call с тегом. Тег туда пушит GITHUB_TOKEN, а такой пуш
+# других workflow не запускает: сборка идёт ровно одна — этим вызовом. Поэтому
+# же checkout берёт ref из входа: в вызванном workflow github.sha — коммит, с
+# которого нажали кнопку, ещё без поднятой версии. Наружу отдаются размеры
+# установщиков — для подписей на кнопках лендинга.
 on:
   push:
     tags:
@@ -26,12 +33,46 @@ on:
       tag:
         description: 'Тег релиза (например v0.1.0) — обязателен для ручного запуска'
         required: true
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Тег релиза, уже запушенный (v0.5.2)'
+        required: true
+        type: string
+      ref:
+        description: 'Что собирать — тот же тег (refs/tags/v0.5.2)'
+        required: true
+        type: string
+    secrets:
+      SUPABASE_SERVICE_ROLE_KEY:
+        required: false
+      R2_ACCOUNT_ID:
+        required: false
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
+      R2_BUCKET:
+        required: false
+      R2_PUBLIC_URL:
+        required: false
+    outputs:
+      win_bytes:
+        description: 'Размер .exe в байтах'
+        value: ${{ jobs.release.outputs.win_bytes }}
+      mac_bytes:
+        description: 'Размер .dmg в байтах'
+        value: ${{ jobs.release.outputs.mac_bytes }}
 
 jobs:
   build-windows:
     runs-on: windows-latest
     steps:
+      # inputs.ref задан только при вызове из publish.yml; пустой — checkout
+      # берёт то же, что и раньше (тег из push или ветку ручного запуска).
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -50,6 +91,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -71,6 +114,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      win_bytes: ${{ steps.sizes.outputs.win_bytes }}
+      mac_bytes: ${{ steps.sizes.outputs.mac_bytes }}
     # Ключ service_role даёт полный доступ на запись в проект Supabase, поэтому
     # живёт секретом репозитория и никогда не попадает в код. Поднят на уровень
     # задачи, чтобы шаг заливки мог проверить его наличие в своём `if`:
@@ -87,17 +133,30 @@ jobs:
       # Нужен сам репозиторий: страницу релиза собирает готовый экшен, а вот
       # фид автообновления заливает наш скрипт из scripts/.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+      # Размеры .exe и .dmg — из манифестов, которые собрал electron-builder.
+      # Нужны publish.yml: подписи на кнопках лендинга и сверка с тем, что
+      # отдаёт R2. Только при вызове из publish.yml: выкат по тегу этот шаг
+      # не видит вовсе.
+      - name: Размеры установщиков
+        id: sizes
+        if: ${{ inputs.ref != '' }}
+        run: node scripts/release-steps.js sizes artifacts >> "$GITHUB_OUTPUT"
+      # Тег идёт в оболочку через переменную, а не подстановкой в текст команды.
       - name: Определить тег релиза
         id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          if [ -n "${{ inputs.tag }}" ]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          if [ -n "$INPUT_TAG" ]; then
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
           else
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi

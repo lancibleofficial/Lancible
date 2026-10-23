@@ -19,9 +19,6 @@ const { expectShot } = require('./shot');
 const PAGES = [
   ['главная', '/index.html'],
   ['блог', '/blog.html'],
-  ['журнал', '/logs.html'],
-  ['устройство', '/architecture.html'],
-  ['граф', '/graph.html'],
 ];
 
 const SIZES = [['широкий', 1280], ['узкий', 375]];

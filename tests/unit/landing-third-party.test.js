@@ -3,9 +3,10 @@
 // Откуда тест. Политика cookie обещает, что о визите на lancible.vercel.app
 // сторонние сервисы не узнают. 10 октября 2026 Legal Manager нашёл, что /graph
 // грузит библиотеку графа vis-network с unpkg.com — то есть каждый, кто открыл
-// граф, светил свой адрес чужому CDN. Библиотека переехала в landing/vendor, а
-// здесь проверяется, что ни одна страница сайта снова не подтянет что-то
-// снаружи: скрипт, стиль, шрифт, картинку, фрейм.
+// граф, светил свой адрес чужому CDN. Библиотека переехала в landing/vendor
+// (с 23 октября 2026 граф вместе с ней — в админке, admin/vendor), а здесь
+// проверяется, что ни одна страница сайта снова не подтянет что-то снаружи:
+// скрипт, стиль, шрифт, картинку, фрейм.
 //
 // Что считается загрузкой. Всё, что браузер запрашивает сам, без действия
 // человека: <script src>, <link> с загружающим rel (stylesheet, preload,
@@ -13,9 +14,9 @@
 // <embed>, <object>, url() и @import в CSS. Ссылки <a href> — не загрузка:
 // по ним человек уходит сам, и это видно.
 //
-// Чего тест не видит. Запросы к данным из скриптов — например, /logs читает
-// журнал из Supabase, нашего же бэкенда. Это не сторонний сервис, а место, где
-// живут данные, и оно описано в политике конфиденциальности.
+// Чего тест не видит. Запросы к данным из скриптов — например, главная и блог
+// читают посты из Supabase, нашего же бэкенда. Это не сторонний сервис, а
+// место, где живут данные, и оно описано в политике конфиденциальности.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
@@ -44,11 +45,11 @@ const ALLOWED = [];
 
 // Библиотека графа — своя копия. Отпечаток sha384 — тот же, что стоял в
 // integrity у ссылки на unpkg: файл взят из пакета vis-network@9.1.6 и совпал
-// с ним байт в байт.
+// с ним байт в байт. С 23 октября 2026 граф живёт в админке, копия — там же.
 const VIS = {
-  file: 'landing/vendor/vis-network-9.1.6.min.js',
+  file: 'admin/vendor/vis-network-9.1.6.min.js',
   sha384: 'Ux6phic9PEHJ38YtrijhkzyJ8yQlH8i/+buBR8s3mAZOJrP1gwyvAcIYl3GWtpX1',
-  licenses: ['landing/vendor/vis-network-LICENSE-MIT.txt', 'landing/vendor/vis-network-LICENSE-APACHE-2.0.txt'],
+  licenses: ['admin/vendor/vis-network-LICENSE-MIT.txt', 'admin/vendor/vis-network-LICENSE-APACHE-2.0.txt'],
 };
 
 const LOADING_REL = /\b(stylesheet|preload|modulepreload|prefetch|preconnect|dns-prefetch|icon|apple-touch-icon|mask-icon|manifest)\b/i;
@@ -128,10 +129,14 @@ test('страницы сайта ничего не грузят со сторо
   assert.deepEqual(bad, [], 'сторонняя загрузка: положите файл к себе (landing/vendor) или внесите её в ALLOWED с причиной');
 });
 
-test('граф грузит библиотеку из своей копии, и копия — та самая', () => {
-  const page = read('landing/graph-view.html');
-  const src = (page.match(/<script\b[^>]*\bsrc="([^"]*vis-network[^"]*)"/) || [])[1];
-  assert.equal(src, `vendor/${path.basename(VIS.file)}`, 'graph-view.html должен брать vis-network из landing/vendor');
+test('граф кода в админке грузит библиотеку из своей копии, и копия — та самая', () => {
+  // С 23 октября 2026 граф — раздел админки (admin/js/sections/graph.js), а
+  // не страница лендинга; политика админки и так не пустит чужой адрес, но
+  // копия должна быть именно той библиотекой.
+  const section = read('admin/js/sections/graph.js');
+  const src = (section.match(/export const VIS = '([^']*vis-network[^']*)'/) || [])[1];
+  assert.equal(src, `vendor/${path.basename(VIS.file)}`, 'раздел графа должен брать vis-network из admin/vendor');
+  assert.ok(!fs.existsSync(path.join(LANDING, 'vendor', path.basename(VIS.file))), 'копия библиотеки графа осталась на лендинге — графа там больше нет');
   // Отпечаток считается по тексту с LF: на Windows git выгружает файл с CRLF
   // (core.autocrlf), а в репозитории и на Vercel он с LF — тем самым, что
   // опубликован в пакете.

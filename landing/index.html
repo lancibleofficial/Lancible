@@ -407,6 +407,7 @@
 <script src="strings.js"></script>
 <script src="i18n.js"></script>
 <script src="blog-posts.js"></script>
+<script src="blog-feed.js"></script>
 <script>
   // Hero entrance
   document.addEventListener('DOMContentLoaded', () => {
@@ -424,10 +425,10 @@
       setTimeout(() => { visual.style.opacity = '1'; visual.style.transform = 'scale(1)'; }, 160);
     }
 
-    // ---- Блог: лента обновлений (записи — в blog-posts.js) ----
+    // ---- Блог: лента обновлений (записи — из базы, запасные — в
+    // blog-posts.js; откуда что — landing/blog-feed.js) ----
     // Подписи ленты (теги, «все записи», пустая лента) — в landing/strings.js,
     // язык — общий для сайта (landing/i18n.js).
-    const TAGS = ['release', 'feature', 'improvement'];
     const tagLabel = (tag) => window.LancibleLang.t(`blog.tag_${tag}`);
 
     const BLOG_VISIBLE = 3;
@@ -435,7 +436,7 @@
     const blogSection = document.getElementById('blog');
     const blogList = document.getElementById('blogList');
     if (blogSection && blogList) {
-      const posts = Array.isArray(window.LANCIBLE_POSTS) ? window.LANCIBLE_POSTS : [];
+      let posts = [];
       const moreWrap = document.getElementById('blogMore');
       const moreBtn = document.getElementById('blogMoreBtn');
       let lang = window.LancibleLang.current;
@@ -468,7 +469,7 @@
 
         const main = document.createElement('div');
         main.className = 'blog-main';
-        const tagKey = TAGS.includes(post.tag) ? post.tag : 'improvement';
+        const tagKey = window.LancibleBlog.tagOf(post);
         const tag = document.createElement('span');
         tag.className = `blog-tag ${tagKey}`;
         tag.textContent = tagLabel(tagKey);
@@ -508,8 +509,14 @@
         moreBtn.textContent = t('blog.more');
       };
 
-      // Язык переключают в шапке — перерисовываемся вслед за ним.
-      window.LancibleLang.subscribe((next) => { lang = next; renderBlog(); });
+      // Сразу — записи файла, а с ответом базы — её. Язык переключают в
+      // шапке — перерисовываемся вслед за ним; подписка зовёт обработчик
+      // сразу, это и есть первая отрисовка.
+      window.LancibleBlog.load((next, source) => {
+        posts = next;
+        if (source === 'file') window.LancibleLang.subscribe((l) => { lang = l; renderBlog(); });
+        else renderBlog();
+      });
     }
 
     // Появление блоков по мере прокрутки.

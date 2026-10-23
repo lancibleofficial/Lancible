@@ -22,6 +22,12 @@ name: Build Android APK
 #
 # Нужен секрет репозитория EXPO_TOKEN — токен доступа Expo:
 # expo.dev → Account settings → Access tokens → Create token.
+#
+# Третий способ запуска — из .github/workflows/publish.yml (выпуск кнопкой), как
+# workflow_call с тегом: тег, запушенный GITHUB_TOKEN, сам этот workflow не
+# запускает, так что сборка одна. checkout берёт ref из входа (в вызванном
+# workflow github.sha — коммит ещё без новой версии в app.json), а наружу
+# уходит размер APK: им publish.yml сверяет раздачу из R2 и пишет latest.json.
 on:
   push:
     tags:
@@ -31,12 +37,41 @@ on:
       tag:
         description: 'Тег релиза (например mobile-v1.1.0) — обязателен для ручного запуска'
         required: true
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Тег релиза, уже запушенный (mobile-v1.3.2)'
+        required: true
+        type: string
+      ref:
+        description: 'Что собирать — тот же тег (refs/tags/mobile-v1.3.2)'
+        required: true
+        type: string
+    secrets:
+      EXPO_TOKEN:
+        required: false
+      R2_ACCOUNT_ID:
+        required: false
+      R2_ACCESS_KEY_ID:
+        required: false
+      R2_SECRET_ACCESS_KEY:
+        required: false
+      R2_BUCKET:
+        required: false
+      R2_PUBLIC_URL:
+        required: false
+    outputs:
+      apk_bytes:
+        description: 'Размер APK в байтах'
+        value: ${{ jobs.build.outputs.apk_bytes }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      apk_bytes: ${{ steps.apk.outputs.bytes }}
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       # aws cli новых версий добавляет к запросам контрольные суммы, которых R2
@@ -45,7 +80,10 @@ jobs:
       AWS_REQUEST_CHECKSUM_CALCULATION: when_required
       AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
     steps:
+      # inputs.ref задан только при вызове из publish.yml; пустой — как раньше.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -57,11 +95,14 @@ jobs:
             exit 1
           fi
 
+      # Тег идёт в оболочку через переменную, а не подстановкой в текст команды.
       - name: Определить тег и версию
         id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
-          if [ -n "${{ inputs.tag }}" ]; then
-            tag="${{ inputs.tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            tag="$INPUT_TAG"
           else
             tag="${GITHUB_REF_NAME}"
           fi
@@ -104,6 +145,7 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Скачать APK под нужным именем
+        id: apk
         run: |
           name="Lancible-${{ steps.meta.outputs.version }}.apk"
           curl -fsSL "${{ steps.build.outputs.url }}" -o "$name"
@@ -111,6 +153,7 @@ jobs:
           # Проверка, что это действительно APK: zip-архив начинается с PK.
           head -c 2 "$name" | grep -q 'PK' || { echo "::error::Скачанный файл не похож на APK"; exit 1; }
           echo "APK_NAME=$name" >> "$GITHUB_ENV"
+          echo "bytes=$(stat -c %s "$name")" >> "$GITHUB_OUTPUT"
 
       - name: Опубликовать GitHub Release
         uses: softprops/action-gh-release@v2

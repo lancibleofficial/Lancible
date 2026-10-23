@@ -15,7 +15,7 @@
 // переключателем) середины должны совпадать с точностью до пикселя.
 const { test, expect } = require('@playwright/test');
 
-const PAGES = ['/index.html', '/blog.html', '/logs.html', '/architecture.html', '/graph.html', '/privacy.html', '/terms.html', '/cookies.html', '/refund.html', '/legal.html', '/delete-account.html'];
+const PAGES = ['/index.html', '/blog.html', '/privacy.html', '/terms.html', '/cookies.html', '/refund.html', '/legal.html', '/delete-account.html'];
 const WIDTHS = [1280, 375];
 
 /** Элементы строки .footer-legal, разложенные по линиям: [[{ label, button,

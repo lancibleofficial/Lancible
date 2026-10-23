@@ -42,8 +42,7 @@ const OPTICAL_DROP = 0.08;
 const FILES = [
   'src/renderer/index.html',
   'web/index.html',
-  // graph-view.html — выгрузка graphify, внутри graph.html: ни шапки, ни favicon у неё нет.
-  ...fs.readdirSync(path.join(ROOT, 'landing')).filter((f) => f.endsWith('.html') && f !== 'graph-view.html').map((f) => `landing/${f}`),
+  ...fs.readdirSync(path.join(ROOT, 'landing')).filter((f) => f.endsWith('.html')).map((f) => `landing/${f}`),
 ];
 
 /** Исходник: поле (viewBox) и контуры. Заливки в нём нет — только currentColor. */

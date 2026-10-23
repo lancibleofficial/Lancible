@@ -1,0 +1,413 @@
+# Выпуск кнопкой: админка (функция admin, действие releases.start) запускает
+# этот workflow через workflow_dispatch с версиями десктопа и/или телефона.
+# Делает то, что раньше делал чек-лист выката в CLAUDE.md руками, в том же
+# порядке и с тем же правилом: упал любой шаг — дальше ничего не идёт.
+#
+#   1. Входы и ключи   версии X.Y.Z новее тех, что в main; тегов ещё нет;
+#                      секреты выпуска заданы; запуск — с main.
+#   2. Полный прогон   test.yml целиком (Linux, как на каждый push) и отдельно
+#                      Windows: npm test со снимками win32 (CI на Linux их не
+#                      проверяет). Пока оба не зелёные, ничего не публикуется.
+#   3. Версии и теги   package.json + lock; mobile/app.json — version и
+#                      versionCode +1; один коммит в main и теги v*/mobile-v*
+#                      одним атомарным пушем. main ушёл вперёд с момента
+#                      нажатия — пуш отклонён целиком, тегов нет.
+#   4. Сборки          release.yml и mobile-release.yml вызовом workflow_call
+#                      с тегом (см. ниже, почему не пушем тега).
+#   5. Проверка        релизы на GitHub со всеми файлами; фид десктопа в
+#                      Supabase называет новую версию, все ссылки ведут в R2 и
+#                      отвечают HEAD 200 своего размера; APK в R2 — того размера,
+#                      что собрал EAS.
+#   6. latest.json     блок "android" в lancibleofficial/lancible-updates.
+#   7. Лендинг         кнопки скачивания (scripts/release-landing.js) — коммит в
+#                      main, последним: кнопка не должна указывать на файл,
+#                      которого ещё нет, а копии телефона узнают о версии раньше.
+#   Итог               таблица шагов на странице запуска (её показывает админка).
+#
+# Почему сборки — workflow_call, а не пуш тега. Пуш токеном GITHUB_TOKEN не
+# запускает других workflow (так GitHub защищается от циклов), поэтому тег,
+# запушенный здесь, release.yml по `push: tags` не тронет. Вызов workflow_call
+# держит весь выпуск одним запуском: needs, общий итог, «Re-run failed jobs»
+# продолжает с упавшего шага. Пуш тега личным токеном (RELEASE_PAT) запустил бы
+# release.yml отдельным запуском, за которым пришлось бы следить опросом API, —
+# сложнее и хрупче. Отсюда и запрет: checkout в «Версиях и тегах» — без своего
+# token, иначе сборка пошла бы дважды (тест tests/unit/publish-workflow.test.js).
+#
+# Секреты репозитория: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+# R2_BUCKET, R2_PUBLIC_URL — всегда; SUPABASE_SERVICE_ROLE_KEY — десктоп (фид);
+# EXPO_TOKEN и LANCIBLE_UPDATES_TOKEN — телефон. LANCIBLE_UPDATES_TOKEN —
+# fine-grained токен только на репозиторий lancible-updates, Contents: Read and
+# write. Коммиты в main и теги пушит GITHUB_TOKEN (permissions ниже). Подробнее —
+# ARCHITECTURE.md, «Сборка и выкат».
+#
+# Выпуск идёт из main как он есть: правовые тексты новой редакции, правки
+# кода и npm run site:refresh попадают в main до нажатия кнопки. Запись в блог
+# пишется после — постом в админке.
+name: Выпуск
+
+on:
+  workflow_dispatch:
+    inputs:
+      desktop_version:
+        description: 'Версия десктопа X.Y.Z (пусто — десктоп не выпускается)'
+        required: false
+        type: string
+        default: ''
+      mobile_version:
+        description: 'Версия телефона X.Y.Z (пусто — телефон не выпускается)'
+        required: false
+        type: string
+        default: ''
+
+# Один выпуск за раз: второй запуск ждёт, пока закончится первый.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Входы и ключи
+    runs-on: ubuntu-latest
+    outputs:
+      desktop: ${{ steps.v.outputs.desktop }}
+      mobile: ${{ steps.v.outputs.mobile }}
+      desktop_tag: ${{ steps.v.outputs.desktop_tag }}
+      mobile_tag: ${{ steps.v.outputs.mobile_tag }}
+    steps:
+      - name: Запуск из main
+        if: ${{ github.ref != 'refs/heads/main' }}
+        run: |
+          echo "::error::Выпуск запускается только из main, а не из ${GITHUB_REF}."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Версии идут в оболочку переменными, а не подстановкой в текст команды.
+      - name: Проверить версии
+        id: v
+        env:
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
+        run: node scripts/release-steps.js versions --desktop "$DESKTOP" --mobile "$MOBILE" >> "$GITHUB_OUTPUT"
+      - name: Теги ещё не заняты
+        env:
+          DESKTOP_TAG: ${{ steps.v.outputs.desktop_tag }}
+          MOBILE_TAG: ${{ steps.v.outputs.mobile_tag }}
+        run: |
+          for t in "$DESKTOP_TAG" "$MOBILE_TAG"; do
+            [ -n "$t" ] || continue
+            if git ls-remote --exit-code --tags origin "refs/tags/$t" > /dev/null; then
+              echo "::error::Тег $t уже есть — эта версия выпущена. Нужна новая."
+              exit 1
+            fi
+          done
+      # Секретов нет в условиях шагов, поэтому их наличие проверяется здесь,
+      # до тестов: без них выпуск всё равно не дошёл бы до конца.
+      - name: Секреты выпуска заданы
+        env:
+          DESKTOP: ${{ steps.v.outputs.desktop }}
+          MOBILE: ${{ steps.v.outputs.mobile }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          LANCIBLE_UPDATES_TOKEN: ${{ secrets.LANCIBLE_UPDATES_TOKEN }}
+        run: |
+          need=(R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET R2_PUBLIC_URL)
+          [ -z "$DESKTOP" ] || need+=(SUPABASE_SERVICE_ROLE_KEY)
+          [ -z "$MOBILE" ] || need+=(EXPO_TOKEN LANCIBLE_UPDATES_TOKEN)
+          missing=()
+          for name in "${need[@]}"; do [ -n "${!name}" ] || missing+=("$name"); done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Не заданы секреты репозитория: ${missing[*]}. Без них выпуск не дойдёт до конца — ничего не начато."
+            exit 1
+          fi
+      - name: Итог входов
+        env:
+          DESKTOP: ${{ steps.v.outputs.desktop }}
+          MOBILE: ${{ steps.v.outputs.mobile }}
+        run: |
+          {
+            echo "### Входы"
+            echo "- десктоп: ${DESKTOP:-не выпускается}"
+            echo "- телефон: ${MOBILE:-не выпускается}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Линуксовая половина полного прогона — test.yml целиком, тот же, что на
+  # каждый push.
+  tests:
+    name: Тесты (Linux)
+    needs: plan
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test.yml
+
+  # Windows: снимки с эталоном win32 (на Linux они пропускаются) и десктоп в
+  # Electron. npm test — тот же «полный набор», что чек-лист выката гонял
+  # руками, и test:visual в нём — последним слоем.
+  tests-windows:
+    name: Тесты (Windows, со снимками)
+    needs: plan
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # Как у копии разработчика: npm ci, двоичный Electron с проверкой (сам он
+      # иногда не распаковывается до конца), зависимости веба и телефона.
+      - name: Подготовка (setup-worktree)
+        run: node scripts/setup-worktree.js --mobile
+      - name: Браузер для Playwright
+        run: npx playwright install chromium
+      - name: Полный набор со снимками (npm test)
+        run: npm test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-windows
+          path: playwright-report/
+          retention-days: 7
+
+  # Первое, что видно снаружи: коммит версий в main и теги. Только после
+  # зелёных тестов на обеих системах.
+  versions:
+    name: Версии и теги
+    needs: [plan, tests, tests-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Ровно тот коммит, что проверили тесты. Без своего token: пушит
+      # GITHUB_TOKEN, и тег не запускает release.yml второй раз.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Поднять версии
+        id: bump
+        env:
+          DESKTOP: ${{ needs.plan.outputs.desktop }}
+          MOBILE: ${{ needs.plan.outputs.mobile }}
+        run: node scripts/release-steps.js versions --desktop "$DESKTOP" --mobile "$MOBILE" --write >> "$GITHUB_OUTPUT"
+      - name: Коммит версий и теги в main
+        env:
+          MESSAGE: ${{ steps.bump.outputs.message }}
+          DESKTOP: ${{ needs.plan.outputs.desktop }}
+          MOBILE: ${{ needs.plan.outputs.mobile }}
+          DESKTOP_TAG: ${{ needs.plan.outputs.desktop_tag }}
+          MOBILE_TAG: ${{ needs.plan.outputs.mobile_tag }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898599+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json mobile/app.json
+          git diff --cached --quiet && { echo "::error::Версии не поменялись — коммитить нечего"; exit 1; }
+          git commit -m "$MESSAGE"
+          refs=("HEAD:refs/heads/main")
+          if [ -n "$DESKTOP_TAG" ]; then git tag -a "$DESKTOP_TAG" -m "Lancible $DESKTOP"; refs+=("refs/tags/$DESKTOP_TAG"); fi
+          if [ -n "$MOBILE_TAG" ]; then git tag -a "$MOBILE_TAG" -m "Lancible mobile $MOBILE"; refs+=("refs/tags/$MOBILE_TAG"); fi
+          # --atomic: main и теги уезжают вместе или не уезжают вовсе. main
+          # ушёл вперёд с момента нажатия — пуш не fast-forward и отклонён.
+          if ! git push --atomic origin "${refs[@]}"; then
+            echo "::error::Пуш в main отклонён (скорее всего, main ушёл вперёд с момента нажатия). Ничего не опубликовано — запусти выпуск ещё раз."
+            exit 1
+          fi
+          {
+            echo "### Версии и теги"
+            echo "- коммит $(git rev-parse --short HEAD) в main: $MESSAGE"
+            echo "- теги: ${DESKTOP_TAG:-} ${MOBILE_TAG:-}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  desktop:
+    name: Сборка десктопа
+    needs: [plan, versions]
+    if: ${{ needs.plan.outputs.desktop != '' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.plan.outputs.desktop_tag }}
+      ref: refs/tags/${{ needs.plan.outputs.desktop_tag }}
+    secrets:
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+
+  mobile:
+    name: Сборка телефона
+    needs: [plan, versions]
+    if: ${{ needs.plan.outputs.mobile != '' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/mobile-release.yml
+    with:
+      tag: ${{ needs.plan.outputs.mobile_tag }}
+      ref: refs/tags/${{ needs.plan.outputs.mobile_tag }}
+    secrets:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+
+  # Не выпускаемая платформа — skipped, это не повод останавливаться;
+  # упавшая — повод.
+  verify:
+    name: Проверка файлов и манифестов
+    needs: [plan, versions, desktop, mobile]
+    if: ${{ !cancelled() && needs.versions.result == 'success' && (needs.desktop.result == 'success' || needs.desktop.result == 'skipped') && (needs.mobile.result == 'success' || needs.mobile.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    env:
+      DESKTOP: ${{ needs.plan.outputs.desktop }}
+      MOBILE: ${{ needs.plan.outputs.mobile }}
+      DESKTOP_TAG: ${{ needs.plan.outputs.desktop_tag }}
+      MOBILE_TAG: ${{ needs.plan.outputs.mobile_tag }}
+      WIN_BYTES: ${{ needs.desktop.outputs.win_bytes }}
+      MAC_BYTES: ${{ needs.desktop.outputs.mac_bytes }}
+      APK_BYTES: ${{ needs.mobile.outputs.apk_bytes }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Релизы на GitHub — со всеми файлами
+        run: |
+          set -euo pipefail
+          has() { grep -Fxq "$2" <<< "$1" || { echo "::error::В релизе нет файла $2"; exit 1; }; }
+          if [ -n "$DESKTOP" ]; then
+            names=$(gh release view "$DESKTOP_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+            for f in "Lancible.Setup.$DESKTOP.exe" "Lancible-$DESKTOP-universal.dmg" "Lancible-$DESKTOP-universal-mac.zip" latest.yml latest-mac.yml; do has "$names" "$f"; done
+          fi
+          if [ -n "$MOBILE" ]; then
+            names=$(gh release view "$MOBILE_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+            has "$names" "Lancible-$MOBILE.apk"
+          fi
+      - name: Фид, файлы в R2 и APK
+        env:
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: >
+          node scripts/release-steps.js verify --public-url "$R2_PUBLIC_URL"
+          --desktop "$DESKTOP" --win-bytes "$WIN_BYTES" --mac-bytes "$MAC_BYTES"
+          --mobile "$MOBILE" --apk-bytes "$APK_BYTES"
+
+  updates:
+    name: latest.json телефона
+    needs: [plan, mobile, verify]
+    if: ${{ !cancelled() && needs.verify.result == 'success' && needs.plan.outputs.mobile != '' }}
+    runs-on: ubuntu-latest
+    env:
+      MOBILE: ${{ needs.plan.outputs.mobile }}
+      APK_BYTES: ${{ needs.mobile.outputs.apk_bytes }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Отдельный публичный репозиторий; токен — только на него.
+      - uses: actions/checkout@v4
+        with:
+          repository: lancibleofficial/lancible-updates
+          token: ${{ secrets.LANCIBLE_UPDATES_TOKEN }}
+          path: updates
+      - name: Блок android в latest.json
+        id: json
+        env:
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: node scripts/release-steps.js latest-json updates/latest.json --mobile "$MOBILE" --public-url "$R2_PUBLIC_URL" --apk-bytes "$APK_BYTES" >> "$GITHUB_OUTPUT"
+      - name: Отправить latest.json в lancible-updates
+        if: ${{ steps.json.outputs.changed == 'true' }}
+        working-directory: updates
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898599+github-actions[bot]@users.noreply.github.com'
+          git add latest.json
+          git commit -m "Android $MOBILE"
+          git push origin HEAD
+          echo "### latest.json" >> "$GITHUB_STEP_SUMMARY"
+          echo "- android → $MOBILE ($APK_BYTES байт), коммит $(git rev-parse --short HEAD)" >> "$GITHUB_STEP_SUMMARY"
+
+  landing:
+    name: Кнопки лендинга
+    needs: [plan, desktop, mobile, verify, updates]
+    if: ${{ !cancelled() && needs.verify.result == 'success' && (needs.updates.result == 'success' || needs.updates.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Кнопки правятся поверх свежего main (за время сборок туда мог кто-то
+      # пушнуть) и сверяются тестом лендинга. Пуш не прошёл из-за гонки —
+      # заново с нового main, до трёх раз.
+      - name: Обновить кнопки и отправить в main
+        env:
+          DESKTOP: ${{ needs.plan.outputs.desktop }}
+          MOBILE: ${{ needs.plan.outputs.mobile }}
+          WIN_BYTES: ${{ needs.desktop.outputs.win_bytes }}
+          MAC_BYTES: ${{ needs.desktop.outputs.mac_bytes }}
+          APK_BYTES: ${{ needs.mobile.outputs.apk_bytes }}
+          R2_PUBLIC_URL: ${{ secrets.R2_PUBLIC_URL }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898599+github-actions[bot]@users.noreply.github.com'
+          what="${DESKTOP:+десктоп $DESKTOP}${DESKTOP:+${MOBILE:+, }}${MOBILE:+телефон $MOBILE}"
+          for attempt in 1 2 3; do
+            git fetch --depth=1 origin main
+            git reset --hard FETCH_HEAD
+            node scripts/release-landing.js --public-url "$R2_PUBLIC_URL" \
+              --desktop "$DESKTOP" --win-bytes "$WIN_BYTES" --mac-bytes "$MAC_BYTES" \
+              --mobile "$MOBILE" --apk-bytes "$APK_BYTES"
+            node --test tests/unit/landing.test.js
+            if git diff --quiet -- landing/index.html landing/strings.js; then
+              echo "### Кнопки лендинга" >> "$GITHUB_STEP_SUMMARY"
+              echo "- уже на $what — ничего не поменялось" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            git add landing/index.html landing/strings.js
+            git commit -m "Лендинг: кнопки скачивания — $what"
+            if git push origin HEAD:refs/heads/main; then
+              echo "### Кнопки лендинга" >> "$GITHUB_STEP_SUMMARY"
+              echo "- $what, коммит $(git rev-parse --short HEAD) в main" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::warning::main ушёл вперёд — попытка $attempt из 3"
+          done
+          echo "::error::Кнопки лендинга не удалось отправить в main за три попытки."
+          exit 1
+
+  summary:
+    name: Итог
+    needs: [plan, tests, tests-windows, versions, desktop, mobile, verify, updates, landing]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Таблица шагов
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          DESKTOP: ${{ inputs.desktop_version }}
+          MOBILE: ${{ inputs.mobile_version }}
+        run: node scripts/release-steps.js summary

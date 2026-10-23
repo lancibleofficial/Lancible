@@ -5,6 +5,13 @@ src/renderer/editor.js
 src/renderer/editor-pdf.js
 mobile/src/editor/editorBundle.js
 
-# Сторонние библиотеки лендинга (landing/vendor) — чужой минифицированный код:
-# в графе он дал бы сотни узлов без имён.
-landing/vendor/
+# Сторонние библиотеки админки (admin/vendor): supabase-js, копия сценок
+# пустых экранов и vis-network для графа кода (до 23 октября 2026 она лежала
+# в landing/vendor) — чужой минифицированный код: в графе он дал бы сотни
+# узлов без имён. Собственный код админки (admin/js, admin/screens.js) граф
+# видит.
+admin/vendor/
+
+# Сам граф, выложенный в админку (npm run site:refresh): производное от графа,
+# в нём он видел бы сам себя.
+admin/graph/

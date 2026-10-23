@@ -56,6 +56,9 @@ export default function TrashSheet() {
   );
 }
 
+// Счётчик экранов (lib/screenStats.js): корзина — заметный лист, считается экраном.
+TrashSheet.screenId = 'trash';
+
 const makeStyles = (colors) => StyleSheet.create({
   restore: { color: colors.accentInk, fontWeight: '600' },
 });

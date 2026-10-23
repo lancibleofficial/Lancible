@@ -17,7 +17,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const LANDING = path.join(__dirname, '..', '..', 'landing');
-const PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html',
+const PAGES = ['index.html', 'blog.html',
   'privacy.html', 'terms.html', 'cookies.html', 'refund.html', 'legal.html', 'delete-account.html'];
 const LANGS = ['ru', 'en', 'uk', 'kk'];
 

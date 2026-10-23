@@ -20,6 +20,9 @@
  *    октября 2026 — доступ по приглашению (supabase/ai-access.sql): без
  *    подтверждённой почты в ai_access, без таблицы или при сбое запроса —
  *    403 no access до тела, журнала и модели; почта и id в лог не попадают.
+ *    С 23 октября 2026 — настройки из админки (app_settings, supabase/admin.sql):
+ *    главнее секретов, только из белого списка, кэш на минуту, без таблицы —
+ *    как раньше.
  * 2. Выложенная функция без входа: GET — 405, ключ anon — 401. Пока функции
  *    нет (404) — todo.
  * 3. Живая часть — только по LANCIBLE_AI_TEST=1: временные пользователи,
@@ -64,9 +67,11 @@ const U1 = { id: 'u1', email: 'u1@example.com', email_confirmed_at: '2026-10-01T
  *  Postgres 42703, как настоящая база. selects — какие колонки ai_calls
  *  читала функция. access — почты в ai_access (null — таблицы нет, как до
  *  supabase/ai-access.sql); accessError — чем ответит запрос к ней (объект
- *  ошибки или 'throw'); accessQueries — с какой почтой функция её спросила. */
-function fakeDb({ noColumns = [], user = U1, access = ['u1@example.com'], accessError = null } = {}) {
-  const db = { users: { 'user-token': user }, calls: [], n: 0, failed: [], selects: [], access, accessQueries: [] };
+ *  ошибки или 'throw'); accessQueries — с какой почтой функция её спросила.
+ *  settings — строки app_settings (null — таблицы нет, как до
+ *  supabase/admin.sql); settingsReads — сколько раз функция её читала. */
+function fakeDb({ noColumns = [], user = U1, access = ['u1@example.com'], accessError = null, settings = [] } = {}) {
+  const db = { users: { 'user-token': user }, calls: [], n: 0, failed: [], selects: [], access, accessQueries: [], settings, settingsReads: 0 };
   db.client = {
     auth: {
       getUser: async (jwt) => (db.users[jwt]
@@ -75,6 +80,7 @@ function fakeDb({ noColumns = [], user = U1, access = ['u1@example.com'], access
     },
     from(table) {
       if (table === 'ai_access') return accessQuery(db, accessError);
+      if (table === 'app_settings') return settingsQuery(db);
       assert.equal(table, 'ai_calls');
       const q = { op: null, values: null, filters: [], head: false, order: null, limit: null, cols: null };
       const run = () => {
@@ -141,6 +147,22 @@ function accessQuery(db, accessError) {
   return b;
 }
 
+/** Запрос к app_settings: только select — писать таблицу ai-chat не должна. */
+function settingsQuery(db) {
+  const b = {
+    select(cols) { assert.equal(cols, 'key, value'); return b; },
+    then(ok, bad) {
+      return Promise.resolve().then(() => {
+        db.settingsReads += 1;
+        if (db.settings === null) return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.app_settings' in the schema cache" } };
+        if (db.settings && db.settings.error) return { data: null, error: db.settings.error };
+        return { data: db.settings.map((r) => ({ ...r })), error: null };
+      }).then(ok, bad);
+    },
+  };
+  return b;
+}
+
 let loaded = null;
 /** index.ts → JS без типов → модуль из data: URL; Deno.serve отдаёт обработчик. */
 async function loadFunction() {
@@ -174,9 +196,12 @@ function sseResponse(text, status = 200) {
 }
 
 /** Один вызов функции: свежая база, подменённый fetch, всё дочитано. */
-async function invoke(t, { method = 'POST', token = 'user-token', body, raw, env, db, upstream } = {}) {
+async function invoke(t, { method = 'POST', token = 'user-token', body, raw, env, db, upstream, keepSettings = false } = {}) {
   const fn = await loadFunction();
   if (!fn) { t.skip('нет esbuild — npm install'); return null; }
+  // Кэш настроек — на модуль; каждый вызов читает свою базу заново, если
+  // тест не проверяет сам кэш.
+  if (!keepSettings) Object.assign(fn.mod.SETTINGS_CACHE, { at: 0, value: null });
   fn.env = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'service', ANTHROPIC_API_KEY: FAKE_KEY, ...env };
   fn.db = db || fakeDb();
   fn.waits = [];
@@ -563,6 +588,82 @@ test('ai-chat без сети: AI_MODEL и AI_EFFORT из секретов; за
   assert.ok(!headers['anthropic-beta'].includes('server-side-fallback'));
   const odd = await invoke(t, { body: hello(), env: { AI_EFFORT: 'max' } });
   assert.deepEqual(odd.sent[0].body.output_config, { effort: 'medium' }, 'неизвестное усилие — по умолчанию');
+});
+
+// 23 октября 2026: модель, усилие, лимит и бюджет задаются в админке —
+// строками app_settings (supabase/admin.sql). Они главнее секретов.
+const setting = (key, value) => ({ key, value });
+
+test('ai-chat без сети: настройки из app_settings главнее секретов — модель, усилие, лимит и бюджет', async (t) => {
+  if (!(await loadFunction())) { t.skip('нет esbuild'); return; }
+  const db = fakeDb({ settings: [
+    setting('ai.model', 'claude-haiku-5-5'), setting('ai.effort', 'low'), setting('ai.daily_limit', 2), setting('ai.daily_units', 20000),
+    setting('ai.something_else', 'x'), setting('feature.flag', true),
+  ] });
+  const env = { AI_MODEL: 'claude-opus-5-5', AI_EFFORT: 'high', AI_DAILY_LIMIT: '40', AI_DAILY_UNITS: '9000000' };
+  const r = await invoke(t, { body: hello(), env, db });
+  assert.equal(r.status, 200, r.text.slice(0, 200));
+  const { body } = r.sent[0];
+  assert.equal(body.model, 'claude-haiku-5-5', 'модель — из админки, а не из секрета');
+  assert.deepEqual(body.output_config, { effort: 'low' });
+  assert.ok(r.text.startsWith('event: lancible\ndata: {"remaining":1,"limit":2,"model":"claude-haiku-5-5"}'), r.text.slice(0, 100));
+  assert.deepEqual(r.errors, []);
+  // Бюджет из админки: 20 000 единиц уже потрачено — 429 budget.
+  db.calls.push({ id: 'b1', user_id: 'u1', counted: false, cost_units: 20000, created_at: new Date().toISOString() });
+  const over = await invoke(t, { body: ask([{ role: 'user', content: 'Когда?' }, { role: 'assistant', content: [{ type: 'tool_use', id: 'tu1', name: 'free_windows', input: {} }] }, { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'tu1', content: '{}' }] }]), env, db });
+  assert.equal(over.status, 429);
+  assert.equal(over.json.error, 'budget');
+});
+
+test('ai-chat без сети: чужие значения в app_settings — как будто строки нет; без таблицы — секреты и умолчания, лог молчит', async (t) => {
+  const fn = await loadFunction();
+  if (!fn) { t.skip('нет esbuild'); return; }
+  const junk = fakeDb({ settings: [
+    setting('ai.model', 'gpt-5'), setting('ai.effort', 'max'), setting('ai.daily_limit', 0), setting('ai.daily_units', 'lots'),
+  ] });
+  const r = await invoke(t, { body: hello(), env: { AI_MODEL: 'claude-opus-5-5', AI_DAILY_LIMIT: '7' }, db: junk });
+  assert.equal(r.sent[0].body.model, 'claude-opus-5-5', 'модель не из списка — секрет');
+  assert.deepEqual(r.sent[0].body.output_config, { effort: 'medium' });
+  assert.ok(r.text.startsWith('event: lancible\ndata: {"remaining":6,"limit":7,'), r.text.slice(0, 80));
+  const { aiSettingsFrom, MODELS, SETTING_LIMITS } = fn.mod;
+  assert.deepEqual(aiSettingsFrom([
+    setting('ai.daily_limit', 1.5), setting('ai.daily_limit', 1001), setting('ai.daily_units', 9999), setting('ai.daily_units', 1e9),
+    setting('ai.model', 'claude-sonnet-5-5 '), setting('ai.effort', 'LOW'), null, 'x', { key: 5 },
+  ]), {}, 'дробные, за пределами, с пробелом, в другом регистре — мимо');
+  assert.deepEqual(aiSettingsFrom([setting('ai.daily_limit', 1000), setting('ai.daily_units', 10000)]), { dailyLimit: 1000, dailyUnits: 10000 }, 'пределы включительно');
+  assert.deepEqual(SETTING_LIMITS, { dailyLimit: [1, 1000], dailyUnits: [10000, 100000000] });
+  assert.ok(MODELS.includes('claude-sonnet-5-5'), 'модель по умолчанию — в списке');
+  for (const [name, settings, logged] of [
+    ['таблицы нет (admin.sql не выполнен)', null, []],
+    ['запрос не прошёл', { error: { code: '57014', message: 'timeout for u1@example.com' } }, ['ai-chat: settings 57014']],
+  ]) {
+    const db = fakeDb({ settings });
+    const x = await invoke(t, { body: hello(), env: { AI_EFFORT: 'high' }, db });
+    assert.equal(x.status, 200, name);
+    assert.equal(x.sent[0].body.model, 'claude-sonnet-5-5', name);
+    assert.deepEqual(x.sent[0].body.output_config, { effort: 'high' }, `${name}: секрет`);
+    assert.deepEqual(x.errors, logged, `${name}: в логе — только код`);
+  }
+});
+
+test('ai-chat без сети: настройки читаются не чаще раза в минуту и не читаются без доступа', async (t) => {
+  const fn = await loadFunction();
+  if (!fn) { t.skip('нет esbuild'); return; }
+  const db = fakeDb({ settings: [setting('ai.model', 'claude-haiku-5-5')] });
+  await invoke(t, { body: hello(), db });
+  db.settings = [setting('ai.model', 'claude-opus-5-5')];
+  const cached = await invoke(t, { body: hello(), db, keepSettings: true });
+  assert.equal(db.settingsReads, 1, 'второй вызов — из кэша');
+  assert.equal(cached.sent[0].body.model, 'claude-haiku-5-5');
+  fn.mod.SETTINGS_CACHE.at = Date.now() - fn.mod.SETTINGS_TTL_MS - 1;
+  const fresh = await invoke(t, { body: hello(), db, keepSettings: true });
+  assert.equal(db.settingsReads, 2, 'через минуту — заново');
+  assert.equal(fresh.sent[0].body.model, 'claude-opus-5-5');
+  assert.equal(fn.mod.SETTINGS_TTL_MS, 60000);
+  const closed = fakeDb({ access: [], settings: [setting('ai.model', 'claude-opus-5-5')] });
+  const no = await invoke(t, { body: hello(), db: closed });
+  assert.equal(no.status, 403);
+  assert.equal(closed.settingsReads, 0, 'без доступа настройки не читаются');
 });
 
 test('ai-chat без сети: ANTHROPIC_WORKSPACE_ID уходит заголовком anthropic-workspace-id; без секрета и с мусором — заголовка нет', async (t) => {

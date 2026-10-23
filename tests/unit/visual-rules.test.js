@@ -113,6 +113,113 @@ test('телефон: цвета берутся из theme.js', () => {
   ratchet(found, [...expand(MOBILE_LEGIT), ...expand(MOBILE_TO_FIX)], 'телефон');
 });
 
+// --- админка: цвета только из токенов admin/admin.css ----------------------------------
+
+// Тот же закон, что у styles.css, но без списка «исправить»: админка родилась
+// 23 октября уже по правилам, ей храповик не нужен — любое отступление сразу
+// красит тест. Браузерная половина (вычисленные цвета деталей равны своим
+// токенам в обеих темах) — tests/admin/theme.spec.js; здесь то, что видно в
+// исходниках, чтобы крюк перед коммитом ловил это за секунды.
+
+/** Блоки токенов: сам :root и две светлые темы (по системе и по выбору).
+ *  Только в них объявляются цвета; в узком `@media … :root` — размеры. */
+const ADMIN_TOKEN_BLOCK = /^:root(:not\(\[data-theme="dark"\]\):not\(\[data-theme="light"\]\)|\[data-theme="(light|dark)"\])?$/;
+const NAMED_COLOR = 'white|black|red|green|blue|gray|grey|yellow|orange|purple|pink|brown';
+const ADMIN_CSS_COLOR = new RegExp(`${COLOR.source}|hsla?\\([^)]*\\)|(?<![-\\w])(?:${NAMED_COLOR})(?![-\\w])`, 'gi');
+
+test('admin.css: цвет — только токеном, литералы лишь в блоках :root и тем', () => {
+  const rules = cssRules(read('admin/admin.css'));
+  const palette = rules.filter((r) => ADMIN_TOKEN_BLOCK.test(r.sel) && /(^|;)\s*--bg\s*:/.test(r.body));
+  assert.ok(palette.length >= 3, `в admin.css ${palette.length} блоков палитры вместо трёх (тёмная и две светлые) — разбор сломался?`);
+  const stray = [];
+  for (const r of rules) {
+    const inBlock = ADMIN_TOKEN_BLOCK.test(r.sel);
+    for (const [prop, value] of Object.entries(declarations(r.body))) {
+      if (inBlock && prop.startsWith('--')) continue; // это и есть палитра
+      if (value.match(ADMIN_CSS_COLOR)) stray.push(`${r.at ? `${r.at} | ` : ''}${r.sel} { ${prop}: ${value} }`);
+    }
+  }
+  assert.deepEqual(stray, [], 'admin.css: цвет мимо токена — заведите токен в «Палитре» (в обеих темах) и возьмите var(--…)');
+});
+
+test('admin.css: светлая тема задана двумя одинаковыми блоками', () => {
+  const rules = cssRules(read('admin/admin.css'));
+  const bySystem = rules.find((r) => r.sel === ':root:not([data-theme="dark"]):not([data-theme="light"])');
+  const byChoice = rules.find((r) => r.sel === ':root[data-theme="light"]');
+  assert.ok(bySystem && byChoice, 'не нашёл одного из блоков светлой темы в admin.css');
+  assert.deepEqual(declarations(bySystem.body), declarations(byChoice.body));
+});
+
+/** Код админки без сторонних библиотек (admin/vendor — чужой код со своими
+ *  правилами): страница, свои скрипты и разделы. */
+function adminSources() {
+  const out = ['admin/index.html', 'admin/screens.js', 'admin/theme-boot.js'];
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(rel);
+      else if (e.name.endsWith('.js')) out.push(rel);
+    }
+  };
+  walk('admin/js');
+  return out;
+}
+
+/** Из текста — без комментариев и без знака во вкладке: favicon — картинка в
+ *  data:-адресе, подстановки токенов в ней нет, цвет акцента прописан в ней
+ *  самой (так же сделан знак лендинга). Это единственное законное исключение. */
+const adminCode = (rel) => read(rel)
+  .replace(/<link rel="icon"[^>]*>/, '')
+  .replace(/<!--[\s\S]*?-->/g, '')
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  .replace(/^\s*\/\/.*$/gm, '');
+
+/** Свойства, которые админка вправе задавать из кода: место и размер того, что
+ *  она раскладывает (ширина полосы, положение меню). Цвета тут нет. */
+const ADMIN_STYLE_ALLOWED = new Set(['top', 'left', 'right', 'bottom', 'width', 'height', 'minWidth', 'maxWidth', 'minHeight', 'maxHeight', 'transform']);
+
+test('админка: из кода — только координаты и размеры, цветов и стилей строкой нет', () => {
+  const colorLiteral = new RegExp(`${COLOR.source}|hsla?\\(|['"\`](?:${NAMED_COLOR})['"\`]`, 'gi');
+  const found = [];
+  for (const rel of adminSources()) {
+    adminCode(rel).split('\n').forEach((line, i) => {
+      const at = `${rel}:${i + 1}`;
+      for (const m of line.match(colorLiteral) || []) found.push(`${at} цвет ${m}`);
+      for (const m of line.matchAll(/\.style\.([a-zA-Z]+)\s*=(?!=)/g)) {
+        if (!ADMIN_STYLE_ALLOWED.has(m[1])) found.push(`${at} .style.${m[1]} — из кода только место и размер`);
+      }
+      if (/\.style\.cssText|setAttribute\(\s*['"]style['"]|\sstyle=["']|[{,]\s*style\s*:\s*['"`]/.test(line)) found.push(`${at} стиль строкой`);
+      // Переменная стиля из кода — только цвет из данных (цвет сообщества
+      // графа кода — его выбирает graphify, как цвет проекта в вебе), и
+      // только --node-color: остальное — классом.
+      for (const m of line.matchAll(/\.style\.setProperty\(\s*(['"`])([^'"`]*)\1/g)) {
+        if (m[2] !== '--node-color') found.push(`${at} .style.setProperty(${m[2]}) — из кода переменной только цвет данных --node-color`);
+      }
+      // Заливка и обводка SVG — из CSS (класс); атрибутом допустимы только «нет» и «как текст».
+      for (const m of line.matchAll(/\b(?:fill|stroke|stop-color|flood-color)['"]?\s*[:=]\s*['"`]([^'"`]*)/g)) {
+        if (!/^(none|currentColor|transparent|inherit|var\(--)/.test(m[1])) found.push(`${at} заливка/обводка «${m[1]}»`);
+      }
+    });
+  }
+  assert.deepEqual(found, [], 'админка: цвет — только классом из admin.css (токен), из кода — координаты и размеры');
+});
+
+test('админка: каждый var(--токен) в стилях и коде объявлен в admin.css', () => {
+  // Опечатка в имени токена не падает: браузер молча берёт «ничего», и
+  // деталь теряет цвет только в одной из тем.
+  const css = read('admin/admin.css');
+  const defined = new Set();
+  for (const r of cssRules(css)) for (const p of Object.keys(declarations(r.body))) if (p.startsWith('--')) defined.add(p);
+  assert.ok(defined.size >= 30, `в admin.css нашлось ${defined.size} токенов — разбор сломался?`);
+  const missing = [];
+  // Сценки пустых экранов из vendor цвета берут из токенов страницы — их имена
+  // тоже должны быть в admin.css.
+  for (const rel of ['admin/admin.css', 'admin/vendor/illustrations.js', ...adminSources()]) {
+    for (const m of read(rel).matchAll(/var\(\s*(--[\w-]+)/g)) if (!defined.has(m[1])) missing.push(`${rel}: ${m[1]}`);
+  }
+  assert.deepEqual(missing, [], 'токен назван, но не объявлен в «Палитре» admin.css');
+});
+
 // --- карта не отстаёт от списков ----------------------------------------------------
 
 test('DESIGN.md называет те же числа, что списки в этом тесте', () => {
@@ -129,18 +236,19 @@ test('DESIGN.md называет те же числа, что списки в э
   for (const row of rows) assert.ok(doc.includes(row), `в DESIGN.md нет строки: ${row}`);
 });
 
-test('блок «Дизайн» на /architecture называет те же числа', () => {
-  // Тот же урок, вторая копия: таблица «что сторожит тест» есть и на
-  // странице архитектуры.
+test('блок «Дизайн» в «Устройстве» называет те же числа', () => {
+  // Тот же урок, вторая копия: таблица «что сторожит тест» есть и в описании
+  // устройства (до 23 октября 2026 — страница /architecture лендинга, теперь —
+  // раздел админки, текст — admin/content/architecture.html).
   const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
-  const page = read('landing/architecture.html');
-  assert.ok(page.includes('<div class="arch-sec" id="design">'), 'на /architecture нет блока «Дизайн»');
+  const page = read('admin/content/architecture.html');
+  assert.ok(page.includes('<div class="island arch-sec" id="design">'), 'в «Устройстве» нет блока «Дизайн»');
   const cells = [
     `Цвета мимо палитры в <code>styles.css</code></td><td class="mono">${DESKTOP_TO_FIX.length} в списке «исправить»</td>`,
     `Цвета мимо темы на телефоне</td><td class="mono">${sum(MOBILE_LEGIT)} законных, ${sum(MOBILE_TO_FIX)} в списке «исправить»</td>`,
     `Цвета и раскладка строкой из <code>app.js</code></td><td class="mono">${JS_TO_FIX.length} в списке «исправить»</td>`,
   ];
-  for (const cell of cells) assert.ok(page.includes(cell), `на /architecture нет строки: ${cell}`);
+  for (const cell of cells) assert.ok(page.includes(cell), `в «Устройстве» нет строки: ${cell}`);
 });
 
 // --- после переезда ----------------------------------------------------------------
@@ -332,7 +440,7 @@ test('телефон: каждое начертание, которое назы
   assert.deepEqual(missing, [], 'эти начертания называет код, но App.js их не загружает');
 });
 
-const LANDING_PAGES = ['index.html', 'blog.html', 'logs.html', 'architecture.html', 'graph.html', 'privacy.html', 'terms.html', 'cookies.html', 'refund.html', 'legal.html', 'delete-account.html'];
+const LANDING_PAGES = ['index.html', 'blog.html', 'privacy.html', 'terms.html', 'cookies.html', 'refund.html', 'legal.html', 'delete-account.html'];
 
 test('лендинг: общее — в landing.css, у страниц только своё', () => {
   assert.ok(fs.existsSync(path.join(ROOT, 'landing', 'landing.css')), 'landing/landing.css нет');
